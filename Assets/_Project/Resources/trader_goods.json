@@ -1,0 +1,17 @@
+[
+{
+"item":"pepper",
+"description":"Pepper from the Malabar coast is highly valued in Vijayanagara markets.",
+"typical_price":20
+},
+{
+"item":"cardamom",
+"description":"Cardamom grows in the Western Ghats and is prized for flavor and medicine.",
+"typical_price":24
+},
+{
+"item":"cinnamon",
+"description":"Cinnamon is traded through coastal ports and used in royal kitchens.",
+"typical_price":26
+}
+]
