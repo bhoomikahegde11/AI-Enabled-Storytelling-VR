@@ -13,3 +13,5 @@ UserSettings/
 *.tmp
 *.user
 *.userprefs
+.vsconfig
+.vs/
