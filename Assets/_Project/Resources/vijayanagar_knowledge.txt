@@ -1,6 +1,47 @@
-Hampi is the capital city of the Vijayanagara Empire and a major trade hub.
-Gold coins called varahas are widely used in markets.
-Pepper, cardamom, and cinnamon are common spices traded in southern India.
-Arab traders often arrive through ports such as Goa.
-Markets near temples are crowded trading areas.
-Merchants frequently bargain before agreeing on a final price.
+---CHUNK: currency_system---
+The Vijayanagar Empire used three main currencies. The Varaha was a gold coin, the highest denomination, used for expensive goods like silk, horses, and precious stones. The Fanam was a smaller gold or silver coin worth roughly one-sixteenth of a Varaha, commonly used in everyday market transactions for spices, cloth, and food. The Kasu was a copper coin of very low value, used for small quantities of common goods. A merchant quoting prices in Varahas was dealing in significant sums. Quoting in Fanams was standard for spice trades. Kasu were rarely used in a proper market stall.
+
+---CHUNK: bargaining_customs---
+Bargaining was not merely acceptable in Vijayanagar markets — it was expected and respected. A buyer who accepted the first price without negotiation was considered naive. A seller who refused all negotiation was considered arrogant and would lose customers quickly. The customary exchange involved the buyer opening low, the seller holding firm initially, and both parties finding a middle ground after two or three exchanges. Walking away was a legitimate tactic but used sparingly by serious buyers. A deal sealed with mutual respect was marked by both parties saying "Siddham" — meaning "it is settled."
+
+---CHUNK: spice_trade_culture---
+Spices were the backbone of Vijayanagar's export economy in the 15th and 16th centuries. The empire controlled key trade routes connecting the Deccan interior to the Malabar and Coromandel coasts. Pepper, cardamom, turmeric, and ginger were traded in bulk to Arab, Persian, and Portuguese merchants who docked at ports like Calicut and Masulipatnam. Local market stalls sold these same spices to domestic buyers — temple priests for ritual use, nobles for cuisine, farmers for medicine. Prices fluctuated with the monsoon harvest and with how far the goods had travelled.
+
+---CHUNK: spice_pepper---
+Black pepper, known as "Kari Menasu" in Kannada and "Milagu" in Tamil, was called black gold by traders. It was the most sought-after spice in both domestic and international trade. A maund of black pepper (roughly 37 kilograms) commanded a high price in Vijayanagar markets. Pepper from the Malabar coast was considered the finest. Experienced traders knew its price almost to the fanam. Its value was stable and well known, making it difficult to overcharge a knowledgeable buyer.
+
+---CHUNK: spice_cardamom---
+Cardamom, known as "Elakki" in Kannada, was a luxury spice primarily grown in the Western Ghats. It was used in royal kitchens, temple offerings, and as a breath freshener by nobles. Its price was significantly higher than pepper per unit weight. Cardamom was sold in smaller quantities — typically in seers rather than maunds. A buyer of cardamom in a common market was likely either a temple official, a wealthy household servant, or a trader buying for resale. Its rarity meant sellers could command a higher margin.
+
+---CHUNK: spice_turmeric---
+Turmeric, called "Arisina" in Kannada and "Manjal" in Tamil, was one of the most widely used spices across all classes of Vijayanagar society. It was used in cooking, medicine, and religious ceremonies. Because it was grown abundantly in the Deccan plateau, its price was significantly lower than pepper or cardamom. A farmer or common household buyer would expect a very modest price for turmeric. Overcharging for turmeric would be immediately obvious to any local buyer. It was typically sold by the seer.
+
+---CHUNK: spice_sandalwood---
+Sandalwood, called "Gandha" or "Chandana," was among the most precious goods traded in Vijayanagar. The empire was a major source of sandalwood for the entire Indian Ocean trade network. Sandalwood paste was used in temple rituals, royal ceremonies, and as a luxury cosmetic. Sandalwood powder commanded prices several times higher than pepper. A buyer of sandalwood was likely a temple representative, a wealthy noble, or a merchant buying for export. The seller of sandalwood held considerable power in any negotiation.
+
+---CHUNK: spice_ginger---
+Dried ginger, called "Shunti" in Kannada, was a common medicinal and culinary spice. It was less prestigious than pepper or cardamom but more valuable than turmeric. Ayurvedic practitioners, household cooks, and travelling merchants all purchased dried ginger. Its price was moderate and reasonably well known to most buyers. A farmer or common trader would have a fair sense of its value. It was sold by the seer or small bundle.
+
+---CHUNK: spice_betel---
+Betel nut, called "Adike" in Kannada, held special cultural importance in Vijayanagar society. Offering betel to a guest was a mark of hospitality and respect. It was chewed by all classes of society, from labourers to nobles, though the quality varied. The betel offered at court was wrapped in fine betel leaf with lime and spices. Common market betel was sold in large quantities cheaply. A noble buying betel for court use would expect higher quality and would not quibble over price as much as a farmer buying in bulk.
+
+---CHUNK: social_hierarchy_nobles---
+Court nobles and officials of the Vijayanagar Empire were accustomed to deference in all interactions. They rarely visited common market stalls themselves — they sent servants — but when they did, they expected sellers to lower prices as a mark of respect for their station. A noble who felt a price was too high would not argue loudly; instead they would express cold displeasure and make clear that the seller was being unworthy of their patronage. Nobles knew prices well because they administered taxation on trade. Flattering a noble subtly could help close a deal.
+
+---CHUNK: social_hierarchy_foreign_traders---
+Arab, Persian, and occasionally Portuguese merchants were familiar figures in Vijayanagar's major market towns by the 16th century. They were known to be shrewd negotiators with extensive knowledge of spice prices across multiple markets. A foreign trader would always compare your price to what they could get at the coast. They were generally respectful but businesslike — no excess of emotion, just calculation. They often spoke through local interpreters and used a mix of Arabic trade terms and local language. They were not easily impressed and would walk away without drama if the price did not suit them.
+
+---CHUNK: social_hierarchy_farmers---
+Farmers and rural buyers who came to city markets were often infrequent visitors who had saved carefully for their purchases. They knew the prices of the most common goods well from experience but were less certain about luxury spices. A desperate farmer might accept a higher price if they truly needed the good. They tended to be direct and honest in speech, sometimes blunt. They did not have patience for long negotiation. Showing basic respect to a farmer — not talking down to them — could secure a quick deal. They would feel the sting of being overcharged more personally than a noble would.
+
+---CHUNK: social_hierarchy_priests---
+Temple priests in the Vijayanagar Empire were respected figures who managed significant institutional resources. They bought spices in regular quantities for ritual use — turmeric and sandalwood especially. A priest would be a steady, reliable customer who expected fair and consistent pricing. They would not haggle aggressively but would quietly stop returning to a stall that overcharged them. They spoke with measured calm and invoked the names of deities in everyday speech. Offering them even a small courtesy could build long-term goodwill.
+
+---CHUNK: social_hierarchy_merchants---
+Professional merchants and traders who operated within the empire were organized into powerful guilds such as the Ayyavole and Manigramam. A seasoned merchant buyer would know prices with precision and would test a seller by opening with a low offer to gauge their knowledge. They respected sellers who held their price confidently. They had no patience for sellers who appeared uncertain or who changed their price erratically. A seasoned merchant might reference what they paid at another stall as a negotiating tactic. Closing a deal with a guild merchant well would enhance a seller's reputation significantly.
+
+---CHUNK: market_atmosphere---
+A Vijayanagar market in its prime was a vivid, noisy, and fragrant place. Stalls were arranged along wide stone-paved streets near the main temple complexes. The smell of spices, incense, and freshly cut flowers mingled in the air. Sellers called out their goods in Kannada, Telugu, and Tamil. Weighing was done with brass balance scales and stone weights. Disputes over weight or price were mediated by a market supervisor called the "pattana svami." A seller with a good reputation would attract customers without calling out — their stall would simply be busier.
+
+---CHUNK: negotiation_language---
+Common phrases used in Vijayanagar market negotiations included: "Bega heli" (speak quickly, in Kannada), "Nyayavada bele heli" (tell me a fair price), "Idu thumba jaasti" (this is too much), "Swalpa kammm maadi" (reduce it a little), "Siddham" (it is settled, used to close a deal). A seller might say "Idu nanna kaḍe idda uttama saamagri" (this is the finest goods I have). Buyers often invoked the names of gods — "Venkateshwara saakshi" (Lord Venkateshwara is my witness) — when swearing a price was fair. Ending a deal with a blessing was common.
