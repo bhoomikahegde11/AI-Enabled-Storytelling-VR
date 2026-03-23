@@ -1,0 +1,11 @@
+Model Information:
+* title:	Flat_ Rock
+* source:	https://sketchfab.com/3d-models/flat--rock-d900686b94d344708087352c1bd0a498
+* author:	Q.Cola (https://sketchfab.com/FA.Q.Cola)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Flat_ Rock" (https://sketchfab.com/3d-models/flat--rock-d900686b94d344708087352c1bd0a498) by Q.Cola (https://sketchfab.com/FA.Q.Cola) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
