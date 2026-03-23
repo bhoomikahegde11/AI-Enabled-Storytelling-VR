@@ -17,9 +17,6 @@ public class RAGRetriever : MonoBehaviour
     public List<TradeGood> goods = new List<TradeGood>();
     public List<CustomerPersonality> personalities = new List<CustomerPersonality>();
 
-    public List<TradeGood> goods = new List<TradeGood>();
-    public List<CustomerPersonality> personalities = new List<CustomerPersonality>();
-
     void Awake()
     {
         LoadKnowledge();
