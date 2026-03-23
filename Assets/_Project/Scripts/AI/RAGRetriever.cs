@@ -1,31 +1,75 @@
+using System.Collections.Generic;
 using UnityEngine;
+using Data;
 
 public class RAGRetriever : MonoBehaviour
 {
     string knowledge;
 
+    public List<TradeGood> goods = new List<TradeGood>();
+    public List<CustomerPersonality> personalities = new List<CustomerPersonality>();
+
     void Awake()
     {
+        // Load grounding knowledge
         TextAsset data = Resources.Load<TextAsset>("vijayanagar_knowledge");
-        knowledge = data.text;
-    }
+        knowledge = data != null ? data.text : "";
 
-    public string RetrieveContext(string item)
-    {
-        string[] lines = knowledge.Split('\n');
-        string result = "";
-
-        foreach(string line in lines)
+        // Load goods
+        TextAsset goodsJson = Resources.Load<TextAsset>("trader_goods");
+        if (goodsJson != null)
         {
-            if(line.ToLower().Contains(item.ToLower()))
+            string wrapped = "{\"items\":" + goodsJson.text + "}";
+            TradeGoodList list = JsonUtility.FromJson<TradeGoodList>(wrapped);
+            if (list != null && list.items != null)
             {
-                result += line + "\n";
+                goods.AddRange(list.items);
             }
         }
 
-        if(result == "")
-            result = knowledge.Substring(0, Mathf.Min(300, knowledge.Length));
+        // Load customer personalities
+        TextAsset customersJson = Resources.Load<TextAsset>("customers");
+        if (customersJson != null)
+        {
+            string wrapped = "{\"items\":" + customersJson.text + "}";
+            CustomerPersonalityList list = JsonUtility.FromJson<CustomerPersonalityList>(wrapped);
+            if (list != null && list.items != null)
+            {
+                personalities.AddRange(list.items);
+            }
+        }
+    }
 
-        return result;
+    public string GetKnowledge()
+    {
+        return knowledge;
+    }
+
+    // Backwards-compatible method
+    public string RetrieveContext(string item)
+    {
+        return GetKnowledge();
+    }
+
+    public TradeGood GetRandomGood()
+    {
+        if (goods == null || goods.Count == 0) return null;
+        return goods[Random.Range(0, goods.Count)];
+    }
+
+    public CustomerPersonality GetRandomPersonality()
+    {
+        if (personalities == null || personalities.Count == 0) return null;
+        return personalities[Random.Range(0, personalities.Count)];
+    }
+
+    public TradeGood GetGoodById(string id)
+    {
+        return goods.Find(g => g.id == id);
+    }
+
+    public CustomerPersonality GetPersonalityById(string id)
+    {
+        return personalities.Find(p => p.id == id);
     }
 }
