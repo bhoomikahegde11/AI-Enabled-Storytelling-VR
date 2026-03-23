@@ -1,6 +1,6 @@
-[System.Serializable]
 namespace Data
 {
+    [System.Serializable]   
     public class TradeGood
     {
         public string id;
