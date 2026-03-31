@@ -1,0 +1,56 @@
+[
+	{
+		"id": "black_pepper",
+		"name": "Black Pepper",
+		"unit": "maund",
+		"category": "spice",
+		"cost_price_per_unit": 12,
+		"price_variance_percent": 15,
+		"description_for_ai": "A highly prized spice traded across the Indian Ocean. Experienced merchants know its value precisely. Often used as currency itself in long distance trade."
+	},
+	{
+		"id": "cardamom",
+		"name": "Cardamom",
+		"unit": "maund",
+		"category": "spice",
+		"cost_price_per_unit": 40,
+		"price_variance_percent": 12,
+		"description_for_ai": "A fragrant and expensive spice prized for culinary and medicinal uses. Its scarcity raises its value among elite buyers."
+	},
+	{
+		"id": "turmeric",
+		"name": "Turmeric",
+		"unit": "maund",
+		"category": "spice",
+		"cost_price_per_unit": 8,
+		"price_variance_percent": 20,
+		"description_for_ai": "A common and versatile root used as a dye, medicine, and spice. Widely used by all social classes."
+	},
+	{
+		"id": "sandalwood_powder",
+		"name": "Sandalwood Powder",
+		"unit": "maund",
+		"category": "spice",
+		"cost_price_per_unit": 80,
+		"price_variance_percent": 10,
+		"description_for_ai": "A luxury aromatic used in perfumes, incense, and rituals. Highly valued and often bought by temples and nobles."
+	},
+	{
+		"id": "dried_ginger",
+		"name": "Dried Ginger",
+		"unit": "maund",
+		"category": "spice",
+		"cost_price_per_unit": 10,
+		"price_variance_percent": 18,
+		"description_for_ai": "A staple spice used in cooking and medicine; popular among traders and household cooks."
+	},
+	{
+		"id": "betel_nut",
+		"name": "Betel Nut",
+		"unit": "maund",
+		"category": "spice",
+		"cost_price_per_unit": 15,
+		"price_variance_percent": 15,
+		"description_for_ai": "A widely consumed stimulant chewed in many social settings; has cultural importance and steady demand."
+	}
+]
