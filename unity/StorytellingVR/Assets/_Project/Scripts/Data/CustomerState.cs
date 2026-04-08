@@ -7,7 +7,7 @@ public class CustomerState
 
     // Pricing and negotiation values (all amounts are in Varahas)
     public float fairTotalPrice; // selected_good.cost_price_per_unit * quantity * 1.3f
-    public float customerMinAccept;
+    public float customerMaxAccept;
     public float currentCustomerOffer;
 
     public int patience;

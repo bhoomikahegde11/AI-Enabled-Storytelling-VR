@@ -74,7 +74,7 @@ public class MarketGameManager : MonoBehaviour
         currentCustomer.quantity = Random.Range(2, 9);
 
         currentCustomer.fairTotalPrice = good.cost_price_per_unit * currentCustomer.quantity * 1.3f;
-        currentCustomer.customerMinAccept = currentCustomer.fairTotalPrice * (1f - personality.desperation * 0.3f);
+        currentCustomer.customerMaxAccept = currentCustomer.fairTotalPrice * (1f + personality.desperation * 0.4f);
         currentCustomer.currentCustomerOffer = Mathf.Round(currentCustomer.fairTotalPrice * personality.opening_offer_ratio);
 
         float respect = sessionData != null ? sessionData.respectScore : 50f;
@@ -100,7 +100,7 @@ public class MarketGameManager : MonoBehaviour
             $"  Quantity:           {currentCustomer.quantity} {good.unit}\n" +
             $"  Cost per unit:      {good.cost_price_per_unit} {good.GetCurrency()}\n" +
             $"  Fair total price:   {currentCustomer.fairTotalPrice:F1} {good.GetCurrency()}\n" +
-            $"  Customer min accept:{currentCustomer.customerMinAccept:F1}\n" +
+            $"  Customer max accept:{currentCustomer.customerMaxAccept:F1}\n" +
             $"  Opening offer:      {currentCustomer.currentCustomerOffer:F1}\n" +
             $"  Currency:           {good.GetCurrency()}"
         );
@@ -230,7 +230,7 @@ public class MarketGameManager : MonoBehaviour
         string knowledge = rag.RetrieveContext(query);
 
         // Immediate acceptance if below customer minimum
-        if (playerPriceInt <= Mathf.RoundToInt(currentCustomer.customerMinAccept))
+        if (playerPriceInt <= Mathf.RoundToInt(currentCustomer.customerMaxAccept))
         {
             string prompt = PromptBuilder.BuildAcceptPrompt(knowledge, p.tone_prompt_tag, p.display_name, playerPriceInt, currentCustomer.quantity, good.unit, good.name, currency);
             ollama.Generate(prompt, (raw) =>
@@ -251,7 +251,7 @@ public class MarketGameManager : MonoBehaviour
         // Probabilistic acceptance if within 10% of fair
         if (playerPrice <= fair * 1.1f)
         {
-            float chanceToAccept = p.desperation * p.price_knowledge;
+            float chanceToAccept = p.desperation * 0.6 + p.price_knowledge * 0.4;
             if (Random.value < chanceToAccept)
             {
                 string prompt = PromptBuilder.BuildAcceptPrompt(knowledge, p.tone_prompt_tag, p.display_name, playerPriceInt, currentCustomer.quantity, good.unit, good.name, currency);
