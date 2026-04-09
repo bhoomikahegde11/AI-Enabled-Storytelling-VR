@@ -22,12 +22,12 @@ def offer_prefix_for_personality(personality, negotiation_stage, frustration):
     if personality == "Aggressive Trader":
         if negotiation_stage == "FINALIZATION":
             return ""
-        return pick_varied("offer_prefix:aggressive", ["", "Fine. ", "Enough. "])
+        return pick_varied("offer_prefix:aggressive", ["Alright... ", "Well... ", "I see... ", "Hmm... ", ""])
 
     if personality == "Polite Merchant":
-        return pick_varied("offer_prefix:polite", ["Well... ", "Perhaps... ", "If I may... ", ""])
+        return pick_varied("offer_prefix:polite", ["Well... ", "Hmm... ", "Alright... ", "I see... ", ""])
 
-    return pick_varied("offer_prefix:cautious", ["Hmm... ", "Let me think... ", "I am not sure... ", ""])
+    return pick_varied("offer_prefix:cautious", ["Hmm... ", "I see... ", "Alright... ", "Well... ", ""])
 
 
 def merge_prefix_and_line(prefix, line):
@@ -46,7 +46,9 @@ def merge_prefix_and_line(prefix, line):
         "perhaps... ": ["well...", "perhaps...", "if i may..."],
         "if i may... ": ["well...", "perhaps...", "if i may..."],
         "fine. ": ["fine.", "enough."],
-        "enough. ": ["fine.", "enough."]
+        "enough. ": ["fine.", "enough."],
+        "alright... ": ["alright..."],
+        "i see... ": ["i see..."]
     }
 
     for starter in conflicting_starters.get(prefix_lower, []):
@@ -103,10 +105,13 @@ def offer_lines_for_personality(personality, price, negotiation_stage, frustrati
             return [
                 f"We settle at {price}.",
                 f"{price}. That is close enough.",
+                "We are settled then.",
                 f"I will give {price}. Take it or leave it.",
                 f"{price} varahas. We are close.",
+                "That should conclude it.",
                 f"I can go to {price}, no further.",
                 f"{price}. Finish it.",
+                "Let us finish this.",
                 f"That is my price: {price}.",
                 f"I would settle at {price}."
             ], offer_prefix_for_personality(personality, negotiation_stage, frustration)
@@ -137,10 +142,13 @@ def offer_lines_for_personality(personality, price, negotiation_stage, frustrati
             return [
                 f"Let us settle at {price}.",
                 f"We are getting closer. I could offer {price} varahas, if you agree.",
+                "We are settled then.",
                 f"That is nearer to my expectation. Perhaps {price} varahas?",
                 f"If it suits you, I could settle at {price} varahas.",
+                "That should conclude it.",
                 f"I believe {price} varahas would conclude this fairly.",
                 f"Perhaps we may finish this at {price} varahas.",
+                "Let us finish this.",
                 f"I would settle at {price} varahas.",
                 f"{price} is fair to me, if you agree."
             ], offer_prefix_for_personality(personality, negotiation_stage, frustration)
@@ -179,10 +187,13 @@ def offer_lines_for_personality(personality, price, negotiation_stage, frustrati
         return [
             f"Let us settle at {price}.",
             f"Hmm... we are getting close. Perhaps {price}?",
+            "We are settled then.",
             f"I think {price} is nearer to what I expected.",
             f"Maybe we could finish at {price} varahas?",
+            "That should conclude it.",
             f"I am almost satisfied. Perhaps {price}?",
             f"Hmm... I think I could go to {price}.",
+            "Let us finish this.",
             f"I would settle at {price}, I think."
         ], offer_prefix_for_personality(personality, negotiation_stage, frustration)
     return [
@@ -198,13 +209,40 @@ def offer_lines_for_personality(personality, price, negotiation_stage, frustrati
     ], offer_prefix_for_personality(personality, negotiation_stage, frustration)
 
 
-def generate_dialogue(action, price, personality, item_name, context=None, politeness=0.5, tone="neutral"):
+def generate_dialogue(decision, personality, item_name):
+    if hasattr(decision, "action"):
+        action = decision.action
+        price = decision.price
+        quantity = decision.quantity
+        reason = decision.reason
+    else:
+        action = decision
+        price = None
+        quantity = None
+        reason = None
 
-    context = context or {}
-    frustration = context.get("frustration", 0.0)
-    trust = context.get("trust", 0.5)
-    negotiation_stage = context.get("stage", "BARGAINING")
-    display_item_name = context.get("bundle_label", item_name)
+    reason_prefix = {
+        "TOO_HIGH": "That is too high.",
+        "TOO_EXPENSIVE": "That is too high.",
+        "FAIR": "That seems fair.",
+    }.get(reason)
+
+    context = {}
+    frustration = 0.0
+    trust = 0.5
+    negotiation_stage = getattr(decision, "stage", "BARGAINING")
+    display_item_name = item_name
+
+    if action == "SET_QUANTITY":
+        quantity_text = format_quantity_grams(quantity)
+        return pick_varied(
+            f"set_quantity:{personality}",
+            [
+                f"I want {quantity_text} of {item_name}.",
+                f"Give me {quantity_text}.",
+                f"Perhaps {quantity_text} of {item_name}."
+            ]
+        )
 
     if action == "ASK_ITEM":
         ask_item_name = item_name
@@ -236,27 +274,27 @@ def generate_dialogue(action, price, personality, item_name, context=None, polit
     if action == "ACCEPT":
         if personality == "Aggressive Trader":
             accept_lines = [
-                f"Fine. Done. {price} varahas.",
-                f"Take it. {price} varahas.",
-                f"Done. {price}.",
-                f"Enough. {price} varahas. Deal.",
-                f"That will do. {price}."
+                f"Alright. {price}. Done.",
+                f"Fine. {price}, we're done.",
+                f"Take it then. {price}.",
+                f"Done. {price} it is.",
+                f"We have a deal. {price}."
             ]
         elif personality == "Polite Merchant":
             accept_lines = [
-                f"Very well, we have a deal. {price} varahas.",
-                f"Agreed. That seems fair. {price} varahas.",
-                f"Very well. {price} varahas. We have a deal.",
-                f"I believe that is fair. {price} varahas.",
-                f"Agreed, then. {price} varahas."
+                f"That sounds fair. {price} varahas.",
+                f"Very well, we have a deal at {price}.",
+                f"Agreed. Let's settle on {price}.",
+                f"I can agree to {price} varahas.",
+                f"That works for me. {price} varahas."
             ]
         else:
             accept_lines = [
-                f"I suppose that works. {price} varahas.",
-                f"Alright... we have a deal. {price} varahas.",
-                f"I think that is acceptable. {price} varahas.",
-                f"Very well... {price} varahas.",
-                f"Alright, then. {price} varahas."
+                f"Hmm... alright, that works. {price}.",
+                f"I think that's fair. Let's settle it at {price}.",
+                f"I suppose we have a deal. {price}.",
+                f"Very well... {price} it is.",
+                f"Alright then. {price} works."
             ]
         return pick_varied(f"accept:{personality}", accept_lines)
 
@@ -513,24 +551,18 @@ def generate_dialogue(action, price, personality, item_name, context=None, polit
     if action == "NO_ITEM":
         if personality == "Aggressive Trader":
             no_item_lines = [
-                "Then why keep me standing here?",
-                "You have none? That wastes my time.",
-                "No goods, then no bargain.",
-                "So there is nothing to trade after all."
+                "Then I have no business here.",
+                "You should have said that sooner."
             ]
         elif personality == "Polite Merchant":
             no_item_lines = [
-                "I understand, though that is unfortunate.",
-                "Very well, then there is no trade to make here.",
-                "I see. That is unfortunate, but I understand.",
-                "Very well. Perhaps another day, then."
+                "I understand. Thank you for your time.",
+                "Very well, I shall take my leave."
             ]
         else:
             no_item_lines = [
-                "I see... then there is no trade to discuss.",
-                "Then we have little reason to continue here.",
-                "I understand. That leaves this bargain at an end.",
-                "If there are no goods, I should move on."
+                "I see... then perhaps another time.",
+                "That is unfortunate, but I understand."
             ]
         return pick_varied(f"no_item:{personality}", no_item_lines)
 
@@ -674,7 +706,7 @@ def generate_dialogue(action, price, personality, item_name, context=None, polit
         return low_price_line + " " + low_price_transition
 
     if action == "WALK_AWAY":
-        reason = context.get("reason")
+        reason = reason
         if reason == "HOSTILE":
             return pick_varied("walk_away:hostile", [
                 "I will not remain where I am spoken to so poorly.",
@@ -711,20 +743,23 @@ def generate_dialogue(action, price, personality, item_name, context=None, polit
         if reason == "NO_INTEREST":
             if personality == "Aggressive Trader":
                 return pick_varied("walk_away:no_interest:aggressive", [
-                    "Enough refusals. I will trade elsewhere.",
-                    "You have wasted enough of my time. Farewell.",
-                    "If you will not bargain in earnest, I am leaving."
+                    "Not worth it. I'm done.",
+                    "Forget it.",
+                    "Waste of time. I'm leaving.",
+                    "We're done here."
                 ])
             if personality == "Polite Merchant":
                 return pick_varied("walk_away:no_interest:polite", [
-                    "I understand, but we do not seem likely to agree. Farewell.",
-                    "Very well, I shall look elsewhere for a bargain.",
-                    "It seems this arrangement will not work. I will take my leave."
+                    "I appreciate your time, but I'll pass.",
+                    "Thank you, but I'll look elsewhere.",
+                    "We can't seem to agree. Farewell.",
+                    "I will take my leave, thank you."
                 ])
             return pick_varied("walk_away:no_interest:cautious", [
-                "This trade no longer seems promising. I should go.",
-                "I do not think we will settle this today. Farewell.",
-                "I have too many doubts to continue. I will leave."
+                "Hmm... I don't think this works for me.",
+                "I'll think about it and come back later.",
+                "Maybe another time...",
+                "I think I'll pass for now."
             ])
         if reason == "SUSPICIOUS":
             return pick_varied("walk_away:suspicious", [
@@ -739,12 +774,33 @@ def generate_dialogue(action, price, personality, item_name, context=None, polit
                 "This has gone too far. I will take my leave."
             ])
         return random.choice([
-            "This is not worth my time. I will leave.",
-            "We cannot reach an agreement. Farewell.",
-            "I will look elsewhere."
+            "I think I'll look elsewhere.",
+            "We can't seem to reach an agreement.",
+            "I'm going to pass."
         ])
 
     proposal_type = context.get("proposal_type")
+    
+    quantity_proposals = [
+        "quantity_change", "bundle_offer", "quantity_reduce", "bundle_adjust", 
+        "quantity_expect_more", "bundle_expect_more", "quantity_too_costly",
+        "quantity_too_small", "reject_small_quantity"
+    ]
+    if proposal_type in quantity_proposals:
+        if context.get("last_quantity_grams") is not None and context.get("current_quantity_grams") == context.get("last_quantity_grams"):
+            lines = [
+                "Alright, let's talk price.",
+                "Fine, now the price.",
+                "That works, what about the price?"
+            ]
+            if personality == "Aggressive Trader":
+                transitions = [f"I give {price}.", f"My price is {price}.", f"Take {price}."]
+            elif personality == "Polite Merchant":
+                transitions = [f"I'll offer {price}.", f"How does {price} sound?", f"Perhaps {price}?"]
+            else:
+                transitions = [f"I think I could do {price}.", f"Let's say {price}.", f"I'd offer {price}."]
+            return pick_varied("quantity_fixed", lines) + " " + pick_varied(f"quantity_fixed_transition:{personality}", transitions)
+
     if proposal_type == "price_increase":
         seller_price = context.get("seller_price")
         previous_seller_price = context.get("previous_seller_price")
@@ -786,88 +842,101 @@ def generate_dialogue(action, price, personality, item_name, context=None, polit
     if proposal_type == "too_expensive_warning":
         seller_price = context.get("seller_price")
         lines = [
-            "That price is far too high.",
-            f"{seller_price} varahas is too high for this trade.",
-            "You ask far beyond what I can consider fair."
+            "That's way too high.",
+            "That is too much.",
+            f"{seller_price}? Not a chance.",
+            "You ask too much.",
+            "Not worth it.",
+            "I can't go that far."
         ]
         transitions = [
-            f"I will not move beyond {price} varahas.",
-            "If we continue, we must return to a fairer price.",
-            f"I will not chase such a price. My offer remains {price} varahas."
+            f"My limit is {price}.",
+            f"I won't give more than {price}.",
+            f"Let's stick to {price}.",
+            f"How about {price}?",
+            f"I'll give {price}."
         ]
         return pick_varied("too_expensive_warning_line", lines) + " " + pick_varied("too_expensive_warning_transition", transitions)
 
     if proposal_type == "hold_position":
         if personality == "Aggressive Trader":
             lines = [
-                "I will not move from this price yet.",
+                "I won't move.",
                 "Too high.",
-                "You must do better than that before I move.",
-                "No. I stay here.",
-                "I am holding to this price."
+                "Do better.",
+                "No.",
+                "I'm staying here."
             ]
             transitions = [
                 f"{price}.",
                 f"I stay at {price}.",
-                f"If we continue, we continue from {price}.",
-                "Show me a better reason to move.",
-                "That is my price."
+                "Give me a reason to move.",
+                "That's it.",
+                f"Take {price} or leave it."
             ]
         elif personality == "Polite Merchant":
             lines = [
-                "I will not move from this price yet.",
-                "That still feels high to me.",
-                "Perhaps you could do a little better before I move.",
-                "For the moment, I would rather hold to this offer.",
-                "I think I should remain at this price for now."
+                "I can't move yet.",
+                "Still feels high.",
+                "Could you do better?",
+                "I'll hold here.",
+                "Let's stay here."
             ]
             transitions = [
-                f"My offer remains {price} varahas.",
-                f"For now, I would stay at {price} varahas.",
-                f"If we continue, perhaps we continue from {price} varahas.",
-                f"That is as far as I will go for the moment: {price} varahas.",
-                "If you agree, give me a better reason to move."
+                f"I'll stick to {price}.",
+                f"Maybe {price}?",
+                f"How about {price}?",
+                f"I can only do {price}.",
+                f"Let's work from {price}."
             ]
         else:
             lines = [
-                "Hmm... I will not move from this price yet.",
-                "That still feels high for me.",
-                "I am not ready to move from this offer.",
-                "Maybe I should stay at this price a little longer.",
-                "I think I should hold here for now."
+                "I shouldn't move yet.",
+                "Still feels a bit high.",
+                "I don't know...",
+                "I'm not ready to move.",
+                "I'll hold here."
             ]
             transitions = [
-                f"I think my offer remains {price}.",
-                f"For now, I will stay at {price} varahas.",
-                f"If we continue, perhaps we continue from {price}.",
-                f"That is as far as I can go for the moment: {price}.",
-                "Show me a fairer reason to move."
+                f"I'll stay at {price}.",
+                f"Maybe {price}?",
+                f"I think {price} is fair.",
+                f"Let's try {price}.",
+                f"I offer {price}."
             ]
         return pick_varied("hold_position_line", lines) + " " + pick_varied("hold_position_transition", transitions)
 
     if proposal_type == "quantity_too_small":
         lines = [
-            "That quantity does not justify such a price.",
-            "For so small a quantity, that price feels too high.",
-            "That amount is too slight for such a demand."
+            "Not for that little.",
+            "That's too high for so little.",
+            "I need more for that price.",
+            "Too small an amount.",
+            "That hardly justifies the cost."
         ]
         transitions = [
-            f"My offer remains {price} varahas.",
-            f"For that amount, I can only offer {price} varahas.",
-            "You must either lower the price or increase the quantity."
+            f"I'll give {price}.",
+            f"For that, I offer {price}.",
+            "Give me more or lower the price.",
+            f"I can only do {price}.",
+            f"Take {price} instead."
         ]
         return pick_varied("quantity_too_small_line", lines) + " " + pick_varied("quantity_too_small_transition", transitions)
 
     if proposal_type == "reject_small_quantity":
         lines = [
-            "For such a small amount, I cannot agree to that price.",
-            "I cannot accept that price for so little quantity.",
-            "That amount is too small for the price you ask."
+            "I can't agree to that.",
+            "Not for that amount.",
+            "Too little for that price.",
+            "I need a better deal.",
+            "That doesn't seem right."
         ]
         transitions = [
-            f"I will remain at {price} varahas.",
-            "If we are to continue, the terms must improve.",
-            f"For now, my offer stays at {price} varahas."
+            f"I'll stay at {price}.",
+            "We need a fairer trade.",
+            f"I can offer {price}.",
+            f"Sticking with {price}.",
+            "Make it fair."
         ]
         return pick_varied("reject_small_quantity_line", lines) + " " + pick_varied("reject_small_quantity_transition", transitions)
 
@@ -875,59 +944,64 @@ def generate_dialogue(action, price, personality, item_name, context=None, polit
         quantity_text = format_quantity_grams(context.get("current_quantity_grams"))
         if personality == "Aggressive Trader":
             lines = [
-                f"For {quantity_text}, I offer {price}.",
-                f"{quantity_text}. {price}.",
-                f"I mean {quantity_text} for {price}."
+                f"For {price}? Then make it {quantity_text}.",
+                f"At {price}, I'd expect {quantity_text}.",
+                f"{quantity_text} for {price}. That's it."
             ]
         elif personality == "Polite Merchant":
             lines = [
-                f"For {quantity_text}, I could offer {price} varahas.",
-                f"I mean {quantity_text} at {price} varahas.",
-                f"For {quantity_text}, perhaps {price} varahas."
+                f"If you mean {price}, I could do {quantity_text}.",
+                f"For {price} varahas, let's say {quantity_text}.",
+                f"At {price}, I think {quantity_text} is fair."
             ]
         else:
             lines = [
-                f"For {quantity_text}, I think I could offer {price}.",
-                f"I mean {quantity_text} for {price}, I think.",
-                f"For {quantity_text}, perhaps {price} varahas."
+                f"For {price}? I suppose {quantity_text}.",
+                f"At {price}, I'd need {quantity_text}.",
+                f"Maybe {quantity_text} for {price}."
             ]
         return pick_varied(f"quantity_answer:{personality}", lines)
 
     if proposal_type in ["quantity_change", "bundle_offer"]:
         quantity_lines = [
-            "For that quantity, that changes things.",
-            "At that amount, the price feels different.",
-            "That quantity changes how I see the value.",
-            "That amount changes the bargain for me."
+            "Oh, for that much?",
+            "That changes things.",
+            "That's different.",
+            "Ah, a new amount.",
+            "That changes my mind."
         ]
 
         if proposal_type == "bundle_offer":
             quantity_lines = [
-                "For that combination, the value changes.",
-                "With both items together, I judge it differently.",
-                "That mix changes the value.",
-                "Together, those goods change the bargain."
+                "For both?",
+                "Together? Alright.",
+                "That changes it.",
+                "Ah, a bundle.",
+                "That mix is different."
             ]
         if personality == "Aggressive Trader":
             quantity_transitions = [
-                f"For {item_name}, I offer {price}.",
-                f"That amount gets {price}.",
-                f"My price for {item_name} is {price}.",
-                f"For that quantity, {price}."
+                f"For {item_name}, I'll give {price}.",
+                f"That gets {price}.",
+                f"My price is {price}.",
+                f"Take {price} then.",
+                f"For that, {price}."
             ]
         elif personality == "Polite Merchant":
             quantity_transitions = [
-                f"I could offer {price} varahas for {item_name}, if you agree.",
-                f"With that amount in mind, I could offer {price} varahas.",
-                f"By my measure, {price} varahas would be fair for {item_name}.",
-                f"So for {item_name}, perhaps I would offer {price} varahas."
+                f"I could do {price} for {item_name}.",
+                f"For that much, maybe {price}.",
+                f"How does {price} sound?",
+                f"I'll offer {price}.",
+                f"Perhaps {price}?"
             ]
         else:
             quantity_transitions = [
-                f"Hmm... for {item_name}, I think I could offer {price}.",
-                f"With that amount in mind, perhaps {price} varahas.",
-                f"By my measure, {price} seems fair for {item_name}.",
-                f"So for {item_name}, maybe I could offer {price}."
+                f"Hmm, maybe {price}?",
+                f"I think I could do {price}.",
+                f"For that, {price} seems fair.",
+                f"I'd offer {price}.",
+                f"Let's say {price}."
             ]
 
         return pick_varied(f"quantity_change_line:{proposal_type}", quantity_lines) + " " + pick_varied(
@@ -940,50 +1014,62 @@ def generate_dialogue(action, price, personality, item_name, context=None, polit
 
         if proposal_type in ["quantity_reduce", "bundle_adjust"]:
             lines = [
-                f"I cannot pay {seller_price} varahas for {item_name}, but I could take {counter_bundle_label} for {price}.",
-                f"At {seller_price} varahas, I would need a smaller lot. I can offer {price} for {counter_bundle_label}.",
-                f"That total is too steep for {item_name}. For {price} varahas, I would take {counter_bundle_label}."
+                f"Too much. I'll take {counter_bundle_label} for {price}.",
+                f"{seller_price} is high. How about {price} for {counter_bundle_label}?",
+                f"I can't pay that. I'd do {price} for {counter_bundle_label}.",
+                f"For {price}, I'll take {counter_bundle_label} instead.",
+                f"Let's scale down. {price} for {counter_bundle_label}."
             ]
         else:
             lines = [
-                f"For {seller_price} varahas, I would expect more quantity than {item_name}.",
-                f"At {seller_price} varahas, the lot should be closer to {counter_bundle_label}.",
-                f"If you ask {seller_price} varahas, I would expect something like {counter_bundle_label}."
+                f"At that price? I'd expect more like {counter_bundle_label}.",
+                f"For {seller_price}, give me {counter_bundle_label}.",
+                f"That's high. Throw in {counter_bundle_label}.",
+                f"Not enough for that price. Give me {counter_bundle_label}.",
+                f"I need {counter_bundle_label} if you want {seller_price}."
             ]
 
         return pick_varied(f"quantity_counter:{proposal_type}", lines)
 
     if proposal_type == "quantity_too_costly":
         lines = [
-            "That is too costly for that quantity.",
-            "At that reduced quantity, the price per measure is too high.",
-            f"For {item_name}, that amount is priced too dearly.",
-            "That smaller lot does not justify such a price."
+            "Not for that quantity.",
+            "That's way too high.",
+            "Too costly for that much.",
+            "I can't pay that for so little.",
+            "That doesn't seem right.",
+            "For that amount? No."
         ]
         if personality == "Aggressive Trader":
             transitions = [
-                f"My offer remains {price}.",
-                f"I need a fairer price for {item_name}.",
-                "Match the quantity to the price.",
-                f"At that quantity, I offer {price}."
+                f"I offer {price}.",
+                "Give me a better price.",
+                f"My price is {price}.",
+                f"Take {price}.",
+                f"I'll give {price}."
             ]
         elif personality == "Polite Merchant":
             transitions = [
-                f"My offer remains {price} varahas.",
-                f"I would need a fairer price for {item_name}.",
-                f"If we continue, the price must better match the quantity.",
-                f"At that quantity, I could only offer {price} varahas."
+                f"My offer is {price}.",
+                "I need a better deal.",
+                f"At that quantity, just {price}.",
+                f"How about {price}?",
+                f"I could do {price}."
             ]
         else:
             transitions = [
-                f"Hmm... my offer remains {price}.",
-                f"I think I would need a fairer price for {item_name}.",
-                "If we continue, the quantity and price should match better.",
-                f"At that quantity, I could only offer {price}."
+                f"Hmm... I'll offer {price}.",
+                "I think I need a better price.",
+                f"Maybe {price}?",
+                f"I can only do {price}.",
+                f"Let's say {price}."
             ]
         return pick_varied("quantity_too_costly_line", lines) + " " + pick_varied("quantity_too_costly_transition", transitions)
 
     # NORMAL OFFER (HIGH VARIETY)
     base_lines, prefix = offer_lines_for_personality(personality, price, negotiation_stage, frustration, trust)
     chosen_line = pick_varied(f"normal_offer:{personality}:{negotiation_stage}:{'tense' if frustration >= 0.8 else 'calm'}", base_lines)
-    return merge_prefix_and_line(prefix, chosen_line)
+    line = merge_prefix_and_line(prefix, chosen_line)
+    if reason_prefix:
+        return f"{reason_prefix} {line}"
+    return line

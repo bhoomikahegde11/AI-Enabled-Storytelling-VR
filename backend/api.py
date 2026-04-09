@@ -31,6 +31,11 @@ def start_session():
 
     return {
         "session_id": session_id,
+        "npc_text": response["npc_text"],
+        "action": response["action"],
+        "price": response["price"],
+        "quantity": response["quantity"],
+        "done": response["done"],
         "response": response
     }
 
@@ -49,6 +54,11 @@ def step_session(req: StepRequest):
 
     return {
         "session_id": session_id,
+        "npc_text": response["npc_text"],
+        "action": response["action"],
+        "price": response["price"],
+        "quantity": response["quantity"],
+        "done": response["done"],
         "response": response
     }
 

@@ -1,7 +1,7 @@
 import re
 import random
+from npc_engine.core.models import EngineDecision
 from npc_engine.engine.memory import Memory
-from npc_engine.llm.intent_classifier import classify_intent, extract_quantity_info, extract_bundle_items
 
 
 class NegotiationEngine:
@@ -18,6 +18,9 @@ class NegotiationEngine:
         self.max_price = buyer.compute_max_price(self.market_price)
 
         self.current_offer = int(round(buyer.initial_offer(self.market_price)))
+        if self.current_offer is None:
+            self.current_offer = int(getattr(self, "market_price", 10))
+        self.current_offer = int(self.current_offer)
         self.personality = self.buyer.personality
 
         self.started = False
@@ -26,6 +29,9 @@ class NegotiationEngine:
         self.ended = False
         self.stage = "OPENING"
         self.deliberate_delay_used = False
+        self.quantity_given = False
+        self.quantity_locked = False
+        self.price_introduced = False
 
         self.turns = 0
         self.max_turns = max(3, int(3 + self.buyer.patience * 8))
@@ -301,9 +307,11 @@ class NegotiationEngine:
         if not self.has_made_first_offer:
             self.current_offer = fresh_offer
         else:
+            if getattr(self, "current_offer", None) is None:
+                self.current_offer = fresh_offer
             self.current_offer = min(self.max_price, max(self.current_offer, fresh_offer))
 
-        self.current_offer = self.clamp(self.current_offer)
+        self.current_offer = int(self.clamp(self.current_offer))
         self.update_stage()
 
     def should_block_accept(self):
@@ -329,6 +337,8 @@ class NegotiationEngine:
         if self.last_action != "OFFER" or not self.has_made_first_offer:
             return False, "INVALID_STATE"
         if self.stage != "FINALIZATION":
+            if self.last_seller_price is not None and self.last_seller_price <= self.current_offer:
+                return True, None
             return False, "NOT_FINAL_STAGE"
         if not self.deliberate_delay_used and random.random() < 0.15:
             self.deliberate_delay_used = True
@@ -443,6 +453,9 @@ class NegotiationEngine:
         return scaled_bundle
 
     def quantity_counter_context(self, seller_price):
+        if self.quantity_locked or seller_price is None:
+            return None
+
         if self.max_available_quantity is not None and self.current_quantity > self.max_available_quantity:
             self.current_quantity = self.max_available_quantity
         seller_price_per_kg = self.seller_price_per_kg(seller_price)
@@ -457,6 +470,9 @@ class NegotiationEngine:
         if seller_price > self.max_price:
             reduced_bundle = self.scale_bundle_for_total(self.current_offer, seller_price)
             if not reduced_bundle:
+                return None
+            if len(reduced_bundle) == 1 and reduced_bundle[0]["quantity"] == self.current_quantity:
+                self.quantity_locked = True
                 return None
             return {
                 "proposal_type": "quantity_reduce" if len(reduced_bundle) == 1 else "bundle_adjust",
@@ -480,6 +496,9 @@ class NegotiationEngine:
             expanded_bundle = self.scale_bundle_for_total(seller_price, self.current_offer)
             if not expanded_bundle:
                 return None
+            if len(expanded_bundle) == 1 and expanded_bundle[0]["quantity"] == self.current_quantity:
+                self.quantity_locked = True
+                return None
             return {
                 "proposal_type": "quantity_expect_more" if len(expanded_bundle) == 1 else "bundle_expect_more",
                 "seller_price": seller_price,
@@ -489,6 +508,23 @@ class NegotiationEngine:
         return None
 
     def respond(self, action, price=None, context=None, tone="neutral"):
+        if getattr(self, "current_offer", None) is None:
+            self.current_offer = int(getattr(self, "market_price", 10))
+        self.current_offer = int(self.current_offer)
+
+        if price is None:
+            if hasattr(self, "current_offer") and self.current_offer is not None:
+                price = int(self.current_offer)
+            else:
+                price = int(getattr(self, "market_price", 10))
+
+        price = int(price)
+
+        if getattr(self, "price_introduced", False) is False and action == "OFFER":
+            action = "ASK_PRICE"
+            if context and "proposal_type" in context:
+                del context["proposal_type"]
+
         if action in ["WALK_AWAY", "NO_ITEM", "ACCEPT"]:
             self.ended = True
         self.last_action = action
@@ -500,9 +536,6 @@ class NegotiationEngine:
                 self.last_offer_per_kg = current_offer_per_kg
         if price is not None and action in ["OFFER", "ACCEPT", "OUT_OF_WORLD", "SOCIAL_RESPONSE"]:
             self.last_buyer_offer = price
-        result = {"action": action}
-        if price is not None:
-            result["price"] = price
         emotional_context = {
             "frustration": round(self.frustration, 3),
             "trust": round(self.trust, 3),
@@ -517,19 +550,23 @@ class NegotiationEngine:
         if context is not None:
             merged_context = dict(context)
             merged_context.update(emotional_context)
-            result["context"] = merged_context
         else:
-            result["context"] = emotional_context
-        if tone != "neutral":
-            result["tone"] = tone
-        return result
+            merged_context = emotional_context
+        return EngineDecision(
+            action=action,
+            price=price,
+            quantity=self.current_quantity,
+            done=action in ["WALK_AWAY", "NO_ITEM", "ACCEPT", "END"],
+            reason=merged_context.get("reason"),
+            stage=self.stage
+        )
 
-    def next_step(self, seller_input):
+    def next_step(self, player_action=None):
         if self.ended:
             return self.respond("END")
 
         if self.deal_locked:
-            return self.respond("END")
+            return self.respond("END", price=self.current_offer)
 
         self.turns += 1
 
@@ -540,58 +577,88 @@ class NegotiationEngine:
             self.started = True
             return self.respond("ASK_ITEM")
 
-        result = classify_intent(seller_input, context={
-            "in_negotiation": self.started,
-            "item_name": self.item.name,
-            "known_items": list(self.item_catalog.keys()),
-            "current_offer": self.current_offer,
-            "last_buyer_offer": self.last_buyer_offer,
-            "last_seller_price": self.last_seller_price,
-            "last_quantity": self.last_quantity,
-            "last_unit": self.last_unit,
-            "last_system_action": self.last_action,
-            "last_intent": self.last_intent
-        })
-        intent = result["intent"]
+        intent = player_action.intent if player_action is not None else "CONTINUE"
+        seller_price = player_action.price if player_action is not None else None
+        seller_quantity = player_action.quantity if player_action is not None else None
+        tone = "neutral"
+        social_sub_intent = None
+
+        if intent == "NO_ITEM":
+            return self.respond("NO_ITEM")
+
+        if not self.quantity_given and seller_quantity is not None:
+            self.current_quantity = seller_quantity
+            self.max_available_quantity = seller_quantity
+            self.quantity_given = True
+            self.update_active_bundle([{
+                "name": self.item.name.lower(),
+                "quantity": seller_quantity,
+                "unit": "g"
+            }])
+
+        if not self.quantity_given:
+            self.quantity_given = True
+            fixed_quantity = random.choice([500, 700, 1000])
+            self.current_quantity = fixed_quantity
+            self.update_active_bundle([{
+                "name": self.item.name.lower(),
+                "quantity": fixed_quantity,
+                "unit": "g"
+            }])
+            return self.respond(
+                "SET_QUANTITY",
+                context={
+                    "quantity": fixed_quantity,
+                    "unit": "g",
+                    "item": self.item.name
+                }
+            )
+
         self.last_intent = intent
-        tone = result.get("tone", "neutral")
-        social_sub_intent = result.get("social_sub_intent")
         print(f"Detected intent: {intent}")
         quantity_modified_last_turn = self.quantity_modified
         self.quantity_modified = False
 
-        seller_input_text = str(seller_input).strip().lower()
-        bundle_items = extract_bundle_items(seller_input_text, self.item_catalog.keys())
-        if bundle_items:
-            self.update_active_bundle(bundle_items)
-            self.quantity_modified = True
-        quantity_info = extract_quantity_info(seller_input_text)
-        quantity_modified_this_turn = bool(bundle_items or quantity_info)
-        if quantity_info is not None:
-            self.current_quantity = quantity_info["quantity_grams"]
-            self.last_quantity = quantity_info["quantity_grams"]
+        previous_quantity = self.current_quantity
+
+        if seller_quantity is not None and seller_quantity == self.current_quantity:
+            self.quantity_locked = True
+
+        if self.quantity_locked:
+            if intent in ["QUANTITY_CHANGE", "QUANTITY_PRICE"]:
+                intent = "PRICE"
+
+        quantity_modified_this_turn = seller_quantity is not None
+
+        if seller_quantity is not None:
+            if self.max_available_quantity is not None:
+                self.current_quantity = min(seller_quantity, self.max_available_quantity)
+            else:
+                self.current_quantity = seller_quantity
+
+            self.last_quantity = self.current_quantity
             self.last_unit = "g"
-            self.last_quantity_grams = quantity_info["quantity_grams"]
+            self.last_quantity_grams = self.current_quantity
             self.quantity_modified = True
-            if any(word in seller_input_text for word in ["only", "left", "remaining"]):
-                self.max_available_quantity = quantity_info["quantity_grams"]
-                self.current_quantity = min(self.current_quantity, self.max_available_quantity)
-            if not bundle_items:
-                self.update_active_bundle([{
-                    "name": self.item.name.lower(),
-                    "quantity": min(quantity_info["quantity_grams"], self.max_available_quantity) if self.max_available_quantity is not None else quantity_info["quantity_grams"],
-                    "unit": "g"
-                }])
-        is_simple_no = seller_input_text in ["no", "nope", "nah"]
+
+            self.update_active_bundle([{
+                "name": self.item.name.lower(),
+                "quantity": self.current_quantity,
+                "unit": "g"
+            }])
+
+            scarcity_ratio = self.current_quantity / 1000.0
+            if scarcity_ratio < 0.5:
+                self.max_price = self.clamp(self.max_price * 0.9)
+                self.current_offer = min(self.current_offer, self.max_price)
+
+        is_simple_no = intent == "REJECT" and seller_price is None and seller_quantity is None
         if is_simple_no:
             self.no_count += 1
             self.adjust_frustration(0.06 + (0.03 * min(self.no_count - 1, 2)))
         else:
             self.no_count = 0
-        if seller_input_text and seller_input_text == self.last_seller_input:
-            self.adjust_frustration(0.12)
-            self.adjust_trust(-0.05)
-        self.last_seller_input = seller_input_text
+        self.last_seller_input = None
 
         frustration_walkaway_threshold = 0.85 if self.personality == "Aggressive Trader" else 0.98 if self.personality == "Polite Merchant" else 0.93
         if self.frustration >= frustration_walkaway_threshold:
@@ -613,6 +680,9 @@ class NegotiationEngine:
                 tone=self.current_tone("annoyed" if self.unclear_no_count >= 2 else tone)
             )
 
+        if seller_price is None and not self.price_introduced:
+            return self.respond("ASK_PRICE")
+
         if intent == "SOCIAL":
             return self.respond(
                 "SOCIAL_RESPONSE",
@@ -621,16 +691,11 @@ class NegotiationEngine:
                 tone=self.current_tone(tone)
             )
 
-        if intent == "NO_ITEM":
-            self.adjust_frustration(0.1 if is_simple_no else 0.06)
-            self.adjust_trust(-0.05)
-            return self.respond("WALK_AWAY", context={"reason": "NO_ITEM"}, tone=self.current_tone("annoyed" if is_simple_no else tone))
-
         if intent == "CONTINUE":
             self.adjust_trust(0.03)
             return self.respond("OFFER", price=self.current_offer, tone=self.current_tone(tone))
 
-        if intent == "QUERY" and any(term in seller_input_text for term in ["how many", "how much", "grams", "gram", "kg", "quantity"]):
+        if intent == "QUERY_QUANTITY":
             return self.respond(
                 "OFFER",
                 price=self.current_offer,
@@ -642,13 +707,6 @@ class NegotiationEngine:
         if intent == "BUNDLE_OFFER":
             self.adjust_trust(0.04)
             self.adjust_frustration(-0.02)
-            if self.last_action == "OFFER":
-                return self.respond(
-                    "OFFER",
-                    price=self.current_offer,
-                    context={"proposal_type": "bundle_offer"},
-                    tone=self.current_tone(tone)
-                )
             return self.respond(
                 "OFFER",
                 price=self.current_offer,
@@ -659,13 +717,16 @@ class NegotiationEngine:
         if intent == "QUANTITY_CHANGE":
             self.adjust_trust(0.03)
             self.adjust_frustration(-0.01)
-            if self.last_action == "OFFER":
-                return self.respond(
-                    "OFFER",
-                    price=self.current_offer,
-                    context={"proposal_type": "quantity_change"},
-                    tone=self.current_tone(tone)
-                )
+            
+            if self.current_quantity < previous_quantity:
+                if self.personality == "Aggressive Trader":
+                    behavior = "reject_small_quantity" if random.random() < 0.5 else "quantity_change"
+                elif self.personality == "Polite Merchant":
+                    behavior = "quantity_change"
+                else:
+                    behavior = "quantity_change"
+                return self.respond("OFFER", price=self.current_offer, context={"proposal_type": behavior}, tone=self.current_tone(tone))
+                
             return self.respond(
                 "OFFER",
                 price=self.current_offer,
@@ -673,9 +734,17 @@ class NegotiationEngine:
                 tone=self.current_tone(tone)
             )
 
-        seller_price = self.extract_price(seller_input)
-
         if seller_price is not None:
+            self.price_introduced = True
+            if intent in ["PRICE", "COUNTER", "QUANTITY_PRICE"]:
+                if seller_price <= self.current_offer:
+                    self.current_offer = seller_price
+                else:
+                    self.current_offer += random.uniform(1, 5)
+                
+                self.current_offer = self.clamp(min(self.current_offer, self.max_price))
+                self.current_offer = min(self.current_offer, seller_price)
+
             self.last_seller_price = seller_price
             self.anchor_price = (0.7 * self.anchor_price) + (0.3 * seller_price)
             self.last_seller_price_per_kg = self.seller_price_per_kg(seller_price)
@@ -799,19 +868,21 @@ class NegotiationEngine:
             if self.rejection_count >= max_rejections:
                 return self.respond("WALK_AWAY", context={"reason": "NO_INTEREST"})
 
-            return self.respond(
-                "REJECT",
-                price=self.current_offer,
-                context={"simple_no": is_simple_no, "rejection_count": self.rejection_count},
-                tone=self.current_tone("annoyed")
-            )
+            increment = max(1, int(self.current_offer * 0.05))
+            new_offer = self.current_offer + increment
+            max_price = self.buyer.compute_max_price(self.item.market_price)
+
+            if new_offer >= max_price:
+                return self.respond("REJECT", price=self.current_offer)
+
+            self.current_offer = new_offer
+            return self.respond("OFFER", price=self.current_offer)
 
         # -------------------------------
         # ULTIMATUM
         # -------------------------------
-        if intent == "ULTIMATUM":
-            if seller_price is not None:
-                self.seller_min_price = seller_price
+        if intent == "ULTIMATUM" and seller_price is not None:
+            self.seller_min_price = seller_price
             self.adjust_frustration(0.1)
             self.adjust_trust(-0.05)
             target_price = self.anchored_seller_price(seller_price)
@@ -856,7 +927,7 @@ class NegotiationEngine:
         # -------------------------------
         # COUNTER (🔥 FIXED POSITION)
         # -------------------------------
-        if intent == "COUNTER":
+        if intent in ["COUNTER", "COUNTER_MIDPOINT"]:
             self.counter_count += 1
             self.adjust_frustration(0.08)
 
@@ -870,7 +941,7 @@ class NegotiationEngine:
             if self.counter_count > max_counters:
                 return self.respond("WALK_AWAY", context={"reason": "TOO_LONG"})
 
-            if seller_input and any(phrase in str(seller_input).lower() for phrase in ["middle", "meet in the middle", "split"]) and self.last_seller_price is not None:
+            if intent == "COUNTER_MIDPOINT" and self.last_seller_price is not None:
                 midpoint_offer = (self.current_offer + self.last_seller_price) / 2
                 if self.should_hold_position(midpoint_offer):
                     return self.respond(
@@ -915,6 +986,13 @@ class NegotiationEngine:
         # PRICE LOGIC
         # -------------------------------
         if intent in ["PRICE", "QUANTITY_PRICE"] and seller_price is not None:
+            if seller_price == self.current_offer:
+                can_accept, _ = self.can_accept_now()
+                if can_accept:
+                    self.deal_locked = True
+                    self.record_final_deal()
+                    return self.respond("ACCEPT", price=self.current_offer)
+
             target_price = self.anchored_seller_price(seller_price)
             market_price_per_kg = self.market_price_per_kg()
             target_price_per_kg = self.seller_price_per_kg(target_price)
@@ -944,6 +1022,19 @@ class NegotiationEngine:
                 )
 
             if target_price_per_kg is not None and market_price_per_kg is not None and target_price_per_kg > market_price_per_kg * 1.8:
+                
+                if quantity_modified_this_turn and self.current_quantity < previous_quantity:
+                    if self.personality == "Aggressive Trader":
+                        behavior = "reject_small_quantity" if random.random() < 0.5 else "quantity_change"
+                    elif self.personality == "Polite Merchant":
+                        behavior = "quantity_change"
+                    else:
+                        behavior = "quantity_change"
+                    self.current_offer += self.compute_increment(target_price)
+                    self.current_offer = min(self.current_offer, target_price)
+                    self.current_offer = self.clamp(min(self.current_offer, self.max_price))
+                    return self.respond("OFFER", price=self.current_offer, context={"proposal_type": behavior}, tone=self.current_tone(tone))
+                    
                 self.too_expensive_count += 1
                 self.adjust_trust(-0.2)
                 self.adjust_frustration(0.2)
