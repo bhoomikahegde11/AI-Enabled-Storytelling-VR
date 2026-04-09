@@ -30,18 +30,18 @@ def run():
         engine = NegotiationEngine(buyer, item, all_items=ITEMS)
         controller = Controller(engine, generate_dialogue)
 
-        action, price, dialogue = controller.step(None)
-        print(f"Buyer: {dialogue}")
+        response = controller.step(None)
+        print(f"Buyer: {response['npc_text']}")
 
         while True:
             seller_input = input("You: ")
 
-            action, price, dialogue = controller.step(seller_input)
-            if action is None:
+            response = controller.step(seller_input)
+            if response["action"] == "END":
                 break
-            print(f"Buyer: {dialogue}")
+            print(f"Buyer: {response['npc_text']}")
 
-            if action in ["ACCEPT", "WALK_AWAY", "NO_ITEM"]:
+            if response["done"]:
                 print("\nCustomer leaves the stall.\n")
                 break
 

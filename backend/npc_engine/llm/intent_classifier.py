@@ -1,7 +1,7 @@
 import re
 from llama_cpp import Llama
 import os
-
+from npc_engine.engine.input_interpreter import extract_price
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "models", "model.gguf")
 
@@ -235,16 +235,27 @@ def apply_intent_corrections(text: str, candidate_intent: str, context=None):
     last_system_action = context.get("last_system_action")
     in_negotiation = context.get("in_negotiation", False)
     has_active_offer = last_system_action == "OFFER"
+    negative_words = ["low", "high", "not", "no", "increase", "decrease", "more", "less"]
 
     agreement_markers = [
         "perfect", "done", "fine", "okay", "ok", "agreed", "sure",
         "that works", "lets do it", "let's do it", "call it a deal"
     ]
     item_transfer_markers = [
-        "i will give", "ill give", "you can have", "it's yours", "its yours",
-        "take the", "take it", "i can give you"
+        "it's yours",
+        "its yours",
+        "you can have it"
     ]
     short_positive_responses = ["sure", "okay", "ok", "fine", "alright", "perfect"]
+
+    if "give" in text and any(char.isdigit() for char in text):
+        return None
+
+    if any(char.isdigit() for char in text):
+        return None
+
+    if any(word in text for word in negative_words):
+        return None
 
     if has_active_offer and (
         any(marker in text for marker in agreement_markers) or
@@ -352,6 +363,36 @@ def fallback_context_classification(text: str, item_name: str):
     return {"intent": "IRRELEVANT", "tone": "neutral", "persuasion": 0}
 
 
+def is_agreement(text, context):
+    if context.get("last_system_action") != "OFFER":
+        return False
+
+    has_number = any(char.isdigit() for char in text)
+    has_question = "?" in text
+    has_quantity = any(unit in text for unit in ["kg", "g", "gram"])
+    negative_words = ["low", "high", "not", "no", "more", "less"]
+
+    if has_number or has_question or has_quantity:
+        return False
+
+    if any(word in text for word in negative_words):
+        return False
+
+    if len(text.split()) <= 4:
+        return True
+
+    return False
+
+
+def is_price_statement(text):
+    return any(char.isdigit() for char in text)
+
+
+def is_rejection(text):
+    negative_words = ["no", "not", "too low", "too high", "reject", "leave"]
+    return any(word in text for word in negative_words)
+
+
 def classify_intent(user_input: str, context=None):
     context = context or {}
     text = user_input.lower().strip()
@@ -368,36 +409,58 @@ def classify_intent(user_input: str, context=None):
     quantity_info = extract_quantity_info(user_input)
     quantity_price_offer = extract_quantity_price_offer(user_input)
 
+    item_mentions = [item_name.lower()] + [item.lower() for item in known_items if item.lower() != item_name.lower()]
+
     # -------------------------------
-    # 🔥 LAYER 1: TRADE INTENTS
+    # 🔥 PRIORITY LAYER: OUT OF WORLD
     # -------------------------------
-    has_number = bool(re.search(r'\d+', text))
-    price_context_words = [
-        "price", "offer", "sell", "selling", "buy", "buying", "cost",
-        "for", "varahas", "deal", "trade", "worth"
+    trade_terms_for_oow = [
+        item_name.lower(),
+        "price", "offer", "trade", "deal", "sell", "buy", "goods", "item",
+        "shop", "market", "varahas", "stall"
+    ] + [item.lower() for item in known_items]
+
+    if contains_out_of_world_concept(text) or has_modern_action_pattern(text, trade_terms_for_oow):
+        return {"intent": "OUT_OF_WORLD", "tone": "confused", "persuasion": 0}
+
+    # -------------------------------
+    # 🔥 PRIORITY LAYER: STRICT NO_ITEM
+    # -------------------------------
+    no_item_strict_phrases = [
+        "we are out", "we are out of", "out of stock", "no stock",
+        "not available", "we don't have", "we do not have", "we dont have",
+        "its over", "it's over", "finished", "sold out", "nothing left",
+        "no we do not", "got over", "it is over"
     ]
-    has_price_context = any(word in text for word in price_context_words) or has_price_statement_pattern(text)
+    if any(phrase in text for phrase in no_item_strict_phrases):
+        return {"intent": "NO_ITEM", "tone": "neutral", "persuasion": 0}
+        
+    no_item_patterns = [
+        r"\b(?:we\s+)?do\s+not\s+have\b",
+        r"\b(?:we\s+)?don't\s+have\b",
+        r"\b(?:we\s+)?dont\s+have\b",
+        r"\bno\s+.*(?:have|stock|sell)\b",
+        r"\b(?:dont|don't)\s+.*have\b",
+        r"\b(?:dont|don't)\s+.*sell\b",
+        r"\bnot\s+selling\b"
+    ]
+    if any(re.search(pattern, text) for pattern in no_item_patterns):
+        return {"intent": "NO_ITEM", "tone": "neutral", "persuasion": 0}
+
+    if last_system_action == "ASK_ITEM" and text in ["no", "nope", "nah"]:
+        return {"intent": "NO_ITEM", "tone": "neutral", "persuasion": 0}
+
+    if re.search(r"\bno\b", text) and any(item in text for item in item_mentions):
+        return {"intent": "NO_ITEM", "tone": "neutral", "persuasion": 0}
+
+    # -------------------------------
+    # 🔥 EARLY HYBRID LAYER
+    # -------------------------------
+    if is_agreement(text, context):
+        return {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
 
     if quantity_price_offer is not None:
         return {"intent": "QUANTITY_PRICE", "tone": "neutral", "persuasion": 1}
-
-    if has_number and (has_price_context or (in_negotiation and len(text.split()) <= 4 and not contains_out_of_world_concept(text) and not bundle_items)):
-        try:
-            world_classification = classify_trade_vs_world(
-                user_input,
-                item_name,
-                current_offer,
-                last_buyer_offer,
-                last_seller_price,
-                last_system_action,
-                last_intent
-            )
-            if world_classification == "C":
-                return {"intent": "OUT_OF_WORLD", "tone": "confused", "persuasion": 0}
-        except:
-            pass
-
-        return {"intent": "PRICE", "tone": "neutral", "persuasion": 1}
 
     if bundle_items:
         if len(bundle_items) > 1:
@@ -412,52 +475,20 @@ def classify_intent(user_input: str, context=None):
     if quantity_info is not None and any(word in text for word in ["only", "left", "remaining"]):
         return {"intent": "QUANTITY_CHANGE", "tone": "neutral", "persuasion": 1}
 
+    if is_price_statement(text):
+        return {"intent": "PRICE", "tone": "neutral", "persuasion": 1}
+
+    if is_rejection(text):
+        return {"intent": "REJECT", "tone": "neutral", "persuasion": 0}
+
     availability_phrases = [
         "yes we have",
         "yes we do",
         "we have",
         "available"
     ]
-    item_mentions = [item_name.lower()] + [item.lower() for item in known_items if item.lower() != item_name.lower()]
     if any(phrase in text for phrase in availability_phrases) and any(item in text for item in item_mentions):
         return {"intent": "CONTINUE", "tone": "neutral", "persuasion": 0}
-
-    no_item_phrases = [
-        "no we do not",
-        "we are out",
-        "out of",
-        "out of stock",
-        "not available",
-        "no stock",
-        "got over",
-        "finished",
-        "sold out"
-    ]
-    no_item_patterns = [
-        r"we\s+do\s+not\s+have",
-        r"we\s+don't\s+have",
-        r"do\s+not\s+have",
-        r"don't\s+have",
-        r"no.*(have|stock|sell)",
-        r"we\s+are\s+out\s+of",
-        r"not\s+available",
-        r"no\s+stock",
-        r"sold\s+out",
-        r"(dont|don't).*have",
-        r"(dont|don't).*sell",
-        r"nothing",
-        r"out of stock",
-        r"not selling"
-    ]
-
-    if last_system_action == "ASK_ITEM" and text == "no":
-        return {"intent": "NO_ITEM", "tone": "neutral", "persuasion": 0}
-
-    if "no" in text and any(item in text for item in item_mentions):
-        return {"intent": "NO_ITEM", "tone": "neutral", "persuasion": 0}
-
-    if any(phrase in text for phrase in no_item_phrases) or any(re.search(pattern, text) for pattern in no_item_patterns):
-        return {"intent": "NO_ITEM", "tone": "neutral", "persuasion": 0}
 
     if text in ["no", "nope", "nah"]:
         if last_system_action == "ASK_ITEM":
@@ -480,15 +511,6 @@ def classify_intent(user_input: str, context=None):
 
     if is_hostile_input(text, user_input):
         return {"intent": "HOSTILE", "tone": "annoyed", "persuasion": 0}
-
-    trade_terms = [
-        item_name.lower(),
-        "price", "offer", "trade", "deal", "sell", "buy", "goods", "item",
-        "shop", "market", "varahas", "stall"
-    ] + [item.lower() for item in known_items]
-
-    if contains_out_of_world_concept(text) or has_modern_action_pattern(text, trade_terms):
-        return {"intent": "OUT_OF_WORLD", "tone": "confused", "persuasion": 0}
 
     query_phrases = [
         "what do you want",
@@ -530,13 +552,48 @@ def classify_intent(user_input: str, context=None):
     if any(phrase in text for phrase in ultimatum_phrases) or any(re.search(pattern, text) for pattern in ultimatum_patterns):
         return {"intent": "ULTIMATUM", "tone": "annoyed", "persuasion": 0}
 
+    explicit_accept_phrases = [
+        "deal",
+        "done",
+        "done deal",
+        "ok deal",
+        "okay deal",
+        "yes deal",
+        "fine deal",
+        "confirm",
+        "confirmed",
+        "take it",
+        "ok take it",
+        "yes take it",
+        "fine take it"
+    ]
+
+    if text in explicit_accept_phrases and not has_accept_blockers(text):
+        if any(char.isdigit() for char in text):
+            return None
+        negative_words = ["low", "high", "not", "no", "increase", "decrease", "more", "less"]
+        if any(word in text for word in negative_words):
+            return None
+        return {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
+
+    if text.strip() in ["done", "deal"]:
+        return {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
+
     accept_phrases = [
         "deal",
         "done",
+        "done deal",
+        "ok deal",
+        "okay deal",
+        "yes deal",
+        "fine deal",
         "agreed",
+        "agree",
+        "accept",
         "take it",
         "fine take it",
         "ok take it",
+        "yes take it",
         "okay take it",
         "ok fine",
         "fine",
@@ -554,6 +611,19 @@ def classify_intent(user_input: str, context=None):
         "let's confirm it",
         "lets confirm it"
     ]
+
+    if last_system_action == "OFFER":
+        has_number = any(char.isdigit() for char in text)
+        negative_words = ["low", "high", "not", "no", "more", "less"]
+
+        if has_number:
+            return None
+
+        if any(word in text for word in negative_words):
+            return None
+
+        if len(text.split()) <= 4:
+            return {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
 
     offer_accept_phrases = [
         "sure",
@@ -576,9 +646,19 @@ def classify_intent(user_input: str, context=None):
     ]
 
     if last_system_action == "OFFER" and text in offer_accept_phrases and not has_accept_blockers(text):
+        if any(char.isdigit() for char in text):
+            return None
+        negative_words = ["low", "high", "not", "no", "increase", "decrease", "more", "less"]
+        if any(word in text for word in negative_words):
+            return None
         return {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
 
-    if last_system_action == "OFFER" and any(phrase in text for phrase in accept_phrases) and not has_accept_blockers(text):
+    if last_system_action == "OFFER" and any(phrase in text for phrase in accept_phrases) and not has_accept_blockers(text) and not any(word in text for word in ["give", "for", "price"]):
+        if any(char.isdigit() for char in text):
+            return None
+        negative_words = ["low", "high", "not", "no", "increase", "decrease", "more", "less"]
+        if any(word in text for word in negative_words):
+            return None
         return {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
 
     if last_system_action == "OFFER" and not has_accept_blockers(text) and len(text.split()) > 2:
@@ -642,6 +722,10 @@ Sentence: "{user_input}"
     if ("low" in text or "higher" in text or "more" in text) and any(word in text for word in ["that", "it", "offer", "price"]):
         return {"intent": "COUNTER", "tone": "neutral", "persuasion": 1}
 
+    affirm_pattern = r"\b(?:yes|ok|okay|sure|fine|that works|deal)\b"
+    if re.search(affirm_pattern, text):
+        return {"intent": "AFFIRM", "tone": "neutral", "persuasion": 0}
+
     continue_phrases = [
         "sure",
         "yes you can",
@@ -690,10 +774,40 @@ Sentence: "{user_input}"
             return corrected or result
 
         result = fallback_context_classification(text, item_name)
-        corrected = apply_intent_corrections(text, result["intent"], context)
-        return corrected or result
+        final_intent = corrected or result
+        
+        if final_intent["intent"] == "IRRELEVANT":
+            abuse_prompt = f"""
+Does this sentence contain sexual references, insults, meaningless disruptive phrases, or strong inappropriate emotion not related to trade?
+Answer YES or NO.
+
+Sentence: "{user_input}"
+"""
+            try:
+                abuse_output = llm(abuse_prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
+                if "YES" in abuse_output:
+                    return {"intent": "HOSTILE", "tone": "annoyed", "persuasion": 0}
+            except:
+                pass
+                
+        return final_intent
 
     except:
         result = fallback_context_classification(text, item_name)
-        corrected = apply_intent_corrections(text, result["intent"], context)
-        return corrected or result
+        final_intent = apply_intent_corrections(text, result["intent"], context) or result
+        
+        if final_intent["intent"] == "IRRELEVANT":
+            abuse_prompt = f"""
+Does this sentence contain sexual references, insults, meaningless disruptive phrases, or strong inappropriate emotion not related to trade?
+Answer YES or NO.
+
+Sentence: "{user_input}"
+"""
+            try:
+                abuse_output = llm(abuse_prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
+                if "YES" in abuse_output:
+                    return {"intent": "HOSTILE", "tone": "annoyed", "persuasion": 0}
+            except:
+                pass
+                
+        return final_intent

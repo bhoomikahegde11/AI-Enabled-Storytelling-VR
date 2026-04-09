@@ -10,5 +10,5 @@ while True:
     response = session.step(user_input)
     print("NPC:", response)
 
-    if response["action"] in ["ACCEPT", "WALK_AWAY", "NO_ITEM"]:
+    if response["done"]:
         break

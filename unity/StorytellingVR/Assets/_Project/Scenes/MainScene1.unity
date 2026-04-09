@@ -726,7 +726,7 @@ Camera:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
@@ -858,6 +858,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e755eea7db41e5b439102bee4e46fc26, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NPCInteractionTest
+  interactDistance: 5
+  npcLayer:
+    serializedVersion: 2
+    m_Bits: 0
   apiClient: {fileID: 0}
 --- !u!1 &358790025
 GameObject:
@@ -2568,6 +2572,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af72a46106fcf2047a2e80d0fcd000d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::APIClient
+  baseUrl: http://127.0.0.1:8000
   sessionId: 
   dialogueText: {fileID: 1644998627}
 --- !u!4 &1386703057 stripped
@@ -3114,10 +3119,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 1920, y: 1080}
   m_ScreenMatchMode: 0
   m_MatchWidthOrHeight: 0
   m_PhysicalUnit: 3
@@ -3339,6 +3344,11 @@ GameObject:
   m_Component:
   - component: {fileID: 2071587457}
   - component: {fileID: 2071587456}
+  - component: {fileID: 2071587459}
+  - component: {fileID: 2071587458}
+  - component: {fileID: 2071587460}
+  - component: {fileID: 2071587461}
+  - component: {fileID: 2071587462}
   m_Layer: 0
   m_Name: NPC_Manager
   m_TagString: Untagged
@@ -3358,6 +3368,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e755eea7db41e5b439102bee4e46fc26, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NPCInteractionTest
+  interactDistance: 5
+  npcLayer:
+    serializedVersion: 2
+    m_Bits: 0
   apiClient: {fileID: 1386703056}
 --- !u!4 &2071587457
 Transform:
@@ -3374,6 +3388,185 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2071587458
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2071587455}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5e77688e065b4c4db6003964fbba6d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WitConfigCreator
+--- !u!114 &2071587459
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2071587455}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28779cfed47441a42a6cd4fb49c8dc89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VoiceSDK.Runtime::Oculus.Voice.AppVoiceExperience
+  ShouldWrap: 1
+  ShouldLog: 1
+  events:
+    _onRequestOptionSetup:
+      m_PersistentCalls:
+        m_Calls: []
+    _onRequestInitialized:
+      m_PersistentCalls:
+        m_Calls: []
+    _onRequestCreated:
+      m_PersistentCalls:
+        m_Calls: []
+    _onSend:
+      m_PersistentCalls:
+        m_Calls: []
+    _onMinimumWakeThresholdHit:
+      m_PersistentCalls:
+        m_Calls: []
+    _onMicDataSent:
+      m_PersistentCalls:
+        m_Calls: []
+    _onStoppedListeningDueToDeactivation:
+      m_PersistentCalls:
+        m_Calls: []
+    _onStoppedListeningDueToInactivity:
+      m_PersistentCalls:
+        m_Calls: []
+    _onStoppedListeningDueToTimeout:
+      m_PersistentCalls:
+        m_Calls: []
+    _onAborting:
+      m_PersistentCalls:
+        m_Calls: []
+    _onAborted:
+      m_PersistentCalls:
+        m_Calls: []
+    _onCanceled:
+      m_PersistentCalls:
+        m_Calls: []
+    _onRawResponse:
+      m_PersistentCalls:
+        m_Calls: []
+    _onPartialResponse:
+      m_PersistentCalls:
+        m_Calls: []
+    _onResponse:
+      m_PersistentCalls:
+        m_Calls: []
+    _onError:
+      m_PersistentCalls:
+        m_Calls: []
+    _onRequestCompleted:
+      m_PersistentCalls:
+        m_Calls: []
+    _onComplete:
+      m_PersistentCalls:
+        m_Calls: []
+    _onStartListening:
+      m_PersistentCalls:
+        m_Calls: []
+    _onStoppedListening:
+      m_PersistentCalls:
+        m_Calls: []
+    _onMicLevelChanged:
+      m_PersistentCalls:
+        m_Calls: []
+    _onPartialTranscription:
+      m_PersistentCalls:
+        m_Calls: []
+    _onFullTranscription:
+      m_PersistentCalls:
+        m_Calls: []
+    _onUserPartialTranscription:
+      m_PersistentCalls:
+        m_Calls: []
+    _onUserFullTranscription:
+      m_PersistentCalls:
+        m_Calls: []
+    _onByteDataReady:
+      m_PersistentCalls:
+        m_Calls: []
+    _onByteDataSent:
+      m_PersistentCalls:
+        m_Calls: []
+    _onValidatePartialResponse:
+      m_PersistentCalls:
+        m_Calls: []
+  witRuntimeConfiguration:
+    witConfiguration: {fileID: 11400000, guid: b7c94bc7239d04c4b9efe7d92bf2379f, type: 2}
+    minKeepAliveVolume: 0.0005
+    minKeepAliveTimeInSeconds: 2
+    minTranscriptionKeepAliveTimeInSeconds: 1
+    maxRecordingTime: 20
+    overrideTimeoutMs: 0
+    soundWakeThreshold: 0.0005
+    sampleLengthInMs: 10
+    micBufferLengthInSeconds: 1
+    maxConcurrentRequests: 5
+    sendAudioToWit: 1
+    customTranscriptionProvider: {fileID: 0}
+    alwaysRecord: 0
+    preferredActivationOffset: -0.5
+    transcribeOnly: 0
+    pubSubSettings:
+      PubSubTopicId: 
+      PublishOptions:
+        transcriptionResponses: 1
+        composerResponses: 1
+      SubscribeOptions:
+        transcriptionResponses: 1
+        composerResponses: 1
+  usePlatformServices: 0
+  enableConsoleLogging: 0
+  sendTranscriptionEventsForMessages: 0
+--- !u!114 &2071587460
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2071587455}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af72a46106fcf2047a2e80d0fcd000d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::APIClient
+  baseUrl: http://127.0.0.1:8000
+  sessionId: 
+  dialogueText: {fileID: 1644998627}
+--- !u!114 &2071587461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2071587455}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b47c5e8dd2374f4192cccf47025af63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VoiceToNPC
+  voice: {fileID: 2071587459}
+  apiClient: {fileID: 2071587460}
+--- !u!114 &2071587462
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2071587455}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff0556f78a0cff4428b98cf0a10432ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MicDebug
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

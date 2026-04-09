@@ -17,30 +17,21 @@ ITEMS = [
 class NPCSession:
     def __init__(self):
         self.buyer = Buyer()
-        self.item = random.choice(ITEMS)
+        self.available_items = ITEMS.copy()
+        random.shuffle(self.available_items)
+        self.item = self.available_items.pop()
         self.engine = NegotiationEngine(self.buyer, self.item, all_items=ITEMS)
         self.controller = Controller(self.engine, generate_dialogue)
 
-    # 🔥 Helper: format structured response
-    def _format_response(self, action, price, dialogue):
-        quantity = getattr(self.engine, "current_quantity_grams", 1000)
-        item_name = getattr(self.engine.item, "name", "item")
-
-        return {
-            "action": action,
-            "price": price,
-            "quantity_grams": quantity,
-            "item": item_name,
-            "total_price": price,  # can refine later if needed
-            "dialogue": dialogue
-        }
-
     # Start conversation
     def start(self):
-        action, price, dialogue = self.controller.step(None)
-        return self._format_response(action, price, dialogue)
+        return self.controller.step(None)
 
     # Continue negotiation
     def step(self, player_input):
-        action, price, dialogue = self.controller.step(player_input)
-        return self._format_response(action, price, dialogue)
+        response = self.controller.step(player_input)
+        if response["done"] and self.available_items:
+            self.item = self.available_items.pop()
+            self.engine = NegotiationEngine(self.buyer, self.item, all_items=ITEMS)
+            self.controller = Controller(self.engine, generate_dialogue)
+        return response
