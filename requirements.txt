@@ -1,0 +1,2 @@
+# Root helper requirements for the Python backend
+-r backend/requirements.txt
