@@ -58,6 +58,8 @@ class NegotiationEngine:
         self.last_seller_price_per_kg = None
         self.seller_min_price = None
         self.final_price = None
+        self.agreed_price = None
+        self.prev_seller_price = None
         self.final_quantity = None
         self.final_item = None
         self.current_quantity = self.normalize_quantity(item.quantity, item.unit, "g")
@@ -362,6 +364,9 @@ class NegotiationEngine:
         self.current_offer = max(self.current_offer, self.seller_min_price)
         self.current_offer = min(self.current_offer, self.max_price)
         self.current_offer = self.clamp(self.current_offer)
+        if self.last_seller_price is not None:
+            if self.current_offer > self.last_seller_price:
+                self.current_offer = self.last_seller_price
         return self.respond(
             "OFFER",
             price=self.current_offer,
@@ -408,7 +413,12 @@ class NegotiationEngine:
     def record_final_deal(self):
         if self.current_quantity is None:
             self.current_quantity = self.normalize_quantity(self.item.quantity, self.item.unit, "g")
-        self.final_price = self.current_offer
+            
+        final_price = self.agreed_price if self.agreed_price is not None else self.current_offer
+        if final_price is None:
+            final_price = self.current_offer
+            
+        self.final_price = final_price
         self.final_quantity = self.current_quantity
         self.final_item = self.current_deal_item()
         self.memory.update(self.final_price)
@@ -529,6 +539,8 @@ class NegotiationEngine:
             self.ended = True
         self.last_action = action
         if action == "OFFER":
+            if self.last_seller_price is not None:
+                price = min(price, self.last_seller_price)
             self.has_made_first_offer = True
             self.update_stage()
             current_offer_per_kg = self.offer_price_per_kg(price if price is not None else self.current_offer)
@@ -572,6 +584,9 @@ class NegotiationEngine:
 
         if self.turns > self.max_turns:
             return self.respond("WALK_AWAY", context={"reason": "TOO_LONG"})
+
+        if self.turns > 6 and self.frustration > 0.6:
+            return self.respond("WALK_AWAY")
 
         if not self.started:
             self.started = True
@@ -737,6 +752,13 @@ class NegotiationEngine:
         if seller_price is not None:
             self.price_introduced = True
             if intent in ["PRICE", "COUNTER", "QUANTITY_PRICE"]:
+                if seller_price is not None and self.current_offer is not None:
+                    if abs(seller_price - self.current_offer) <= 1:
+                        self.current_offer = seller_price
+                        self.deal_locked = True
+                        self.record_final_deal()
+                        return self.respond("ACCEPT", price=self.current_offer)
+
                 if seller_price <= self.current_offer:
                     self.current_offer = seller_price
                 else:
@@ -745,6 +767,7 @@ class NegotiationEngine:
                 self.current_offer = self.clamp(min(self.current_offer, self.max_price))
                 self.current_offer = min(self.current_offer, seller_price)
 
+            self.prev_seller_price = self.last_seller_price
             self.last_seller_price = seller_price
             self.anchor_price = (0.7 * self.anchor_price) + (0.3 * seller_price)
             self.last_seller_price_per_kg = self.seller_price_per_kg(seller_price)
@@ -876,6 +899,9 @@ class NegotiationEngine:
                 return self.respond("REJECT", price=self.current_offer)
 
             self.current_offer = new_offer
+            if self.last_seller_price is not None:
+                if self.current_offer > self.last_seller_price:
+                    self.current_offer = self.last_seller_price
             return self.respond("OFFER", price=self.current_offer)
 
         # -------------------------------
@@ -916,6 +942,9 @@ class NegotiationEngine:
                 self.current_offer = min(self.current_offer, target_price)
             self.current_offer = min(self.current_offer, self.max_price)
             self.current_offer = self.clamp(self.current_offer)
+            if self.last_seller_price is not None:
+                if self.current_offer > self.last_seller_price:
+                    self.current_offer = self.last_seller_price
 
             return self.respond(
                 "OFFER",
@@ -968,6 +997,9 @@ class NegotiationEngine:
 
             self.current_offer = min(self.current_offer, self.max_price)
             self.current_offer = self.clamp(self.current_offer)
+            if self.last_seller_price is not None:
+                if self.current_offer > self.last_seller_price:
+                    self.current_offer = self.last_seller_price
 
             return self.respond("OFFER", price=self.current_offer, tone=self.current_tone(tone))
 
@@ -975,17 +1007,39 @@ class NegotiationEngine:
         # ACCEPT
         # -------------------------------
         if intent == "ACCEPT":
-            self.current_offer = self.clamp(self.current_offer)
+            if self.last_seller_price is not None:
+                if self.last_seller_price < self.item.market_price * 0.3:
+                    return self.respond("REJECT", price=self.current_offer)
+
+            if self.last_seller_price is not None:
+                self.agreed_price = self.last_seller_price
+            else:
+                self.agreed_price = self.current_offer
+
             self.deal_locked = True
             self.record_final_deal()
             self.adjust_trust(0.1)
             self.adjust_frustration(-0.1)
-            return self.respond("ACCEPT", price=self.current_offer)
+            return self.respond("ACCEPT", price=self.agreed_price)
 
         # -------------------------------
         # PRICE LOGIC
         # -------------------------------
         if intent in ["PRICE", "QUANTITY_PRICE"] and seller_price is not None:
+            if seller_price and self.current_offer:
+                diff = abs(seller_price - self.current_offer)
+            
+                if diff <= 2:
+                    # auto converge
+                    mid = int((seller_price + self.current_offer) / 2)
+
+                    # clamp to seller price
+                    if mid > seller_price:
+                        mid = seller_price
+
+                    self.current_offer = mid
+                    return self.respond("OFFER", price=mid)
+
             if seller_price == self.current_offer:
                 can_accept, _ = self.can_accept_now()
                 if can_accept:
@@ -1033,6 +1087,9 @@ class NegotiationEngine:
                     self.current_offer += self.compute_increment(target_price)
                     self.current_offer = min(self.current_offer, target_price)
                     self.current_offer = self.clamp(min(self.current_offer, self.max_price))
+                    if self.last_seller_price is not None:
+                        if self.current_offer > self.last_seller_price:
+                            self.current_offer = self.last_seller_price
                     return self.respond("OFFER", price=self.current_offer, context={"proposal_type": behavior}, tone=self.current_tone(tone))
                     
                 self.too_expensive_count += 1
@@ -1098,6 +1155,9 @@ class NegotiationEngine:
                     self.current_offer = min(self.current_offer, target_price)
                     self.current_offer = min(self.current_offer, self.max_price)
                     self.current_offer = self.clamp(self.current_offer)
+                    if self.last_seller_price is not None:
+                        if self.current_offer > self.last_seller_price:
+                            self.current_offer = self.last_seller_price
                 return self.respond(
                     "OFFER",
                     price=self.current_offer,
@@ -1118,6 +1178,9 @@ class NegotiationEngine:
                 self.current_offer = min(self.current_offer, target_price)
                 self.current_offer = min(self.current_offer, self.max_price)
                 self.current_offer = self.clamp(self.current_offer)
+                if self.last_seller_price is not None:
+                    if self.current_offer > self.last_seller_price:
+                        self.current_offer = self.last_seller_price
                 return self.respond(
                     "OFFER",
                     price=self.current_offer,
@@ -1190,6 +1253,9 @@ class NegotiationEngine:
             self.current_offer = min(self.current_offer, target_price)
             self.current_offer = min(self.current_offer, self.max_price)
             self.current_offer = self.clamp(self.current_offer)
+            if self.last_seller_price is not None:
+                if self.current_offer > self.last_seller_price:
+                    self.current_offer = self.last_seller_price
 
             return self.respond("OFFER", price=self.current_offer, tone=self.current_tone(tone))
 

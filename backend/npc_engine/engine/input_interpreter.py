@@ -61,4 +61,16 @@ def extract_price(text):
         if matches:
             return int(matches[-1])
             
+    difference_phrases = [
+        "difference",
+        "isnt doing anything",
+        "isn't doing anything",
+        "close enough",
+        "almost there",
+        "just"
+    ]
+
+    if any(phrase in text for phrase in difference_phrases):
+        return None
+
     return numbers[-1]
