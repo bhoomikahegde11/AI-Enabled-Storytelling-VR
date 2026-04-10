@@ -126,7 +126,7 @@ This is the fastest path for anyone who only wants to validate the AI chat / bar
 
 ```powershell
 cd backend
-python test_interface.py
+python -m npc_engine.main
 ```
 
 This launches a command-line conversation using `NPCSession` directly, without Unity.
