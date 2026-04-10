@@ -1,12 +1,14 @@
 from npc_engine.core.models import PlayerAction
 from npc_engine.engine.input_interpreter import extract_price
 from npc_engine.llm.intent_classifier import classify_intent, extract_quantity_info
+from npc_engine.dialogue.dialogue_composer import DialogueComposer
 
 
 class Controller:
     def __init__(self, engine, dialogue_fn):
         self.engine = engine
         self.dialogue_fn = dialogue_fn
+        self.composer = DialogueComposer()
 
     def format_final_quantity(self):
         quantity = self.engine.final_quantity
@@ -35,7 +37,15 @@ class Controller:
             "last_seller_price": self.engine.last_seller_price,
             "current_offer": self.engine.current_offer
         })
-        intent = result["intent"]
+        
+        if result is None:
+            result = {
+                "intent": "IRRELEVANT"
+            }
+
+        intent = result.get("intent", "IRRELEVANT")
+        price = result.get("price", price)
+        quantity = result.get("quantity", quantity)
 
         if intent == "NO_ITEM" and quantity is not None and any(
             word in lowered for word in ["only", "left", "have", "but", "instead", "g", "gm", "kg"]
@@ -53,10 +63,10 @@ class Controller:
     def _format_response(self, decision, dialogue):
         return {
             "npc_text": dialogue,
-            "action": decision.action,
+            "action": composed.get("action", decision.action),
             "price": decision.price,
             "quantity": decision.quantity,
-            "done": decision.done,
+            "done": decision.done or composed.get("action") == "WALK_AWAY",
         }
 
     def step(self, seller_input):
@@ -64,16 +74,105 @@ class Controller:
             decision = self.engine.next_step(None)
         else:
             action = self._build_player_action(seller_input)
+
+            text_lower = str(seller_input).lower()
+            text = text_lower
+
+            if any(p in text for p in [
+                "difference", 
+                "isnt doing anything",
+                "isn't doing anything",
+                "almost same",
+                "close enough"
+            ]):
+                return {
+                    "npc_text": "We are very close. Let us settle this.",
+                    "tone": "firm",
+                    "emotion": "serious",
+                    "action": "OFFER",
+                    "price": self.engine.current_offer
+                }
+
+            if (
+                any(q in text_lower for q in ["how much", "quantity", "how many"])
+                and self.engine.last_seller_price is None
+            ):
+                quantity = self.engine.final_quantity or 1000
+                quantity_text = f"{quantity}g" if quantity < 1000 else f"{int(quantity)//1000}kg"
+                return {
+                    "npc_text": f"I am looking for about {quantity_text}. What price do you offer?",
+                    "tone": "neutral",
+                    "emotion": "thinking",
+                    "action": "QUERY_QUANTITY",
+                    "done": False
+                }
+
+            if action.intent == "NO_ITEM":
+                return {
+                    "npc_text": "I see. I will look elsewhere.",
+                    "tone": "neutral",
+                    "emotion": "idle",
+                    "action": "WALK_AWAY",
+                    "done": True
+                }
+
+            if action.intent == "OUT_OF_WORLD":
+                self.engine.out_of_world_count += 1
+
+                if self.engine.out_of_world_count >= 2:
+                    return {
+                        "npc_text": "I am not here for this. I will leave.",
+                        "tone": "annoyed",
+                        "emotion": "frustrated",
+                        "action": "WALK_AWAY",
+                        "done": True
+                    }
+
+                return {
+                    "npc_text": "Let us focus on the trade.",
+                    "tone": "firm",
+                    "emotion": "serious",
+                    "action": "OUT_OF_WORLD",
+                    "done": False
+                }
+
             decision = self.engine.next_step(action)
 
         if decision.action == "END":
             return self._format_response(decision, None)
 
-        dialogue = self.dialogue_fn(decision, self.engine.buyer.personality, self.engine.item.name)
+        if decision.action == "WALK_AWAY":
+            return {
+                "npc_text": "I am leaving.",
+                "tone": "annoyed",
+                "emotion": "frustrated",
+                "action": "WALK_AWAY",
+                "done": True
+            }
 
-        if decision.action == "ACCEPT":
+        composed = self.composer.compose(decision, self.engine)
+
+        if decision.action == "ACCEPT" and composed.get("action", decision.action) == "ACCEPT":
             final_quantity = self.format_final_quantity()
             final_item = self.engine.final_item or self.engine.item.name
-            dialogue += f"\n\nTransaction complete.\nFinal Deal: {final_quantity} {final_item} for {decision.price} varahas"
+            composed["text"] += f"\n\nTransaction complete.\nFinal Deal: {final_quantity} {final_item} for {decision.price} varahas"
 
-        return self._format_response(decision, dialogue)
+        debug_info = {
+            "stage": self.engine.stage,
+            "current_offer": self.engine.current_offer,
+            "seller_price": self.engine.last_seller_price,
+            "desperation": round(self.engine.buyer.desperation, 2),
+            "frustration": round(self.engine.frustration, 2),
+            "turn": self.engine.turns
+        }
+
+        return {
+            "npc_text": composed["text"],
+            "tone": composed["tone"],
+            "emotion": composed["emotion"],
+            "action": composed.get("action", decision.action),
+            "price": decision.price,
+            "quantity": decision.quantity,
+            "done": decision.done or composed.get("action") == "WALK_AWAY",
+            "debug": debug_info
+        }

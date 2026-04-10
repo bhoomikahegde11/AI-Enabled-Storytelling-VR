@@ -15,13 +15,17 @@ ITEMS = [
 
 
 def run():
-    buyer = Buyer()
-    item = random.choice(ITEMS)
-
-    engine = NegotiationEngine(buyer, item, all_items=ITEMS)
+    item_pool = ITEMS.copy()
+    random.shuffle(item_pool)
 
     while True:
         buyer = Buyer()
+        
+        if not item_pool:
+            item_pool = ITEMS.copy()
+            random.shuffle(item_pool)
+            
+        item = item_pool.pop()
 
         print("\nA new customer approaches your stall.")
         print(f"Personality: {buyer.personality}")
