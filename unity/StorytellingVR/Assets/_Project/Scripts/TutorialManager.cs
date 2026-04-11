@@ -1,9 +1,10 @@
 using UnityEngine;
 using TMPro;
+using UnityEngine.InputSystem; // 1. Add this namespace
 
 public class TutorialManager : MonoBehaviour
 {
-    public TextMeshProUGUI captionText; // Drag your BottomCaption here
+    public TextMeshProUGUI captionText;
 
     private string[] dialogues = new string[]
     {
@@ -20,14 +21,19 @@ public class TutorialManager : MonoBehaviour
 
     void Start()
     {
-        // Display the first line immediately
         UpdateUI();
     }
 
     void Update()
     {
-        // Detect Mouse Click (Temporary for Demo)
-        if (Input.GetMouseButtonDown(0))
+        // 2. Use the New Input System's Mouse detection
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            AdvanceDialogue();
+        }
+
+        // 3. (Optional) Also allow the Space bar for easier testing
+        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
         {
             AdvanceDialogue();
         }
@@ -42,8 +48,8 @@ public class TutorialManager : MonoBehaviour
         }
         else
         {
-            captionText.text = ""; // Clear text when tutorial ends
-            Debug.Log("Tutorial Finished. Starting 5-minute timer.");
+            captionText.text = "";
+            Debug.Log("Tutorial Finished. Transitioning to 5-minute game loop.");
         }
     }
 
