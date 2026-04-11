@@ -59,6 +59,7 @@ class NegotiationEngine:
         self.seller_min_price = None
         self.final_price = None
         self.agreed_price = None
+        self.agreed_quantity = None
         self.prev_seller_price = None
         self.final_quantity = None
         self.final_item = None
@@ -411,15 +412,17 @@ class NegotiationEngine:
         return self.item.name
 
     def record_final_deal(self):
-        if self.current_quantity is None:
-            self.current_quantity = self.normalize_quantity(self.item.quantity, self.item.unit, "g")
+        if self.current_quantity is not None:
+            self.agreed_quantity = self.current_quantity
+        else:
+            self.agreed_quantity = self.normalize_quantity(self.item.quantity, self.item.unit, "g")
             
         final_price = self.agreed_price if self.agreed_price is not None else self.current_offer
         if final_price is None:
             final_price = self.current_offer
             
         self.final_price = final_price
-        self.final_quantity = self.current_quantity
+        self.final_quantity = self.agreed_quantity if self.agreed_quantity else self.normalize_quantity(self.item.quantity, self.item.unit, "g")
         self.final_item = self.current_deal_item()
         self.memory.update(self.final_price)
 
@@ -535,6 +538,13 @@ class NegotiationEngine:
             if context and "proposal_type" in context:
                 del context["proposal_type"]
 
+        if action == "WALK_AWAY":
+            if getattr(self, "last_seller_price", None) is not None and getattr(self, "current_offer", None) is not None:
+                if abs(self.last_seller_price - self.current_offer) <= 5:
+                    action = "OFFER"
+                    if context:
+                        context.pop("reason", None)
+
         if action in ["WALK_AWAY", "NO_ITEM", "ACCEPT"]:
             self.ended = True
         self.last_action = action
@@ -547,6 +557,12 @@ class NegotiationEngine:
             if current_offer_per_kg is not None:
                 self.last_offer_per_kg = current_offer_per_kg
         if price is not None and action in ["OFFER", "ACCEPT", "OUT_OF_WORLD", "SOCIAL_RESPONSE"]:
+            if action == "OFFER" and hasattr(self, "last_buyer_offer"):
+                if price == self.last_buyer_offer:
+                    # force progression
+                    increment = max(1, int(price * 0.05))
+                    self.current_offer += increment
+                    price = self.current_offer
             self.last_buyer_offer = price
         emotional_context = {
             "frustration": round(self.frustration, 3),
@@ -601,7 +617,7 @@ class NegotiationEngine:
         if intent == "NO_ITEM":
             return self.respond("NO_ITEM")
 
-        if not self.quantity_given and seller_quantity is not None:
+        if seller_quantity is not None:
             self.current_quantity = seller_quantity
             self.max_available_quantity = seller_quantity
             self.quantity_given = True
@@ -769,6 +785,13 @@ class NegotiationEngine:
 
             self.prev_seller_price = self.last_seller_price
             self.last_seller_price = seller_price
+            
+            if self.prev_seller_price and self.last_seller_price:
+                if self.last_seller_price < self.prev_seller_price:
+                    # buyer should respond positively and move up
+                    increment = max(1, int(self.current_offer * 0.1))
+                    self.current_offer += increment
+                    
             self.anchor_price = (0.7 * self.anchor_price) + (0.3 * seller_price)
             self.last_seller_price_per_kg = self.seller_price_per_kg(seller_price)
             market_price_per_kg = self.market_price_per_kg()
@@ -1029,6 +1052,13 @@ class NegotiationEngine:
             if seller_price and self.current_offer:
                 diff = abs(seller_price - self.current_offer)
             
+                if diff <= 3:
+                    # close deal
+                    self.current_offer = seller_price
+                    self.deal_locked = True
+                    self.agreed_price = seller_price
+                    return self.respond("ACCEPT", price=self.current_offer)
+
                 if diff <= 2:
                     # auto converge
                     mid = int((seller_price + self.current_offer) / 2)
