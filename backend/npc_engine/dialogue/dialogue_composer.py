@@ -24,7 +24,7 @@ class DialogueComposer:
         prev_price = engine.prev_seller_price
         current_price = engine.last_seller_price
 
-        text = self.generate_text(action, price, stage, has_price, has_quantity, market_price, seller_price, desperation, turns, item_name, out_count, prev_price, current_price)
+        text = self.generate_text(action, price, stage, has_price, has_quantity, market_price, seller_price, desperation, turns, item_name, out_count, prev_price, current_price, personality)
         
         # Internal override for loop breakers to ensure engine knows we walked away
         if "going nowhere" in text or "leave if this continues" in text or "done here" in text:
@@ -41,7 +41,7 @@ class DialogueComposer:
             "price": price
         }
 
-    def generate_text(self, action, price, stage, has_price, has_quantity, market_price, seller_price, desperation, turns, item_name, out_count, prev_price=None, current_price=None):
+    def generate_text(self, action, price, stage, has_price, has_quantity, market_price, seller_price, desperation, turns, item_name, out_count, prev_price=None, current_price=None, personality="Polite Merchant"):
         if prev_price is not None and current_price is not None:
             if current_price > prev_price:
                 return random.choice([
@@ -85,12 +85,26 @@ class DialogueComposer:
                     "You must offer more than that."
                 ])
 
+        gap = None
+        prefix = ""
         if seller_price is not None and price is not None:
-            if abs(seller_price - price) <= 5:
-                return random.choice([
-                    f"For this {item_name}, {price} should be fair.",
-                    f"We are close on this {item_name}. {price} works.",
-                    f"This {item_name} is worth about {price}."
+            gap = abs(seller_price - price)
+
+        if gap is not None:
+            if gap > max(10, seller_price * 0.3):
+                prefix = random.choice([
+                    "That is far from my expectation.",
+                    "We are quite far apart.",
+                ])
+            elif max(3, seller_price * 0.1) < gap <= max(10, seller_price * 0.3):
+                prefix = random.choice([
+                    "We are getting closer.",
+                    "That is better.",
+                ])
+            elif gap <= max(3, seller_price * 0.1):
+                prefix = random.choice([
+                    "We are very close.",
+                    "This is a small difference.",
                 ])
 
         text = "Speak clearly."
@@ -103,59 +117,54 @@ class DialogueComposer:
             ])
 
         elif action == "OFFER":
-            if desperation > 0.7:
+            if price is None:
+                text = f"What price do you want for this {item_name}?"
+            elif personality == "Aggressive Trader":
                 text = random.choice([
-                    f"I can go up to {price}, but that is my limit.",
-                    f"Alright… I will stretch to {price}.",
-                    f"I really need this. {price}."
-                ])
-            elif desperation < 0.4:
-                text = random.choice([
+                    f"{price}. Take it or leave it.",
                     f"I will not go beyond {price}.",
-                    f"{price} is already high for me.",
-                    f"I am firm at {price}."
+                    f"{price}. Final."
                 ])
-            elif not has_price:
+            elif personality == "Cautious Buyer":
                 text = random.choice([
-                    f"For this {item_name}, I can start at {price}.",
-                    f"I am looking to pay around {price} for this {item_name}.",
-                    f"I would begin at {price} for this {item_name}."
+                    f"I can offer {price}… but I am unsure.",
+                    f"Maybe {price} is fair?",
+                    f"I can go up to {price}, I think."
                 ])
             else:
                 text = random.choice([
-                    f"For this {item_name}, I can go up to {price}.",
-                    f"I will raise it to {price} for this {item_name}.",
-                    f"{price} is my best offer for this {item_name}.",
-                    f"I was hoping for something closer to {price} for this {item_name}."
+                    f"I can offer {price} for this {item_name}.",
+                    f"Perhaps {price} would be reasonable.",
+                    f"I would be comfortable at {price}."
                 ])
 
         elif action == "REJECT":
-            if seller_price is not None and market_price is not None:
-                if seller_price > market_price:
-                    text = random.choice([
-                        f"That is too high for this {item_name}.",
-                        f"I cannot pay that much for this {item_name}.",
-                        f"This {item_name} is not worth that price."
-                    ])
-                else: # fallback if price is too low
-                    text = random.choice([
-                        f"That is too low for this {item_name}.",
-                        f"You must offer more for this {item_name}.",
-                        f"This price will not work for this {item_name}."
-                    ])
+            if personality == "Aggressive Trader":
+                text = random.choice([
+                    "That is unacceptable.",
+                    "Do not waste my time.",
+                    "That price is ridiculous."
+                ])
+            elif personality == "Cautious Buyer":
+                text = random.choice([
+                    "That seems a bit high…",
+                    "I am not comfortable with that.",
+                    "That feels too much for me."
+                ])
             else:
                 text = random.choice([
-                    f"That is too low for this {item_name}.",
-                    f"You must offer more for this {item_name}.",
-                    f"This price will not work for this {item_name}."
+                    "I am afraid that is too high.",
+                    "I cannot agree to that price.",
+                    "Perhaps you could reconsider?"
                 ])
 
         elif action == "ACCEPT":
-            text = random.choice([
-                f"Alright, I will take this {item_name}.",
-                f"We have a deal for this {item_name}.",
-                f"Agreed. I will buy this {item_name}."
-            ])
+            if personality == "Aggressive Trader":
+                text = "Fine. Deal."
+            elif personality == "Cautious Buyer":
+                text = "Alright… I think this works."
+            else:
+                text = "Very well, we have a deal."
 
         elif action == "WALK_AWAY":
             text = random.choice([
@@ -191,6 +200,9 @@ class DialogueComposer:
 
         elif action == "SET_QUANTITY":
             text = f"Alright, {item_name}. Now tell me your price."
+
+        if prefix and action in ["OFFER", "REJECT", "COUNTER"]:
+            text = f"{prefix} {text}"
 
         seller_words = ["give", "i have", "available", "i sell"]
 
