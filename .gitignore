@@ -14,4 +14,12 @@ UserSettings/
 *.user
 *.userprefs
 .vsconfig
+<<<<<<< HEAD
 .vs/
+=======
+.vs/
+
+# Ignore large models
+backend/npc_engine/models/
+*.gguf
+>>>>>>> 98febe4cf32ebf9de29905fb859c061ed6348557
