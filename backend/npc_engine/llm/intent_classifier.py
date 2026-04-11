@@ -9,6 +9,8 @@ llm = Llama(
     model_path=MODEL_PATH,
     n_ctx=2048,
     n_threads=6,
+    use_mmap=False,   # 🔥 CRITICAL FIX
+    use_mlock=False,  # optional safety
     verbose=False
 )
 
