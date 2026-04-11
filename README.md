@@ -288,4 +288,7 @@ These are worth checking during onboarding:
 - Add a formal `.env` or configuration flow for model path and backend URL.
 - Add automated Python tests for session and negotiation flows.
 - Add Unity scene/setup screenshots to the README.
+  
 https://drive.google.com/drive/folders/1niNB5vcjIiwQG5TsiTGbCRWTrPwTRHNK
+
+https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF?show_file_info=Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
