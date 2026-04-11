@@ -10,7 +10,6 @@ using System.Collections.Generic;
 /// </summary>
 public class TutorialManager1 : MonoBehaviour
 {
-    [Header("Tutorial Stages")]
     public enum TutorialStage
     {
         Intro,
