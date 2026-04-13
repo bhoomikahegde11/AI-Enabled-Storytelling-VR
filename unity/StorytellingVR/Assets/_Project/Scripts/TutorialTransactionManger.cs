@@ -288,7 +288,7 @@ public class TutorialTransactionManager : MonoBehaviour
         OnPriceSubmitted?.Invoke(currentPlayerPrice);
 
         // Trigger tutorial manager callback
-        TutorialManager1 tutorialManager = FindObjectOfType<TutorialManager1>();
+        TutorialManagerNew tutorialManager = FindObjectOfType<TutorialManagerNew>();
         if (tutorialManager != null)
         {
             tutorialManager.OnPlayerSubmitPrice(currentPlayerPrice);

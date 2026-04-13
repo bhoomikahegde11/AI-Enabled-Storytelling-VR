@@ -8,8 +8,9 @@ using System.Collections.Generic;
 /// Main tutorial controller that manages the tutorial flow and coordinates with dialogue system
 /// Handles tutorial stages: Spice Introduction -> Customer Introduction -> Transaction Demo
 /// </summary>
-public class TutorialManager1 : MonoBehaviour
+public class TutorialManagerNew : MonoBehaviour
 {
+    [Header("Tutorial Stages")]
     public enum TutorialStage
     {
         Intro,
