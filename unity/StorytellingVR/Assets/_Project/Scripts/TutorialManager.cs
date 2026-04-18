@@ -33,10 +33,10 @@ public class TutorialManager : MonoBehaviour
         }
 
         // 3. (Optional) Also allow the Space bar for easier testing
-        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
-        {
-            AdvanceDialogue();
-        }
+        //if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+        //{
+        //    AdvanceDialogue();
+        //}
     }
 
     void AdvanceDialogue()

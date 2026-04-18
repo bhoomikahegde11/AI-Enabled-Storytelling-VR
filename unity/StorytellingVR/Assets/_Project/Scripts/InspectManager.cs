@@ -3,19 +3,20 @@ using UnityEngine;
 public class InspectManager : MonoBehaviour
 {
     public Transform inspectPoint;
-    private GameObject currentObject;
+    public GameObject inspectLight;
 
     public void StartInspect(GameObject obj)
     {
-        currentObject = obj;
-
+        obj.transform.SetParent(null);
+        obj.transform.position = inspectPoint.position;
+        obj.transform.rotation = inspectPoint.rotation;
         obj.transform.SetParent(inspectPoint);
-        obj.transform.localPosition = Vector3.zero;
-        obj.transform.localRotation = Quaternion.identity;
+
+        inspectLight.SetActive(true); // TURN ON LIGHT
     }
 
-    public void EndInspect()
+    public void EndInspect(GameObject obj)
     {
-        currentObject.transform.SetParent(null);
+        inspectLight.SetActive(false); // TURN OFF LIGHT
     }
 }
