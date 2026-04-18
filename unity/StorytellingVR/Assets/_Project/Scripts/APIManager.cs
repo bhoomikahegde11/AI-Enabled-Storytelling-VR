@@ -8,7 +8,8 @@ public class APIManager : MonoBehaviour
     private string baseURL = "http://127.0.0.1:8000";
     private string sessionId;
 
-    public IEnumerator StartSession(System.Action<string> callback)
+    // 🔥 START SESSION
+    public IEnumerator StartSession(System.Action<string, string> callback)
     {
         string url = baseURL + "/start";
 
@@ -21,17 +22,27 @@ public class APIManager : MonoBehaviour
 
         if (request.result == UnityWebRequest.Result.Success)
         {
-            var response = JsonUtility.FromJson<StartResponse>(request.downloadHandler.text);
+            string raw = request.downloadHandler.text;
+            Debug.Log("START RAW RESPONSE: " + raw);
+
+            StartResponse response = JsonUtility.FromJson<StartResponse>(raw);
+
             sessionId = response.session_id;
-            callback(response.npc_text);
+
+            Debug.Log("Session ID: " + sessionId);
+            Debug.Log("NPC Text: " + response.npc_text);
+            Debug.Log("Audio URL: " + response.audio_url);
+
+            callback(response.npc_text, response.audio_url);
         }
         else
         {
-            Debug.LogError(request.error);
+            Debug.LogError("StartSession Error: " + request.error);
         }
     }
 
-    public IEnumerator SendMessage(string playerInput, System.Action<string> callback)
+    // 🔥 SEND PLAYER MESSAGE
+    public IEnumerator SendMessage(string playerInput, System.Action<string, string> callback)
     {
         string url = baseURL + "/step";
 
@@ -52,12 +63,19 @@ public class APIManager : MonoBehaviour
 
         if (request.result == UnityWebRequest.Result.Success)
         {
-            var response = JsonUtility.FromJson<StepResponse>(request.downloadHandler.text);
-            callback(response.npc_text);
+            string raw = request.downloadHandler.text;
+            Debug.Log("STEP RAW RESPONSE: " + raw);
+
+            StepResponse response = JsonUtility.FromJson<StepResponse>(raw);
+
+            Debug.Log("NPC Text: " + response.npc_text);
+            Debug.Log("Audio URL: " + response.audio_url);
+
+            callback(response.npc_text, response.audio_url);
         }
         else
         {
-            Debug.LogError(request.error);
+            Debug.LogError("SendMessage Error: " + request.error);
         }
     }
 }
