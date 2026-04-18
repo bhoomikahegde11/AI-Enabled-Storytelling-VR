@@ -7,6 +7,7 @@ public class StartResponse
     public int price;
     public int quantity;
     public bool done;
+    public string audio_url;
 }
 
 [System.Serializable]
@@ -18,6 +19,7 @@ public class StepResponse
     public int price;
     public int quantity;
     public bool done;
+    public string audio_url;
 }
 
 [System.Serializable]

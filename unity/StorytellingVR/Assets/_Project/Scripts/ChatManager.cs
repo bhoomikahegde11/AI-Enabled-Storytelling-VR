@@ -1,12 +1,21 @@
 using UnityEngine;
 using TMPro;
 
+[System.Serializable]
+public class APIResponse
+{
+    public string npc_text;
+    public string audio_url;
+}
+
 public class ChatManager : MonoBehaviour
 {
     public APIManager api;
 
     public TMP_InputField inputField;
     public TextMeshProUGUI npcText;
+
+    public AudioManager audioManager;
 
     void Start()
     {
@@ -24,8 +33,18 @@ public class ChatManager : MonoBehaviour
         inputField.text = "";
     }
 
-    void OnNPCReply(string text)
+    void OnNPCReply(string text, string audioUrl)
     {
         npcText.text = text;
+
+        if (audioManager != null && !string.IsNullOrEmpty(audioUrl))
+        {
+            Debug.Log("Playing audio: " + audioUrl);
+            audioManager.PlayAudioFromUrl(audioUrl);
+        }
+        else
+        {
+            Debug.LogWarning("Audio URL missing!");
+        }
     }
 }
