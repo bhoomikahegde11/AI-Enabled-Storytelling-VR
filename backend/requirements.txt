@@ -6,3 +6,4 @@ llama-cpp-python>=0.3,<0.4
 gtts
 elevenlabs
 requests
+piper-tts
