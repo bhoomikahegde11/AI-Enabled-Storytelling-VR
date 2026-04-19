@@ -13,5 +13,6 @@ public class InspectTriggerInput : MonoBehaviour
         {
             manager.StartInspect(testCoin);
         }
+        
     }
 }
