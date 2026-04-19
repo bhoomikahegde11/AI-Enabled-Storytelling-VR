@@ -1,6 +1,7 @@
 using System.Collections;
-using UnityEngine;
 using TMPro;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class TutorialManager : MonoBehaviour
 {
@@ -189,6 +190,7 @@ public class TutorialManager : MonoBehaviour
         );
 
         tutorialFinished = true;
+        SceneManager.LoadScene(1);
     }
 
     void ShowNarrator(string text)
