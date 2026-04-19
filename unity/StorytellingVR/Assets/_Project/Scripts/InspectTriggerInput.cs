@@ -2,16 +2,16 @@ using UnityEngine;
 
 public class InspectTriggerInput : MonoBehaviour
 {
-    public GameObject coin;
+    public GameObject testcoin;
     public InspectManager manager;
+
+    public GameObject testCoin;
 
     void Update()
     {
-        Debug.Log("Update running");
-
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            Debug.Log("SPACE PRESSED");
+            manager.StartInspect(testCoin);
         }
     }
 }
