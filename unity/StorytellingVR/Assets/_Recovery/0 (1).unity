@@ -233,7 +233,7 @@ MonoBehaviour:
   requestBodyTrackingPermissionOnStartup: 0
   requestFaceTrackingPermissionOnStartup: 0
   requestEyeTrackingPermissionOnStartup: 0
-  requestScenePermissionOnStartup: 1
+  requestScenePermissionOnStartup: 0
   requestRecordAudioPermissionOnStartup: 0
   requestPassthroughCameraAccessPermissionOnStartup: 0
   _localDimming: 1
@@ -933,7 +933,7 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 2
+  m_HorizontalAlignment: 1
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
@@ -965,7 +965,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: -211.90132, y: -22.7973, z: -181.50592, w: -31.19259}
+  m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -995,7 +995,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.16, y: 2.3}
+  m_AnchoredPosition: {x: 0.11300004, y: 1.9560006}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &363890919
@@ -3167,109 +3167,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1573725606
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1573725609}
-  - component: {fileID: 1573725608}
-  - component: {fileID: 1573725607}
-  m_Layer: 0
-  m_Name: '[BuildingBlock] Speech To Text'
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1573725607
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1573725606}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0ebafe374ff6848bb9b28beabd283b5e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  providerAsset: {fileID: 11400000, guid: 3aa2df4f65b6ed947b20f1b5e08f96f5, type: 2}
-  deviceName: 
-  sampleRate: 16000
-  channels: 1
-  rmsWindowSeconds: 0.02
-  vadStartThresholdDb: 14
-  vadStopThresholdDb: 8
-  maxSilenceSeconds: 0.8
-  minSpeechSeconds: 0.25
-  endPadSeconds: 0.06
-  envelopeAttackSeconds: 0.02
-  envelopeReleaseSeconds: 0.1
-  noiseWindowSeconds: 1.5
-  noisePercentile: 0.2
-  quietMarginDb: 1
-  maxDurationSeconds: 20
-  prePadSeconds: 0.35
-  manualStopOnly: 1
-  onTranscript:
-    m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 2137732763}
-        m_TargetAssemblyTypeName: ChatManager, Assembly-CSharp
-        m_MethodName: OnVoiceInput
-        m_Mode: 5
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-  lastTranscript: 
---- !u!114 &1573725608
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1573725606}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5b023183069df224080314a560e6e1ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Meta.XR.BuildingBlocks::Meta.XR.BuildingBlocks.BuildingBlock
-  blockId: b246d3bb-3f91-4efe-893c-c4c2d0de7210
-  instanceId: 35e796e8-b496-4a19-a4e1-c6d6add6a70c
-  version: 1
-  installationRoutineCheckpoint:
-    _installationRoutineId: 23952c08-05e9-48de-b271-fadf8448828c
-    _installationVariants:
-    - _memberName: providerAssetSelection
-      _value: Create a new provider asset
-    - _memberName: inferenceType
-      _value: '{"value__":1}'
-    - _memberName: modelProvider
-      _value: OpenAI - gpt-4o-mini-transcribe
---- !u!4 &1573725609
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1573725606}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1784848074
 GameObject:
   m_ObjectHideFlags: 0
@@ -4033,4 +3930,3 @@ SceneRoots:
   - {fileID: 1500459785}
   - {fileID: 503488386}
   - {fileID: 2137732765}
-  - {fileID: 1573725609}
