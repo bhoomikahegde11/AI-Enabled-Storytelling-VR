@@ -1593,7 +1593,8 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1402024733}
   m_Father: {fileID: 1868099375}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -2739,16 +2740,16 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1402024732}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -22}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalRotation: {x: 0.064473175, y: -0.014942601, z: -0.006689907, w: -0.99778515}
+  m_LocalPosition: {x: 0, y: 0, z: 1284.3087}
+  m_LocalScale: {x: 3.5103214, y: 3.5103219, z: 3.5103219}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1569645475}
+  m_Father: {fileID: 802985046}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 4, y: -274}
+  m_AnchoredPosition: {x: 917.42615, y: -705.864}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1402024734
@@ -2775,19 +2776,19 @@ MonoBehaviour:
 
     Gold | Vijayanagara Empire
 
-    
 
-    Used in trade
-    across
 
-    South India and Persia
+    Used in trade across
 
-    
+    South
+    India and Persia
+
+
 
     Value: High denomination'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: e390c1dc5803cb84d956c29b4057d0b0, type: 2}
-  m_sharedMaterial: {fileID: 3620414256581649086, guid: e390c1dc5803cb84d956c29b4057d0b0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -3069,8 +3070,7 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: -0.032}
   m_LocalScale: {x: 0.002, y: 0.002, z: 0.002}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1402024733}
+  m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: -179.253, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -3308,8 +3308,9 @@ RectTransform:
   m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1976708502}
   - {fileID: 802985046}
+  - {fileID: 3745622628548100375}
+  - {fileID: 1976708502}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -3329,7 +3330,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42fb33946cca7fa4083f66b3b745511f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialManager
-  captionText: {fileID: 1976708503}
 --- !u!1001 &1890983932
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3556,8 +3556,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Namaskara, welcome to Hampi!
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: e390c1dc5803cb84d956c29b4057d0b0, type: 2}
-  m_sharedMaterial: {fileID: 3620414256581649086, guid: e390c1dc5803cb84d956c29b4057d0b0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -3663,12 +3663,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 832149484262920189}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.5142268, y: -0.4817393, z: -0.45487118, w: 0.54460096}
-  m_LocalPosition: {x: 0.209, y: 2.649, z: -0.114}
-  m_LocalScale: {x: 0.38016355, y: 0.024685126, z: 0.35426515}
+  m_LocalRotation: {x: 0.4931489, y: -0.51113814, z: 0.54094976, w: -0.4504612}
+  m_LocalPosition: {x: -1069, y: 439, z: 1445}
+  m_LocalScale: {x: 667.2481, y: 43.326363, z: 621.79236}
   m_ConstrainProportionsScale: 1
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1868099375}
   m_LocalEulerAnglesHint: {x: 6.998, y: -89.596, z: -86.689}
 --- !u!23 &4539702728183999318
 MeshRenderer:
@@ -3746,7 +3746,6 @@ SceneRoots:
   - {fileID: 900244554}
   - {fileID: 503488386}
   - {fileID: 896845276}
-  - {fileID: 3745622628548100375}
   - {fileID: 1117089529}
   - {fileID: 542658725}
   - {fileID: 1569645475}
