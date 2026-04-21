@@ -5,6 +5,8 @@ using UnityEngine.SceneManagement;
 
 public class TutorialManager : MonoBehaviour
 {
+    IEnumerator LoadNextScene() 
+    { yield return new WaitForSeconds(2f); SceneManager.LoadScene(1); }
     [Header("Dialogue UI")]
     public TMP_Text speakerNameText;
     public TMP_Text dialogueText;
@@ -159,7 +161,7 @@ public class TutorialManager : MonoBehaviour
             "Balance is the key to trade...\n\nToo high... and you lose the customer.\n\nToo low... and you lose your profit.\n\nChoose wisely."
         );
 
-        tutorialFinished = true;
+        tutorialFinished = true; StartCoroutine(LoadNextScene());
     }
 
     IEnumerator TooHighAgainSequence(int offer)
@@ -190,7 +192,7 @@ public class TutorialManager : MonoBehaviour
         );
 
         tutorialFinished = true;
-        SceneManager.LoadScene(1);
+        StartCoroutine(LoadNextScene());
     }
 
     void ShowNarrator(string text)
