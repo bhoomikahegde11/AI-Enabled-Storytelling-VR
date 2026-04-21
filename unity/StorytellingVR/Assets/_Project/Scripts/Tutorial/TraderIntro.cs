@@ -4,7 +4,7 @@ using System.Collections;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-public class TutorialManager : MonoBehaviour
+public class TraderIntro : MonoBehaviour
 {
     [Header("UI")]
     public TextMeshProUGUI subtitleText;
