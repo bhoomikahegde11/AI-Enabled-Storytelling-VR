@@ -67,5 +67,35 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4053952679807787860, guid: 1d90cb57d12ad934dad04412902fa84f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 89956797543312785}
   m_SourcePrefab: {fileID: 100100000, guid: 1d90cb57d12ad934dad04412902fa84f, type: 3}
+--- !u!1 &4206111903972063420 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4053952679807787860, guid: 1d90cb57d12ad934dad04412902fa84f, type: 3}
+  m_PrefabInstance: {fileID: 152440716594011112}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &89956797543312785
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4206111903972063420}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3dc06b820e4b43458f3ef54541b6653, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NPCManager
+  destination: {fileID: 8940281142020673089}
+  speed: 1.2
+  infoCanvas: {fileID: 0}
+  factText: {fileID: 0}
+  historicalFact: 
+--- !u!4 &8940281142020673089 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -139657413205666391, guid: 1d90cb57d12ad934dad04412902fa84f, type: 3}
+  m_PrefabInstance: {fileID: 152440716594011112}
+  m_PrefabAsset: {fileID: 0}
