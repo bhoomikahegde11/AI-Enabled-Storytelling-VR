@@ -1408,7 +1408,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -150, y: 199}
+  m_AnchoredPosition: {x: -150, y: 222}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &527020552
@@ -1431,13 +1431,12 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Namaskara, Player!\r\n\r\n--------------------------------\r\n       
-    Hampi Ledger\r\n--------------------------------\r\n\r\nRevenue        : 500
-    gold\r\nTaxes Paid     : 20 gold\r\nRent           : 10 gold\r\n\r\n--------------------------------\r\nNet
-    Balance    : 470 gold\r\n--------------------------------"
+  m_text: "\r\n        Hampi Ledger\r\n--------------------------------\r\n\r\nRevenue       
+    : 500 Varahas\r\nTaxes Paid     : 20 Varahas\r\nRent           : 10 varahas\r\n\r\n--------------------------------\r\nNet
+    Balance    : 470 varahas\r\n--------------------------------"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
+  m_sharedMaterial: {fileID: -7543732066147648486, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2840,7 +2839,7 @@ GameObject:
   - component: {fileID: 1868099372}
   - component: {fileID: 1868099376}
   m_Layer: 5
-  m_Name: NarratorCanvas
+  m_Name: ReportCanvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
