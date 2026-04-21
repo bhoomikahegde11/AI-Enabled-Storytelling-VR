@@ -1,42 +1,48 @@
 using UnityEngine;
 using TMPro;
-using UnityEngine.InputSystem;
+using Meta.WitAi;
+using Meta.WitAi.Json;
 
 public class VoiceRecognitionManager : MonoBehaviour
 {
+    public AppVoiceExperience voiceExperience;
     public TutorialManager tutorialManager;
     public TMP_Text spokenPriceText;
 
+    void Start()
+    {
+        voiceExperience.VoiceEvents.OnResponse.AddListener(OnWitResponse);
+    }
+
     void Update()
     {
-        if (Keyboard.current.digit1Key.wasPressedThisFrame)
+        if (Input.GetKeyDown(KeyCode.V))
         {
-            SubmitPrice(200);
-        }
-
-        if (Keyboard.current.digit2Key.wasPressedThisFrame)
-        {
-            SubmitPrice(70);
-        }
-
-        if (Keyboard.current.digit3Key.wasPressedThisFrame)
-        {
-            SubmitPrice(60);
-        }
-
-        if (Keyboard.current.digit4Key.wasPressedThisFrame)
-        {
-            SubmitPrice(40);
-        }
-        if (Keyboard.current.digit5Key.wasPressedThisFrame)
-        {
-            SubmitPrice(500);
+            voiceExperience.Activate();
+            Debug.Log("Listening...");
         }
     }
 
-    public void SubmitPrice(int price)
+    void OnWitResponse(WitResponseNode response)
     {
-        spokenPriceText.text = "Spoken Price: " + price + " Varahas";
-        tutorialManager.HandlePlayerOffer(price);
+        if (response == null)
+        {
+            tutorialManager.ShowNarratorMessage("Say a number.");
+            return;
+        }
+
+        var entities = response["entities"]["wit$number:number"];
+
+        if (entities == null || entities.Count == 0)
+        {
+            tutorialManager.ShowNarratorMessage("Say a number.");
+            return;
+        }
+
+        int recognizedNumber = entities[0]["value"].AsInt;
+
+        spokenPriceText.text = "Spoken Price: " + recognizedNumber + " Varahas";
+
+        tutorialManager.HandlePlayerOffer(recognizedNumber);
     }
 }

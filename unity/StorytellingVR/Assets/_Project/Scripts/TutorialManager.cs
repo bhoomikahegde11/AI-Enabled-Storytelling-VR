@@ -208,4 +208,12 @@ public class TutorialManager : MonoBehaviour
         dialogueText.text = text;
         dialogueText.color = Color.white;
     }
+    public void ShowNarratorMessage(string message)
+    {
+        speakerNameText.text = "Narrator";
+        speakerNameText.color = Color.yellow;
+
+        dialogueText.text = message;
+        dialogueText.color = Color.yellow;
+    }
 }
