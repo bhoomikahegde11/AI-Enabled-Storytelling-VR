@@ -1615,7 +1615,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.01886791, g: 0.014328931, b: 0.014328931, a: 0.8156863}
+  m_Color: {r: 0, g: 0, b: 0, a: 0.69411767}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2115,7 +2115,7 @@ Transform:
   m_GameObject: {fileID: 1073431718}
   serializedVersion: 2
   m_LocalRotation: {x: 0.0942936, y: 0.104446866, z: -0.04794108, w: 0.9888889}
-  m_LocalPosition: {x: -0.85000193, y: 0.5519998, z: 0.048000082}
+  m_LocalPosition: {x: -0.516, y: 0.381, z: -0.056}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2162,7 +2162,7 @@ Light:
   m_Type: 0
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Intensity: 8
-  m_Range: 2.4565432
+  m_Range: 1.3741444
   m_SpotAngle: 40.693024
   m_InnerSpotAngle: 24.687302
   m_CookieSize2D: {x: 0.5, y: 0.5}
@@ -3309,7 +3309,6 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 802985046}
-  - {fileID: 3745622628548100375}
   - {fileID: 1976708502}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -3663,12 +3662,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 832149484262920189}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.4931489, y: -0.51113814, z: 0.54094976, w: -0.4504612}
-  m_LocalPosition: {x: -1069, y: 439, z: 1445}
-  m_LocalScale: {x: 667.2481, y: 43.326363, z: 621.79236}
+  m_LocalRotation: {x: 0.5142268, y: -0.48173934, z: -0.45487124, w: 0.544601}
+  m_LocalPosition: {x: -0.115208924, y: 2.568076, z: 0.29404292}
+  m_LocalScale: {x: 0.18136582, y: 0.0117766075, z: 0.16901037}
   m_ConstrainProportionsScale: 1
   m_Children: []
-  m_Father: {fileID: 1868099375}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 6.998, y: -89.596, z: -86.689}
 --- !u!23 &4539702728183999318
 MeshRenderer:
@@ -3749,3 +3748,4 @@ SceneRoots:
   - {fileID: 1117089529}
   - {fileID: 542658725}
   - {fileID: 1569645475}
+  - {fileID: 3745622628548100375}
