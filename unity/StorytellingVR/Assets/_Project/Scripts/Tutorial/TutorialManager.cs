@@ -186,18 +186,20 @@ public class TutorialManager : MonoBehaviour
     {
         float t = 0;
 
+        // Target upper body/face for accurate distance computation instead of the feet
+        Vector3 focusPoint = npc.position + Vector3.up * 1.5f;
         float distance = Vector3.Distance(
             Camera.main.transform.position,
-            npc.position
+            focusPoint
         );
 
         while (t < 1)
         {
             t += Time.unscaledDeltaTime * 2f;
 
-            // 🔥 strong blur targeting the specific distance
+            // 🔥 strong blur targeting the specific distance with adjusted aperture for close-up
             dof.focusDistance.value = Mathf.Lerp(10f, distance, t);
-            dof.aperture.value = Mathf.Lerp(5f, 0.2f, t);
+            dof.aperture.value = Mathf.Lerp(5f, 0.6f, t);
 
             yield return null;
         }
@@ -210,13 +212,14 @@ public class TutorialManager : MonoBehaviour
 
         while (true)
         {
+            Vector3 focusPoint = npc.position + Vector3.up * 1.5f;
             float distance = Vector3.Distance(
                 Camera.main.transform.position,
-                npc.position
+                focusPoint
             );
 
             dof.focusDistance.value = distance;
-            dof.aperture.value = 0.2f;
+            dof.aperture.value = 0.6f;
 
             yield return null;
         }
