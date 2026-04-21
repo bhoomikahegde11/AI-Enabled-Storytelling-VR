@@ -93,7 +93,7 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 20201, guid: 0000000000000000f000000000000000, type: 0}
+  m_LightingDataAsset: {fileID: 112000000, guid: 5079c4a6c8fe8d84696b7aa3d361aae4, type: 2}
   m_LightingSettings: {fileID: 0}
 --- !u!196 &4
 NavMeshSettings:
@@ -8639,12 +8639,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42fb33946cca7fa4083f66b3b745511f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialManager
-  subtitleText: {fileID: 0}
-  npc: {fileID: 0}
-  npcTarget: {fileID: 0}
-  npcSpeed: 1.5
-  playerCamera: {fileID: 0}
-  globalVolume: {fileID: 0}
 --- !u!1 &1876122636
 GameObject:
   m_ObjectHideFlags: 0
@@ -9195,8 +9189,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Namaskara, welcome to Hampi!
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: e390c1dc5803cb84d956c29b4057d0b0, type: 2}
-  m_sharedMaterial: {fileID: 3620414256581649086, guid: e390c1dc5803cb84d956c29b4057d0b0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
+  m_sharedMaterial: {fileID: -7543732066147648486, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
