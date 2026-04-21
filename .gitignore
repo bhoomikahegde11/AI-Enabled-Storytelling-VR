@@ -16,3 +16,12 @@ UserSettings/
 .vsconfig
 .vs/
 /unity/StorytellingVR/Assets/_Recovery
+
+# Environment Variables
+.env
+backend/.env
+
+# Large Models
+backend/npc_engine/models/model.gguf
+*.gguf
+backend/models/en_US-lessac-medium.onnx
