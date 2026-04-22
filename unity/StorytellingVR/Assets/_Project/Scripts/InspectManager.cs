@@ -41,9 +41,9 @@ public class InspectManager : MonoBehaviour
 
         //  FINAL POSITION
         Vector3 targetPos = cam.position
-                  + cam.forward * 1.5f   // 🔥 main fix (distance)
-                  - cam.right * 0.1f     // slight left
-                  - cam.up * 0.15f;       // slight down
+                  + cam.forward * 1.3f   // 🔥 main fix (distance)
+                  - cam.right * 0.5f     // slight left
+                  - cam.up * -0.2f;       // slight down
 
         Vector3 originalScale = obj.transform.localScale;
 
