@@ -25,3 +25,4 @@ backend/.env
 backend/npc_engine/models/model.gguf
 *.gguf
 backend/models/en_US-lessac-medium.onnx
+unity/StorytellingVR/Assets/Fonts/LibertinusSerifDisplay-Regular SDF.asset
