@@ -25,6 +25,7 @@ public class TutorialManager : MonoBehaviour
     private bool waitingForHighPrice = false;
     private bool waitingForFairPrice = false;
     private bool tutorialFinished = false;
+    private bool waitingForNextLine = false;
 
     void Start()
     {
@@ -37,24 +38,56 @@ public class TutorialManager : MonoBehaviour
 
         StartCoroutine(TutorialSequence());
     }
+    IEnumerator ShowDialogueSequence(string speaker, Color color, params string[] lines)
+    {
+        speakerNameText.text = speaker;
+        speakerNameText.color = color;
 
+        foreach (string line in lines)
+        {
+            dialogueText.text = line;
+            dialogueText.color = color;
+
+            waitingForNextLine = true;
+
+            while (waitingForNextLine == true)
+            {
+                if (Input.GetKeyDown(KeyCode.Space))
+                {
+                    waitingForNextLine = false;
+                }
+
+                yield return null;
+            }
+
+            yield return null;
+        }
+    }
     IEnumerator TutorialSequence()
     {
-        ShowNarrator(
-            "Ah... look there.\n\nYour first customer approaches.\n\nLet us see how you handle your very first deal..."
-        );
+        yield return StartCoroutine(ShowDialogueSequence(
+            "Narrator:",
+            Color.yellow,
+            "Let us see how you handle your very first deal..."
+        ));
 
-        yield return new WaitForSeconds(5f);
+        yield return StartCoroutine(ShowDialogueSequence(
+            "Rahim:",
+            Color.white,
+            "Greetings, merchant.",
+            "I am Rahim, a trader from the lands of Persia.",
+            "I have travelled far across deserts and seas in search of fine spices.",
+            "I would like to buy 1 kilogram of cardamom... at a fair price."
+        ));
 
-        ShowCustomer(
-            "Greetings, merchant.\n\nI am Rahim, a trader from the lands of Persia.\n\nI have travelled far across deserts and seas in search of fine spices.\n\nI would like to buy 1 kilogram of cardamom... at a fair price."
-        );
-
-        yield return new WaitForSeconds(8f);
-
-        ShowNarrator(
-            "Let us now understand the art of negotiation...\n\nThe base price for cardamom is 50 Varahas.\n\nTry beginning with 200.\n\nOffer too high... and you may lose the deal."
-        );
+        yield return StartCoroutine(ShowDialogueSequence(
+            "Narrator:",
+            Color.yellow,
+            "Let us now understand the art of negotiation...",
+            "The base price for cardamom is 50 Varahas.",
+            "Try beginning with 200.",
+            "Offer too high... and you may lose the deal."
+        ));
 
         waitingForHighPrice = true;
     }
@@ -100,15 +133,21 @@ public class TutorialManager : MonoBehaviour
 
     IEnumerator HighPriceReactionSequence(int offer)
     {
-        ShowCustomer(
-            offer + " Varahas?!\n\nThat is outrageous, merchant...\n\nPlease offer a fair price."
-        );
+        yield return StartCoroutine(ShowDialogueSequence(
+            "Rahim:",
+            Color.white,
+            offer + " Varahas?!",
+            "That is outrageous, merchant...",
+            "Please offer a fair price."
+        ));
 
-        yield return new WaitForSeconds(5f);
-
-        ShowNarrator(
-            "As you can see... greed may cost you the trade.\n\nNow... make a wiser decision.\n\nOffer a fair price while still securing your profit."
-        );
+        yield return StartCoroutine(ShowDialogueSequence(
+            "Narrator:",
+            Color.yellow,
+            "As you can see... greed may cost you the trade.",
+            "Now... make a wiser decision.",
+            "Offer a fair price while still securing your profit."
+        ));
 
         waitingForFairPrice = true;
     }
@@ -143,53 +182,70 @@ public class TutorialManager : MonoBehaviour
 
     IEnumerator FairPriceSequence(int offer)
     {
-        int profit = offer - 50;
         coins += offer;
-
         coinsEarnedText.text = "Coins Earned: " + coins;
 
         respect += 10;
         respectUIManager.SetRespect(respect);
 
-        ShowCustomer(
-            "Hmm... " + offer + " Varahas...\n\nThat seems more reasonable.\n\nI accept your offer."
-        );
+        yield return StartCoroutine(ShowDialogueSequence(
+            "Rahim:",
+            Color.white,
+            "Hmm... " + offer + " Varahas...",
+            "That seems more reasonable.",
+            "I accept your offer."
+        ));
 
-        yield return new WaitForSeconds(5f);
+        yield return StartCoroutine(ShowDialogueSequence(
+            "Narrator:",
+            Color.yellow,
+            "Balance is the key to trade...",
+            "Too high... and you lose the customer.",
+            "Too low... and you lose your profit.",
+            "Choose wisely."
+        ));
 
-        ShowNarrator(
-            "Balance is the key to trade...\n\nToo high... and you lose the customer.\n\nToo low... and you lose your profit.\n\nChoose wisely."
-        );
-
-        tutorialFinished = true; StartCoroutine(LoadNextScene());
+        tutorialFinished = true;
+        StartCoroutine(LoadNextScene());
     }
 
     IEnumerator TooHighAgainSequence(int offer)
     {
-        ShowCustomer(
-            offer + " Varahas?\n\nThat is still too expensive.\n\nI may take my business elsewhere."
-        );
+        yield return StartCoroutine(ShowDialogueSequence(
+            "Rahim:",
+            Color.white,
+            offer + " Varahas?",
+            "That is still too expensive.",
+            "I may take my business elsewhere."
+        ));
 
-        yield return new WaitForSeconds(5f);
-
-        ShowNarrator(
-            "That price is still too high.\n\nTry offering something closer to 60 or 70 Varahas."
-        );
+        yield return StartCoroutine(ShowDialogueSequence(
+            "Narrator:",
+            Color.yellow,
+            "That price is still too high.",
+            "Try offering something closer to 60 or 70 Varahas."
+        ));
 
         waitingForFairPrice = true;
     }
 
     IEnumerator TooLowSequence(int offer)
     {
-        ShowCustomer(
-            offer + " Varahas?\n\nThat is very generous.\n\nI happily accept."
-        );
+        yield return StartCoroutine(ShowDialogueSequence(
+            "Rahim:",
+            Color.white,
+            offer + " Varahas?",
+            "That is very generous.",
+            "I happily accept."
+        ));
 
-        yield return new WaitForSeconds(5f);
-
-        ShowNarrator(
-            "The customer is pleased...\n\nBut your profit is very low.\n\nTry to find a better balance next time."
-        );
+        yield return StartCoroutine(ShowDialogueSequence(
+            "Narrator:",
+            Color.yellow,
+            "The customer is pleased...",
+            "But your profit is very low.",
+            "Try to find a better balance next time."
+        ));
 
         tutorialFinished = true;
         StartCoroutine(LoadNextScene());
@@ -197,7 +253,7 @@ public class TutorialManager : MonoBehaviour
 
     void ShowNarrator(string text)
     {
-        speakerNameText.text = "Narrator";
+        speakerNameText.text = "Narrator:";
         speakerNameText.color = Color.yellow;
 
         dialogueText.text = text;
@@ -206,7 +262,7 @@ public class TutorialManager : MonoBehaviour
 
     void ShowCustomer(string text)
     {
-        speakerNameText.text = "Rahim";
+        speakerNameText.text = "Rahim:";
         speakerNameText.color = Color.white;
 
         dialogueText.text = text;
