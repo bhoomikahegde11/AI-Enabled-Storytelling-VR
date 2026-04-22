@@ -5,14 +5,20 @@ from npc_engine.engine.input_interpreter import extract_price
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "models", "model.gguf")
 
-llm = Llama(
-    model_path=MODEL_PATH,
-    n_ctx=2048,
-    n_threads=6,
-    use_mmap=False,   # 🔥 CRITICAL FIX
-    use_mlock=False,  # optional safety
-    verbose=False
-)
+_llm = None
+
+def get_llm():
+    global _llm
+    if _llm is None:
+        _llm = Llama(
+            model_path=MODEL_PATH,
+            n_ctx=2048,
+            n_threads=6,
+            use_mmap=False,   # 🔥 CRITICAL FIX
+            use_mlock=False,  # optional safety
+            verbose=False
+        )
+    return _llm
 
 OUT_OF_WORLD_TERMS = [
     "phone", "internet", "computer", "app", "mobile", "online", "wifi", "robot",
@@ -98,7 +104,7 @@ Sentence: "{user_input}"
 """
 
     try:
-        hostility_output = llm(hostility_prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
+        hostility_output = get_llm()(hostility_prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
         return hostility_output == "YES"
     except:
         return False
@@ -229,7 +235,7 @@ Negotiation context:
 
 Return ONLY A, B, or C.
 """
-    return llm(prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
+    return get_llm()(prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
 
 
 def apply_intent_corrections(text: str, candidate_intent: str, context=None):
@@ -672,7 +678,7 @@ Sentence: "{user_input}"
 """
 
         try:
-            agreement_output = llm(agreement_prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
+            agreement_output = get_llm()(agreement_prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
             if agreement_output == "YES":
                 return {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
         except:
@@ -786,7 +792,7 @@ Answer YES or NO.
 Sentence: "{user_input}"
 """
             try:
-                abuse_output = llm(abuse_prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
+                abuse_output = get_llm()(abuse_prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
                 if "YES" in abuse_output:
                     return {"intent": "HOSTILE", "tone": "annoyed", "persuasion": 0}
             except:

@@ -150,12 +150,12 @@ def start_session():
 
     return {
         "session_id": session_id,
-        "npc_text": response["npc_text"],
-        "action": response["action"],
-        "price": response["price"],
-        "quantity": response["quantity"],
-        "done": response["done"],
-        "audio_url": generate_audio_url(response["npc_text"]),
+        "npc_text": response.get("npc_text", ""),
+        "action": response.get("action", ""),
+        "price": response.get("price", 0),
+        "quantity": response.get("quantity", 0),
+        "done": response.get("done", False),
+        "audio_url": generate_audio_url(response.get("npc_text", "")),
         "response": response
     }
 
@@ -174,12 +174,12 @@ def step_session(req: StepRequest):
 
     return {
         "session_id": session_id,
-        "npc_text": response["npc_text"],
-        "action": response["action"],
-        "price": response["price"],
-        "quantity": response["quantity"],
-        "done": response["done"],
-        "audio_url": generate_audio_url(response["npc_text"]),
+        "npc_text": response.get("npc_text", ""),
+        "action": response.get("action", ""),
+        "price": response.get("price", 0),
+        "quantity": response.get("quantity", 0),
+        "done": response.get("done", False),
+        "audio_url": generate_audio_url(response.get("npc_text", "")),
         "response": response
     }
 
