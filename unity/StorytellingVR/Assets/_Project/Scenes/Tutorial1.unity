@@ -1502,9 +1502,17 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: -3789489790654712381, guid: 7794f37d28c9e194ea14f7516bac1683, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -9.58
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 7794f37d28c9e194ea14f7516bac1683, type: 3}
       propertyPath: m_Name
       value: bazaarpillar (2)
+      objectReference: {fileID: 0}
+    - target: {fileID: 5219135774775564417, guid: 7794f37d28c9e194ea14f7516bac1683, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 3.92
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -3375,11 +3383,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42fb33946cca7fa4083f66b3b745511f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialManager
-  speakerNameText: {fileID: 0}
-  dialogueText: {fileID: 0}
-  coinsEarnedText: {fileID: 0}
-  spokenPriceText: {fileID: 0}
-  respectUIManager: {fileID: 0}
 --- !u!114 &1868099377
 MonoBehaviour:
   m_ObjectHideFlags: 0
