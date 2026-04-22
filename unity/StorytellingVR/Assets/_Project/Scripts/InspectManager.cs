@@ -1,81 +1,76 @@
 ﻿using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 using System.Collections;
 
 public class InspectManager : MonoBehaviour
 {
-    public Volume volume;              // Assign in Inspector
-    private DepthOfField dof;
-    public GameObject infoPanel;
-    public Transform inspectPoint;
+    [Header("References")]
+    public GameObject coin;              // assign in Inspector
+    public CanvasGroup overlay;          // dark background (with CanvasGroup)
+    public GameObject coinUI;            // info panel UI
+
+    [Header("Settings")]
     public float moveDuration = 0.6f;
+    public float startDelay = 1.5f;
 
     void Start()
     {
-        infoPanel.SetActive(false);
-        // Get Depth of Field from Volume
-        if (volume.profile.TryGet(out dof))
-        {
-            dof.active = false; // start with blur OFF
-        }
-        else
-        {
-            Debug.LogError("Depth of Field not found in Volume!");
-        }
+        // Initial state
+        overlay.alpha = 0f;
+        coinUI.SetActive(false);
+
+        // Start full sequence
+        StartCoroutine(StartInspectSequence());
     }
 
-    public void StartInspect(GameObject obj)
+    IEnumerator StartInspectSequence()
     {
-        StartCoroutine(MoveToInspect(obj));
+        yield return new WaitForSeconds(startDelay);
+
+        yield return StartCoroutine(MoveToInspect(coin));
+
+        // After animation finishes → show UI
+        coinUI.SetActive(true);
     }
 
     IEnumerator MoveToInspect(GameObject obj)
     {
         Transform t = obj.transform;
-
         Transform cam = Camera.main.transform;
 
-        // 🔥 Capture FINAL values (what you set manually)
-        Vector3 endPos = t.position;
-        Vector3 endScale = t.localScale;
-        Quaternion endRot = t.rotation;
+        Vector3 startPos = t.position;
 
-        // 🔥 Define start values
-        Vector3 startPos = cam.position + cam.forward * 1.5f;
-        Vector3 startScale = Vector3.one * 0.05f;
+        //  FINAL POSITION
+        Vector3 targetPos = cam.position
+                  + cam.forward * 1.5f   // 🔥 main fix (distance)
+                  - cam.right * 0.1f     // slight left
+                  - cam.up * 0.15f;       // slight down
 
-        // Apply start state
-        t.position = startPos;
-        t.localScale = startScale;
+        Vector3 originalScale = obj.transform.localScale;
+
+        Vector3 startScale = originalScale * 0.3f;
+        Vector3 endScale = originalScale * 1.2f;
 
         float time = 0;
 
         while (time < moveDuration)
         {
-            float tVal = Mathf.SmoothStep(0, 1, time / moveDuration);
+            float tVal = time / moveDuration;
 
-            // Move
-            t.position = Vector3.Lerp(startPos, endPos, tVal);
+            // Move forward
+            t.position = Vector3.Lerp(startPos, targetPos, tVal);
 
-            // Scale
+            // Scale up
             t.localScale = Vector3.Lerp(startScale, endScale, tVal);
+
+            // Fade overlay
+            overlay.alpha = Mathf.Lerp(0f, 0.6f, tVal);
 
             time += Time.deltaTime;
             yield return null;
         }
 
-        // Final snap (exact)
-        t.position = endPos;
+        // Final snap
+        t.position = targetPos;
         t.localScale = endScale;
-        t.rotation = endRot;
-        infoPanel.SetActive(true);
-    }
-    void EnableBlur()
-    {
-        if (dof != null)
-        {
-            dof.active = true;
-        }
     }
 }

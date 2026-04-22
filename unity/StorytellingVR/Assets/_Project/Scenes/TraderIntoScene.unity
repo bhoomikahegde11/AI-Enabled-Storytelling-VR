@@ -8537,7 +8537,8 @@ GameObject:
   - component: {fileID: 1868099373}
   - component: {fileID: 1868099372}
   - component: {fileID: 1868099376}
-  m_Layer: 5
+  - component: {fileID: 1868099377}
+  m_Layer: 3
   m_Name: NarratorCanvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -8583,7 +8584,7 @@ MonoBehaviour:
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 0
+  m_PresetInfoIsWorld: 1
 --- !u!223 &1868099374
 Canvas:
   m_ObjectHideFlags: 0
@@ -8593,8 +8594,8 @@ Canvas:
   m_GameObject: {fileID: 1868099371}
   m_Enabled: 1
   serializedVersion: 3
-  m_RenderMode: 0
-  m_Camera: {fileID: 0}
+  m_RenderMode: 2
+  m_Camera: {fileID: 86862298}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
   m_ReceivesEvents: 1
@@ -8614,19 +8615,19 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1868099371}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0, y: -0.9998813, z: -0, w: 0.015405045}
+  m_LocalPosition: {x: 0, y: 0, z: 0.013}
+  m_LocalScale: {x: 0.002, y: 0.002, z: 0.002}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1976708502}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: -178.235, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0, y: 0}
+  m_AnchoredPosition: {x: -0.434, y: 2.915}
+  m_SizeDelta: {x: 1919.9999, y: 1647.4724}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1868099376
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8639,6 +8640,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42fb33946cca7fa4083f66b3b745511f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialManager
+--- !u!114 &1868099377
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1868099371}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee10491ef6d5d1d49a270cf6b09bdc19, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Oculus.VR::OVROverlayCanvas
+  _mipmapMode: 0
+  _dynamicResolution: 1
+  _redrawResolutionThreshold: 2147483647
+  rectTransform: {fileID: 1868099375}
+  maxTextureSize: 2048
+  manualRedraw: 0
+  renderInterval: 1
+  renderIntervalFrameOffset: 0
+  superSample: 0
+  layer: 5
+  opacity: 2
+  shape: 0
+  curveRadius: 1
+  overlapMask: 0
+  compositionMode: 1
+  _overlayEnabled: 1
 --- !u!1 &1876122636
 GameObject:
   m_ObjectHideFlags: 0
@@ -9141,7 +9170,7 @@ GameObject:
   - component: {fileID: 1976708502}
   - component: {fileID: 1976708504}
   - component: {fileID: 1976708503}
-  m_Layer: 5
+  m_Layer: 3
   m_Name: BottomCaption
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -9164,7 +9193,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 0, y: 25}
+  m_AnchoredPosition: {x: 0, y: 479}
   m_SizeDelta: {x: 1400, y: 50}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &1976708503
@@ -9214,8 +9243,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 60
+  m_fontSizeBase: 60
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
