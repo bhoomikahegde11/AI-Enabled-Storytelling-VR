@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -108,21 +108,7 @@ public class SpiceIntroSequence : MonoBehaviour
 
     IEnumerator FocusOnSpice(Transform target, string spiceName, string spicePrice, string narration)
     {
-        if (target != null)
-        {
-            Vector3 lookDirection = target.position - mainCamera.transform.position;
-            Quaternion targetRotation = Quaternion.LookRotation(lookDirection);
-
-            float timer = 0f;
-            Quaternion startRotation = mainCamera.transform.rotation;
-
-            while (timer < 1f)
-            {
-                timer += Time.deltaTime;
-                mainCamera.transform.rotation = Quaternion.Slerp(startRotation, targetRotation, timer);
-                yield return null;
-            }
-        }
+        // ❌ Camera movement removed completely
 
         if (dof != null)
         {
