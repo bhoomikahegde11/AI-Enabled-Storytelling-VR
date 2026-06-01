@@ -1,41 +1,57 @@
 import re
-from llama_cpp import Llama
 import os
-from npc_engine.engine.input_interpreter import extract_price
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "models", "model.gguf")
-
-llm = Llama(
-    model_path=MODEL_PATH,
-    n_ctx=2048,
-    n_threads=6,
-    use_mmap=False,   # 🔥 CRITICAL FIX
-    use_mlock=False,  # optional safety
-    verbose=False
-)
+from npc_engine.levels.level1_market.input_interpreter import extract_price
+from npc_engine.llm.llm_client import run_llm, llm_loaded
 
 OUT_OF_WORLD_TERMS = [
+    # Technology & devices
     "phone", "internet", "computer", "app", "mobile", "online", "wifi", "robot",
-    "screen", "tablet", "google", "youtube", "instagram", "facebook", "twitter",
-    "tiktok", "netflix", "spotify", "xbox", "playstation", "barbie", "hot wheels",
-    "lego", "pokemon", "disney", "marvel", "avengers", "gta", "fortnite", "doomsday",
-    "nike", "adidas", "apple", "samsung",
-    "sony", "coca cola", "pepsi"
+    "screen", "tablet", "laptop", "keyboard", "mouse", "printer", "bluetooth",
+    "email", "website", "webpage", "web page", "url", "http", "www",
+    "selfie", "emoji", "hashtag", "meme", "viral", "streaming",
+    "download", "upload", "screenshot", "password", "login", "logout",
+    "software", "hardware", "algorithm", "database", "server",
+    # Social media & platforms
+    "google", "youtube", "instagram", "facebook", "twitter",
+    "tiktok", "netflix", "spotify", "snapchat", "whatsapp", "telegram",
+    "reddit", "linkedin", "pinterest", "twitch", "discord",
+    "uber", "amazon", "flipkart", "zomato", "swiggy",
+    # Gaming
+    "xbox", "playstation", "nintendo", "fortnite", "minecraft", "roblox",
+    "gta", "pubg", "valorant", "cod", "csgo",
+    # Brands & modern products
+    "barbie", "hot wheels", "lego", "pokemon", "disney", "marvel", "avengers",
+    "nike", "adidas", "apple", "samsung", "sony", "coca cola", "pepsi",
+    "starbucks", "mcdonalds", "burger king", "dominos", "pizza hut",
+    # Modern concepts
+    "electricity", "electric", "battery", "engine", "airplane", "aeroplane",
+    "car", "bus", "train", "railway", "truck", "motorcycle", "bicycle",
+    "photograph", "camera", "television", "radio", "satellite",
+    "plastic", "nylon", "polyester",
+    "vaccine", "antibiotic", "x-ray", "xray",
+    "democracy", "president", "prime minister",
+    "rupee", "rupees", "dollar", "dollars", "euro", "euros", "pound", "pounds",
+    "bitcoin", "crypto",
+    "doomsday"
 ]
 
 MODERN_KEYWORDS = [
     "phone", "mobile", "laptop", "computer",
     "fortnite", "call of duty", "cod", "csgo",
     "internet", "wifi", "youtube", "google",
-    "app", "instagram", "whatsapp",
-    "playstation", "xbox", "game", "gaming"
+    "app", "instagram", "whatsapp", "website",
+    "playstation", "xbox", "game", "gaming",
+    "email", "selfie", "uber", "amazon", "netflix",
+    "electricity", "electric", "battery", "camera",
+    "rupee", "rupees", "dollar", "dollars"
 ]
 
 OUT_OF_WORLD_GROUPS = [
     ["video", "game"], ["social", "media"], ["mobile", "phone"], ["cell", "phone"],
     ["smart", "phone"], ["brand", "toy"], ["toy", "car"], ["toy", "doll"],
     ["plastic", "toy"], ["computer", "game"], ["internet", "site"], ["online", "store"],
-    ["digital", "device"]
+    ["digital", "device"], ["web", "site"], ["check", "online"], ["look", "online"],
+    ["search", "online"], ["electric", "light"], ["text", "message"]
 ]
 
 
@@ -98,10 +114,15 @@ Sentence: "{user_input}"
 """
 
     try:
-        hostility_output = llm(hostility_prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
+        if not llm_loaded:
+            return False
+        hostility_output = run_llm(hostility_prompt, max_tokens=3).upper()
         return hostility_output == "YES"
     except:
         return False
+
+
+from npc_engine.core.measurements import parse_traditional_to_grams
 
 
 def has_price_statement_pattern(text: str):
@@ -117,69 +138,33 @@ def has_price_statement_pattern(text: str):
 
 
 def parse_quantity(text: str):
-    text = str(text).lower().strip()
-    match = re.search(r"\b(\d+(?:\.\d+)?)\s*(g|gm|gram|grams|kg|kgs|kilogram|kilograms)\b", text)
-    if not match:
+    grams = parse_traditional_to_grams(text)
+    if grams is None:
         return None
-
-    quantity_value = float(match.group(1))
-    raw_unit = match.group(2)
-    unit_map = {
-        "g": "g",
-        "gm": "g",
-        "gram": "g",
-        "grams": "g",
-        "kg": "kg",
-        "kgs": "kg",
-        "kilogram": "kg",
-        "kilograms": "kg"
-    }
-    normalized_unit = unit_map[raw_unit]
-    quantity_grams = quantity_value * 1000.0 if normalized_unit == "kg" else quantity_value
-
-    if quantity_value.is_integer():
-        quantity_value = int(quantity_value)
-    if quantity_grams.is_integer():
-        quantity_grams = int(quantity_grams)
-
+        
     return {
-        "quantity": quantity_value,
-        "unit": normalized_unit,
-        "quantity_grams": quantity_grams
+        "quantity": grams,
+        "unit": "g",
+        "quantity_grams": grams
     }
 
 
 def extract_quantity_price_offer(user_input: str):
     text = str(user_input).lower().strip()
-    patterns = [
-        r"\b(\d+(?:\.\d+)?)\s*(g|gm|gram|grams|kg|kgs|kilogram|kilograms)\s+for\s+(\d+)\b",
-        r"\bfor\s+(\d+)\s*,?\s*(\d+(?:\.\d+)?)\s*(g|gm|gram|grams|kg|kgs|kilogram|kilograms)\b",
-        r"\b(\d+(?:\.\d+)?)\s*(g|gm|gram|grams|kg|kgs|kilogram|kilograms)\s+(?:is|for)\s+(\d+)\b"
-    ]
-
-    for pattern in patterns:
-        match = re.search(pattern, text)
-        if not match:
-            continue
-
-        groups = match.groups()
-        if pattern.startswith(r"\bfor"):
-            price_raw, quantity_raw, raw_unit = groups
-        else:
-            quantity_raw, raw_unit, price_raw = groups
-
-        quantity_info = parse_quantity(f"{quantity_raw}{raw_unit}")
-        if quantity_info is None:
-            continue
-
-        return {
-            "price": int(price_raw),
-            "quantity": quantity_info["quantity"],
-            "unit": quantity_info["unit"],
-            "quantity_grams": quantity_info["quantity_grams"]
-        }
-
-    return None
+    price = extract_price(text)
+    if price is None:
+        return None
+        
+    grams = parse_traditional_to_grams(text)
+    if grams is None:
+        return None
+        
+    return {
+        "price": price,
+        "quantity": grams,
+        "unit": "g",
+        "quantity_grams": grams
+    }
 
 
 def extract_quantity_info(user_input: str):
@@ -193,7 +178,7 @@ def extract_bundle_items(user_input: str, known_items=None):
         known_items = ["pepper", "clove", "cinnamon", "cardamom"]
 
     item_pattern = "|".join(re.escape(item) for item in sorted(known_items, key=len, reverse=True))
-    pattern = rf"\b(\d+(?:\.\d+)?)\s*(g|gm|gram|grams|kg|kgs|kilogram|kilograms)\s+({item_pattern})\b"
+    pattern = rf"\b(\d+(?:\.\d+)?)\s*(g|gm|gram|grams|kg|kgs|kilogram|kilograms|palam|palams|seer|seers|veesai|viss|manangu|maund|maunds|bahar|bahars|candy|candies)\s+({item_pattern})\b"
 
     bundle_items = []
     for quantity_raw, raw_unit, item_name in re.findall(pattern, text):
@@ -229,7 +214,9 @@ Negotiation context:
 
 Return ONLY A, B, or C.
 """
-    return llm(prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
+    if not llm_loaded:
+        return "B"  # Default fallback to normal social conversation
+    return run_llm(prompt, max_tokens=3).upper()
 
 
 def apply_intent_corrections(text: str, candidate_intent: str, context=None):
@@ -371,7 +358,7 @@ def is_agreement(text, context):
 
     has_number = any(char.isdigit() for char in text)
     has_question = "?" in text
-    has_quantity = any(unit in text for unit in ["kg", "g", "gram"])
+    has_quantity = any(unit in text for unit in ["kg", "g", "gram", "palam", "seer", "veesai", "viss", "manangu", "bahar", "candy"])
     negative_words = ["low", "high", "not", "no", "more", "less"]
 
     if has_number or has_question or has_quantity:
@@ -434,7 +421,13 @@ def classify_intent(user_input: str, context=None):
         "its over", "it's over", "finished", "sold out", "nothing left",
         "no we do not", "got over", "it is over"
     ]
-    if any(phrase in text for phrase in no_item_strict_phrases):
+    # Check if this is a quantity limitation rather than item unavailability
+    has_qty_terms = any(term in text for term in [
+        "that much", "manangu", "seer", "veesai", "palam", "bahar", "viss", "maund", "candy", 
+        "grams", "gram", "kg", "kgs", "kilogram", "kilograms", "quantity", "amount"
+    ])
+    
+    if any(phrase in text for phrase in no_item_strict_phrases) and not has_qty_terms:
         return {"intent": "NO_ITEM", "tone": "neutral", "persuasion": 0}
         
     no_item_patterns = [
@@ -446,7 +439,7 @@ def classify_intent(user_input: str, context=None):
         r"\b(?:dont|don't)\s+.*sell\b",
         r"\bnot\s+selling\b"
     ]
-    if any(re.search(pattern, text) for pattern in no_item_patterns):
+    if any(re.search(pattern, text) for pattern in no_item_patterns) and not has_qty_terms:
         return {"intent": "NO_ITEM", "tone": "neutral", "persuasion": 0}
 
     if last_system_action == "ASK_ITEM" and text in ["no", "nope", "nah"]:
@@ -531,6 +524,11 @@ def classify_intent(user_input: str, context=None):
         "how many gram",
         "how many g",
         "how many kg",
+        "how many seers",
+        "how many veesai",
+        "how many palams",
+        "how many viss",
+        "how many manangu",
         "what quantity",
         "what amount"
     ]
@@ -672,7 +670,10 @@ Sentence: "{user_input}"
 """
 
         try:
-            agreement_output = llm(agreement_prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
+            if not llm_loaded:
+                agreement_output = "NO"
+            else:
+                agreement_output = run_llm(agreement_prompt, max_tokens=3).upper()
             if agreement_output == "YES":
                 return {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
         except:
@@ -778,6 +779,35 @@ Sentence: "{user_input}"
         result = fallback_context_classification(text, item_name)
         final_intent = corrected or result
         
+        # Typo-robust GGUF semantic safety net to prevent rigid keyword classification failure
+        if llm_loaded and final_intent["intent"] in ["IRRELEVANT", "QUERY", "SOCIAL"]:
+            semantic_prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+Classify this trader message in Hampi market into exactly one category:
+- QUERY_QUANTITY: Seller asking about weight/amount (e.g. "what quantity?", "how much?", "for what quanitity?", "how many", "quantity").
+- QUANTITY_CHANGE: Proposing a different weight, saying they don't have that much, or asking to change quantity (e.g. "i do not have that much quantity", "i have 2 seers instead", "only 2 palams", "only have 3 seers", "i do not have one manangu").
+- PRICE: Seller counter-offering or proposing a price (e.g. "how does 80 sound", "I want 90", "meet at 80", "how does 50 sound").
+- ACCEPT: Agreeing to a deal (e.g. "ok deal", "done").
+- REJECT: Walking away or refusing (e.g. "no deal").
+- SOCIAL: General chit-chat.
+- IRRELEVANT: Anything else.
+
+Reply with ONLY the category name. Do not explain.
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+Message: "{user_input}"
+<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+"""
+            llm_choice = run_llm(semantic_prompt, max_tokens=10).strip().upper()
+            if "QUERY_QUANTITY" in llm_choice:
+                final_intent = {"intent": "QUERY_QUANTITY", "tone": "neutral", "persuasion": 0}
+            elif "QUANTITY_CHANGE" in llm_choice:
+                final_intent = {"intent": "QUANTITY_CHANGE", "tone": "neutral", "persuasion": 1}
+            elif "PRICE" in llm_choice:
+                final_intent = {"intent": "PRICE", "tone": "neutral", "persuasion": 1}
+            elif "ACCEPT" in llm_choice:
+                final_intent = {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
+            elif "REJECT" in llm_choice:
+                final_intent = {"intent": "REJECT", "tone": "neutral", "persuasion": 0}
+        
         if final_intent["intent"] == "IRRELEVANT":
             abuse_prompt = f"""
 Does this sentence contain sexual references, insults, meaningless disruptive phrases, or strong inappropriate emotion not related to trade?
@@ -786,7 +816,10 @@ Answer YES or NO.
 Sentence: "{user_input}"
 """
             try:
-                abuse_output = llm(abuse_prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
+                if not llm_loaded:
+                    abuse_output = "NO"
+                else:
+                    abuse_output = run_llm(abuse_prompt, max_tokens=3).upper()
                 if "YES" in abuse_output:
                     return {"intent": "HOSTILE", "tone": "annoyed", "persuasion": 0}
             except:
@@ -798,6 +831,35 @@ Sentence: "{user_input}"
         result = fallback_context_classification(text, item_name)
         final_intent = apply_intent_corrections(text, result["intent"], context) or result
         
+        # Typo-robust GGUF semantic safety net under exception fallback
+        if llm_loaded and final_intent["intent"] in ["IRRELEVANT", "QUERY", "SOCIAL"]:
+            semantic_prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+Classify this trader message in Hampi market into exactly one category:
+- QUERY_QUANTITY: Seller asking about weight/amount (e.g. "what quantity?", "how much?", "for what quanitity?", "how many", "quantity").
+- QUANTITY_CHANGE: Proposing a different weight, saying they don't have that much, or asking to change quantity (e.g. "i do not have that much quantity", "i have 2 seers instead", "only 2 palams", "only have 3 seers", "i do not have one manangu").
+- PRICE: Seller counter-offering or proposing a price (e.g. "how does 80 sound", "I want 90", "meet at 80", "how does 50 sound").
+- ACCEPT: Agreeing to a deal (e.g. "ok deal", "done").
+- REJECT: Walking away or refusing (e.g. "no deal").
+- SOCIAL: General chit-chat.
+- IRRELEVANT: Anything else.
+
+Reply with ONLY the category name. Do not explain.
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+Message: "{user_input}"
+<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+"""
+            llm_choice = run_llm(semantic_prompt, max_tokens=10).strip().upper()
+            if "QUERY_QUANTITY" in llm_choice:
+                final_intent = {"intent": "QUERY_QUANTITY", "tone": "neutral", "persuasion": 0}
+            elif "QUANTITY_CHANGE" in llm_choice:
+                final_intent = {"intent": "QUANTITY_CHANGE", "tone": "neutral", "persuasion": 1}
+            elif "PRICE" in llm_choice:
+                final_intent = {"intent": "PRICE", "tone": "neutral", "persuasion": 1}
+            elif "ACCEPT" in llm_choice:
+                final_intent = {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
+            elif "REJECT" in llm_choice:
+                final_intent = {"intent": "REJECT", "tone": "neutral", "persuasion": 0}
+        
         if final_intent["intent"] == "IRRELEVANT":
             abuse_prompt = f"""
 Does this sentence contain sexual references, insults, meaningless disruptive phrases, or strong inappropriate emotion not related to trade?
@@ -806,7 +868,10 @@ Answer YES or NO.
 Sentence: "{user_input}"
 """
             try:
-                abuse_output = llm(abuse_prompt, max_tokens=3)["choices"][0]["text"].strip().upper()
+                if not llm_loaded:
+                    abuse_output = "NO"
+                else:
+                    abuse_output = run_llm(abuse_prompt, max_tokens=3).upper()
                 if "YES" in abuse_output:
                     return {"intent": "HOSTILE", "tone": "annoyed", "persuasion": 0}
             except:
