@@ -22,7 +22,50 @@ app.mount("/audio", StaticFiles(directory="audio"), name="audio")
 # ----------------- TTS CONFIGURATION -----------------
 
 def get_tts_provider():
-    return os.getenv("TTS_PROVIDER", "openai").lower()
+    return os.getenv("TTS_PROVIDER", "piper").lower()
+
+def generate_piper_audio(text: str) -> str:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    piper_exe = os.path.join(base_dir, "piper", "piper.exe")
+    model_path = os.path.join(base_dir, "models", "en_US-lessac-medium.onnx")
+
+    if not os.path.exists(piper_exe):
+        print(f"[ERROR Piper] Executable not found at: {piper_exe}")
+        return ""
+    if not os.path.exists(model_path):
+        print(f"[ERROR Piper] Model file not found at: {model_path}")
+        return ""
+
+    filename = f"{uuid.uuid4()}.wav"
+    filepath = os.path.join(base_dir, "audio", filename)
+
+    command = [
+        piper_exe,
+        "--model", model_path,
+        "--output_file", filepath
+    ]
+
+    try:
+        import subprocess
+        print(f"[INFO Piper] Generating audio offline for: \"{text}\"")
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8"
+        )
+        stdout, stderr = process.communicate(input=text)
+        
+        if process.returncode == 0 and os.path.exists(filepath):
+            return f"http://127.0.0.1:8000/audio/{filename}"
+        else:
+            print(f"[ERROR Piper] Process exited with code {process.returncode}. Stderr: {stderr}")
+    except Exception as e:
+        print(f"[ERROR Piper] Execution failed: {e}")
+
+    return ""
 
 def generate_elevenlabs_audio(text: str) -> str:
     api_key = os.getenv("ELEVENLABS_API_KEY")
@@ -109,7 +152,13 @@ def generate_audio_url(text: str) -> str:
     provider = get_tts_provider()
     print(f"[INFO] Using provider: {provider}")
 
-    if provider == "elevenlabs":
+    if provider == "piper":
+        url = generate_piper_audio(text)
+        if url: return url
+        print("[WARNING] Piper failed, falling back to OpenAI...")
+        return generate_openai_audio(text)
+
+    elif provider == "elevenlabs":
         url = generate_elevenlabs_audio(text)
         if url: return url
         print("[WARNING] ElevenLabs failed, falling back to OpenAI...")
@@ -143,7 +192,7 @@ class StepRequest(BaseModel):
 def start_session():
     session_id = str(uuid.uuid4())
 
-    session = NPCSession()
+    session = NPCSession(session_id=session_id)
     sessions[session_id] = session
 
     response = session.start()

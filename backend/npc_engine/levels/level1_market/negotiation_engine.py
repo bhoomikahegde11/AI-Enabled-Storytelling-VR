@@ -1,7 +1,8 @@
 import re
 import random
 from npc_engine.core.models import EngineDecision
-from npc_engine.engine.memory import Memory
+from npc_engine.levels.level1_market.memory import Memory
+from npc_engine.core.measurements import grams_to_traditional_label
 
 
 class NegotiationEngine:
@@ -279,13 +280,9 @@ class NegotiationEngine:
     def describe_bundle(self, bundle_items):
         parts = []
         for bundle_item in bundle_items:
-            quantity = bundle_item["quantity"]
-            unit = bundle_item["unit"]
-            if unit == "g" and quantity >= 1000 and quantity % 1000 == 0:
-                quantity = quantity / 1000
-                unit = "kg"
-            quantity_text = int(quantity) if isinstance(quantity, float) and quantity.is_integer() else quantity
-            parts.append(f"{quantity_text}{unit} {bundle_item['name']}")
+            quantity_grams = self.normalize_quantity(bundle_item["quantity"], bundle_item["unit"], "g")
+            quantity_text = grams_to_traditional_label(quantity_grams)
+            parts.append(f"{quantity_text} {bundle_item['name']}")
         return " and ".join(parts) if parts else self.item.name
 
     def update_active_bundle(self, bundle_items):
@@ -412,17 +409,19 @@ class NegotiationEngine:
         return self.item.name
 
     def record_final_deal(self):
+        from npc_engine.core.measurements import snap_to_nearest_traditional_unit
         if self.current_quantity is not None:
-            self.agreed_quantity = self.current_quantity
+            self.agreed_quantity = snap_to_nearest_traditional_unit(self.current_quantity)
         else:
-            self.agreed_quantity = self.normalize_quantity(self.item.quantity, self.item.unit, "g")
+            raw_qty = self.normalize_quantity(self.item.quantity, self.item.unit, "g")
+            self.agreed_quantity = snap_to_nearest_traditional_unit(raw_qty)
             
         final_price = self.agreed_price if self.agreed_price is not None else self.current_offer
         if final_price is None:
             final_price = self.current_offer
             
         self.final_price = final_price
-        self.final_quantity = self.agreed_quantity if self.agreed_quantity else self.normalize_quantity(self.item.quantity, self.item.unit, "g")
+        self.final_quantity = self.agreed_quantity
         self.final_item = self.current_deal_item()
         self.memory.update(self.final_price)
 
@@ -629,8 +628,7 @@ class NegotiationEngine:
 
         if not self.quantity_given:
             self.quantity_given = True
-            fixed_quantity = random.choice([500, 700, 1000])
-            self.current_quantity = fixed_quantity
+            fixed_quantity = self.current_quantity
             self.update_active_bundle([{
                 "name": self.item.name.lower(),
                 "quantity": fixed_quantity,
@@ -1057,6 +1055,7 @@ class NegotiationEngine:
                     self.current_offer = seller_price
                     self.deal_locked = True
                     self.agreed_price = seller_price
+                    self.record_final_deal()
                     return self.respond("ACCEPT", price=self.current_offer)
 
                 if diff <= 2:
