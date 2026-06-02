@@ -30,7 +30,7 @@ def extract_price(text):
     for match in re.finditer(r"\b(\d+)\b", text):
         number = int(match.group(1))
         remainder = text[match.end():]
-        if re.match(r"\s*(kg|kilogram|kilograms|g|gram|grams)\b", remainder):
+        if re.match(r"\s*(kg|kilogram|kilograms|g|gram|grams|veesai|viss|seer|seers|palam|palams|manangu|manangus|maund|maunds|bahar|bahars|candy|candies)\b", remainder):
             continue
         numbers.append(number)
         

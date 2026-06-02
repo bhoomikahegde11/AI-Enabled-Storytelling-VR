@@ -9,12 +9,33 @@ SESSIONS_DIR = os.path.join(WORKSPACE_DIR, "memory", "sessions")
 os.makedirs(SESSIONS_DIR, exist_ok=True)
 
 def load_session(session_id: str) -> dict:
-    """Loads a player session from the local disk."""
+    """Loads a player session from the local disk with dynamic backward-compatible upgrades."""
     filepath = os.path.join(SESSIONS_DIR, f"{session_id}.json")
     if os.path.exists(filepath):
         try:
             with open(filepath, "r", encoding="utf-8") as f:
-                return json.load(f)
+                state = json.load(f)
+            
+            # Dynamic schema backward-compatibility upgrades
+            modified = False
+            if "inventory" not in state:
+                state["inventory"] = {
+                    "pepper": 15000.0,      # 15 kg
+                    "clove": 8000.0,        # 8 kg
+                    "cinnamon": 12000.0,    # 12 kg
+                    "cardamom": 4000.0      # 4 kg
+                }
+                modified = True
+            if "shift_stats" not in state:
+                state["shift_stats"] = {
+                    "shifts_completed": 0,
+                    "total_varahas_earned": 0,
+                    "total_deals_made": 0
+                }
+                modified = True
+            if modified:
+                save_session(session_id, state)
+            return state
         except Exception as e:
             print(f"[ERROR Persistence] Failed to read session {session_id}: {e}")
     return initialize_session(session_id)
@@ -45,6 +66,17 @@ def initialize_session(session_id: str) -> dict:
             "reputation": 50,
             "total_varahas": 100,
             "completed_levels": []
+        },
+        "inventory": {
+            "pepper": 15000.0,      # 15 kg
+            "clove": 8000.0,        # 8 kg
+            "cinnamon": 12000.0,    # 12 kg
+            "cardamom": 4000.0      # 4 kg
+        },
+        "shift_stats": {
+            "shifts_completed": 0,
+            "total_varahas_earned": 0,
+            "total_deals_made": 0
         }
     }
     save_session(session_id, state)

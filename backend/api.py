@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from npc_engine.interface import NPCSession
@@ -7,6 +7,7 @@ from openai import OpenAI
 import requests
 import uuid
 import os
+import asyncio
 
 load_dotenv()
 
@@ -17,6 +18,26 @@ os.makedirs("audio", exist_ok=True)
 
 # Mount the audio directory so Unity can access the files directly
 app.mount("/audio", StaticFiles(directory="audio"), name="audio")
+
+# Connection Manager for Unity VR WebSocket clients
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections = {}
+
+    async def connect(self, session_id: str, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections[session_id] = websocket
+
+    def disconnect(self, session_id: str):
+        if session_id in self.active_connections:
+            del self.active_connections[session_id]
+
+    async def send_personal_message(self, message: dict, session_id: str):
+        websocket = self.active_connections.get(session_id)
+        if websocket:
+            await websocket.send_json(message)
+
+manager = ConnectionManager()
 
 
 # ----------------- TTS CONFIGURATION -----------------
@@ -192,10 +213,17 @@ class StepRequest(BaseModel):
 def start_session():
     session_id = str(uuid.uuid4())
 
-    session = NPCSession(session_id=session_id)
+    from npc_engine.core.market_events import get_random_market_event
+    active_event = get_random_market_event()
+    session = NPCSession(session_id=session_id, active_event=active_event)
     sessions[session_id] = session
 
     response = session.start()
+
+    from npc_engine.core.persistence import load_session
+    state = load_session(session_id)
+    reputation = state.get("global_metrics", {}).get("reputation", 50)
+    total_varahas = state.get("global_metrics", {}).get("total_varahas", 100)
 
     return {
         "session_id": session_id,
@@ -205,6 +233,9 @@ def start_session():
         "quantity": response.get("quantity"),
         "done": response.get("done", False),
         "audio_url": generate_audio_url(response.get("npc_text", "")),
+        "active_event": active_event,
+        "reputation": reputation,
+        "total_varahas": total_varahas,
         "response": response
     }
 
@@ -221,6 +252,11 @@ def step_session(req: StepRequest):
 
     response = session.step(req.player_input)
 
+    from npc_engine.core.persistence import load_session
+    state = load_session(session_id)
+    reputation = state.get("global_metrics", {}).get("reputation", 50)
+    total_varahas = state.get("global_metrics", {}).get("total_varahas", 100)
+
     return {
         "session_id": session_id,
         "npc_text": response.get("npc_text", ""),
@@ -229,11 +265,108 @@ def step_session(req: StepRequest):
         "quantity": response.get("quantity"),
         "done": response.get("done", False),
         "audio_url": generate_audio_url(response.get("npc_text", "")),
+        "reputation": reputation,
+        "total_varahas": total_varahas,
+        "transaction": response.get("transaction"),
         "response": response
     }
 
 
-# ❤️ HEALTH CHECK (optional but useful)
+# Asynchronous Background Audio Compiler & Dispatcher
+async def generate_and_send_audio(session_id: str, npc_text: str):
+    if not npc_text:
+        return
+    try:
+        # Run Piper TTS generation in a non-blocking background thread
+        audio_url = await asyncio.to_thread(generate_audio_url, npc_text)
+        if audio_url:
+            await manager.send_personal_message({
+                "type": "audio_ready",
+                "session_id": session_id,
+                "audio_url": audio_url
+            }, session_id)
+    except Exception as e:
+        print(f"[ERROR WebSocket] Background audio generation failed for session {session_id}: {e}")
+
+
+# 🔌 HIGH-QOS WEB-SOCKET ENDPOINT FOR UNITY VR CLIENTS
+@app.websocket("/ws/negotiate/{session_id}")
+async def websocket_negotiation(websocket: WebSocket, session_id: str):
+    await manager.connect(session_id, websocket)
+    print(f"[INFO WebSocket] VR Client connected: session_id={session_id}")
+
+    try:
+        # Load or start session
+        if session_id not in sessions:
+            from npc_engine.core.market_events import get_random_market_event
+            active_event = get_random_market_event()
+            sessions[session_id] = NPCSession(session_id=session_id, active_event=active_event)
+        session = sessions[session_id]
+
+        # Trigger welcome step if engine has not started
+        if not session.engine.started:
+            response = session.start()
+            npc_text = response.get("npc_text", "")
+            
+            # Send immediate subtitle/text response
+            await websocket.send_json({
+                "type": "welcome",
+                "session_id": session_id,
+                "npc_text": npc_text,
+                "action": response.get("action", ""),
+                "price": response.get("price"),
+                "quantity": response.get("quantity"),
+                "done": response.get("done", False),
+                "tone": response.get("tone", "neutral"),
+                "emotion": response.get("emotion", "idle"),
+                "active_event": session.active_event
+            })
+
+            # Synthesize voice asynchronously in background thread
+            if npc_text:
+                asyncio.create_task(generate_and_send_audio(session_id, npc_text))
+
+        # Main interactive duplex communication loop
+        while True:
+            data = await websocket.receive_json()
+            player_input = data.get("player_input", "").strip()
+
+            response = session.step(player_input)
+            npc_text = response.get("npc_text", "")
+
+            # Send immediate subtitle response (extremely low latency)
+            await websocket.send_json({
+                "type": "text_response",
+                "session_id": session_id,
+                "npc_text": npc_text,
+                "action": response.get("action", ""),
+                "price": response.get("price"),
+                "quantity": response.get("quantity"),
+                "done": response.get("done", False),
+                "tone": response.get("tone", "neutral"),
+                "emotion": response.get("emotion", "idle")
+            })
+
+            # Synthesize voice asynchronously in background thread
+            if npc_text:
+                asyncio.create_task(generate_and_send_audio(session_id, npc_text))
+
+            if response.get("done", False):
+                break
+
+    except WebSocketDisconnect:
+        print(f"[INFO WebSocket] VR Client disconnected: session_id={session_id}")
+    except Exception as e:
+        print(f"[ERROR WebSocket] Connection error in session {session_id}: {e}")
+        try:
+            await websocket.send_json({"type": "error", "message": str(e)})
+        except:
+            pass
+    finally:
+        manager.disconnect(session_id)
+
+
+# ❤️ HEALTH CHECK
 @app.get("/")
 def health():
     return {"status": "NPC Engine API running"}

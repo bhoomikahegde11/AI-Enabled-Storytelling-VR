@@ -85,6 +85,24 @@ def generate_dialogue(decision, engine):
             
         numbers_clause = "\n".join(active_numbers_instructions) if active_numbers_instructions else "1. DO NOT invent, modify, or add any numbers."
 
+        # Extract buyer identity, reputation, and market event context
+        buyer_name = getattr(engine.buyer, "name", "a buyer")
+        buyer_origin = getattr(engine.buyer, "origin", "a merchant")
+        buyer_interest = getattr(engine.buyer, "interest", "spices")
+        buyer_wealth = getattr(engine.buyer, "wealth", "medium")
+        player_reputation = getattr(engine.buyer, "reputation", 50.0)
+        
+        reputation_context = ""
+        if player_reputation < 35:
+            reputation_context = "\nPlayer Reputation Context: You know this seller as a Greedy Haggler who overcharges other buyers. Start suspicious, impatient, and irritated by their demands."
+        elif player_reputation > 75:
+            reputation_context = "\nPlayer Reputation Context: You know this seller as an honest, Fair Trader. Be highly respectful, patient, and cooperative."
+            
+        event_context = ""
+        active_event = getattr(engine, "active_event", None)
+        if active_event:
+            event_context = f"\nActive Market Event Context: {active_event['name']} - {active_event['description']}. You can occasionally reference this event in your speech if it fits natural conversation."
+
         player_context = ""
         if getattr(engine, "last_seller_input", None):
             player_context = f"\nThe seller (player) just said: \"{engine.last_seller_input}\"\n"
@@ -93,7 +111,11 @@ def generate_dialogue(decision, engine):
         prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
 You are an NPC buyer in the Hampi bazaars of the Vijayanagara Empire (1500s).
 Role Context: You are visiting the player's stall to BUY spices from them. The player is the SELLER. You are the BUYER. You must NEVER act as the seller.
-Your personality is {personality}, your current tone is {tone}, and your current emotion is {emotion}.
+Your Name: {buyer_name}
+Your Identity/Origin: {buyer_origin}
+Your Spice Interest: {buyer_interest}
+Your Wealth Class: {buyer_wealth}
+Your Personality is {personality}, your current tone is {tone}, and your current emotion is {emotion}.{reputation_context}{event_context}
 Historical Context: {fact_context}
 {player_context}
 Task: Rephrase the dialogue template in character, responding naturally to what the seller just said if relevant. Keep it extremely concise (1-2 sentences).
@@ -307,21 +329,13 @@ def _generate_text(action, price, stage, has_price, has_quantity, market_price, 
         elif personality == "Cautious Buyer":
             text = "Alright… I think this works."
         else:
-            text = "Very well, we have a deal."
+            text = "A fair bargain. I will remember your honesty, trader."
 
     elif action == "WALK_AWAY":
-        text = pick_varied("walk_away", [
-            "This is going nowhere. I am leaving.",
-            "We are not reaching an agreement. I will take my leave.",
-            "This deal is not worth it."
-        ])
+        text = "Perhaps another day we shall agree."
 
     elif action == "NO_ITEM":
-        text = pick_varied("no_item", [
-            "Then I will look elsewhere.",
-            "I see. I will find another seller.",
-            "Alright, I will move on."
-        ])
+        text = "Perhaps another day we shall agree."
         
     elif action == "OUT_OF_WORLD":
         if out_count == 1:
