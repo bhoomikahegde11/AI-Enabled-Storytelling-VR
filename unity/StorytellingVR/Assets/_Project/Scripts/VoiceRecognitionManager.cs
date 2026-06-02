@@ -1,42 +1,96 @@
 using UnityEngine;
 using TMPro;
-using UnityEngine.InputSystem;
+using Oculus.Voice;
+using System.Text.RegularExpressions;
 
 public class VoiceRecognitionManager : MonoBehaviour
 {
+    public AppVoiceExperience voiceExperience;
+
     public TutorialManager tutorialManager;
+
     public TMP_Text spokenPriceText;
 
-    void Update()
+    private bool waitingForInput = false;
+
+    
+    void Start()
+{
+    Debug.Log("VOICE MANAGER STARTED");
+
+    
+
+    voiceExperience.VoiceEvents.OnStartListening.AddListener(() =>
     {
-        if (Keyboard.current.digit1Key.wasPressedThisFrame)
-        {
-            SubmitPrice(200);
-        }
+        Debug.Log("STARTED LISTENING");
+    });
 
-        if (Keyboard.current.digit2Key.wasPressedThisFrame)
-        {
-            SubmitPrice(70);
-        }
+    voiceExperience.VoiceEvents.OnStoppedListening.AddListener(() =>
+    {
+        Debug.Log("STOPPED LISTENING");
+    });
 
-        if (Keyboard.current.digit3Key.wasPressedThisFrame)
-        {
-            SubmitPrice(60);
-        }
+    voiceExperience.VoiceEvents.OnPartialTranscription.AddListener((text) =>
+    {
+        Debug.Log("PARTIAL: " + text);
+    });
 
-        if (Keyboard.current.digit4Key.wasPressedThisFrame)
+    voiceExperience.VoiceEvents.OnFullTranscription.AddListener((text) =>
+    {
+        Debug.Log("FULL: " + text);
+        OnTranscription(text);
+    });
+}
+
+    public void ListenForPrice()
+    {
+        waitingForInput = true;
+
+        Debug.Log("Listening for player price...");
+
+        voiceExperience.Activate();
+    }
+
+    void OnTranscription(string transcription)
+    {
+        Debug.Log("TRANSCRIPTION  WAS RECEIVED: " + transcription);
+        if (!waitingForInput)
+            return;
+
+        Debug.Log("Player said: " + transcription);
+
+        int number;
+
+        if (TryExtractNumber(transcription, out number))
         {
-            SubmitPrice(40);
+            waitingForInput = false;
+
+            spokenPriceText.text =
+                "Spoken Price: " + number + " Varahas";
+
+            tutorialManager.HandlePlayerOffer(number);
         }
-        if (Keyboard.current.digit5Key.wasPressedThisFrame)
+        else
         {
-            SubmitPrice(500);
+            tutorialManager.ShowNarrator(
+                "Please say a number."
+            );
+
+            voiceExperience.Activate();
         }
     }
 
-    public void SubmitPrice(int price)
+    bool TryExtractNumber(string text, out int number)
     {
-        spokenPriceText.text = "Spoken Price: " + price + " Varahas";
-        tutorialManager.HandlePlayerOffer(price);
+        Match match = Regex.Match(text, @"\d+");
+
+        if (match.Success)
+        {
+            number = int.Parse(match.Value);
+            return true;
+        }
+
+        number = 0;
+        return false;
     }
 }
