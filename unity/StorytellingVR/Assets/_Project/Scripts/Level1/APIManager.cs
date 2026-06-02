@@ -9,7 +9,7 @@ public class APIManager : MonoBehaviour
     private string sessionId;
 
     // 🔥 START SESSION
-    public IEnumerator StartSession(System.Action<string, string> callback)
+    public IEnumerator StartSession(System.Action<string, string, int, int, bool, TransactionSummary> callback)
     {
         string url = baseURL + "/start";
 
@@ -32,17 +32,21 @@ public class APIManager : MonoBehaviour
             Debug.Log("Session ID: " + sessionId);
             Debug.Log("NPC Text: " + response.npc_text);
             Debug.Log("Audio URL: " + response.audio_url);
+            Debug.Log("Reputation: " + response.reputation);
+            Debug.Log("Total Varahas: " + response.total_varahas);
+            Debug.Log("Done: " + response.done);
 
-            callback(response.npc_text, response.audio_url);
+            callback(response.npc_text, response.audio_url, response.reputation, response.total_varahas, response.done, null);
         }
         else
         {
             Debug.LogError("StartSession Error: " + request.error);
+            callback(null, null, -1, -1, false, null);
         }
     }
 
     // 🔥 SEND PLAYER MESSAGE
-    public IEnumerator SendMessage(string playerInput, System.Action<string, string> callback)
+    public IEnumerator SendMessage(string playerInput, System.Action<string, string, int, int, bool, TransactionSummary> callback)
     {
         string url = baseURL + "/step";
 
@@ -70,12 +74,16 @@ public class APIManager : MonoBehaviour
 
             Debug.Log("NPC Text: " + response.npc_text);
             Debug.Log("Audio URL: " + response.audio_url);
+            Debug.Log("Reputation: " + response.reputation);
+            Debug.Log("Total Varahas: " + response.total_varahas);
+            Debug.Log("Done: " + response.done);
 
-            callback(response.npc_text, response.audio_url);
+            callback(response.npc_text, response.audio_url, response.reputation, response.total_varahas, response.done, response.transaction);
         }
         else
         {
             Debug.LogError("SendMessage Error: " + request.error);
+            callback(null, null, -1, -1, false, null);
         }
     }
 }

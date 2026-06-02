@@ -13,16 +13,18 @@ try:
     
     if os.path.exists(MODEL_PATH):
         print(f"[INFO LLM] Loading local Llama model from: {MODEL_PATH}")
+        gpu_layers = int(os.getenv("LLM_GPU_LAYERS", 0))
         _llm = Llama(
             model_path=MODEL_PATH,
-            n_ctx=2048,
+            n_ctx=1024,       # Optimized context size for faster memory allocation
             n_threads=6,
+            n_gpu_layers=gpu_layers, # Support GPU offloading if configured (e.g. LLM_GPU_LAYERS=16 or 33)
             use_mmap=False,   # Critical fix for mapping errors
             use_mlock=False,  # Safety flag
             verbose=False
         )
         llm_loaded = True
-        print("[INFO LLM] Llama model loaded successfully.")
+        print(f"[INFO LLM] Llama model loaded successfully (GPU Layers: {gpu_layers}).")
     else:
         print("\n" + "="*80)
         print("[WARNING LLM] Local LLM model.gguf not found!")

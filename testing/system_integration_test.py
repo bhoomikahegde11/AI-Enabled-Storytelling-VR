@@ -131,10 +131,35 @@ def run_tests():
     assert post_walk_reputation < final_reputation, "Failed deal did not drop respect!"
     print("✓ TEST 4 PASSED!")
     
-    # Cleanup test session file
-    if os.path.exists(session_file):
-        os.remove(session_file)
-        print(f"\nCleaned up test session file: {session_file}")
+    # Test 5: Buyer price overshoot capping
+    print("\n[TEST 5] Testing buyer price overshoot capping logic...")
+    test_session_id3 = f"test-overshoot-{uuid.uuid4()}"
+    session3 = NPCSession(session_id=test_session_id3)
+    session3.start()
+    session3.step("I have 1 Veesai")
+    
+    # Establish first high counter-offer
+    step_price1 = session3.step("The price is 150 varahas")
+    print(f"Step 1: Seller counters with 150 varahas. Buyer offer: {step_price1['price']} varahas.")
+    
+    # Check if the deal is completed, if not proceed to test price drops
+    if not step_price1["done"]:
+        # Concede slightly to trigger the concession logic drop
+        step_price2 = session3.step("ok, let's meet at 115 varahas")
+        buyer_current_offer = session3.engine.current_offer
+        print(f"Step 2: Seller price dropped to 115. Buyer offer: {buyer_current_offer} varahas.")
+        
+        # Verify the buyer offer never shot above 115 (the seller's active counter)
+        assert buyer_current_offer <= 115, f"OVERSHOOT DETECTED! Buyer offered {buyer_current_offer} varahas, which is greater than seller's price of 115!"
+        
+    print("✓ TEST 5 PASSED!")
+    
+    # Cleanup test session files
+    for sid in [test_session_id, test_session_id3]:
+        sfile = os.path.join(SESSIONS_DIR, f"{sid}.json")
+        if os.path.exists(sfile):
+            os.remove(sfile)
+            print(f"Cleaned up test session file: {sfile}")
         
     print("\n" + "="*60)
     print(" ALL SYSTEM INTEGRATION TESTS PASSED SUCCESSFULLY! ")

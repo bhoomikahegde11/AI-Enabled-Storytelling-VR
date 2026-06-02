@@ -25,18 +25,31 @@ class NPCSession:
     by injecting level-specific components into the general runner controller.
     Supports persistent local serialization to disk.
     """
-    def __init__(self, session_id: str = None):
+    def __init__(self, session_id: str = None, active_event: dict = None):
         self.session_id = session_id or str(uuid.uuid4())
+        self.active_event = active_event
         
         # Load or initialize the persistent state on disk
-        load_session(self.session_id)
+        state = load_session(self.session_id)
         
         self.buyer = Buyer()
         
-        # Randomize quantities based on commercial density for each item
+        # Adjust buyer parameters based on persistent player reputation
+        reputation = state.get("global_metrics", {}).get("reputation", 50)
+        self.buyer.adjust_from_reputation(reputation)
+        
+        # Randomize quantities capped by what the player has in stock
         self.session_items = []
+        player_inventory = state.setdefault("inventory", {})
+        
         for default_item in ITEMS:
+            stock_grams = float(player_inventory.get(default_item.name.lower(), 0.0))
+            if stock_grams <= 0:
+                continue # Skip out-of-stock spices
+                
             grams = get_random_spice_quantity(default_item.name)
+            grams = min(grams, stock_grams) # Cap at available stock
+            
             randomized_item = Item(
                 name=default_item.name,
                 base_price_per_unit=default_item.base_price_per_unit,
@@ -46,12 +59,16 @@ class NPCSession:
             )
             self.session_items.append(randomized_item)
             
+        # Emergency Fallback: If all stocks are empty, supply a tiny emergency quantity of pepper
+        if not self.session_items:
+            self.session_items.append(Item("pepper", base_price_per_unit=80, market_multiplier=1.2, unit="kg", quantity=0.28))
+            
         self.available_items = self.session_items.copy()
         random.shuffle(self.available_items)
         self.item = self.available_items.pop()
         
         # Instantiate Level 1 engine with session-specific items
-        self.engine = NegotiationEngine(self.buyer, self.item, all_items=self.session_items)
+        self.engine = NegotiationEngine(self.buyer, self.item, all_items=self.session_items, active_event=self.active_event)
         
         # Inject level-specific functions into the generic controller
         self.controller = Controller(
@@ -74,11 +91,16 @@ class NPCSession:
             # Commit the negotiation outcome to disk memory
             spice_name = self.engine.item.name
             final_price = response.get("price")
-            final_quantity = response.get("quantity")
+            final_quantity = response.get("quantity")  # grams
             trust = self.engine.trust
             frustration = self.engine.frustration
             out_count = self.engine.out_of_world_count
             action = response.get("action", "WALK_AWAY")
+            
+            # Deduct inventory stock if transaction is complete and accepted
+            if action == "ACCEPT" and final_quantity is not None:
+                from npc_engine.core.inventory import deduct_inventory_stock
+                deduct_inventory_stock(self.session_id, spice_name, final_quantity)
             
             # Record deal using persistent module
             record_negotiation_deal(
@@ -91,11 +113,33 @@ class NPCSession:
                 out_of_world_count=out_count,
                 outcome=action
             )
+
+            # Compile transaction complete summary for acceptances
+            if action == "ACCEPT" and final_price is not None and final_quantity is not None:
+                from npc_engine.core.measurements import grams_to_traditional_label
+                base_prices = {"pepper": 80, "clove": 70, "cinnamon": 80, "cardamom": 100}
+                base_price = base_prices.get(spice_name.lower(), 80)
+                profit = int(max(0, final_price - base_price * (final_quantity / 1000.0)))
+                
+                # Fetch last recorded respect change
+                state = load_session(self.session_id)
+                last_deal = state["level_history"]["level1_market"]["deals"][-1]
+                respect_change = last_deal.get("respect_change", 5)
+                
+                response["transaction"] = {
+                    "item": spice_name.capitalize(),
+                    "quantity": grams_to_traditional_label(final_quantity),
+                    "earned": int(final_price),
+                    "profit": profit,
+                    "respect_change": respect_change,
+                    "buyer_name": getattr(self.buyer, "name", "Abdul Rahman"),
+                    "buyer_origin": getattr(self.buyer, "origin", "Persian Trader")
+                }
             
             # Check if there are more items to negotiate
             if self.available_items:
                 self.item = self.available_items.pop()
-                self.engine = NegotiationEngine(self.buyer, self.item, all_items=self.session_items)
+                self.engine = NegotiationEngine(self.buyer, self.item, all_items=self.session_items, active_event=self.active_event)
                 self.controller = Controller(
                     self.engine,
                     classify_intent_fn=classify_intent,

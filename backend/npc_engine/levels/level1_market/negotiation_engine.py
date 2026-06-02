@@ -8,16 +8,20 @@ from npc_engine.core.measurements import grams_to_traditional_label
 class NegotiationEngine:
     shared_memory = Memory()
 
-    def __init__(self, buyer, item, all_items=None):
+    def __init__(self, buyer, item, all_items=None, active_event=None):
         self.buyer = buyer
         self.item = item
         self.all_items = all_items or [item]
         self.item_catalog = {catalog_item.name.lower(): catalog_item for catalog_item in self.all_items}
         self.memory = self.shared_memory
+        self.active_event = active_event
 
         self.market_price = item.market_price
-        self.max_price = buyer.compute_max_price(self.market_price)
+        if self.active_event and self.active_event["affected_spice"].lower() == self.item.name.lower():
+            self.market_price = int(round(self.market_price * self.active_event["price_multiplier"]))
+            print(f"[INFO Market Event] Applied event '{self.active_event['name']}' multiplier to {self.item.name}. New market price: {self.market_price}")
 
+        self.max_price = buyer.compute_max_price(self.market_price)
         self.current_offer = int(round(buyer.initial_offer(self.market_price)))
         if self.current_offer is None:
             self.current_offer = int(getattr(self, "market_price", 10))
@@ -789,6 +793,7 @@ class NegotiationEngine:
                     # buyer should respond positively and move up
                     increment = max(1, int(self.current_offer * 0.1))
                     self.current_offer += increment
+                    self.current_offer = min(self.current_offer, self.last_seller_price)
                     
             self.anchor_price = (0.7 * self.anchor_price) + (0.3 * seller_price)
             self.last_seller_price_per_kg = self.seller_price_per_kg(seller_price)
