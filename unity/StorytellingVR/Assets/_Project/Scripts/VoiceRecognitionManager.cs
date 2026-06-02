@@ -2,6 +2,7 @@ using UnityEngine;
 using TMPro;
 using Oculus.Voice;
 using System.Text.RegularExpressions;
+using System.Collections;
 
 public class VoiceRecognitionManager : MonoBehaviour
 {
@@ -28,6 +29,7 @@ public class VoiceRecognitionManager : MonoBehaviour
     voiceExperience.VoiceEvents.OnStoppedListening.AddListener(() =>
     {
         Debug.Log("STOPPED LISTENING");
+        StartCoroutine(ResetVoiceState());
     });
 
     voiceExperience.VoiceEvents.OnPartialTranscription.AddListener((text) =>
@@ -44,11 +46,7 @@ public class VoiceRecognitionManager : MonoBehaviour
 
     public void ListenForPrice()
     {
-        waitingForInput = true;
-
-        Debug.Log("Listening for player price...");
-
-        voiceExperience.Activate();
+        StartCoroutine(StartFreshListening());
     }
 
     void OnTranscription(string transcription)
@@ -76,7 +74,7 @@ public class VoiceRecognitionManager : MonoBehaviour
                 "Please say a number."
             );
 
-            voiceExperience.Activate();
+            StartCoroutine(RestartListening());
         }
     }
 
@@ -92,5 +90,26 @@ public class VoiceRecognitionManager : MonoBehaviour
 
         number = 0;
         return false;
+    }
+    IEnumerator RestartListening()
+    {
+        waitingForInput = false ;
+        voiceExperience.Deactivate();
+        yield return new WaitForSeconds(1.0f);
+        waitingForInput = true;
+        voiceExperience.Activate();
+    }
+    IEnumerator StartFreshListening()
+    {
+        voiceExperience.Deactivate();
+        yield return new WaitForSeconds(0.5f);
+        waitingForInput = true;
+        Debug.Log("Listening for player price");
+        voiceExperience.Activate();
+    }
+    IEnumerator ResetVoiceState()
+    {
+        yield return new WaitForSeconds(0.5f);
+        voiceExperience.Deactivate();
     }
 }
