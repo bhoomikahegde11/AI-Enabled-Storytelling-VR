@@ -10,7 +10,7 @@ public class TutorialManager : MonoBehaviour
     [Header("Dialogue UI")]
     public TMP_Text speakerNameText;
     public TMP_Text dialogueText;
-
+    public VoiceRecognitionManager voiceRecognitionManager;
 
     [Header("UI")]
     public TMP_Text coinsEarnedText;
@@ -88,7 +88,7 @@ public class TutorialManager : MonoBehaviour
             "Try beginning with 200.",
             "Offer too high... and you may lose the deal."
         ));
-
+        voiceRecognitionManager.ListenForPrice();
         waitingForHighPrice = true;
     }
 
@@ -128,6 +128,7 @@ public class TutorialManager : MonoBehaviour
             ShowNarrator(
                 "Try offering a very high price like 200 Varahas so you can see the customer's reaction."
             );
+            voiceRecognitionManager.ListenForPrice();
         }
     }
 
@@ -141,6 +142,7 @@ public class TutorialManager : MonoBehaviour
             "Please offer a fair price."
         ));
 
+        
         yield return StartCoroutine(ShowDialogueSequence(
             "Narrator:",
             Color.yellow,
@@ -148,7 +150,7 @@ public class TutorialManager : MonoBehaviour
             "Now... make a wiser decision.",
             "Offer a fair price while still securing your profit."
         ));
-
+        voiceRecognitionManager.ListenForPrice();
         waitingForFairPrice = true;
     }
 
@@ -225,7 +227,7 @@ public class TutorialManager : MonoBehaviour
             "That price is still too high.",
             "Try offering something closer to 60 or 70 Varahas."
         ));
-
+        voiceRecognitionManager.ListenForPrice();
         waitingForFairPrice = true;
     }
 
@@ -251,7 +253,7 @@ public class TutorialManager : MonoBehaviour
         StartCoroutine(LoadNextScene());
     }
 
-    void ShowNarrator(string text)
+    public void ShowNarrator(string text)
     {
         speakerNameText.text = "Narrator:";
         speakerNameText.color = Color.yellow;
