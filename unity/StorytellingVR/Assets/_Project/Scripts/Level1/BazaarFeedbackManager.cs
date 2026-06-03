@@ -89,8 +89,6 @@ public class BazaarFeedbackManager : MonoBehaviour
             // Set both naming styles for maximum animator compatibility
             npcAnimator.SetBool("isThinking", false);
             npcAnimator.SetBool("thinking", false);
-            npcAnimator.SetBool("isTalking", true);
-            npcAnimator.SetBool("talking", true);
 
             // Dynamically trigger look at player
             NPCGazeController gazeController = npcAnimator.GetComponent<NPCGazeController>();

@@ -17,11 +17,7 @@ ModelImporter:
     removeConstantScaleCurves: 0
     motionNodeName: 
     animationImportErrors: 
-    animationImportWarnings: "\nClip 'mixamo.com' has import animation warnings that
-      might lower retargeting quality:\nNote: Activate translation DOF on avatar
-      to improve retargeting quality.\n\t'Neck1' is inbetween humanoid transforms
-      and has rotation animation that will be discarded.\n\t'Head' is inbetween humanoid
-      transforms and has rotation animation that will be discarded.\n"
+    animationImportWarnings: 
     animationRetargetingWarnings: 
     animationDoRetargetingWarnings: 0
     importAnimatedCustomProperties: 0
@@ -221,8 +217,7 @@ ModelImporter:
     - name: LeftForeArm1
       parentName: LeftForeArm
       position: {x: -0.0006323463, y: 0.118728414, z: -0.00057622336}
-      rotation: {x: -0.0000000037252899, y: -4.6566123e-10, z: -0.0000000048016418,
-        w: 1}
+      rotation: {x: -0.0000000037252899, y: -4.6566123e-10, z: -0.0000000048016418, w: 1}
       scale: {x: 1.0000012, y: 1.000001, z: 0.9999998}
     - name: LeftForeArm2
       parentName: LeftForeArm
@@ -528,9 +523,9 @@ ModelImporter:
     skeletonHasParents: 1
   lastHumanDescriptionAvatarSource: {instanceID: 0}
   autoGenerateAvatarMappingIfUnspecified: 1
-  animationType: 2
+  animationType: 3
   humanoidOversampling: 1
-  avatarSetup: 0
+  avatarSetup: 1
   addHumanoidExtraRootOnlyWhenUsingAvatar: 1
   importBlendShapeDeformPercent: 1
   remapMaterialsIfMaterialImportModeIsNone: 0

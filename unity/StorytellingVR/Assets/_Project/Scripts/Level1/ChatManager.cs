@@ -119,6 +119,17 @@ public class ChatManager : MonoBehaviour
         if (marketplaceManager != null && marketplaceManager.buyerNPC != null)
         {
             npcAnim = marketplaceManager.buyerNPC.GetComponent<Animator>();
+            if (npcAnim == null)
+            {
+                npcAnim = marketplaceManager.buyerNPC.GetComponentInChildren<Animator>();
+            }
+        }
+
+        if (npcAnim != null)
+        {
+            npcAnim.SetBool("isThinking", true);
+            npcAnim.SetBool("thinking", true);
+            Debug.Log("[ANIM] Thinking ON");
         }
 
         if (feedbackManager != null)
@@ -144,6 +155,17 @@ public class ChatManager : MonoBehaviour
         if (marketplaceManager != null && marketplaceManager.buyerNPC != null)
         {
             npcAnim = marketplaceManager.buyerNPC.GetComponent<Animator>();
+            if (npcAnim == null)
+            {
+                npcAnim = marketplaceManager.buyerNPC.GetComponentInChildren<Animator>();
+            }
+        }
+
+        if (npcAnim != null)
+        {
+            npcAnim.SetBool("isThinking", false);
+            npcAnim.SetBool("thinking", false);
+            Debug.Log("[ANIM] Thinking OFF");
         }
 
         if (feedbackManager != null)
@@ -157,6 +179,15 @@ public class ChatManager : MonoBehaviour
             if (npcText != null)
             {
                 npcText.text = "The market is too noisy, could you repeat that?";
+            }
+            if (npcAnim != null)
+            {
+                npcAnim.SetBool("isThinking", false);
+                npcAnim.SetBool("thinking", false);
+                npcAnim.SetBool("isTalking", false);
+                npcAnim.SetBool("talking", false);
+                Debug.Log("[ANIM] Thinking OFF");
+                Debug.Log("[ANIM] Talking OFF");
             }
             EnableConversationUI();
             isProcessing = false;

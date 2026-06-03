@@ -31,6 +31,10 @@ public class AudioManager : MonoBehaviour
             return;
         }
 
+        // Clean up any previous active audio downloads or monitoring loops
+        ResetTalkingParameter();
+        StopAllCoroutines();
+
         StartCoroutine(DownloadAndPlayAudioRoutine(url));
     }
 
@@ -54,6 +58,7 @@ public class AudioManager : MonoBehaviour
             if (www.result == UnityWebRequest.Result.ConnectionError || www.result == UnityWebRequest.Result.ProtocolError)
             {
                 Debug.LogError($"[AudioManager] Error downloading audio: {www.error} | URL: {url}");
+                ResetTalkingParameter(); // Clean reset on request failures
             }
             else
             {
@@ -63,12 +68,60 @@ public class AudioManager : MonoBehaviour
                 {
                     audioSource.clip = clip;
                     audioSource.Play();
+                    StartCoroutine(MonitorAudioPlayback(clip.length));
                 }
                 else
                 {
                     Debug.LogError("[AudioManager] Audio downloaded successfully, but the clip is null.");
+                    ResetTalkingParameter();
                 }
             }
         }
+    }
+
+    private IEnumerator MonitorAudioPlayback(float duration)
+    {
+        Animator animator = GetNPCAnimator();
+        if (animator != null)
+        {
+            animator.SetBool("isTalking", true);
+            animator.SetBool("talking", true);
+            Debug.Log("[ANIM] Talking ON");
+        }
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            // If the audio source is stopped or paused early, exit out
+            if (audioSource != null && !audioSource.isPlaying && elapsed > 0.5f)
+            {
+                break;
+            }
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        ResetTalkingParameter();
+    }
+
+    private void ResetTalkingParameter()
+    {
+        Animator animator = GetNPCAnimator();
+        if (animator != null)
+        {
+            animator.SetBool("isTalking", false);
+            animator.SetBool("talking", false);
+            Debug.Log("[ANIM] Talking OFF");
+        }
+    }
+
+    private Animator GetNPCAnimator()
+    {
+        MarketplaceManager mm = FindObjectOfType<MarketplaceManager>();
+        if (mm != null && mm.buyerNPC != null)
+        {
+            return mm.buyerNPC.GetComponent<Animator>() ?? mm.buyerNPC.GetComponentInChildren<Animator>();
+        }
+        return null;
     }
 }
