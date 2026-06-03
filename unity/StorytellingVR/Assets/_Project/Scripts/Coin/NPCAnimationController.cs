@@ -7,6 +7,7 @@ public class NPCAnimationController : MonoBehaviour
     [Header("Coin")]
     public GameObject handCoin;
 
+
     void Awake()
     {
         animator = GetComponent<Animator>();
@@ -15,20 +16,27 @@ public class NPCAnimationController : MonoBehaviour
             handCoin.SetActive(false);
     }
 
+
     public void GiveCoin()
     {
+        Debug.Log("GiveCoin called");
+
         animator.speed = 1f;
         animator.SetTrigger("GiveCoin");
     }
 
-    // Called by animation event
+
+    // Animation Event calls this
     public void FreezeHand()
     {
+        Debug.Log("Freeze called");
+
         animator.speed = 0f;
 
         if (handCoin != null)
             handCoin.SetActive(true);
     }
+
 
     public void ResumeAnimation()
     {
