@@ -219,7 +219,7 @@ public class TutorialManager : MonoBehaviour
         coins += offer;
         coinsEarnedText.text = "Coins Earned: " + coins;
 
-        respect += 10;
+        respect += 20;
         respectUIManager.SetRespect(respect);
 
         yield return StartCoroutine(ShowDialogueSequence(
@@ -276,6 +276,12 @@ public class TutorialManager : MonoBehaviour
 
     IEnumerator TooLowSequence(int offer)
     {
+        coins += offer;
+        coinsEarnedText.text = "Coins Earned: " + coins;
+        respect += 30;
+        respectUIManager.SetRespect(respect);
+
+
         yield return StartCoroutine(ShowDialogueSequence(
             "Rahim:",
             Color.white,
