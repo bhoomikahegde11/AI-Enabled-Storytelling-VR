@@ -9,9 +9,6 @@ public class CoinInteraction : MonoBehaviour
     [Header("Inspection")]
     public Transform inspectPoint;
 
-    [Header("Animation")]
-    public float transitionDuration = 1.2f;
-
     public Vector3 inspectScale =
         new Vector3(
             0.3548979f,
@@ -19,79 +16,138 @@ public class CoinInteraction : MonoBehaviour
             0.3307208f
         );
 
-    private bool taken = false;
+    public float transitionDuration = 1.2f;
 
+
+    private bool taken = false;
     private Collider coinCollider;
 
 
-    void Start()
+    void Awake()
     {
         coinCollider = GetComponent<Collider>();
 
-        // Coin should not be rotatable while in NPC hand
-        InspectRotate inspectRotate = GetComponent<InspectRotate>();
+        VRInspectRotate rotate =
+            GetComponent<VRInspectRotate>();
 
-        if (inspectRotate != null)
-            inspectRotate.enabled = false;
+        if (rotate != null)
+        {
+            rotate.enabled = false;
+        }
+
+        Debug.Log("CoinInteraction Ready");
+    }
+
+
+    void Update()
+    {
+        // RIGHT INDEX TRIGGER
+        float triggerValue =
+            OVRInput.Get(
+                OVRInput.Axis1D.SecondaryIndexTrigger
+            );
+
+
+        if (triggerValue > 0.5f)
+        {
+            Debug.Log("RIGHT TRIGGER DETECTED");
+
+            TakeCoin();
+        }
     }
 
 
     public void TakeCoin()
     {
-        if (taken) return;
+        if (taken)
+            return;
+
+
+        Debug.Log("Coin Taken");
+
 
         taken = true;
 
-        // Detach from NPC hand
+
+        // Remove from NPC hand
         transform.SetParent(null);
 
-        // NPC lowers hand
+
+        // Let NPC finish animation
         if (npc != null)
+        {
             npc.ResumeAnimation();
+        }
+        else
+        {
+            Debug.LogWarning("NPC missing");
+        }
 
-        // Disable collider while moving
+
         if (coinCollider != null)
+        {
             coinCollider.enabled = false;
+        }
 
-        StartCoroutine(MoveToInspectMode());
 
-        Debug.Log("Coin Taken");
+        StartCoroutine(
+            MoveToInspectMode()
+        );
     }
 
 
     IEnumerator MoveToInspectMode()
     {
-        Vector3 startPos = transform.position;
-        Quaternion startRot = transform.rotation;
-        Vector3 startScale = transform.localScale;
+        Vector3 startPos =
+            transform.position;
+
+
+        Quaternion startRot =
+            transform.rotation;
+
+
+        Vector3 startScale =
+            transform.localScale;
+
 
         float elapsed = 0f;
+
 
         while (elapsed < transitionDuration)
         {
             elapsed += Time.deltaTime;
 
-            float t = elapsed / transitionDuration;
 
-            // Smooth easing
-            t = Mathf.SmoothStep(0f, 1f, t);
+            float t =
+                elapsed / transitionDuration;
 
-            // Movement
-            Vector3 pos =
+
+            t = Mathf.SmoothStep(
+                0,
+                1,
+                t
+            );
+
+
+            Vector3 targetPos =
                 Vector3.Lerp(
                     startPos,
                     inspectPoint.position,
                     t
                 );
 
-            // Add a slight arc
-            pos += Vector3.up *
-                   Mathf.Sin(t * Mathf.PI) *
-                   0.15f;
 
-            transform.position = pos;
+            // small floating arc
+            targetPos +=
+                Vector3.up *
+                Mathf.Sin(t * Mathf.PI)
+                * 0.15f;
 
-            // Rotate toward inspection orientation
+
+            transform.position =
+                targetPos;
+
+
             transform.rotation =
                 Quaternion.Slerp(
                     startRot,
@@ -99,7 +155,7 @@ public class CoinInteraction : MonoBehaviour
                     t
                 );
 
-            // Scale up while moving
+
             transform.localScale =
                 Vector3.Lerp(
                     startScale,
@@ -107,32 +163,52 @@ public class CoinInteraction : MonoBehaviour
                     t
                 );
 
+
             yield return null;
         }
 
-        // Snap to final values
-        transform.position = inspectPoint.position;
-        transform.rotation = inspectPoint.rotation;
-        transform.localScale = inspectScale;
 
-        // Re-enable collider
+        // final snap
+        transform.position =
+            inspectPoint.position;
+
+
+        transform.rotation =
+            inspectPoint.rotation;
+
+
+        transform.localScale =
+            inspectScale;
+
+
         if (coinCollider != null)
-            coinCollider.enabled = true;
-
-        // Enable inspection rotation
-        InspectRotate inspectRotate = GetComponent<InspectRotate>();
-
-        if (inspectRotate != null)
-            inspectRotate.enabled = true;
-    }
-
-
-    // TEMP TEST ONLY
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.E))
         {
-            TakeCoin();
+            coinCollider.enabled = true;
         }
+
+
+        VRInspectRotate rotate =
+            GetComponent<VRInspectRotate>();
+
+
+        if (rotate != null)
+        {
+            rotate.enabled = true;
+
+            Debug.Log(
+                "VR Inspect Enabled"
+            );
+        }
+        else
+        {
+            Debug.LogError(
+                "NO VRInspectRotate FOUND"
+            );
+        }
+
+
+        Debug.Log(
+            "Inspect Mode Started"
+        );
     }
 }
