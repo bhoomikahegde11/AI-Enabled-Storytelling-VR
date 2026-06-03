@@ -125,13 +125,6 @@ public class ChatManager : MonoBehaviour
             }
         }
 
-        if (npcAnim != null)
-        {
-            npcAnim.SetBool("isThinking", true);
-            npcAnim.SetBool("thinking", true);
-            Debug.Log("[ANIM] Thinking ON");
-        }
-
         if (feedbackManager != null)
         {
             feedbackManager.StartNPCThinking(npcAnim, npcText);
@@ -161,13 +154,6 @@ public class ChatManager : MonoBehaviour
             }
         }
 
-        if (npcAnim != null)
-        {
-            npcAnim.SetBool("isThinking", false);
-            npcAnim.SetBool("thinking", false);
-            Debug.Log("[ANIM] Thinking OFF");
-        }
-
         if (feedbackManager != null)
         {
             feedbackManager.StopNPCThinking(npcAnim);
@@ -182,11 +168,8 @@ public class ChatManager : MonoBehaviour
             }
             if (npcAnim != null)
             {
-                npcAnim.SetBool("isThinking", false);
-                npcAnim.SetBool("thinking", false);
                 npcAnim.SetBool("isTalking", false);
                 npcAnim.SetBool("talking", false);
-                Debug.Log("[ANIM] Thinking OFF");
                 Debug.Log("[ANIM] Talking OFF");
             }
             EnableConversationUI();

@@ -35,12 +35,15 @@ public class BazaarFeedbackManager : MonoBehaviour
     // Immersion thinking fillers
     private readonly string[] thinkingFillers = new string[]
     {
-        "Hmm... let me consider the price.",
-        "Let me check today's market value...",
-        "The spice demand has been changing recently...",
-        "I must think about this bargain carefully.",
-        "A good trade benefits both sides..."
+        "Hmm...",
+        "Let me consider that.",
+        "The market has been unusual lately.",
+        "A merchant must think carefully.",
+        "Interesting proposal...",
+        "I traded with another seller earlier today."
     };
+
+    private Coroutine thinkingCoroutine;
 
     private void Start()
     {
@@ -55,27 +58,118 @@ public class BazaarFeedbackManager : MonoBehaviour
     /// </summary>
     public void StartNPCThinking(Animator npcAnimator, TMP_Text npcTextElement)
     {
-        if (npcAnimator != null)
+        // Stop any running thinking coroutine first to avoid overlaps
+        if (thinkingCoroutine != null)
         {
-            // Set both naming styles for maximum animator compatibility
-            npcAnimator.SetBool("isThinking", true);
-            npcAnimator.SetBool("thinking", true);
-            npcAnimator.SetBool("isTalking", false);
-            npcAnimator.SetBool("talking", false);
+            StopCoroutine(thinkingCoroutine);
+        }
 
-            // Dynamically trigger look at spices
-            NPCGazeController gazeController = npcAnimator.GetComponent<NPCGazeController>();
-            if (gazeController != null)
+        thinkingCoroutine = StartCoroutine(ThinkingBehaviourRoutine(npcAnimator, npcTextElement));
+    }
+
+    private IEnumerator ThinkingBehaviourRoutine(Animator animator, TMP_Text textElement)
+    {
+        NPCGazeController gaze = null;
+        if (animator != null)
+        {
+            gaze = animator.GetComponent<NPCGazeController>();
+        }
+
+        // --- IMMEDIATELY: Play Thinking animation once ---
+        if (animator != null)
+        {
+            animator.SetBool("isThinking", true);
+            animator.SetBool("thinking", true);
+            animator.SetBool("isTalking", false);
+            animator.SetBool("talking", false);
+            Debug.Log("[ANIM] Thinking ON");
+
+            if (gaze != null)
             {
-                gazeController.LookAtSpices();
+                gaze.LookAtSpices();
             }
         }
 
-        if (npcTextElement != null)
+        if (textElement != null)
         {
-            int randomIndex = Random.Range(0, thinkingFillers.Length);
-            npcTextElement.text = thinkingFillers[randomIndex];
-            Debug.Log($"[BazaarFeedback] NPC Thinking filler triggered: \"{npcTextElement.text}\"");
+            textElement.text = "Hmm...";
+            Debug.Log($"[BazaarFeedback] Thinking filler text: {textElement.text}");
+        }
+
+        // Wait 2.5 seconds for the initial thinking gesture to play
+        yield return new WaitForSeconds(2.5f);
+
+        // --- LOOP: waiting for the backend response ---
+        while (true)
+        {
+            int action = Random.Range(1, 6); // 1 to 5 inclusive
+            float waitDuration = Random.Range(2.0f, 4.0f);
+
+            switch (action)
+            {
+                case 1:
+                    // 1. Idle breathing
+                    if (animator != null)
+                    {
+                        animator.SetBool("isThinking", false);
+                        animator.SetBool("thinking", false);
+                        Debug.Log("[ANIM] Thinking OFF");
+                    }
+                    if (gaze != null)
+                    {
+                        gaze.LookAtPlayer();
+                    }
+                    break;
+
+                case 2:
+                    // 2. Thinking animation
+                    if (animator != null)
+                    {
+                        animator.SetBool("isThinking", true);
+                        animator.SetBool("thinking", true);
+                        Debug.Log("[ANIM] Thinking ON");
+                    }
+                    if (gaze != null)
+                    {
+                        gaze.LookAtSpices();
+                    }
+                    break;
+
+                case 3:
+                    // 3. Look at spices
+                    if (gaze != null)
+                    {
+                        gaze.LookAtSpices();
+                    }
+                    break;
+
+                case 4:
+                    // 4. Head nod animation (triggers "happy")
+                    if (animator != null)
+                    {
+                        animator.SetBool("isThinking", false);
+                        animator.SetBool("thinking", false);
+                        animator.SetTrigger("happy");
+                        Debug.Log("[ANIM] Triggered Head Nod (happy)");
+                    }
+                    if (gaze != null)
+                    {
+                        gaze.LookAtPlayer();
+                    }
+                    break;
+
+                case 5:
+                    // 5. Filler dialogue text
+                    if (textElement != null)
+                    {
+                        int textIdx = Random.Range(0, thinkingFillers.Length);
+                        textElement.text = thinkingFillers[textIdx];
+                        Debug.Log($"[BazaarFeedback] Thinking filler text: {textElement.text}");
+                    }
+                    break;
+            }
+
+            yield return new WaitForSeconds(waitDuration);
         }
     }
 
@@ -84,13 +178,19 @@ public class BazaarFeedbackManager : MonoBehaviour
     /// </summary>
     public void StopNPCThinking(Animator npcAnimator)
     {
+        if (thinkingCoroutine != null)
+        {
+            StopCoroutine(thinkingCoroutine);
+            thinkingCoroutine = null;
+        }
+
         if (npcAnimator != null)
         {
-            // Set both naming styles for maximum animator compatibility
             npcAnimator.SetBool("isThinking", false);
             npcAnimator.SetBool("thinking", false);
+            Debug.Log("[ANIM] Thinking OFF");
 
-            // Dynamically trigger look at player
+            // Return gaze target to player immediately on response
             NPCGazeController gazeController = npcAnimator.GetComponent<NPCGazeController>();
             if (gazeController != null)
             {
