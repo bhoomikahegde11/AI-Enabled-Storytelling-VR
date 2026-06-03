@@ -3327,8 +3327,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InspectRotate
   sensitivity: 0.2
   smoothSpeed: 10
---- !u!64 &5334037119504291689
-MeshCollider:
+--- !u!65 &5334037119504291689
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -3345,10 +3345,9 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 5701403352186899810, guid: 9961594622026314e902f484642e7456, type: 3}
+  serializedVersion: 3
+  m_Size: {x: 2, y: 0.9162159, z: 1.9999995}
+  m_Center: {x: -0.000003874302, y: 0.000066533685, z: -0.0000121593475}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
