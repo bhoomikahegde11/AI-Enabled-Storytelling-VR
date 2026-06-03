@@ -9,7 +9,7 @@ public class InspectRotate : MonoBehaviour
     private bool isDragging = false;
     private Quaternion targetRotation;
 
-    void Start()
+    void OnEnable()
     {
         targetRotation = transform.rotation;
     }
