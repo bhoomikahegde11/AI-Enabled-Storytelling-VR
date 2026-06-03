@@ -5495,6 +5495,19 @@ MonoBehaviour:
   speakerNameText: {fileID: 605924555}
   dialogueText: {fileID: 368860202}
   voiceRecognitionManager: {fileID: 1933992658}
+  narratorAudioSource: {fileID: 0}
+  customerAudioSource: {fileID: 0}
+  narratorIntroClip: {fileID: 0}
+  customerIntroClip: {fileID: 0}
+  narratorNegotiationClip: {fileID: 0}
+  customerAngryClip: {fileID: 0}
+  narratorGreedClip: {fileID: 0}
+  customerAcceptClip: {fileID: 0}
+  narratorEndingClip: {fileID: 0}
+  customerTooHighClip: {fileID: 0}
+  narratorTryAgainClip: {fileID: 0}
+  customerTooLowClip: {fileID: 0}
+  narratorLowProfitClip: {fileID: 0}
   coinsEarnedText: {fileID: 1890106866}
   spokenPriceText: {fileID: 1765832576}
   respectUIManager: {fileID: 1558924849}
@@ -5555,7 +5568,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Respect Level
+  m_text: 'Reputation
 
 '
   m_isRightToLeft: 0
