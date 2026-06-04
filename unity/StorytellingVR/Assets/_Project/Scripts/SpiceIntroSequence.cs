@@ -5,8 +5,24 @@ using UnityEngine.UI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
+
 public class SpiceIntroSequence : MonoBehaviour
 {
+    [Header("Audio")]
+    public AudioSource narratorAudioSource;
+
+    [Header("Narration Clips")]
+    public AudioClip intro1;
+    public AudioClip intro2;
+    public AudioClip intro3;
+    public AudioClip intro4;
+
+    public AudioClip pepperClip;
+    public AudioClip turmericClip;
+    public AudioClip cardamomClip;
+    public AudioClip cinnamonClip;
+
+    public AudioClip endingClip;
     [Header("UI")]
     public CanvasGroup subtitleCanvas;
     public TMP_Text subtitleText;
@@ -51,69 +67,68 @@ public class SpiceIntroSequence : MonoBehaviour
 
         yield return ShowSubtitle(
             "Welcome, traveller. Before you stands the great bazaar of Hampi, where voices from distant lands mingle with the scent of spice and dust.",
-            5f
+            intro1
         );
 
         yield return ShowSubtitle(
             "Here, merchants gather with horses, silk, gems, and goods from distant kingdoms.",
-            4f
+            intro2
         );
 
         yield return ShowSubtitle(
             "But among all treasures of the market, few are as valuable as spices.",
-            3.5f
+            intro3
         );
 
         yield return ShowSubtitle(
             "The stall before you is yours.",
-            2.5f
+            intro4
         );
 
         yield return FocusOnSpice(
             pepperTarget,
             "Pepper",
-            "12 Gold Coins / Sack",
-            "Pepper is among the most sought-after goods in the market, prized by traders from distant lands."
+            "12 Varahas / Veesai",
+            "Pepper is among the most sought-after goods in the market, prized by traders from distant lands.",
+            pepperClip
         );
 
         yield return FocusOnSpice(
             turmericTarget,
             "Turmeric",
-            "5 Gold Coins / Sack",
-            "Turmeric is valued for its colour, flavour, and medicinal use."
+            "5 Varahas / Veesai",
+            "Turmeric is valued for its colour, flavour, and medicinal use.",
+            turmericClip
         );
 
         yield return FocusOnSpice(
             cardamomTarget,
             "Cardamom",
-            "18 Gold Coins / Sack",
-            "Cardamom is rare and fragrant, often found in royal kitchens and temple offerings."
+            "18 Varahas / Veesai",
+            "Cardamom is rare and fragrant, often found in royal kitchens and temple offerings.",
+            cardamomClip
         );
 
         yield return FocusOnSpice(
             cinnamonTarget,
             "Cinnamon",
-            "20 Gold Coins / Sack",
-            "Cinnamon travels through long trade routes, making it one of the most precious goods in the market."
+            "20 varahas / veesai",
+            "Cinnamon travels through long trade routes, making it one of the most precious goods in the market.",
+            cinnamonClip
         );
 
         yield return ShowSubtitle(
             "Remember these goods well. Knowing their worth may decide the success of your trade.",
-            4f
+            endingClip
         );
-
-        
-
-        // Optional:
-        // Trigger trader intro scene or trader sequence here
-        // traderIntroSequence.PlaySequence();
     }
 
     IEnumerator FocusOnSpice(
     Transform target,
     string spiceName,
     string spicePrice,
-    string narration)
+    string narration,
+    AudioClip narrationClip)
     {
         // Move popup to current spice location
         if (target != null)
@@ -134,17 +149,28 @@ public class SpiceIntroSequence : MonoBehaviour
 
         yield return FadeCanvas(spiceInfoCanvas, 1f, 0.5f);
 
-        yield return ShowSubtitle(narration, 4f);
+        yield return ShowSubtitle(narration, narrationClip);
 
         yield return new WaitForSeconds(1f);
 
         yield return FadeCanvas(spiceInfoCanvas, 0f, 0.5f);
     }
 
-    IEnumerator ShowSubtitle(string message, float duration)
+    IEnumerator ShowSubtitle(string message, AudioClip clip)
     {
         subtitleText.text = message;
-        yield return new WaitForSeconds(duration);
+
+        if (clip != null && narratorAudioSource != null)
+        {
+            narratorAudioSource.clip = clip;
+            narratorAudioSource.Play();
+
+            yield return new WaitWhile(() => narratorAudioSource.isPlaying);
+        }
+        else
+        {
+            yield return new WaitForSeconds(3f);
+        }
     }
 
     IEnumerator FadeCanvas(CanvasGroup canvasGroup, float targetAlpha, float duration)
