@@ -19,7 +19,6 @@ public class TutorialManager : MonoBehaviour
     [Header("Dialogue Audio")]
     public AudioClip narratorIntroClip;
     public AudioClip customerIntroClip;
-    public AudioClip narratorNegotiationClip;
     public AudioClip customerAngryClip;
     public AudioClip narratorGreedClip;
     public AudioClip customerAcceptClip;
@@ -86,31 +85,72 @@ public class TutorialManager : MonoBehaviour
             yield return null;
         }
     }
+    IEnumerator ShowDialogueSequenceWithTimings(
+    string speaker,
+    Color color,
+    AudioSource audioSource,
+    AudioClip audioClip,
+    string[] lines,
+    float[] startTimes)
+    {
+        speakerNameText.text = speaker;
+        speakerNameText.color = color;
+
+        dialogueText.color = color;
+
+        audioSource.clip = audioClip;
+        audioSource.Play();
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            yield return new WaitUntil(() =>
+                audioSource.time >= startTimes[i]);
+
+            dialogueText.text = lines[i];
+        }
+
+        yield return new WaitWhile(() =>
+            audioSource.isPlaying);
+    }
     IEnumerator TutorialSequence()
     {
-        yield return StartCoroutine(ShowDialogueSequence(
-            "Rahim:",
-            Color.white,
-            customerAudioSource,
-            customerIntroClip,
-            "Greetings, merchant.",
-            "My name is Rahim.",
-            "I have journeyed here from the Deccan Sultanate to trade in the markets of Vijayanagara.",
-            "I am looking to purchase some cardamom today, if the price is fair."
-        ));
+        yield return StartCoroutine(
+            ShowDialogueSequenceWithTimings(
+                "Rahim:",
+                 Color.white,
+                 customerAudioSource,
+                 customerIntroClip,
+
+                new string[]
+                {
+                    "Greetings, merchant.",
+                    "My name is Rahim.",
+                    "I have journeyed here from the Deccan Sultanate to trade in the markets of Vijayanagara.",
+                    "I am looking to purchase one veesai of cardamom today, if the price is fair."
+                },
+
+                new float[]
+                {
+                    0.0f,
+                    1.8f,
+                    3.6f,
+                    8.8f
+                }
+    )
+);
 
         yield return StartCoroutine(ShowDialogueSequence(
             "Narrator:",
             Color.yellow,
             narratorAudioSource,
-            narratorNegotiationClip,
+            narratorIntroClip,
             "Now, let us learn the art of negotiation.",
-            "The base price of one kilogram of cardamom is 50 Varahas.",
+            "The base price of one veesai of cardamom is 18 Varahas.",
             "To your right, you will see the number of Varahas you earn from each successful trade.",
-            "Above it, you will also find your Reputation.",
+            "Next to it, you will also find your Reputation in the market.",
             "As a trader, you must maintain a good reputation.",
             "Merchants who earn the trust and respect of their customers attract more business and greater opportunities.",
-            "Start by offering 200 varahas.",
+            "Start by offering 70 varahas.",
             "Be careful... a price that is too high may cost you the deal entirely."
         ));
 
@@ -140,7 +180,7 @@ public class TutorialManager : MonoBehaviour
 
     void HandleHighPriceStage(int offer)
     {
-        if (offer >= 120)
+        if (offer >= 60)
         {
             waitingForHighPrice = false;
 
@@ -151,8 +191,9 @@ public class TutorialManager : MonoBehaviour
         }
         else
         {
+            //
             ShowNarrator(
-                "Try offering a very high price like 200 Varahas so you can see the customer's reaction."
+                "Try offering a very high price like 70 Varahas so you can see the customer's reaction."
             );
             voiceRecognitionManager.ListenForPrice();
             waitingForHighPrice = true;
@@ -190,18 +231,18 @@ public class TutorialManager : MonoBehaviour
     {
         waitingForFairPrice = false;
 
-        if (offer >= 60 && offer <= 80)
+        if (offer >= 22 && offer <= 30)
         {
             StartCoroutine(FairPriceSequence(offer));
         }
-        else if (offer > 80)
+        else if (offer > 30)
         {
             respect -= 20;
             respectUIManager.SetRespect(respect);
 
             StartCoroutine(TooHighAgainSequence(offer));
         }
-        else if (offer < 50)
+        else if (offer < 18)
         {
             coins += offer;
             coinsEarnedText.text = "Coins Earned: " + coins;
@@ -267,7 +308,7 @@ public class TutorialManager : MonoBehaviour
             "That offer is still too expensive for the customer.",
             "Notice how your Reputation continues to decline.",
             "Even the wealthiest traders of Vijayanagara could not prosper without the trust of their customers.",
-            "Try proposing a price closer to 60 or 70 Varahas."
+            "Try proposing a price closer to 25 Varahas."
         ));
 
         voiceRecognitionManager.ListenForPrice();
