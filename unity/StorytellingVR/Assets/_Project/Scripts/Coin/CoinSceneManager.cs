@@ -7,7 +7,7 @@ public class CoinSceneManager : MonoBehaviour
     [Header("References")]
     public NPCAnimationController npc;
     public TMP_Text dialogueText;
-
+    public AudioSource voiceSource;
 
     [Header("Coins")]
     public GameObject varahaCoin;
@@ -16,6 +16,13 @@ public class CoinSceneManager : MonoBehaviour
     [Header("Sequence")]
     public CoinSequenceManager coinSequence;
 
+    [Header("Voice Lines")]
+    public AudioClip npcPaymentClip;
+    public AudioClip inspectCoinClip;
+    public AudioClip varahaClip;
+    public AudioClip kasuClip;
+    public AudioClip understandCoinsClip;
+    public AudioClip tradingAheadClip;
 
 
     void Start()
@@ -37,8 +44,9 @@ public class CoinSceneManager : MonoBehaviour
 
 
         yield return ShowDialogue(
-            "A fair bargain, merchant. Here is your payment.",
-            3
+            "A pleasure doing business with you, trader. Here is your payment.",
+            npcPaymentClip
+            
         );
 
 
@@ -59,7 +67,7 @@ public class CoinSceneManager : MonoBehaviour
 
         yield return ShowDialogue(
             "Take a closer look at this coin.",
-            3
+            inspectCoinClip
         );
 
 
@@ -84,7 +92,7 @@ public class CoinSceneManager : MonoBehaviour
         StartCoroutine(
             ShowDialogue(
                 "The Varaha was a gold coin used for important trade and represented the wealth of the Vijayanagara Empire.",
-                6
+                varahaClip
             )
         );
     }
@@ -97,7 +105,7 @@ public class CoinSceneManager : MonoBehaviour
         StartCoroutine(
             ShowDialogue(
                 "The Kasu was a bronze coin used by common people for everyday marketplace transactions.",
-                6
+                kasuClip
             )
         );
     }
@@ -118,13 +126,13 @@ public class CoinSceneManager : MonoBehaviour
     {
         yield return ShowDialogue(
             "You now understand the coins used in Vijayanagara markets.",
-            4
+            understandCoinsClip
         );
 
 
         yield return ShowDialogue(
             "Now use this knowledge while trading with the customers ahead.",
-            4
+            tradingAheadClip
         );
 
 
@@ -140,17 +148,14 @@ public class CoinSceneManager : MonoBehaviour
 
 
 
-    IEnumerator ShowDialogue(
-        string line,
-        float time
-    )
+    IEnumerator ShowDialogue(string line, AudioClip clip)
     {
         dialogueText.text = line;
 
+        voiceSource.clip = clip;
+        voiceSource.Play();
 
-        yield return
-            new WaitForSeconds(time);
-
+        yield return new WaitForSeconds(clip.length);
 
         dialogueText.text = "";
     }
