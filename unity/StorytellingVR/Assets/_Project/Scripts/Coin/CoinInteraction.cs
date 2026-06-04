@@ -203,7 +203,11 @@ public class CoinInteraction : MonoBehaviour
 
 
         isInspecting = true;
-        sceneManager.NarrateVaraha();
+        if (sceneManager != null)
+        {
+            sceneManager.NarrateVaraha();
+        }
+
         if (sequenceManager != null)
         {
             sequenceManager.StartSequence();
