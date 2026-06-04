@@ -157,7 +157,10 @@ public class CoinSequenceManager : MonoBehaviour
             descriptions[index]
         );
 
-        sceneManager.NarrateKasu();
+        if (sceneManager != null)
+        {
+            sceneManager.NarrateKasu();
+        }
 
         // enable joystick rotate
         VRInspectRotate rotate =
