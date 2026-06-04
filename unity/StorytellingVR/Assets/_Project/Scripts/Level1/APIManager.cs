@@ -8,6 +8,12 @@ public class APIManager : MonoBehaviour
     private string baseURL = "http://127.0.0.1:8000";
     private string sessionId;
 
+    [Header("Current Buyer / Trade Data cached from Backend")]
+    public string currentBuyerName;
+    public string currentBuyerOrigin;
+    public string currentSpiceName;
+    public string currentSpiceQuantity;
+
     // 🔥 START SESSION
     public IEnumerator StartSession(System.Action<string, string, int, int, bool, TransactionSummary> callback)
     {
@@ -28,6 +34,10 @@ public class APIManager : MonoBehaviour
             StartResponse response = JsonUtility.FromJson<StartResponse>(raw);
 
             sessionId = response.session_id;
+            currentBuyerName = response.buyer_name;
+            currentBuyerOrigin = response.buyer_origin;
+            currentSpiceName = response.spice_name;
+            currentSpiceQuantity = response.spice_quantity;
 
             Debug.Log("Session ID: " + sessionId);
             Debug.Log("NPC Text: " + response.npc_text);
@@ -36,7 +46,7 @@ public class APIManager : MonoBehaviour
             Debug.Log("Total Varahas: " + response.total_varahas);
             Debug.Log("Done: " + response.done);
 
-            callback(response.npc_text, response.audio_url, response.reputation, response.total_varahas, response.done, null);
+            callback(response.npc_text, response.audio_url, response.player_reputation, response.player_money, response.done, null);
         }
         else
         {
@@ -72,13 +82,21 @@ public class APIManager : MonoBehaviour
 
             StepResponse response = JsonUtility.FromJson<StepResponse>(raw);
 
+            if (response != null && !string.IsNullOrEmpty(response.buyer_name))
+            {
+                currentBuyerName = response.buyer_name;
+                currentBuyerOrigin = response.buyer_origin;
+                currentSpiceName = response.spice_name;
+                currentSpiceQuantity = response.spice_quantity;
+            }
+
             Debug.Log("NPC Text: " + response.npc_text);
             Debug.Log("Audio URL: " + response.audio_url);
             Debug.Log("Reputation: " + response.reputation);
             Debug.Log("Total Varahas: " + response.total_varahas);
             Debug.Log("Done: " + response.done);
 
-            callback(response.npc_text, response.audio_url, response.reputation, response.total_varahas, response.done, response.transaction);
+            callback(response.npc_text, response.audio_url, response.player_reputation, response.player_money, response.done, response.transaction);
         }
         else
         {

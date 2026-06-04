@@ -29,6 +29,12 @@ public class ChatManager : MonoBehaviour
     public bool autoStart = false;
     public MarketplaceManager marketplaceManager;
 
+    [Header("Level 1 HUD References")]
+    public Level1HUDManager hudManager;
+    public GameObject sendButtonObject;
+
+    private bool isFirstReplyOfSession = false;
+
     // 🔥 Prevent STT spam / multiple requests
     private bool isProcessing = false;
     private string lastProcessedText = "";
@@ -36,15 +42,41 @@ public class ChatManager : MonoBehaviour
 
     void Start()
     {
+        if (sendButtonObject != null)
+        {
+            sendButtonObject.SetActive(false); // Hide send button for the demo
+        }
+
         if (autoStart)
         {
             StartNewSession();
         }
     }
 
+    void Update()
+    {
+        // Detect Enter / Return key press for confirmation
+        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+        {
+            if (inputField != null && !string.IsNullOrEmpty(inputField.text))
+            {
+                Debug.Log("[INPUT] Keyboard confirm triggered");
+                OnSend();
+            }
+        }
+    }
+
     public void StartNewSession()
     {
         isProcessing = false; // Reset lock for new session
+        isFirstReplyOfSession = true;
+        if (api != null)
+        {
+            api.currentBuyerName = "";
+            api.currentBuyerOrigin = "";
+            api.currentSpiceName = "";
+            api.currentSpiceQuantity = "";
+        }
         StartCoroutine(api.StartSession(OnNPCReply));
     }
 
@@ -53,6 +85,12 @@ public class ChatManager : MonoBehaviour
         if (npcText != null)
         {
             npcText.text = statusText;
+        }
+
+        if (hudManager != null)
+        {
+            hudManager.HideSubtitle();
+            hudManager.HideCurrentTrade();
         }
 
         if (inputField != null)
@@ -114,6 +152,8 @@ public class ChatManager : MonoBehaviour
     // 🔁 COMMON SEND ROUTINE (prevents duplication)
     IEnumerator SendMessageRoutine(string text)
     {
+        Debug.Log($"[THINK] Request Sent: {text}");
+
         // 1. Trigger the thinking behavior if feedbackManager is assigned
         Animator npcAnim = null;
         if (marketplaceManager != null && marketplaceManager.buyerNPC != null)
@@ -127,7 +167,12 @@ public class ChatManager : MonoBehaviour
 
         if (feedbackManager != null)
         {
+            Debug.Log("[THINK] Calling feedbackManager.StartNPCThinking");
             feedbackManager.StartNPCThinking(npcAnim, npcText);
+        }
+        else
+        {
+            Debug.LogError("[THINK] feedbackManager is NULL in ChatManager!");
         }
 
         yield return api.SendMessage(text, OnNPCReply);
@@ -169,11 +214,22 @@ public class ChatManager : MonoBehaviour
             if (npcAnim != null)
             {
                 npcAnim.SetBool("isTalking", false);
-                npcAnim.SetBool("talking", false);
                 Debug.Log("[ANIM] Talking OFF");
             }
             EnableConversationUI();
             isProcessing = false;
+            return;
+        }
+
+        // Check if this is the first greeting reply of the session
+        if (isFirstReplyOfSession)
+        {
+            isFirstReplyOfSession = false;
+            if (inputField != null)
+            {
+                inputField.interactable = false; // Lock inputs during introduction sequence
+            }
+            StartCoroutine(FirstReplyIntroRoutine(text, audioUrl, reputation, totalVarahas, done, transaction, npcAnim));
             return;
         }
 
@@ -187,6 +243,14 @@ public class ChatManager : MonoBehaviour
         if (coinsEarnedText != null)
         {
             coinsEarnedText.text = "Coins Earned: " + totalVarahas;
+        }
+
+        // Update Level 1 HUD Economy metrics
+        if (hudManager != null)
+        {
+            hudManager.UpdateMoney(totalVarahas);
+            hudManager.UpdateRespect(reputation);
+            hudManager.ShowSubtitle(!string.IsNullOrEmpty(api.currentBuyerName) ? api.currentBuyerName : "Customer", text);
         }
 
         // 2. Trigger transaction completed feedback popups or respect warnings on done
@@ -208,6 +272,15 @@ public class ChatManager : MonoBehaviour
             }
         }
 
+        if (done && hudManager != null)
+        {
+            hudManager.HideCurrentTrade();
+            if (transaction != null)
+            {
+                hudManager.ShowTradeComplete(transaction);
+            }
+        }
+
         if (audioManager != null && !string.IsNullOrEmpty(audioUrl))
         {
             Debug.Log("Playing audio: " + audioUrl);
@@ -220,7 +293,61 @@ public class ChatManager : MonoBehaviour
 
         if (done && marketplaceManager != null)
         {
-            marketplaceManager.OnNegotiationFinished();
+            marketplaceManager.OnNegotiationFinished(transaction != null);
         }
+    }
+
+    private IEnumerator FirstReplyIntroRoutine(string text, string audioUrl, int reputation, int totalVarahas, bool done, TransactionSummary transaction, Animator npcAnim)
+    {
+        // Stop browsing/thinking state and look at player when the response arrives
+        if (feedbackManager != null)
+        {
+            feedbackManager.StopNPCThinking(npcAnim);
+        }
+        else if (npcAnim != null)
+        {
+            npcAnim.SetBool("isThinking", false);
+            NPCGazeController gaze = npcAnim.GetComponent<NPCGazeController>();
+            if (gaze != null)
+            {
+                gaze.LookAtPlayer();
+            }
+        }
+
+        string bName = !string.IsNullOrEmpty(api.currentBuyerName) ? api.currentBuyerName : "Customer";
+        string bOrigin = !string.IsNullOrEmpty(api.currentBuyerOrigin) ? api.currentBuyerOrigin : "Merchant";
+
+        // 1. Trigger HUD NPC Introduction Card and active trade details immediately
+        if (hudManager != null)
+        {
+            hudManager.ShowNPCIntro(bName, bOrigin);
+            hudManager.ShowCurrentTrade(api.currentSpiceName, api.currentSpiceQuantity, bName);
+            hudManager.UpdateMoney(totalVarahas);
+            hudManager.UpdateRespect(reputation);
+        }
+
+        // 2. Wait exactly 3.0 seconds to allow the intro card to play fully before greeting text/speech
+        yield return new WaitForSeconds(3.0f);
+
+        // 3. Render greeting dialogue and subtitles
+        if (npcText != null)
+        {
+            npcText.text = text;
+        }
+
+        if (hudManager != null)
+        {
+            hudManager.ShowSubtitle(bName, text);
+        }
+
+        // 4. Trigger speech audio playback
+        if (audioManager != null && !string.IsNullOrEmpty(audioUrl))
+        {
+            Debug.Log("Playing audio: " + audioUrl);
+            audioManager.PlayAudioFromUrl(audioUrl);
+        }
+
+        // 5. Unlock conversation inputs
+        EnableConversationUI();
     }
 }

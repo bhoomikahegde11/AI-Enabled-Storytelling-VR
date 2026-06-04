@@ -373,8 +373,44 @@ def is_agreement(text, context):
     return False
 
 
+trade_keywords = {
+    "varaha", "varahas", "waraha", "warahas", "vara", "varas", "baraha", "barahas",
+    "price", "prices", "offer", "offers", "pay", "pays", "paying",
+    "sell", "sells", "selling", "buy", "buys", "buying", "cost", "costs",
+    "give", "gives", "giving", "take", "takes", "taking", "want", "wants"
+}
+
+bargaining_keywords = {
+    # Currency
+    "varaha", "varahas", "waraha", "warahas", "vara", "varas", "baraha", "barahas",
+    "price", "prices", "offer", "offers", "pay", "pays", "paying",
+    "sell", "sells", "selling", "buy", "buys", "buying", "cost", "costs",
+    "give", "gives", "giving", "take", "takes", "taking", "want", "wants",
+    # Quantity / Weight
+    "palam", "palams", "palm", "palms", "palum", "palums", "palan", "palans",
+    "veesai", "viss", "seer", "seers", "manangu", "maund", "maunds", "bahar", "bahars", "candy", "candies",
+    "kg", "kgs", "kilogram", "kilograms", "bag", "bags", "quantity", "amount", "weight",
+    # Spices
+    "pepper", "peppers", "paper", "peper", "pepers",
+    "cardamom", "cardamoms", "cardamon", "cardamons", "cardimum", "cardamum", "cardam",
+    "cinnamon", "cinnamons", "cinamon", "cinnamun", "clove", "cloves"
+}
+
 def is_price_statement(text):
-    return any(char.isdigit() for char in text)
+    has_digit = any(char.isdigit() for char in text)
+    if not has_digit:
+        return False
+        
+    # Check if text is just a number (only digits, spaces, and punctuation)
+    if re.match(r'^[\s\d.,;!?]+$', text):
+        return True
+        
+    if has_price_statement_pattern(text):
+        return True
+        
+    words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+    has_trade_keyword = any(w in trade_keywords for w in words)
+    return has_trade_keyword
 
 
 def is_rejection(text):
@@ -503,6 +539,26 @@ def classify_intent(user_input: str, context=None):
         if last_system_action == "OFFER":
             return {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
         return {"intent": "CONTINUE", "tone": "neutral", "persuasion": 0}
+
+    budget_query_phrases = [
+        "what is your offer",
+        "what's your offer",
+        "how much are you willing to pay",
+        "how much will you pay",
+        "what is your budget",
+        "what's your budget",
+        "what can you spend",
+        "how much will you give",
+        "what will you give",
+        "what can you pay",
+        "how much do you want to pay",
+        "what are you willing to spend"
+    ]
+    if any(phrase in text for phrase in budget_query_phrases) or (
+        ("budget" in text or "willing to pay" in text or "willing to spend" in text or "can you spend" in text or "your offer" in text)
+        and ("what" in text or "how much" in text or "query" in text)
+    ):
+        return {"intent": "QUERY_BUYER_BUDGET", "tone": "neutral", "persuasion": 0}
 
     if is_hostile_input(text, user_input):
         return {"intent": "HOSTILE", "tone": "annoyed", "persuasion": 0}
@@ -825,6 +881,18 @@ Sentence: "{user_input}"
             except:
                 pass
                 
+        # Safety check: demote low-confidence/uncertain price offers to CLARIFICATION
+        if final_intent.get("intent") not in ["OUT_OF_WORLD", "HOSTILE"]:
+            if any(char.isdigit() for char in text):
+                words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+                has_keyword = any(w in bargaining_keywords for w in words)
+                is_pure_num = bool(re.match(r'^[\s\d.,;!?]+$', text))
+                if not (has_keyword or is_pure_num):
+                    final_intent = {"intent": "CLARIFICATION", "tone": "confused", "persuasion": 0}
+        
+        if final_intent.get("intent") in ["PRICE", "COUNTER", "QUANTITY_PRICE"]:
+            if not is_price_statement(text):
+                final_intent = {"intent": "CLARIFICATION", "tone": "confused", "persuasion": 0}
         return final_intent
 
     except:
@@ -877,4 +945,16 @@ Sentence: "{user_input}"
             except:
                 pass
                 
+        # Safety check: demote low-confidence/uncertain price offers to CLARIFICATION
+        if final_intent.get("intent") not in ["OUT_OF_WORLD", "HOSTILE"]:
+            if any(char.isdigit() for char in text):
+                words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+                has_keyword = any(w in bargaining_keywords for w in words)
+                is_pure_num = bool(re.match(r'^[\s\d.,;!?]+$', text))
+                if not (has_keyword or is_pure_num):
+                    final_intent = {"intent": "CLARIFICATION", "tone": "confused", "persuasion": 0}
+        
+        if final_intent.get("intent") in ["PRICE", "COUNTER", "QUANTITY_PRICE"]:
+            if not is_price_statement(text):
+                final_intent = {"intent": "CLARIFICATION", "tone": "confused", "persuasion": 0}
         return final_intent

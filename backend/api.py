@@ -1,7 +1,9 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from npc_engine.interface import NPCSession
+from stt.whisper_service import transcribe_audio_file
+from npc_engine.utils.text_normalizer import normalize_text
 from dotenv import load_dotenv
 from openai import OpenAI
 import requests
@@ -166,30 +168,48 @@ def generate_openai_audio(text: str) -> str:
         print(f"[ERROR OpenAI] request failed: {e}")
         return ""
 
+def clean_text_for_speech(text: str) -> str:
+    import re
+    # 1. Remove parenthesized measurements e.g., " (~1.4 kg)" or "(~28g)" or "(~113.2 g)"
+    text = re.sub(r'\s*\([^)]*(?:kg|g|gram|grams|veesai|palam)[^)]*\)', '', text, flags=re.IGNORECASE)
+    
+    # 2. Remove ~ symbols and other technical symbols
+    text = text.replace('~', '')
+    
+    # 3. Specifically convert "1 Veesai" (case-insensitive) to "one veesai"
+    text = re.sub(r'\b1\s+veesai\b', 'one veesai', text, flags=re.IGNORECASE)
+    text = re.sub(r'\b1\s+veesais\b', 'one veesai', text, flags=re.IGNORECASE)
+    
+    # Clean up double/multiple spaces
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
 def generate_audio_url(text: str) -> str:
     if not text:
         return ""
 
+    cleaned_text = clean_text_for_speech(text)
     provider = get_tts_provider()
     print(f"[INFO] Using provider: {provider}")
 
     if provider == "piper":
-        url = generate_piper_audio(text)
+        url = generate_piper_audio(cleaned_text)
         if url: return url
         print("[WARNING] Piper failed, falling back to OpenAI...")
-        return generate_openai_audio(text)
+        return generate_openai_audio(cleaned_text)
 
     elif provider == "elevenlabs":
-        url = generate_elevenlabs_audio(text)
+        url = generate_elevenlabs_audio(cleaned_text)
         if url: return url
         print("[WARNING] ElevenLabs failed, falling back to OpenAI...")
-        return generate_openai_audio(text)
+        return generate_openai_audio(cleaned_text)
 
     elif provider == "openai":
-        url = generate_openai_audio(text)
+        url = generate_openai_audio(cleaned_text)
         if url: return url
         print("[WARNING] OpenAI failed, falling back to ElevenLabs...")
-        return generate_elevenlabs_audio(text)
+        return generate_elevenlabs_audio(cleaned_text)
 
     return ""
 
@@ -225,6 +245,10 @@ def start_session():
     reputation = state.get("global_metrics", {}).get("reputation", 50)
     total_varahas = state.get("global_metrics", {}).get("total_varahas", 100)
 
+    from npc_engine.core.measurements import grams_to_traditional_label
+    spice_name = session.item.name
+    spice_qty = grams_to_traditional_label(session.item.quantity * 1000.0)
+
     return {
         "session_id": session_id,
         "npc_text": response.get("npc_text", ""),
@@ -236,6 +260,15 @@ def start_session():
         "active_event": active_event,
         "reputation": reputation,
         "total_varahas": total_varahas,
+        
+        # New HUD and identity keys
+        "player_reputation": reputation,
+        "player_money": total_varahas,
+        "buyer_name": getattr(session.buyer, "name", "Abdul Rahman"),
+        "buyer_origin": getattr(session.buyer, "origin", "Persian Trader"),
+        "spice_name": spice_name.capitalize(),
+        "spice_quantity": spice_qty,
+        
         "response": response
     }
 
@@ -257,6 +290,10 @@ def step_session(req: StepRequest):
     reputation = state.get("global_metrics", {}).get("reputation", 50)
     total_varahas = state.get("global_metrics", {}).get("total_varahas", 100)
 
+    from npc_engine.core.measurements import grams_to_traditional_label
+    spice_name = session.item.name
+    spice_qty = grams_to_traditional_label(session.item.quantity * 1000.0)
+
     return {
         "session_id": session_id,
         "npc_text": response.get("npc_text", ""),
@@ -268,6 +305,15 @@ def step_session(req: StepRequest):
         "reputation": reputation,
         "total_varahas": total_varahas,
         "transaction": response.get("transaction"),
+        
+        # New HUD and identity keys
+        "player_reputation": reputation,
+        "player_money": total_varahas,
+        "buyer_name": getattr(session.buyer, "name", "Abdul Rahman"),
+        "buyer_origin": getattr(session.buyer, "origin", "Persian Trader"),
+        "spice_name": spice_name.capitalize(),
+        "spice_quantity": spice_qty,
+        
         "response": response
     }
 
@@ -364,6 +410,38 @@ async def websocket_negotiation(websocket: WebSocket, session_id: str):
             pass
     finally:
         manager.disconnect(session_id)
+
+
+# 🎙️ OFFLINE WHISPER SPEECH TO TEXT ENDPOINT
+@app.post("/stt")
+async def speech_to_text(file: UploadFile = File(...)):
+    import time
+    import shutil
+
+    temp_filename = f"temp_{uuid.uuid4()}.wav"
+    temp_filepath = os.path.join("audio", temp_filename)
+    
+    start_time = time.time()
+    try:
+        with open(temp_filepath, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        print(f"[STT] Transcribing received file: {file.filename}")
+        transcript = transcribe_audio_file(temp_filepath)
+        normalized_transcript = normalize_text(transcript)
+        
+        elapsed_ms = int((time.time() - start_time) * 1000)
+        print(f"[STT RAW]: {transcript}")
+        print(f"[STT NORMALIZED]: {normalized_transcript}")
+        print(f"[PERF STT] Inference: {elapsed_ms} ms")
+        
+        return {"text": normalized_transcript}
+    except Exception as e:
+        print(f"[STT] Transcription error: {e}")
+        return {"text": "", "error": str(e)}
+    finally:
+        if os.path.exists(temp_filepath):
+            os.remove(temp_filepath)
 
 
 # ❤️ HEALTH CHECK

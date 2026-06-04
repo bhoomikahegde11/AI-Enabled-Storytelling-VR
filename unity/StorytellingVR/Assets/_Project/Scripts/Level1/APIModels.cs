@@ -10,6 +10,14 @@ public class StartResponse
     public string audio_url;
     public int reputation;
     public int total_varahas;
+    
+    // Backend-driven HUD data
+    public int player_reputation;
+    public int player_money;
+    public string buyer_name;
+    public string buyer_origin;
+    public string spice_name;
+    public string spice_quantity;
 }
 
 [System.Serializable]
@@ -37,6 +45,14 @@ public class StepResponse
     public int reputation;
     public int total_varahas;
     public TransactionSummary transaction;
+
+    // Backend-driven HUD data
+    public int player_reputation;
+    public int player_money;
+    public string buyer_name;
+    public string buyer_origin;
+    public string spice_name;
+    public string spice_quantity;
 }
 
 [System.Serializable]

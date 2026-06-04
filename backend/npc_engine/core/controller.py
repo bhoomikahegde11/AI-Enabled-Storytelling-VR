@@ -150,6 +150,18 @@ class Controller:
                     "debug": self._build_debug_info()
                 }
 
+            if action.intent == "CLARIFICATION":
+                return {
+                    "npc_text": "I did not understand your offer. Could you repeat your price?",
+                    "tone": "confused",
+                    "emotion": "confused",
+                    "action": "WAIT",
+                    "price": self.engine.current_offer,
+                    "quantity": self.engine.current_quantity,
+                    "done": False,
+                    "debug": self._build_debug_info()
+                }
+
             if action.intent == "OUT_OF_WORLD":
                 self.engine.out_of_world_count += 1
 

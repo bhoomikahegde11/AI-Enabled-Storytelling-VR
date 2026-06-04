@@ -617,6 +617,18 @@ class NegotiationEngine:
         tone = "neutral"
         social_sub_intent = None
 
+        if intent == "QUERY_BUYER_BUDGET":
+            self.price_introduced = True
+            if not self.quantity_given:
+                self.quantity_given = True
+                fixed_quantity = self.current_quantity
+                self.update_active_bundle([{
+                    "name": self.item.name.lower(),
+                    "quantity": fixed_quantity,
+                    "unit": "g"
+                }])
+            return self.respond("QUERY_BUYER_BUDGET", price=self.current_offer)
+
         if intent == "NO_ITEM":
             return self.respond("NO_ITEM")
 
