@@ -20,11 +20,17 @@ public class SpiceIntroSequence : MonoBehaviour
     public Volume globalVolume;
     private DepthOfField dof;
 
-    [Header("Focus Targets")]
+    [Header("UI Positions")]
     public Transform pepperTarget;
     public Transform turmericTarget;
     public Transform cardamomTarget;
     public Transform cinnamonTarget;
+
+    [Header("UI Anchors")]
+    public Transform pepperUIAnchor;
+    public Transform turmericUIAnchor;
+    public Transform cardamomUIAnchor;
+    public Transform cinnamonUIAnchor;
 
     [Header("Camera")]
     public Camera mainCamera;
@@ -96,19 +102,25 @@ public class SpiceIntroSequence : MonoBehaviour
             4f
         );
 
-        yield return ShowSubtitle(
-            "And now... it seems your first customer approaches.",
-            3f
-        );
+        
 
         // Optional:
         // Trigger trader intro scene or trader sequence here
         // traderIntroSequence.PlaySequence();
     }
 
-    IEnumerator FocusOnSpice(Transform target, string spiceName, string spicePrice, string narration)
+    IEnumerator FocusOnSpice(
+    Transform target,
+    string spiceName,
+    string spicePrice,
+    string narration)
     {
-        // ❌ Camera movement removed completely
+        // Move popup to current spice location
+        if (target != null)
+        {
+            spiceInfoCanvas.transform.position =
+                target.position;
+        }
 
         if (dof != null)
         {
@@ -121,8 +133,11 @@ public class SpiceIntroSequence : MonoBehaviour
         spicePriceText.text = spicePrice;
 
         yield return FadeCanvas(spiceInfoCanvas, 1f, 0.5f);
+
         yield return ShowSubtitle(narration, 4f);
+
         yield return new WaitForSeconds(1f);
+
         yield return FadeCanvas(spiceInfoCanvas, 0f, 0.5f);
     }
 
