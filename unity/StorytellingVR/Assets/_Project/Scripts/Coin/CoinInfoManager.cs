@@ -3,19 +3,17 @@ using TMPro;
 
 public class CoinInfoManager : MonoBehaviour
 {
+    public GameObject panel;
+
     public TextMeshProUGUI titleText;
-
     public TextMeshProUGUI typeText;
-
     public TextMeshProUGUI descriptionText;
-
 
 
     void Awake()
     {
-        gameObject.SetActive(false);
+        panel.SetActive(false);
     }
-
 
 
     public void ShowInfo(
@@ -24,21 +22,16 @@ public class CoinInfoManager : MonoBehaviour
         string description
     )
     {
-        gameObject.SetActive(true);
-
+        panel.SetActive(true);
 
         titleText.text = title;
-
         typeText.text = type;
-
-        descriptionText.text =
-            description;
+        descriptionText.text = description;
     }
-
 
 
     public void Hide()
     {
-        gameObject.SetActive(false);
+        panel.SetActive(false);
     }
 }

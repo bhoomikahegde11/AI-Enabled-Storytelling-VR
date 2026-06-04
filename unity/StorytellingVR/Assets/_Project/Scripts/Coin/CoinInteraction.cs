@@ -61,7 +61,7 @@ public class CoinInteraction : MonoBehaviour
         // right trigger
         if (
             OVRInput.GetDown(
-            OVRInput.Button.SecondaryIndexTrigger)
+                OVRInput.Button.One)
         )
         {
             if (!taken)
