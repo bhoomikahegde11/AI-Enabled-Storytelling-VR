@@ -85,7 +85,6 @@ public class AudioManager : MonoBehaviour
         if (animator != null)
         {
             animator.SetBool("isTalking", true);
-            animator.SetBool("talking", true);
             Debug.Log("[ANIM] Talking ON");
         }
 
@@ -110,7 +109,6 @@ public class AudioManager : MonoBehaviour
         if (animator != null)
         {
             animator.SetBool("isTalking", false);
-            animator.SetBool("talking", false);
             Debug.Log("[ANIM] Talking OFF");
         }
     }

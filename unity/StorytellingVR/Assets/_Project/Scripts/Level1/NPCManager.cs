@@ -51,7 +51,6 @@ public class NPCManager : MonoBehaviour
     void Arrive()
     {
         hasArrived = true;
-        anim.SetBool("isAtStall", true); // Trigger the Idle/Gesture animation
         infoCanvas.SetActive(true); // Pop up the info box
     }
 }

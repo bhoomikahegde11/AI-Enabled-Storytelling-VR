@@ -35,6 +35,7 @@ public class MarketplaceManager : MonoBehaviour
     private NavMeshAgent navMeshAgent;
     private Animator animator;
     private bool isTransitioning = false;
+    private bool negotiationWasAccepted = false;
 
     private void Start()
     {
@@ -172,12 +173,41 @@ public class MarketplaceManager : MonoBehaviour
 
         // 3. NPC Arrived at Stall - Orient smoothly
         buyerNPC.transform.rotation = tradePoint.rotation;
-        Debug.Log("[MarketplaceManager] NPC reached TradePoint. Activating UI and starting session.");
+        Debug.Log("[MarketplaceManager] NPC reached TradePoint. Triggering browsing behavior.");
 
-        // 4. Enable input fields on arrival and start session
+        // Cache animator
+        if (animator == null)
+        {
+            animator = buyerNPC.GetComponent<Animator>();
+            if (animator == null) animator = buyerNPC.GetComponentInChildren<Animator>();
+        }
+
+        // 4. Make NPC look at spices using NPCGazeController
+        NPCGazeController gaze = buyerNPC.GetComponent<NPCGazeController>();
+        if (gaze != null)
+        {
+            gaze.LookAtSpices();
+        }
+
+        // 1 & 2. Trigger idle/thinking behaviour and show browsing subtitle
+        if (chatManager != null && chatManager.hudManager != null)
+        {
+            // Show temporary subtitle: Speaker "Customer", Text "Customer is browsing your goods..."
+            chatManager.hudManager.ShowSubtitle("Customer", "Customer is browsing your goods...");
+        }
+
+        if (chatManager != null && chatManager.feedbackManager != null)
+        {
+            chatManager.feedbackManager.StartNPCThinking(animator, chatManager.npcText);
+        }
+
+        // 5. Start backend request in parallel
         if (chatManager != null)
         {
-            chatManager.EnableConversationUI();
+            if (chatManager.inputField != null)
+            {
+                chatManager.inputField.interactable = false; // Lock inputs during arrival and browsing
+            }
             chatManager.StartNewSession();
         }
 
@@ -187,12 +217,13 @@ public class MarketplaceManager : MonoBehaviour
     /// <summary>
     /// Invoked dynamically by ChatManager when done = true is returned by the API response.
     /// </summary>
-    public void OnNegotiationFinished()
+    public void OnNegotiationFinished(bool wasAccepted)
     {
         if (isTransitioning) return;
         isTransitioning = true;
 
-        Debug.Log("[MarketplaceManager] Negotiation concluded. Moving NPC to BuyerExitPoint.");
+        negotiationWasAccepted = wasAccepted;
+        Debug.Log($"[MarketplaceManager] Negotiation concluded. Accepted: {wasAccepted}. Playing farewell and outcome animation.");
         StartCoroutine(ExitLifecycleRoutine());
     }
 
@@ -233,6 +264,35 @@ public class MarketplaceManager : MonoBehaviour
             // Fallback if no audio system is present
             yield return new WaitForSeconds(3.5f);
         }
+
+        // Play outcome animation (Agree/Reject) after TTS speech completes
+        if (chatManager != null && chatManager.feedbackManager != null)
+        {
+            if (animator == null && buyerNPC != null)
+            {
+                animator = buyerNPC.GetComponent<Animator>();
+                if (animator == null) animator = buyerNPC.GetComponentInChildren<Animator>();
+            }
+
+            chatManager.feedbackManager.StopNPCThinking(animator);
+
+            if (animator != null)
+            {
+                if (negotiationWasAccepted)
+                {
+                    animator.SetTrigger("happy");
+                    Debug.Log("[ANIM] Triggered Agree (happy) animation after speech complete");
+                }
+                else
+                {
+                    animator.SetTrigger("reject");
+                    Debug.Log("[ANIM] Triggered Reject (reject) animation after speech complete");
+                }
+            }
+        }
+
+        // Wait for the animation to play fully while standing before walking
+        yield return new WaitForSeconds(1.8f);
 
         // 2. Lock conversation UI input field but leave farewell message visible during walking
         if (chatManager != null)
@@ -320,15 +380,11 @@ public class MarketplaceManager : MonoBehaviour
         if (animator == null) return;
         
         animator.SetBool("isWalking", isWalking);
-        animator.SetFloat("Speed", isWalking ? 1f : 0f);
-        animator.SetBool("isAtStall", !isWalking);
 
         if (isWalking)
         {
             animator.SetBool("isThinking", false);
-            animator.SetBool("thinking", false);
             animator.SetBool("isTalking", false);
-            animator.SetBool("talking", false);
         }
     }
 }

@@ -58,6 +58,8 @@ public class BazaarFeedbackManager : MonoBehaviour
     /// </summary>
     public void StartNPCThinking(Animator npcAnimator, TMP_Text npcTextElement)
     {
+        Debug.Log("[THINK] StartNPCThinking Called");
+
         // Stop any running thinking coroutine first to avoid overlaps
         if (thinkingCoroutine != null)
         {
@@ -69,6 +71,8 @@ public class BazaarFeedbackManager : MonoBehaviour
 
     private IEnumerator ThinkingBehaviourRoutine(Animator animator, TMP_Text textElement)
     {
+        Debug.Log("[THINK] Coroutine Started");
+
         NPCGazeController gaze = null;
         if (animator != null)
         {
@@ -79,9 +83,7 @@ public class BazaarFeedbackManager : MonoBehaviour
         if (animator != null)
         {
             animator.SetBool("isThinking", true);
-            animator.SetBool("thinking", true);
             animator.SetBool("isTalking", false);
-            animator.SetBool("talking", false);
             Debug.Log("[ANIM] Thinking ON");
 
             if (gaze != null)
@@ -102,7 +104,7 @@ public class BazaarFeedbackManager : MonoBehaviour
         // --- LOOP: waiting for the backend response ---
         while (true)
         {
-            int action = Random.Range(1, 6); // 1 to 5 inclusive
+            int action = Random.Range(1, 5); // 1 to 4 inclusive
             float waitDuration = Random.Range(2.0f, 4.0f);
 
             switch (action)
@@ -112,7 +114,6 @@ public class BazaarFeedbackManager : MonoBehaviour
                     if (animator != null)
                     {
                         animator.SetBool("isThinking", false);
-                        animator.SetBool("thinking", false);
                         Debug.Log("[ANIM] Thinking OFF");
                     }
                     if (gaze != null)
@@ -126,7 +127,6 @@ public class BazaarFeedbackManager : MonoBehaviour
                     if (animator != null)
                     {
                         animator.SetBool("isThinking", true);
-                        animator.SetBool("thinking", true);
                         Debug.Log("[ANIM] Thinking ON");
                     }
                     if (gaze != null)
@@ -144,22 +144,7 @@ public class BazaarFeedbackManager : MonoBehaviour
                     break;
 
                 case 4:
-                    // 4. Head nod animation (triggers "happy")
-                    if (animator != null)
-                    {
-                        animator.SetBool("isThinking", false);
-                        animator.SetBool("thinking", false);
-                        animator.SetTrigger("happy");
-                        Debug.Log("[ANIM] Triggered Head Nod (happy)");
-                    }
-                    if (gaze != null)
-                    {
-                        gaze.LookAtPlayer();
-                    }
-                    break;
-
-                case 5:
-                    // 5. Filler dialogue text
+                    // 4. Filler dialogue text
                     if (textElement != null)
                     {
                         int textIdx = Random.Range(0, thinkingFillers.Length);
@@ -187,7 +172,6 @@ public class BazaarFeedbackManager : MonoBehaviour
         if (npcAnimator != null)
         {
             npcAnimator.SetBool("isThinking", false);
-            npcAnimator.SetBool("thinking", false);
             Debug.Log("[ANIM] Thinking OFF");
 
             // Return gaze target to player immediately on response
@@ -266,7 +250,7 @@ public class BazaarFeedbackManager : MonoBehaviour
     private IEnumerator ShowAndHidePopupRoutine()
     {
         transactionPopupPanel.SetActive(true);
-        yield return new WaitForSeconds(3.5f); // Display for 3.5 seconds
+        yield return new WaitForSeconds(5.0f); // Display for 5 seconds
         transactionPopupPanel.SetActive(false);
     }
 

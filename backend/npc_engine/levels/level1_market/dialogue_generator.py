@@ -45,11 +45,43 @@ def generate_dialogue(decision, engine):
     current_price = engine.last_seller_price
 
     # 1. Generate text
-    text = _generate_text(
-        action, price, stage, has_price, has_quantity, market_price, 
-        seller_price, desperation, turns, item_name, out_count, 
-        prev_price, current_price, personality
-    )
+    if action == "QUERY_BUYER_BUDGET":
+        buyer = engine.buyer
+        if not hasattr(buyer, "target_price") or buyer.target_price is None:
+            buyer.target_price = int(engine.current_offer)
+        buyer.current_offer = int(engine.current_offer)
+        buyer.max_budget = int(engine.max_price)
+
+        # Randomly choose one of the three metrics to reveal in the response
+        metric = random.choice(["current_offer", "target_price", "max_budget"])
+        
+        if personality == "Aggressive Trader":
+            if metric == "current_offer":
+                text = f"My offer is {buyer.current_offer} varahas. No more."
+            elif metric == "target_price":
+                text = f"I'm willing to give {buyer.target_price} varahas for this."
+            else:
+                text = f"My maximum budget is {buyer.max_budget} varahas. Do not ask for more."
+        elif personality == "Cautious Buyer":
+            if metric == "current_offer":
+                text = f"Perhaps {buyer.current_offer} varahas is what I can offer."
+            elif metric == "target_price":
+                text = f"I was hoping to spend around {buyer.target_price} varahas."
+            else:
+                text = f"I could go up to {buyer.max_budget} varahas, but that is my absolute limit."
+        else: # Polite Merchant / default
+            if metric == "current_offer":
+                text = f"My offer would be {buyer.current_offer} varahas."
+            elif metric == "target_price":
+                text = f"I could pay around {buyer.target_price} varahas."
+            else:
+                text = f"I might stretch to {buyer.max_budget} varahas, but no higher."
+    else:
+        text = _generate_text(
+            action, price, stage, has_price, has_quantity, market_price, 
+            seller_price, desperation, turns, item_name, out_count, 
+            prev_price, current_price, personality
+        )
     
     # Internal override for loop breakers to ensure engine knows we walked away
     if "going nowhere" in text or "leave if this continues" in text or "done here" in text:
@@ -65,7 +97,16 @@ def generate_dialogue(decision, engine):
         
         # Determine which numbers are active in the template to avoid forcing unrelated numbers
         active_numbers_instructions = []
-        has_price_in_template = str(price) in text if price is not None else False
+        
+        if action == "QUERY_BUYER_BUDGET":
+            buyer = engine.buyer
+            for val in [buyer.target_price, buyer.current_offer, buyer.max_budget]:
+                if str(val) in text:
+                    active_numbers_instructions.append(f"1. You MUST preserve the exact budget/price value of '{val}' varahas exactly as it is in the template.")
+        else:
+            has_price_in_template = str(price) in text if price is not None else False
+            if has_price_in_template:
+                active_numbers_instructions.append(f"1. You MUST preserve the exact price offer of '{price}' varahas exactly as it is in the template.")
         
         # Check quantity representations in template
         has_qty_in_template = False
@@ -77,8 +118,6 @@ def generate_dialogue(decision, engine):
             ):
                 has_qty_in_template = True
                 
-        if has_price_in_template:
-            active_numbers_instructions.append(f"1. You MUST preserve the exact price offer of '{price}' varahas exactly as it is in the template.")
         if has_qty_in_template:
             qty_label = grams_to_traditional_label(engine.current_quantity)
             active_numbers_instructions.append(f"1. You MUST preserve the exact traditional quantity of '{qty_label}' exactly as it is in the template.")
@@ -174,11 +213,34 @@ Dialogue template to rephrase: "{text}"
                 "download", "upload", "screenshot", "password",
             ]
             has_immersion_breaker = any(word in rephrased.lower() for word in immersion_breakers)
+            
+            # Future purchase validation for ACCEPT responses
+            has_future_accept_phrase = False
+            if action == "ACCEPT":
+                forbidden_accept_phrases = [
+                    "return later", "will return", "shall return", "return with more", 
+                    "may purchase", "another time", "perhaps", "buy later", "purchase later",
+                    "next time", "return again", "come back", "will buy", "shall buy",
+                    "might buy", "might purchase", "return to buy", "return to purchase"
+                ]
+                has_future_accept_phrase = any(phrase in rephrased.lower() for phrase in forbidden_accept_phrases)
+
+            # Spice name hallucination check for ACCEPT and WALK_AWAY responses
+            has_wrong_spice = False
+            if action in ["ACCEPT", "WALK_AWAY"]:
+                all_spices = ["pepper", "cardamom", "cinnamon", "clove", "ginger"]
+                correct_spice = item_name.lower()
+                for spice in all_spices:
+                    if spice != correct_spice and spice in rephrased.lower():
+                        has_wrong_spice = True
+                        break
                     
             is_valid = (
                 numbers_match 
                 and no_number_hallucination
                 and not has_immersion_breaker
+                and not has_future_accept_phrase
+                and not has_wrong_spice
                 and len(rephrased) > 5 
                 and not any(bad in rephrased.lower() for bad in ["assistant:", "rephrased dialogue:", "system:", "npc:", "prompt:"])
             )
@@ -195,6 +257,8 @@ Dialogue template to rephrase: "{text}"
                 if has_immersion_breaker:
                     broken = [w for w in immersion_breakers if w in rephrased.lower()]
                     reasons.append(f"immersion breakers: {broken}")
+                if has_future_accept_phrase:
+                    reasons.append("future purchase language in ACCEPT")
                 print(f"[WARNING LLM] Failsafe trigger: LLM output \"{rephrased}\" failed validations ({', '.join(reasons)}). Defaulting to template.")
 
     return {

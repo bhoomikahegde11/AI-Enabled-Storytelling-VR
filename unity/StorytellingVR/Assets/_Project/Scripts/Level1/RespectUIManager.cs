@@ -22,7 +22,7 @@ public class RespectUIManager : MonoBehaviour
     {
         displayedRespect = Mathf.Lerp(displayedRespect, targetRespect, Time.deltaTime * 3f);
         respectSlider.value = displayedRespect;
-        respectValueText.text = Mathf.RoundToInt(displayedRespect).ToString();
+        respectValueText.text = $"Respect: {Mathf.RoundToInt(displayedRespect)}";
 
         UpdateColor();
     }
