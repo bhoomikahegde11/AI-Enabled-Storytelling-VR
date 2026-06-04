@@ -66,28 +66,28 @@ public class SpiceIntroSequence : MonoBehaviour
         yield return FocusOnSpice(
             pepperTarget,
             "Pepper",
-            "12 Gold Coins / Sack",
+            "12 Varahas / Veesai",
             "Pepper is among the most sought-after goods in the market, prized by traders from distant lands."
         );
 
         yield return FocusOnSpice(
             turmericTarget,
             "Turmeric",
-            "5 Gold Coins / Sack",
+            "5 Varahas / Veesai",
             "Turmeric is valued for its colour, flavour, and medicinal use."
         );
 
         yield return FocusOnSpice(
             cardamomTarget,
             "Cardamom",
-            "18 Gold Coins / Sack",
+            "18 Varahas / Veesai",
             "Cardamom is rare and fragrant, often found in royal kitchens and temple offerings."
         );
 
         yield return FocusOnSpice(
             cinnamonTarget,
             "Cinnamon",
-            "20 Gold Coins / Sack",
+            "20 Varahas / Veesai",
             "Cinnamon travels through long trade routes, making it one of the most precious goods in the market."
         );
 
@@ -96,11 +96,7 @@ public class SpiceIntroSequence : MonoBehaviour
             4f
         );
 
-        yield return ShowSubtitle(
-            "And now... it seems your first customer approaches.",
-            3f
-        );
-
+       
         // Optional:
         // Trigger trader intro scene or trader sequence here
         // traderIntroSequence.PlaySequence();
