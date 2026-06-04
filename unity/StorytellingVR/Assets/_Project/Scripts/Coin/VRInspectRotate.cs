@@ -45,7 +45,7 @@ public class VRInspectRotate : MonoBehaviour
                 *
                 Quaternion.AngleAxis(
                     vertical,
-                    Vector3.right
+                    Vector3.left
                 );
 
 
