@@ -1,14 +1,28 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class CoinInteraction : MonoBehaviour
 {
+    [Header("Scene")]
+    public CoinSceneManager sceneManager; 
+    
     [Header("References")]
     public NPCAnimationController npc;
-
-    [Header("Inspection")]
     public Transform inspectPoint;
+    public CoinSequenceManager sequenceManager;
 
+    [Header("Info")]
+    public CoinInfoManager infoManager;
+
+    public string coinName;
+    public string coinType;
+
+    [TextArea]
+    public string coinDescription;
+
+
+    [Header("Inspect Settings")]
     public Vector3 inspectScale =
         new Vector3(
             0.3548979f,
@@ -19,81 +33,68 @@ public class CoinInteraction : MonoBehaviour
     public float transitionDuration = 1.2f;
 
 
+    [HideInInspector]
+    public bool isInspecting = false;
+
+
     private bool taken = false;
+
     private Collider coinCollider;
 
 
     void Awake()
     {
-        coinCollider = GetComponent<Collider>();
+        coinCollider =
+            GetComponent<Collider>();
+
 
         VRInspectRotate rotate =
             GetComponent<VRInspectRotate>();
 
         if (rotate != null)
-        {
             rotate.enabled = false;
-        }
-
-        Debug.Log("CoinInteraction Ready");
     }
 
 
     void Update()
     {
-        // RIGHT INDEX TRIGGER
-        float triggerValue =
-            OVRInput.Get(
-                OVRInput.Axis1D.SecondaryIndexTrigger
-            );
-
-
-        if (triggerValue > 0.5f)
+        // right trigger
+        if (
+            OVRInput.GetDown(
+            OVRInput.Button.SecondaryIndexTrigger)
+        )
         {
-            Debug.Log("RIGHT TRIGGER DETECTED");
-
-            TakeCoin();
+            if (!taken)
+            {
+                TakeCoin();
+            }
         }
     }
 
 
     public void TakeCoin()
     {
-        if (taken)
-            return;
-
+        taken = true;
 
         Debug.Log("Coin Taken");
 
 
-        taken = true;
-
-
-        // Remove from NPC hand
         transform.SetParent(null);
 
 
-        // Let NPC finish animation
         if (npc != null)
-        {
             npc.ResumeAnimation();
-        }
-        else
-        {
-            Debug.LogWarning("NPC missing");
-        }
 
 
         if (coinCollider != null)
-        {
             coinCollider.enabled = false;
-        }
 
 
         StartCoroutine(
             MoveToInspectMode()
         );
     }
+
 
 
     IEnumerator MoveToInspectMode()
@@ -110,7 +111,7 @@ public class CoinInteraction : MonoBehaviour
             transform.localScale;
 
 
-        float elapsed = 0f;
+        float elapsed = 0;
 
 
         while (elapsed < transitionDuration)
@@ -129,7 +130,7 @@ public class CoinInteraction : MonoBehaviour
             );
 
 
-            Vector3 targetPos =
+            Vector3 pos =
                 Vector3.Lerp(
                     startPos,
                     inspectPoint.position,
@@ -137,15 +138,13 @@ public class CoinInteraction : MonoBehaviour
                 );
 
 
-            // small floating arc
-            targetPos +=
+            pos +=
                 Vector3.up *
                 Mathf.Sin(t * Mathf.PI)
                 * 0.15f;
 
 
-            transform.position =
-                targetPos;
+            transform.position = pos;
 
 
             transform.rotation =
@@ -168,47 +167,51 @@ public class CoinInteraction : MonoBehaviour
         }
 
 
-        // final snap
+
         transform.position =
             inspectPoint.position;
 
-
         transform.rotation =
             inspectPoint.rotation;
-
 
         transform.localScale =
             inspectScale;
 
 
+
         if (coinCollider != null)
-        {
             coinCollider.enabled = true;
-        }
+
 
 
         VRInspectRotate rotate =
             GetComponent<VRInspectRotate>();
 
-
         if (rotate != null)
-        {
             rotate.enabled = true;
 
-            Debug.Log(
-                "VR Inspect Enabled"
+
+
+        if (infoManager != null)
+        {
+            infoManager.ShowInfo(
+                coinName,
+                coinType,
+                coinDescription
             );
         }
-        else
+
+
+        isInspecting = true;
+        sceneManager.NarrateVaraha();
+        if (sequenceManager != null)
         {
-            Debug.LogError(
-                "NO VRInspectRotate FOUND"
-            );
+            sequenceManager.StartSequence();
         }
 
 
         Debug.Log(
-            "Inspect Mode Started"
+            "Inspect Started"
         );
     }
 }
