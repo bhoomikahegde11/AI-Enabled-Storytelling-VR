@@ -83,11 +83,18 @@ class Controller:
         }
 
     def step(self, seller_input):
+        import time
+        intent_time_ms = 0
+        llm_time_ms = 0
+
         if seller_input is None:
             decision = self.engine.next_step(None)
         else:
             self.engine.last_seller_input = seller_input
+            
+            start_intent = time.time()
             action = self._build_player_action(seller_input)
+            intent_time_ms = int((time.time() - start_intent) * 1000)
 
             text_lower = str(seller_input).lower()
             text = text_lower
@@ -108,7 +115,9 @@ class Controller:
                     "price": self.engine.current_offer,
                     "quantity": self.engine.current_quantity,
                     "done": False,
-                    "debug": self._build_debug_info()
+                    "debug": self._build_debug_info(),
+                    "perf_intent": intent_time_ms,
+                    "perf_llm": 0
                 }
 
             if (
@@ -135,7 +144,40 @@ class Controller:
                     "price": self.engine.current_offer,
                     "quantity": quantity,
                     "done": False,
-                    "debug": self._build_debug_info()
+                    "debug": self._build_debug_info(),
+                    "perf_intent": intent_time_ms,
+                    "perf_llm": 0
+                }
+
+            if action.intent == "GENERAL_DIALOGUE":
+                from npc_engine.levels.level1_market.dialogue_generator import generate_context_response
+                current_state = {
+                    "current_offer": self.engine.current_offer,
+                    "seller_price": self.engine.last_seller_price,
+                    "turns": self.engine.turns,
+                    "personality": getattr(self.engine.buyer, "personality", "Polite Merchant")
+                }
+                start_llm = time.time()
+                composed = generate_context_response(
+                    player_text=seller_input,
+                    buyer_name=getattr(self.engine.buyer, "name", "Abdul"),
+                    buyer_origin=getattr(self.engine.buyer, "origin", "Persia"),
+                    spice=self.engine.item.name,
+                    current_negotiation_state=current_state
+                )
+                llm_time_ms = int((time.time() - start_llm) * 1000)
+                
+                return {
+                    "npc_text": composed["text"],
+                    "tone": composed["tone"],
+                    "emotion": composed["emotion"],
+                    "action": "WAIT",
+                    "price": self.engine.current_offer,
+                    "quantity": self.engine.current_quantity,
+                    "done": False,
+                    "debug": self._build_debug_info(),
+                    "perf_intent": intent_time_ms,
+                    "perf_llm": llm_time_ms
                 }
 
             if action.intent == "NO_ITEM":
@@ -147,7 +189,9 @@ class Controller:
                     "price": self.engine.current_offer,
                     "quantity": self.engine.current_quantity,
                     "done": True,
-                    "debug": self._build_debug_info()
+                    "debug": self._build_debug_info(),
+                    "perf_intent": intent_time_ms,
+                    "perf_llm": 0
                 }
 
             if action.intent == "CLARIFICATION":
@@ -159,7 +203,9 @@ class Controller:
                     "price": self.engine.current_offer,
                     "quantity": self.engine.current_quantity,
                     "done": False,
-                    "debug": self._build_debug_info()
+                    "debug": self._build_debug_info(),
+                    "perf_intent": intent_time_ms,
+                    "perf_llm": 0
                 }
 
             if action.intent == "OUT_OF_WORLD":
@@ -174,18 +220,22 @@ class Controller:
                         "price": self.engine.current_offer,
                         "quantity": self.engine.current_quantity,
                         "done": True,
-                        "debug": self._build_debug_info()
+                        "debug": self._build_debug_info(),
+                        "perf_intent": intent_time_ms,
+                        "perf_llm": 0
                     }
 
                 return {
-                    "npc_text": "Let us focus on the trade.",
-                    "tone": "firm",
-                    "emotion": "serious",
+                    "npc_text": "Your words describe wonders unknown to me, friend. My world is of caravans, spices, and trade.",
+                    "tone": "confused",
+                    "emotion": "confused",
                     "action": "OUT_OF_WORLD",
                     "price": self.engine.current_offer,
                     "quantity": self.engine.current_quantity,
                     "done": False,
-                    "debug": self._build_debug_info()
+                    "debug": self._build_debug_info(),
+                    "perf_intent": intent_time_ms,
+                    "perf_llm": 0
                 }
 
             decision = self.engine.next_step(action)
@@ -202,11 +252,15 @@ class Controller:
                 "price": self.engine.current_offer,
                 "quantity": self.engine.current_quantity,
                 "done": True,
-                "debug": self._build_debug_info()
+                "debug": self._build_debug_info(),
+                "perf_intent": intent_time_ms,
+                "perf_llm": 0
             }
 
         # Generate dialogue using injected generator
+        start_llm = time.time()
         composed = self.dialogue_fn(decision, self.engine)
+        llm_time_ms = int((time.time() - start_llm) * 1000)
 
         if decision.action == "ACCEPT" and composed.get("action", decision.action) == "ACCEPT":
             final_quantity = self.format_final_quantity()
@@ -223,5 +277,7 @@ class Controller:
             "price": decision.price,
             "quantity": decision.quantity,
             "done": decision.done or composed.get("action") == "WALK_AWAY",
-            "debug": debug_info
+            "debug": debug_info,
+            "perf_intent": intent_time_ms,
+            "perf_llm": llm_time_ms
         }

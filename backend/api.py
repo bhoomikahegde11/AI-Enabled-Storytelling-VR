@@ -13,6 +13,8 @@ import asyncio
 
 load_dotenv()
 
+DEBUG_PERFORMANCE = True
+
 app = FastAPI()
 
 # Create audio folder inside the backend directory
@@ -245,6 +247,8 @@ def start_session():
     reputation = state.get("global_metrics", {}).get("reputation", 50)
     total_varahas = state.get("global_metrics", {}).get("total_varahas", 100)
 
+    print(f"[REP BACKEND] {reputation}")
+
     from npc_engine.core.measurements import grams_to_traditional_label
     spice_name = session.item.name
     spice_qty = grams_to_traditional_label(session.item.quantity * 1000.0)
@@ -276,6 +280,8 @@ def start_session():
 # 🔁 CONTINUE SESSION
 @app.post("/step")
 def step_session(req: StepRequest):
+    import time
+    start_step = time.time()
     session_id = req.session_id
 
     if session_id not in sessions:
@@ -290,9 +296,26 @@ def step_session(req: StepRequest):
     reputation = state.get("global_metrics", {}).get("reputation", 50)
     total_varahas = state.get("global_metrics", {}).get("total_varahas", 100)
 
+    print(f"[REP BACKEND] {reputation}")
+
+    start_tts = time.time()
+    audio_url = generate_audio_url(response.get("npc_text", ""))
+    tts_duration_ms = int((time.time() - start_tts) * 1000)
+
     from npc_engine.core.measurements import grams_to_traditional_label
     spice_name = session.item.name
     spice_qty = grams_to_traditional_label(session.item.quantity * 1000.0)
+
+    total_duration_ms = int((time.time() - start_step) * 1000)
+    perf_intent = response.get("perf_intent", 0)
+    perf_llm = response.get("perf_llm", 0)
+
+    if DEBUG_PERFORMANCE:
+        print(f"\n[PERF]")
+        print(f"Intent: {perf_intent} ms")
+        print(f"LLM: {perf_llm} ms")
+        print(f"TTS: {tts_duration_ms} ms")
+        print(f"Total: {total_duration_ms} ms\n")
 
     return {
         "session_id": session_id,
@@ -301,7 +324,7 @@ def step_session(req: StepRequest):
         "price": response.get("price"),
         "quantity": response.get("quantity"),
         "done": response.get("done", False),
-        "audio_url": generate_audio_url(response.get("npc_text", "")),
+        "audio_url": audio_url,
         "reputation": reputation,
         "total_varahas": total_varahas,
         "transaction": response.get("transaction"),
@@ -319,12 +342,24 @@ def step_session(req: StepRequest):
 
 
 # Asynchronous Background Audio Compiler & Dispatcher
-async def generate_and_send_audio(session_id: str, npc_text: str):
+async def generate_and_send_audio(session_id: str, npc_text: str, perf_intent: int = 0, perf_llm: int = 0, start_step: float = 0):
     if not npc_text:
         return
     try:
+        import time
+        start_tts = time.time()
         # Run Piper TTS generation in a non-blocking background thread
         audio_url = await asyncio.to_thread(generate_audio_url, npc_text)
+        tts_duration_ms = int((time.time() - start_tts) * 1000)
+
+        if DEBUG_PERFORMANCE and start_step > 0:
+            total_duration_ms = int((time.time() - start_step) * 1000)
+            print(f"\n[PERF]")
+            print(f"Intent: {perf_intent} ms")
+            print(f"LLM: {perf_llm} ms")
+            print(f"TTS: {tts_duration_ms} ms")
+            print(f"Total: {total_duration_ms} ms\n")
+
         if audio_url:
             await manager.send_personal_message({
                 "type": "audio_ready",
@@ -351,9 +386,16 @@ async def websocket_negotiation(websocket: WebSocket, session_id: str):
 
         # Trigger welcome step if engine has not started
         if not session.engine.started:
+            import time
+            start_step = time.time()
             response = session.start()
             npc_text = response.get("npc_text", "")
             
+            from npc_engine.core.persistence import load_session
+            state = load_session(session_id)
+            reputation = state.get("global_metrics", {}).get("reputation", 50)
+            print(f"[REP BACKEND] {reputation}")
+
             # Send immediate subtitle/text response
             await websocket.send_json({
                 "type": "welcome",
@@ -370,15 +412,28 @@ async def websocket_negotiation(websocket: WebSocket, session_id: str):
 
             # Synthesize voice asynchronously in background thread
             if npc_text:
-                asyncio.create_task(generate_and_send_audio(session_id, npc_text))
+                asyncio.create_task(generate_and_send_audio(
+                    session_id, 
+                    npc_text,
+                    perf_intent=response.get("perf_intent", 0),
+                    perf_llm=response.get("perf_llm", 0),
+                    start_step=start_step
+                ))
 
         # Main interactive duplex communication loop
         while True:
             data = await websocket.receive_json()
             player_input = data.get("player_input", "").strip()
 
+            import time
+            start_step = time.time()
             response = session.step(player_input)
             npc_text = response.get("npc_text", "")
+
+            from npc_engine.core.persistence import load_session
+            state = load_session(session_id)
+            reputation = state.get("global_metrics", {}).get("reputation", 50)
+            print(f"[REP BACKEND] {reputation}")
 
             # Send immediate subtitle response (extremely low latency)
             await websocket.send_json({
@@ -395,7 +450,13 @@ async def websocket_negotiation(websocket: WebSocket, session_id: str):
 
             # Synthesize voice asynchronously in background thread
             if npc_text:
-                asyncio.create_task(generate_and_send_audio(session_id, npc_text))
+                asyncio.create_task(generate_and_send_audio(
+                    session_id, 
+                    npc_text,
+                    perf_intent=response.get("perf_intent", 0),
+                    perf_llm=response.get("perf_llm", 0),
+                    start_step=start_step
+                ))
 
             if response.get("done", False):
                 break

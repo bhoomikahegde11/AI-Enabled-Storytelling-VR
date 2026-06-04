@@ -32,6 +32,10 @@ public class MarketplaceManager : MonoBehaviour
     [Tooltip("Delay in seconds to wait at the exit point before resetting.")]
     public float resetDelay = 3f;
 
+    [Header("Debug Logging")]
+    [SerializeField]
+    private bool showDebugLogs = true;
+
     private NavMeshAgent navMeshAgent;
     private Animator animator;
     private bool isTransitioning = false;
@@ -98,7 +102,10 @@ public class MarketplaceManager : MonoBehaviour
         if (gazeController == null)
         {
             gazeController = buyerNPC.AddComponent<NPCGazeController>();
-            Debug.Log("[MarketplaceManager] Automatically added NPCGazeController to BuyerNPC.");
+            if (showDebugLogs)
+            {
+                Debug.Log("[MarketplaceManager] Automatically added NPCGazeController to BuyerNPC.");
+            }
         }
 
         // 4. Hide Conversation UI Canvas on scene start
@@ -153,6 +160,11 @@ public class MarketplaceManager : MonoBehaviour
     /// </summary>
     private IEnumerator StartBargainingLifecycle()
     {
+        if (chatManager != null)
+        {
+            chatManager.ClearSubtitle();
+        }
+
         // 1. Reset UI to show "Customer approaching..." and lock inputs immediately
         if (chatManager != null)
         {
@@ -166,14 +178,20 @@ public class MarketplaceManager : MonoBehaviour
 
         yield return new WaitForSeconds(1.0f); // Load buffer
 
-        Debug.Log("[MarketplaceManager] Moving BuyerNPC from SpawnPoint -> TradePoint");
+        if (showDebugLogs)
+        {
+            Debug.Log("[MarketplaceManager] Moving BuyerNPC from SpawnPoint -> TradePoint");
+        }
 
         // 2. Move NPC to Trade Point and wait until reached
         yield return StartCoroutine(WalkToDestinationRoutine(tradePoint.position));
 
         // 3. NPC Arrived at Stall - Orient smoothly
         buyerNPC.transform.rotation = tradePoint.rotation;
-        Debug.Log("[MarketplaceManager] NPC reached TradePoint. Triggering browsing behavior.");
+        if (showDebugLogs)
+        {
+            Debug.Log("[MarketplaceManager] NPC reached TradePoint. Triggering browsing behavior.");
+        }
 
         // Cache animator
         if (animator == null)
@@ -189,6 +207,11 @@ public class MarketplaceManager : MonoBehaviour
             gaze.LookAtSpices();
         }
 
+        if (chatManager != null)
+        {
+            chatManager.ClearSubtitle();
+        }
+
         // 1 & 2. Trigger idle/thinking behaviour and show browsing subtitle
         if (chatManager != null && chatManager.hudManager != null)
         {
@@ -198,7 +221,7 @@ public class MarketplaceManager : MonoBehaviour
 
         if (chatManager != null && chatManager.feedbackManager != null)
         {
-            chatManager.feedbackManager.StartNPCThinking(animator, chatManager.npcText);
+            chatManager.feedbackManager.StartNPCThinking(animator, chatManager.npcText, false);
         }
 
         // 5. Start backend request in parallel
@@ -223,7 +246,10 @@ public class MarketplaceManager : MonoBehaviour
         isTransitioning = true;
 
         negotiationWasAccepted = wasAccepted;
-        Debug.Log($"[MarketplaceManager] Negotiation concluded. Accepted: {wasAccepted}. Playing farewell and outcome animation.");
+        if (showDebugLogs)
+        {
+            Debug.Log($"[MarketplaceManager] Negotiation concluded. Accepted: {wasAccepted}. Playing farewell and outcome animation.");
+        }
         StartCoroutine(ExitLifecycleRoutine());
     }
 
@@ -281,18 +307,29 @@ public class MarketplaceManager : MonoBehaviour
                 if (negotiationWasAccepted)
                 {
                     animator.SetTrigger("happy");
-                    Debug.Log("[ANIM] Triggered Agree (happy) animation after speech complete");
+                    if (showDebugLogs)
+                    {
+                        Debug.Log("[ANIM] Triggered Agree (happy) animation after speech complete");
+                    }
                 }
                 else
                 {
                     animator.SetTrigger("reject");
-                    Debug.Log("[ANIM] Triggered Reject (reject) animation after speech complete");
+                    if (showDebugLogs)
+                    {
+                        Debug.Log("[ANIM] Triggered Reject (reject) animation after speech complete");
+                    }
                 }
             }
         }
 
         // Wait for the animation to play fully while standing before walking
         yield return new WaitForSeconds(1.8f);
+
+        if (chatManager != null)
+        {
+            chatManager.ClearSubtitle();
+        }
 
         // 2. Lock conversation UI input field but leave farewell message visible during walking
         if (chatManager != null)
@@ -313,7 +350,10 @@ public class MarketplaceManager : MonoBehaviour
             chatManager.ResetConversationUI("Waiting for next customer...");
         }
 
-        Debug.Log($"[MarketplaceManager] NPC reached ExitPoint. Waiting {resetDelay} seconds before resetting.");
+        if (showDebugLogs)
+        {
+            Debug.Log($"[MarketplaceManager] NPC reached ExitPoint. Waiting {resetDelay} seconds before resetting.");
+        }
 
         // 5. Wait for the reset delay (e.g. 3 seconds)
         yield return new WaitForSeconds(resetDelay);
