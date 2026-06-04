@@ -8,6 +8,10 @@ public class APIManager : MonoBehaviour
     private string baseURL = "http://127.0.0.1:8000";
     private string sessionId;
 
+    [Header("Debug Logging")]
+    [SerializeField]
+    private bool showDebugLogs = true;
+
     [Header("Current Buyer / Trade Data cached from Backend")]
     public string currentBuyerName;
     public string currentBuyerOrigin;
@@ -24,10 +28,20 @@ public class APIManager : MonoBehaviour
         request.downloadHandler = new DownloadHandlerBuffer();
         request.SetRequestHeader("Content-Type", "application/json");
 
+        if (showDebugLogs)
+        {
+            Debug.Log($"[PERF API] Request sent timestamp: {System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")}");
+        }
+
         yield return request.SendWebRequest();
 
         if (request.result == UnityWebRequest.Result.Success)
         {
+            if (showDebugLogs)
+            {
+                Debug.Log($"[PERF API] Response received timestamp: {System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")}");
+            }
+
             string raw = request.downloadHandler.text;
             Debug.Log("START RAW RESPONSE: " + raw);
 
@@ -38,6 +52,11 @@ public class APIManager : MonoBehaviour
             currentBuyerOrigin = response.buyer_origin;
             currentSpiceName = response.spice_name;
             currentSpiceQuantity = response.spice_quantity;
+
+            if (showDebugLogs)
+            {
+                Debug.Log($"[REP API] {response.player_reputation}");
+            }
 
             Debug.Log("Session ID: " + sessionId);
             Debug.Log("NPC Text: " + response.npc_text);
@@ -73,10 +92,20 @@ public class APIManager : MonoBehaviour
         request.downloadHandler = new DownloadHandlerBuffer();
         request.SetRequestHeader("Content-Type", "application/json");
 
+        if (showDebugLogs)
+        {
+            Debug.Log($"[PERF API] Request sent timestamp: {System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")}");
+        }
+
         yield return request.SendWebRequest();
 
         if (request.result == UnityWebRequest.Result.Success)
         {
+            if (showDebugLogs)
+            {
+                Debug.Log($"[PERF API] Response received timestamp: {System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")}");
+            }
+
             string raw = request.downloadHandler.text;
             Debug.Log("STEP RAW RESPONSE: " + raw);
 
@@ -88,6 +117,11 @@ public class APIManager : MonoBehaviour
                 currentBuyerOrigin = response.buyer_origin;
                 currentSpiceName = response.spice_name;
                 currentSpiceQuantity = response.spice_quantity;
+            }
+
+            if (showDebugLogs)
+            {
+                Debug.Log($"[REP API] {response.player_reputation}");
             }
 
             Debug.Log("NPC Text: " + response.npc_text);

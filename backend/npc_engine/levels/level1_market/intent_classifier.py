@@ -3,36 +3,43 @@ import os
 from npc_engine.levels.level1_market.input_interpreter import extract_price
 from npc_engine.llm.llm_client import run_llm, llm_loaded
 
+DEBUG_LLM = True
+
 OUT_OF_WORLD_TERMS = [
-    # Technology & devices
-    "phone", "internet", "computer", "app", "mobile", "online", "wifi", "robot",
-    "screen", "tablet", "laptop", "keyboard", "mouse", "printer", "bluetooth",
-    "email", "website", "webpage", "web page", "url", "http", "www",
-    "selfie", "emoji", "hashtag", "meme", "viral", "streaming",
-    "download", "upload", "screenshot", "password", "login", "logout",
-    "software", "hardware", "algorithm", "database", "server",
-    # Social media & platforms
-    "google", "youtube", "instagram", "facebook", "twitter",
-    "tiktok", "netflix", "spotify", "snapchat", "whatsapp", "telegram",
-    "reddit", "linkedin", "pinterest", "twitch", "discord",
-    "uber", "amazon", "flipkart", "zomato", "swiggy",
-    # Gaming
-    "xbox", "playstation", "nintendo", "fortnite", "minecraft", "roblox",
-    "gta", "pubg", "valorant", "cod", "csgo",
-    # Brands & modern products
-    "barbie", "hot wheels", "lego", "pokemon", "disney", "marvel", "avengers",
-    "nike", "adidas", "apple", "samsung", "sony", "coca cola", "pepsi",
-    "starbucks", "mcdonalds", "burger king", "dominos", "pizza hut",
-    # Modern concepts
-    "electricity", "electric", "battery", "engine", "airplane", "aeroplane",
-    "car", "bus", "train", "railway", "truck", "motorcycle", "bicycle",
-    "photograph", "camera", "television", "radio", "satellite",
-    "plastic", "nylon", "polyester",
-    "vaccine", "antibiotic", "x-ray", "xray",
-    "democracy", "president", "prime minister",
-    "rupee", "rupees", "dollar", "dollars", "euro", "euros", "pound", "pounds",
-    "bitcoin", "crypto",
-    "doomsday"
+    # Electronics & Technology
+    "electronics", "electronic", "technology", "technological", "tech", "gadget", "gadgets", "device", "devices", "digital",
+    "phone", "iphone", "android", "mobile", "computer", "computers", "laptop", "laptops", "tablet", "tablets", "screen", "screens",
+    "keyboard", "mouse", "printer", "printers", "scanner", "scanners", "bluetooth", "wifi", "robot", "robots", "software", "hardware",
+    "app", "apps", "application", "applications", "database", "server", "servers", "algorithm", "algorithms",
+    # Internet & Digital Platforms
+    "internet", "online", "website", "websites", "webpage", "webpages", "web page", "web pages", "url", "http", "www", "net",
+    "email", "emails", "google", "youtube", "instagram", "facebook", "twitter", "tiktok", "netflix", "spotify", "snapchat",
+    "whatsapp", "telegram", "reddit", "linkedin", "pinterest", "twitch", "discord", "uber", "amazon", "flipkart", "zomato", "swiggy",
+    "social media", "selfie", "selfies", "emoji", "emojis", "hashtag", "meme", "memes", "viral", "streaming", "download", "upload",
+    "screenshot", "screenshots", "password", "log in", "login", "logout", "log out",
+    # Gaming & Entertainment
+    "gaming", "xbox", "playstation", "nintendo", "fortnite", "minecraft", "roblox", "gta", "pubg", "valorant",
+    "cod", "csgo", "television", "tv", "radio", "radios", "satellite", "satellites", "photograph", "photographs", "photo", "photos",
+    "camera", "cameras", "movie", "movies", "cinema", "cinemas", "show", "shows",
+    # Modern Brands
+    "apple", "samsung", "sony", "nike", "adidas", "coca cola", "pepsi", "starbucks", "mcdonalds", "burger king", "dominos", "pizza hut",
+    "lego", "barbie", "pokemon", "disney", "marvel", "avengers",
+    # Modern Transport & Infrastructure
+    "car", "cars", "automobile", "automobiles", "vehicle", "vehicles", "bus", "buses", "train", "trains", "railway", "railways",
+    "truck", "trucks", "motorcycle", "motorcycles", "bicycle", "bicycles", "bike", "bikes", "airplane", "airplanes", "aeroplane",
+    "aeroplanes", "plane", "planes", "flight", "flights", "helicopter", "helicopters", "airport", "airports",
+    "electricity", "electric", "battery", "batteries", "generator", "generators", "engine", "engines", "nuclear", "atomic",
+    "plastic", "plastics", "nylon", "polyester",
+    # Modern Medicine
+    "vaccine", "vaccines", "antibiotic", "antibiotics", "x-ray", "xray", "laser", "lasers",
+    # Modern Geopolitics / Events
+    "democracy", "democracies", "president", "presidents", "prime minister", "parliament", "congress", "elections", "election",
+    "world war", "cold war", "global warming", "climate change", "nasa", "spacecraft", "astronaut", "astronauts",
+    "united states", "america", "american", "germany", "german", "france", "french", "england", "english", "britain", "british",
+    "uk", "usa", "canada", "canadian", "australia", "australian", "japan", "japanese", "china", "chinese", "russia", "russian",
+    # Modern Currencies & Finance
+    "rupee", "rupees", "dollar", "dollars", "euro", "euros", "pound", "pounds", "yen", "cent", "cents",
+    "bitcoin", "crypto", "cryptocurrency", "bank", "banks", "credit card", "credit cards", "debit card",
 ]
 
 MODERN_KEYWORDS = [
@@ -40,7 +47,7 @@ MODERN_KEYWORDS = [
     "fortnite", "call of duty", "cod", "csgo",
     "internet", "wifi", "youtube", "google",
     "app", "instagram", "whatsapp", "website",
-    "playstation", "xbox", "game", "gaming",
+    "playstation", "xbox", "gaming",
     "email", "selfie", "uber", "amazon", "netflix",
     "electricity", "electric", "battery", "camera",
     "rupee", "rupees", "dollar", "dollars"
@@ -56,9 +63,18 @@ OUT_OF_WORLD_GROUPS = [
 
 
 def contains_out_of_world_concept(text: str):
-    return any(term in text for term in OUT_OF_WORLD_TERMS) or any(term in text for term in MODERN_KEYWORDS) or any(
-        all(part in text for part in group) for group in OUT_OF_WORLD_GROUPS
-    )
+    text_lower = text.lower()
+    for term in OUT_OF_WORLD_TERMS:
+        if re.search(r'\b' + re.escape(term) + r'\b', text_lower):
+            return True
+    for term in MODERN_KEYWORDS:
+        if re.search(r'\b' + re.escape(term) + r'\b', text_lower):
+            return True
+    for group in OUT_OF_WORLD_GROUPS:
+        if all(re.search(r'\b' + re.escape(part) + r'\b', text_lower) for part in group):
+            return True
+    return False
+
 
 
 def has_modern_action_pattern(text: str, trade_terms):
@@ -132,7 +148,26 @@ def has_price_statement_pattern(text: str):
         r"\b\d+\s+is\s+(?:fine|good|okay|ok|fair)\b",
         r"\bfor\s+\d+\b",
         r"\bprice\s+is\s+\d+\b",
-        r"\bsell(?:ing)?\s+(?:it|this|the\s+\w+)?\s*(?:for\s+)?\d+\b"
+        r"\bsell(?:ing)?\s+(?:it|this|the\s+\w+)?\s*(?:for\s+)?\d+\b",
+        r"\bhow about\s+\d+\b",
+        r"\bwhat about\s+\d+\b",
+        r"\bcan we do\s+\d+\b",
+        r"\bwould you (?:take|pay|give)\s+\d+\b",
+        r"\bwill you (?:take|pay|give)\s+\d+\b",
+        r"\bhow is\s+\d+\b",
+        r"\bi can (?:do|give|pay|offer)\s+\d+\b",
+        r"\bi'll (?:do|give|pay|offer)\s+\d+\b",
+        r"\bi\s+can\s+offer\s+\d+\b",
+        r"\bi\s+demand\s+\d+\b",
+        r"\bmy\s+price\s+is\s+\d+\b",
+        r"\bmake it\s+\d+\b",
+        r"\baccept\s+\d+\b",
+        r"\b\d+\s+varahas?\b",
+        r"\b\d+\s+coins?\b",
+        r"\b\d+\s+gold\b",
+        r"\b\d+\s+tara\b",
+        r"\b\d+\s+silver\b",
+        r"\b\d+\s*(?:\?|$)"
     ]
     return any(re.search(pattern, text) for pattern in price_patterns)
 
@@ -418,6 +453,108 @@ def is_rejection(text):
     return any(word in text for word in negative_words)
 
 
+TRADE_KEYWORDS = [
+    "varaha", "varahas", "waraha", "warahas", "vara", "varas", "baraha", "barahas",
+    "price", "prices", "offer", "offers", "pay", "pays", "paying",
+    "sell", "sells", "selling", "buy", "buys", "buying", "cost", "costs",
+    "give", "gives", "giving", "take", "takes", "taking", "want", "wants", "need", "needs",
+    "palam", "palams", "tula", "tulas", "mana", "manas", "veesai", "veesais", "viss", "seer", "seers",
+    "manangu", "maund", "maunds", "bahar", "bahars", "candy", "candies",
+    "kg", "kgs", "g", "gm", "grams", "gram", "quantity", "amount", "weight", "how much", "how many",
+    "deal", "done", "accept", "reject", "reduce", "lower", "more", "less",
+    "compromise", "transaction", "haggling", "negotiation", "exchange", "sale", "bargain", "counter",
+    "value", "worth", "cost", "coins", "coin", "gold", "silver", "tara", "money", "varah"
+]
+
+
+def is_general_dialogue(text: str) -> bool:
+    text_lower = text.lower().strip()
+    
+    # Priority check: if there is any digit/number in the text, it is NOT general dialogue (it's trade/price)
+    if any(char.isdigit() for char in text_lower):
+        return False
+        
+    if any(tk in text_lower for tk in TRADE_KEYWORDS):
+        return False
+
+    # Check for specific non-trade general questions or chit-chat
+    general_phrases = [
+        "how is the weather", "what is the weather", "how's the weather", "is it going to rain", "nice weather",
+        "where are you from", "where is your home", "what is your origin", "where do you come from",
+        "what spices do you like", "do you like spices", "what is your favorite spice",
+        "how is vijayanagara", "tell me about vijayanagara", "tell me about hampi", "how is hampi",
+        "tell me about yourself", "who are you", "what is your name", "what's your name",
+        "who is the king", "who rules this land", "who is the emperor", "who is the ruler",
+        "how are you", "how goes the day", "how is your day", "who rules"
+    ]
+    if any(phrase in text_lower for phrase in general_phrases):
+        return True
+
+    general_patterns = [
+        r"\bweather\b",
+        r"\bwhere (?:are|do) you (?:from|live|come from)\b",
+        r"\bwhat (?:is|'s) your name\b",
+        r"\bwho are you\b",
+        r"\btell me about yourself\b",
+        r"\bspices? do you (?:like|prefer)\b",
+        r"\bhow is vijayanagara\b",
+        r"\bwhat is vijayanagara\b",
+        r"\btell me about vijayanagara\b",
+        r"\bwho is the (?:king|emperor|ruler)\b",
+        r"\bwho rules\b",
+        r"\bhow are you\b",
+        r"\bhow goes the day\b",
+        r"\bwhat is your origin\b"
+    ]
+    if any(re.search(pat, text_lower) for pat in general_patterns):
+        return True
+
+    # If it is a question (has "?") and contains no trade keywords at all, classify it as general dialogue
+    if "?" in text_lower:
+        return True
+        
+    return False
+
+
+def gguf_semantic_safety_net(user_input: str, final_intent: dict, text: str) -> dict:
+    if llm_loaded and final_intent["intent"] in ["IRRELEVANT", "QUERY", "SOCIAL"]:
+        if DEBUG_LLM:
+            print("[INTENT LLM] Semantic safety net triggered")
+
+        semantic_prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+Classify this trader message in Hampi market into exactly one category:
+- ACCEPT: Agreeing to a deal (e.g. "ok deal", "done").
+- REJECT: Walking away or refusing (e.g. "no deal").
+- PRICE: Seller counter-offering or proposing a price (e.g. "how does 80 sound", "I want 90", "meet at 80", "how does 50 sound").
+- QUANTITY_CHANGE: Proposing a different weight, saying they don't have that much, or asking to change quantity (e.g. "i do not have that much quantity", "i have 2 seers instead", "only 2 palams", "only have 3 seers", "i do not have one manangu").
+- QUERY_QUANTITY: Seller asking about weight/amount (e.g. "what quantity?", "how much?", "for what quanitity?", "how many", "quantity").
+- GENERAL_DIALOGUE: Casual talk, questions, or conversation that are NOT about pricing, spices, weight or trade deal (e.g. "how is the weather", "where are you from", "who is the king").
+- SOCIAL: General chit-chat.
+- IRRELEVANT: Anything else.
+
+Reply with ONLY the category name. Do not explain.
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+Message: "{user_input}"
+<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+"""
+        llm_choice = run_llm(semantic_prompt, max_tokens=10).strip().upper()
+        if "ACCEPT" in llm_choice:
+            return {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
+        elif "REJECT" in llm_choice:
+            return {"intent": "REJECT", "tone": "neutral", "persuasion": 0}
+        elif "PRICE" in llm_choice:
+            return {"intent": "PRICE", "tone": "neutral", "persuasion": 1}
+        elif "QUANTITY_CHANGE" in llm_choice:
+            return {"intent": "QUANTITY_CHANGE", "tone": "neutral", "persuasion": 1}
+        elif "QUERY_QUANTITY" in llm_choice:
+            return {"intent": "QUERY_QUANTITY", "tone": "neutral", "persuasion": 0}
+        elif "GENERAL_DIALOGUE" in llm_choice:
+            if not any(char.isdigit() for char in text) and not any(tk in text for tk in TRADE_KEYWORDS):
+                return {"intent": "GENERAL_DIALOGUE", "tone": "neutral", "persuasion": 0}
+    return final_intent
+
+
+
 def classify_intent(user_input: str, context=None):
     context = context or {}
     text = user_input.lower().strip()
@@ -668,18 +805,13 @@ def classify_intent(user_input: str, context=None):
         "lets confirm it"
     ]
 
-    if last_system_action == "OFFER":
+    if last_system_action == "OFFER" and not has_accept_blockers(text) and not is_general_dialogue(text):
         has_number = any(char.isdigit() for char in text)
         negative_words = ["low", "high", "not", "no", "more", "less"]
 
-        if has_number:
-            return None
-
-        if any(word in text for word in negative_words):
-            return None
-
-        if len(text.split()) <= 4:
-            return {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
+        if not has_number and not any(word in text for word in negative_words):
+            if len(text.split()) <= 4:
+                return {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
 
     offer_accept_phrases = [
         "sure",
@@ -800,6 +932,10 @@ Sentence: "{user_input}"
     if text in continue_phrases:
         return {"intent": "CONTINUE", "tone": "neutral", "persuasion": 0}
 
+    # Low priority GENERAL_DIALOGUE classification:
+    if is_general_dialogue(text):
+        return {"intent": "GENERAL_DIALOGUE", "tone": "neutral", "persuasion": 0}
+
     # -------------------------------
     # 🔥 LAYER 3: LLM CONTEXT CLASSIFICATION
     # -------------------------------
@@ -836,33 +972,7 @@ Sentence: "{user_input}"
         final_intent = corrected or result
         
         # Typo-robust GGUF semantic safety net to prevent rigid keyword classification failure
-        if llm_loaded and final_intent["intent"] in ["IRRELEVANT", "QUERY", "SOCIAL"]:
-            semantic_prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-Classify this trader message in Hampi market into exactly one category:
-- QUERY_QUANTITY: Seller asking about weight/amount (e.g. "what quantity?", "how much?", "for what quanitity?", "how many", "quantity").
-- QUANTITY_CHANGE: Proposing a different weight, saying they don't have that much, or asking to change quantity (e.g. "i do not have that much quantity", "i have 2 seers instead", "only 2 palams", "only have 3 seers", "i do not have one manangu").
-- PRICE: Seller counter-offering or proposing a price (e.g. "how does 80 sound", "I want 90", "meet at 80", "how does 50 sound").
-- ACCEPT: Agreeing to a deal (e.g. "ok deal", "done").
-- REJECT: Walking away or refusing (e.g. "no deal").
-- SOCIAL: General chit-chat.
-- IRRELEVANT: Anything else.
-
-Reply with ONLY the category name. Do not explain.
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-Message: "{user_input}"
-<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-"""
-            llm_choice = run_llm(semantic_prompt, max_tokens=10).strip().upper()
-            if "QUERY_QUANTITY" in llm_choice:
-                final_intent = {"intent": "QUERY_QUANTITY", "tone": "neutral", "persuasion": 0}
-            elif "QUANTITY_CHANGE" in llm_choice:
-                final_intent = {"intent": "QUANTITY_CHANGE", "tone": "neutral", "persuasion": 1}
-            elif "PRICE" in llm_choice:
-                final_intent = {"intent": "PRICE", "tone": "neutral", "persuasion": 1}
-            elif "ACCEPT" in llm_choice:
-                final_intent = {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
-            elif "REJECT" in llm_choice:
-                final_intent = {"intent": "REJECT", "tone": "neutral", "persuasion": 0}
+        final_intent = gguf_semantic_safety_net(user_input, final_intent, text)
         
         if final_intent["intent"] == "IRRELEVANT":
             abuse_prompt = f"""
@@ -900,33 +1010,7 @@ Sentence: "{user_input}"
         final_intent = apply_intent_corrections(text, result["intent"], context) or result
         
         # Typo-robust GGUF semantic safety net under exception fallback
-        if llm_loaded and final_intent["intent"] in ["IRRELEVANT", "QUERY", "SOCIAL"]:
-            semantic_prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-Classify this trader message in Hampi market into exactly one category:
-- QUERY_QUANTITY: Seller asking about weight/amount (e.g. "what quantity?", "how much?", "for what quanitity?", "how many", "quantity").
-- QUANTITY_CHANGE: Proposing a different weight, saying they don't have that much, or asking to change quantity (e.g. "i do not have that much quantity", "i have 2 seers instead", "only 2 palams", "only have 3 seers", "i do not have one manangu").
-- PRICE: Seller counter-offering or proposing a price (e.g. "how does 80 sound", "I want 90", "meet at 80", "how does 50 sound").
-- ACCEPT: Agreeing to a deal (e.g. "ok deal", "done").
-- REJECT: Walking away or refusing (e.g. "no deal").
-- SOCIAL: General chit-chat.
-- IRRELEVANT: Anything else.
-
-Reply with ONLY the category name. Do not explain.
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-Message: "{user_input}"
-<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-"""
-            llm_choice = run_llm(semantic_prompt, max_tokens=10).strip().upper()
-            if "QUERY_QUANTITY" in llm_choice:
-                final_intent = {"intent": "QUERY_QUANTITY", "tone": "neutral", "persuasion": 0}
-            elif "QUANTITY_CHANGE" in llm_choice:
-                final_intent = {"intent": "QUANTITY_CHANGE", "tone": "neutral", "persuasion": 1}
-            elif "PRICE" in llm_choice:
-                final_intent = {"intent": "PRICE", "tone": "neutral", "persuasion": 1}
-            elif "ACCEPT" in llm_choice:
-                final_intent = {"intent": "ACCEPT", "tone": "neutral", "persuasion": 1}
-            elif "REJECT" in llm_choice:
-                final_intent = {"intent": "REJECT", "tone": "neutral", "persuasion": 0}
+        final_intent = gguf_semantic_safety_net(user_input, final_intent, text)
         
         if final_intent["intent"] == "IRRELEVANT":
             abuse_prompt = f"""

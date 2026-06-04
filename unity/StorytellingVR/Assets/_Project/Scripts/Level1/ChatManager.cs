@@ -33,6 +33,10 @@ public class ChatManager : MonoBehaviour
     public Level1HUDManager hudManager;
     public GameObject sendButtonObject;
 
+    [Header("Debug Logging")]
+    [SerializeField]
+    private bool showDebugLogs = true;
+
     private bool isFirstReplyOfSession = false;
 
     // 🔥 Prevent STT spam / multiple requests
@@ -87,9 +91,10 @@ public class ChatManager : MonoBehaviour
             npcText.text = statusText;
         }
 
+        ClearSubtitle();
+
         if (hudManager != null)
         {
-            hudManager.HideSubtitle();
             hudManager.HideCurrentTrade();
         }
 
@@ -100,6 +105,19 @@ public class ChatManager : MonoBehaviour
         }
         
         lastProcessedText = ""; // Reset STT filter history for the new customer
+    }
+
+    public void ClearSubtitle()
+    {
+        if (subtitleHideCoroutine != null)
+        {
+            StopCoroutine(subtitleHideCoroutine);
+            subtitleHideCoroutine = null;
+        }
+        if (hudManager != null)
+        {
+            hudManager.ClearSubtitle();
+        }
     }
 
     public void EnableConversationUI()
@@ -168,7 +186,7 @@ public class ChatManager : MonoBehaviour
         if (feedbackManager != null)
         {
             Debug.Log("[THINK] Calling feedbackManager.StartNPCThinking");
-            feedbackManager.StartNPCThinking(npcAnim, npcText);
+            feedbackManager.StartNPCThinking(npcAnim, npcText, true);
         }
         else
         {
@@ -186,6 +204,11 @@ public class ChatManager : MonoBehaviour
     // 🤖 NPC RESPONSE (unchanged but safer)
     void OnNPCReply(string text, string audioUrl, int reputation, int totalVarahas, bool done, TransactionSummary transaction)
     {
+        if (showDebugLogs)
+        {
+            Debug.Log($"[REP HUD] {reputation}");
+        }
+
         Debug.Log("NPC Reply: " + text);
 
         // 1. Stop thinking animations
@@ -250,7 +273,7 @@ public class ChatManager : MonoBehaviour
         {
             hudManager.UpdateMoney(totalVarahas);
             hudManager.UpdateRespect(reputation);
-            hudManager.ShowSubtitle(!string.IsNullOrEmpty(api.currentBuyerName) ? api.currentBuyerName : "Customer", text);
+            TriggerSubtitleDisplay(!string.IsNullOrEmpty(api.currentBuyerName) ? api.currentBuyerName : "Customer", text);
         }
 
         // 2. Trigger transaction completed feedback popups or respect warnings on done
@@ -335,10 +358,7 @@ public class ChatManager : MonoBehaviour
             npcText.text = text;
         }
 
-        if (hudManager != null)
-        {
-            hudManager.ShowSubtitle(bName, text);
-        }
+        TriggerSubtitleDisplay(bName, text);
 
         // 4. Trigger speech audio playback
         if (audioManager != null && !string.IsNullOrEmpty(audioUrl))
@@ -349,5 +369,44 @@ public class ChatManager : MonoBehaviour
 
         // 5. Unlock conversation inputs
         EnableConversationUI();
+    }
+
+    private Coroutine subtitleHideCoroutine;
+
+    private void TriggerSubtitleDisplay(string speaker, string text)
+    {
+        if (hudManager == null) return;
+
+        hudManager.ShowSubtitle(speaker, text);
+
+        if (subtitleHideCoroutine != null)
+        {
+            StopCoroutine(subtitleHideCoroutine);
+        }
+        subtitleHideCoroutine = StartCoroutine(SubtitleHideRoutine());
+    }
+
+    private IEnumerator SubtitleHideRoutine()
+    {
+        // Give audio a tiny fraction of a second to start loading / playing if triggered concurrently
+        yield return new WaitForSeconds(0.3f);
+
+        // 1. If audio is playing, wait until it finishes
+        if (audioManager != null && audioManager.audioSource != null)
+        {
+            while (audioManager.audioSource.isPlaying)
+            {
+                yield return null;
+            }
+        }
+
+        // 2. Wait exactly 5.0 seconds
+        yield return new WaitForSeconds(5.0f);
+
+        // 3. Hide subtitle
+        if (hudManager != null)
+        {
+            hudManager.HideSubtitle();
+        }
     }
 }

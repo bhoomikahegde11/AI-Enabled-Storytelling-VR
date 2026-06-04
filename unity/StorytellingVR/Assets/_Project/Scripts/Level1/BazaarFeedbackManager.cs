@@ -32,6 +32,10 @@ public class BazaarFeedbackManager : MonoBehaviour
     public Image respectToastBackground;
     public float toastDuration = 3.0f;
 
+    [Header("Debug Logging")]
+    [SerializeField]
+    private bool showDebugLogs = true;
+
     // Immersion thinking fillers
     private readonly string[] thinkingFillers = new string[]
     {
@@ -56,9 +60,12 @@ public class BazaarFeedbackManager : MonoBehaviour
     /// <summary>
     /// Animates the NPC thinking state using animators and in-character thinking fillers.
     /// </summary>
-    public void StartNPCThinking(Animator npcAnimator, TMP_Text npcTextElement)
+    public void StartNPCThinking(Animator npcAnimator, TMP_Text npcTextElement, bool allowFillers = true)
     {
-        Debug.Log("[THINK] StartNPCThinking Called");
+        if (showDebugLogs)
+        {
+            Debug.Log($"[THINK] StartNPCThinking Called, allowFillers: {allowFillers}");
+        }
 
         // Stop any running thinking coroutine first to avoid overlaps
         if (thinkingCoroutine != null)
@@ -66,12 +73,15 @@ public class BazaarFeedbackManager : MonoBehaviour
             StopCoroutine(thinkingCoroutine);
         }
 
-        thinkingCoroutine = StartCoroutine(ThinkingBehaviourRoutine(npcAnimator, npcTextElement));
+        thinkingCoroutine = StartCoroutine(ThinkingBehaviourRoutine(npcAnimator, npcTextElement, allowFillers));
     }
 
-    private IEnumerator ThinkingBehaviourRoutine(Animator animator, TMP_Text textElement)
+    private IEnumerator ThinkingBehaviourRoutine(Animator animator, TMP_Text textElement, bool allowFillers)
     {
-        Debug.Log("[THINK] Coroutine Started");
+        if (showDebugLogs)
+        {
+            Debug.Log($"[THINK] Coroutine Started, allowFillers: {allowFillers}");
+        }
 
         NPCGazeController gaze = null;
         if (animator != null)
@@ -84,7 +94,10 @@ public class BazaarFeedbackManager : MonoBehaviour
         {
             animator.SetBool("isThinking", true);
             animator.SetBool("isTalking", false);
-            Debug.Log("[ANIM] Thinking ON");
+            if (showDebugLogs)
+            {
+                Debug.Log("[ANIM] Thinking ON");
+            }
 
             if (gaze != null)
             {
@@ -92,10 +105,13 @@ public class BazaarFeedbackManager : MonoBehaviour
             }
         }
 
-        if (textElement != null)
+        if (allowFillers && textElement != null)
         {
             textElement.text = "Hmm...";
-            Debug.Log($"[BazaarFeedback] Thinking filler text: {textElement.text}");
+            if (showDebugLogs)
+            {
+                Debug.Log($"[BazaarFeedback] Thinking filler text: {textElement.text}");
+            }
         }
 
         // Wait 2.5 seconds for the initial thinking gesture to play
@@ -114,7 +130,10 @@ public class BazaarFeedbackManager : MonoBehaviour
                     if (animator != null)
                     {
                         animator.SetBool("isThinking", false);
-                        Debug.Log("[ANIM] Thinking OFF");
+                        if (showDebugLogs)
+                        {
+                            Debug.Log("[ANIM] Thinking OFF");
+                        }
                     }
                     if (gaze != null)
                     {
@@ -127,7 +146,10 @@ public class BazaarFeedbackManager : MonoBehaviour
                     if (animator != null)
                     {
                         animator.SetBool("isThinking", true);
-                        Debug.Log("[ANIM] Thinking ON");
+                        if (showDebugLogs)
+                        {
+                            Debug.Log("[ANIM] Thinking ON");
+                        }
                     }
                     if (gaze != null)
                     {
@@ -145,11 +167,14 @@ public class BazaarFeedbackManager : MonoBehaviour
 
                 case 4:
                     // 4. Filler dialogue text
-                    if (textElement != null)
+                    if (allowFillers && textElement != null)
                     {
                         int textIdx = Random.Range(0, thinkingFillers.Length);
                         textElement.text = thinkingFillers[textIdx];
-                        Debug.Log($"[BazaarFeedback] Thinking filler text: {textElement.text}");
+                        if (showDebugLogs)
+                        {
+                            Debug.Log($"[BazaarFeedback] Thinking filler text: {textElement.text}");
+                        }
                     }
                     break;
             }
@@ -172,7 +197,10 @@ public class BazaarFeedbackManager : MonoBehaviour
         if (npcAnimator != null)
         {
             npcAnimator.SetBool("isThinking", false);
-            Debug.Log("[ANIM] Thinking OFF");
+            if (showDebugLogs)
+            {
+                Debug.Log("[ANIM] Thinking OFF");
+            }
 
             // Return gaze target to player immediately on response
             NPCGazeController gazeController = npcAnimator.GetComponent<NPCGazeController>();
@@ -200,36 +228,23 @@ public class BazaarFeedbackManager : MonoBehaviour
     public void ShowTransactionFeedback(TransactionSummary summary, string archetype)
     {
         if (summary == null) return;
-        Debug.Log($"[BazaarFeedback] Triggering transaction feedback for {summary.item}. Earned: {summary.earned}");
+        if (showDebugLogs)
+        {
+            Debug.Log($"[BazaarFeedback] Triggering transaction feedback for {summary.item}. Earned: {summary.earned}");
+        }
 
         // 1. Trigger the Transaction Complete Popup UI
         if (transactionPopupPanel != null)
         {
-            if (titleText != null) titleText.text = "📜 Trade Ledger";
-            if (itemText != null) itemText.text = $"Sold: {summary.item} ({summary.quantity})";
+            if (titleText != null) titleText.text = "TRADE COMPLETE";
             if (moneyText != null) moneyText.text = $"+{summary.earned} Varahas";
-            if (profitText != null) profitText.text = $"+{summary.profit} Varahas Profit";
+            if (itemText != null) itemText.text = $"{summary.item} Sold";
             
-            if (respectText != null)
-            {
-                string sign = summary.respect_change >= 0 ? "+" : "";
-                respectText.text = $"{sign}{summary.respect_change} Respect";
-            }
-
-            if (reputationLabelText != null)
-            {
-                reputationLabelText.text = $"Reputation Status: {archetype}";
-            }
-
-            if (buyerNameText != null)
-            {
-                buyerNameText.text = $"Buyer: {summary.buyer_name}";
-            }
-
-            if (buyerOriginText != null)
-            {
-                buyerOriginText.text = $"Origin: {summary.buyer_origin}";
-            }
+            if (profitText != null) profitText.text = "";
+            if (respectText != null) respectText.text = "";
+            if (reputationLabelText != null) reputationLabelText.text = "";
+            if (buyerNameText != null) buyerNameText.text = "";
+            if (buyerOriginText != null) buyerOriginText.text = "";
 
             StartCoroutine(ShowAndHidePopupRoutine());
         }

@@ -40,12 +40,12 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     private string GetIdleText()
     {
-        return IsXRDeviceActive() ? "Hold A to bargain" : "Hold V to bargain";
+        return IsXRDeviceActive() ? "Hold A to Speak" : "Hold V to Speak";
     }
 
     private string GetReviewText()
     {
-        return IsXRDeviceActive() ? "A: Confirm   B: Retry" : "ENTER: Send   R: Retry";
+        return IsXRDeviceActive() ? "A Confirm | B Retry" : "ENTER Confirm | R Retry";
     }
 
     private bool IsXRDeviceActive()
@@ -334,29 +334,35 @@ public class Level1VoiceInputManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(transcript)) return false;
 
-        // Split words by standard whitespaces
-        string[] words = transcript.Split(new char[] { ' ', '\t', '\n', '\r' }, System.StringSplitOptions.RemoveEmptyEntries);
-        if (words.Length < 3) return false;
+        string trimmed = transcript.Trim();
+        if (trimmed.Length == 0) return false;
 
-        // Curated set of relevant trade and negotiation keywords
-        string[] tradeWords = new string[] 
+        // Reject random single characters (except single digits or single letter words like 'a', 'A', 'i', 'I')
+        if (trimmed.Length == 1)
         {
-            "varaha", "varahas", "price", "offer", "pay", "sell", "buy", "cost", "spend", "give", "deal",
-            "palam", "palams", "tula", "tulas", "mana", "manas", "veesai", "viss", "bag", "bags", "kg", "gram", "grams",
-            "pepper", "cardamom", "cinnamon", "clove", "cloves", "ginger",
-            "budget", "how much"
-        };
-
-        string lowerTranscript = transcript.ToLower();
-        foreach (string tWord in tradeWords)
-        {
-            if (lowerTranscript.Contains(tWord))
+            char c = trimmed[0];
+            if (!char.IsDigit(c) && c != 'a' && c != 'A' && c != 'i' && c != 'I')
             {
-                return true;
+                return false;
             }
         }
 
-        return false;
+        // Filter common Whisper silence/hallucination artifacts (exact match or trailing punctuation)
+        string lower = trimmed.ToLower();
+        string[] whisperArtifacts = new string[] 
+        {
+            "thank you", "thanks", "you", "bye", "subtitles by", "subtitles", "watching", "transcript", "subscribe"
+        };
+        
+        foreach (string artifact in whisperArtifacts)
+        {
+            if (lower == artifact || lower == artifact + "." || lower == artifact + "!" || lower == artifact + "?")
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     [System.Serializable]

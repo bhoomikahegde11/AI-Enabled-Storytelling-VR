@@ -469,3 +469,102 @@ def _select_emotion(action, frustration):
         return "serious"
 
     return "idle"
+
+
+def generate_context_response(player_text, buyer_name, buyer_origin, spice, current_negotiation_state):
+    """
+    Generates a 1500s context-grounded response to player's casual dialogue.
+    Constraints:
+    - 2 sentences max.
+    - Stay immersive, in-character.
+    - Uses RAG context if available.
+    - Returns the buyer to bargaining at the end.
+    - Fallback templates when LLM is not loaded.
+    """
+    text_lower = player_text.lower().strip()
+    personality = current_negotiation_state.get("personality", "Polite Merchant")
+    turns = current_negotiation_state.get("turns", 0)
+    current_offer = current_negotiation_state.get("current_offer")
+    seller_price = current_negotiation_state.get("seller_price")
+    
+    # 1. Check if LLM is loaded
+    if llm_loaded:
+        fact_context = _rag.retrieve_context(spice, "social")
+        
+        prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+You are an NPC buyer in the Hampi bazaars of the Vijayanagara Empire (1500s) named {buyer_name} from {buyer_origin}.
+Your Personality is {personality}.
+Your Spice Interest: {spice}
+Historical Context: {fact_context}
+Task: Respond to the seller's casual comment or question: "{player_text}" in character.
+Rules:
+1. Stay immersive and in-character for 1500s Vijayanagara.
+2. Keep it under 2 sentences.
+3. You must end the response by returning the topic to the bargaining of {spice}.
+4. DO NOT use modern terms or mention modern technology.
+5. DO NOT add any preambles, explanations, or quotes. Output ONLY the response.
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+Seller: "{player_text}"
+<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+"""
+        try:
+            rephrased = run_llm(prompt, max_tokens=80).strip()
+            rephrased = re.sub(r'^(rephrased\s+dialogue|character\s+speech|here\s+is\s+the\s+rephrased\s+dialogue|here\s+is\s+your\s+rephrased\s+speech|rephrased):', '', rephrased, flags=re.IGNORECASE)
+            rephrased = rephrased.strip().strip('"').strip("'").strip()
+            if len(rephrased) > 5 and not any(bad in rephrased.lower() for bad in ["assistant:", "system:", "npc:", "prompt:"]):
+                # Ensure the response ends with a return to bargaining if not already doing so
+                lower_rep = rephrased.lower()
+                if spice.lower() not in lower_rep and not any(term in lower_rep for term in ["offer", "price", "varaha", "trade", "deal", "sell", "buy"]):
+                    rephrased += f" But let us speak of the {spice}. What is your offer?"
+                
+                # Check for immersion breakers
+                immersion_breakers = [
+                    "rupee", "rupees", "dollar", "dollars", "euro", "euros", "pound", "pounds",
+                    "bitcoin", "crypto", "website", "internet", "phone", "mobile", "online",
+                    "email", "app", "computer", "laptop", "google", "amazon",
+                    "sir,", "ma'am", "ok", "okay",
+                    "electric", "battery", "camera", "photograph",
+                    "train", "bus", "car", "truck", "airplane",
+                ]
+                if not any(word in rephrased.lower() for word in immersion_breakers):
+                    return {
+                        "text": rephrased,
+                        "tone": "neutral",
+                        "emotion": "thinking"
+                    }
+        except Exception as e:
+            print(f"[WARNING LLM] RAG dialogue generation failed: {e}. Falling back to template.")
+
+    # 2. Deterministic Fallbacks if LLM not loaded or failed validation
+    if "weather" in text_lower or "rain" in text_lower or "sun" in text_lower or "hot" in text_lower:
+        if personality == "Aggressive Trader":
+            text = f"The Hampi sun is scorching, but my gold is just as hot. Let us return to our trade of {spice}."
+        elif personality == "Cautious Buyer":
+            text = f"The weather is clear today, thank the gods, so my caravan won't suffer damp spices. Let us speak of the {spice}."
+        else:
+            text = f"The sky is fair over Vijayanagara today, ideal for commerce. Let us discuss the price of your {spice}."
+    elif "origin" in text_lower or "where" in text_lower or "from" in text_lower or "home" in text_lower:
+        if personality == "Aggressive Trader":
+            text = f"Where I come from does not change the weight of my coins. Let us talk about this {spice}."
+        elif personality == "Cautious Buyer":
+            text = f"I travel with the caravans through many lands, seeking honest traders. Tell me your price for the {spice}."
+        else:
+            text = f"I have journeyed far from {buyer_origin} to trade in the great bazaars of Hampi. Now, what of the {spice}?"
+    elif "king" in text_lower or "ruler" in text_lower or "emperor" in text_lower or "rules" in text_lower or "krishnadevaraya" in text_lower:
+        text = f"Emperor Krishnadevaraya rules with great power from Hampi, ensuring safe roads for merchants. Let us return to our business of {spice}."
+    elif "name" in text_lower or "who are you" in text_lower or "yourself" in text_lower:
+        if personality == "Aggressive Trader":
+            text = f"I am {buyer_name}. I care for transactions, not introductions. What is your offer for {spice}?"
+        else:
+            text = f"I am {buyer_name}, a humble merchant of {buyer_origin}. Let us return to our bargain of {spice}."
+    elif "like" in text_lower or "favorite" in text_lower:
+        text = f"I seek only the finest {spice} to load onto my camels. Let us discuss your price."
+    else:
+        text = f"Hampi is a city of wonders, but I am here on business. What is your final offer for this {spice}?"
+
+    return {
+        "text": text,
+        "tone": "neutral",
+        "emotion": "thinking"
+    }
+
