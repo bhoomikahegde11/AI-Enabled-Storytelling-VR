@@ -52,7 +52,7 @@ public class CoinSequenceManager : MonoBehaviour
             sequenceStarted &&
             !switching &&
             OVRInput.GetDown(
-            OVRInput.Button.SecondaryIndexTrigger)
+                OVRInput.Button.One)
         )
         {
             Next();

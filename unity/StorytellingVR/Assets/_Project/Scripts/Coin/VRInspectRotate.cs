@@ -23,7 +23,7 @@ public class VRInspectRotate : MonoBehaviour
         // Right joystick
         Vector2 stick =
             OVRInput.Get(
-                OVRInput.Axis2D.SecondaryThumbstick
+                OVRInput.Axis2D.PrimaryThumbstick
             );
 
 
