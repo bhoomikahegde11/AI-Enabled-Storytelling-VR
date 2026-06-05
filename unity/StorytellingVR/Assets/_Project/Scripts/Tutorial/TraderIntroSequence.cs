@@ -112,6 +112,8 @@ public class TraderIntroSequence : MonoBehaviour
         yield return ShowLine("And now… he stands before you.", 2.5f, 6);
 
         yield return ShowLine("Let us see how you handle your first customer.", 3f, 7);
+
+        GameManager.Instance.LoadNextScene();
     }
 
     IEnumerator MoveNPC()
