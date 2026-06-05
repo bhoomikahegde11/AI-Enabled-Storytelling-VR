@@ -20,10 +20,9 @@ public class VRInspectRotate : MonoBehaviour
 
     void Update()
     {
-        // Right joystick
         Vector2 stick =
             OVRInput.Get(
-                OVRInput.Axis2D.PrimaryThumbstick
+                OVRInput.Axis2D.SecondaryThumbstick
             );
 
 
@@ -54,7 +53,6 @@ public class VRInspectRotate : MonoBehaviour
         }
 
 
-        // smoothing
         transform.rotation =
             Quaternion.Slerp(
                 transform.rotation,
