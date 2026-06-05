@@ -12,12 +12,15 @@ public class VoiceRecognitionManager : MonoBehaviour
 
     public TMP_Text spokenPriceText;
 
+    public TMP_Text voicePromptText;
+
     private bool waitingForInput = false;
 
     
     void Start()
 {
-    Debug.Log("VOICE MANAGER STARTED");
+        voicePromptText.text = "";
+        Debug.Log("VOICE MANAGER STARTED");
 
     
 
@@ -65,14 +68,15 @@ public class VoiceRecognitionManager : MonoBehaviour
 
             spokenPriceText.text =
                 "Spoken Price: " + number + " Varahas";
+            voicePromptText.text = "";
 
             tutorialManager.HandlePlayerOffer(number);
         }
         else
         {
-            tutorialManager.ShowNarrator(
-                "Please say a number."
-            );
+            voicePromptText.text = "Please say a number.";
+
+            StartCoroutine(ClearPromptAfterDelay());
 
             StartCoroutine(RestartListening());
         }
@@ -111,5 +115,14 @@ public class VoiceRecognitionManager : MonoBehaviour
     {
         yield return new WaitForSeconds(0.5f);
         voiceExperience.Deactivate();
+    }
+    IEnumerator ClearPromptAfterDelay()
+    {
+        yield return new WaitForSeconds(2f);
+
+        if (waitingForInput)
+            voicePromptText.text = "Speak now";
+        else
+            voicePromptText.text = "";
     }
 }

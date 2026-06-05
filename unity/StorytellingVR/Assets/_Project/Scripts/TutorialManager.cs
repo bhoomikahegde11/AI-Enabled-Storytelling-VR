@@ -40,7 +40,6 @@ public class TutorialManager : MonoBehaviour
     private bool waitingForHighPrice = false;
     private bool waitingForFairPrice = false;
     private bool tutorialFinished = false;
-    private bool waitingForNextLine = false;
 
     void Start()
     {
@@ -123,7 +122,7 @@ public class TutorialManager : MonoBehaviour
 
                 new string[]
                 {
-                    "Greetings, merchant.",
+                    "Greetings Merchant!",
                     "My name is Rahim.",
                     "I have journeyed here from the Deccan Sultanate to trade in the markets of Vijayanagara.",
                     "I am looking to purchase one veesai of cardamom today, if the price is fair."
@@ -154,7 +153,10 @@ public class TutorialManager : MonoBehaviour
             "Be careful... a price that is too high may cost you the deal entirely."
         ));
 
+        voiceRecognitionManager.voicePromptText.text = "Say 70";
+
         voiceRecognitionManager.ListenForPrice();
+
         waitingForHighPrice = true;
     }
 
@@ -223,7 +225,11 @@ public class TutorialManager : MonoBehaviour
             "Try offering a fair price that earns a profit while keeping the customer satisfied."
         ));
 
+        voiceRecognitionManager.voicePromptText.text =
+    "Offer a fair price";
+
         voiceRecognitionManager.ListenForPrice();
+
         waitingForFairPrice = true;
     }
 
@@ -245,7 +251,7 @@ public class TutorialManager : MonoBehaviour
         else if (offer < 18)
         {
             coins += offer;
-            coinsEarnedText.text = "Coins Earned: " + coins;
+            coinsEarnedText.text = "Varahas Earned: " + coins;
 
             StartCoroutine(TooLowSequence(offer));
         }
