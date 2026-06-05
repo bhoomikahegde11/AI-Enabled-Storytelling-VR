@@ -292,7 +292,7 @@ public class TutorialManager : MonoBehaviour
         ));
 
         tutorialFinished = true;
-        StartCoroutine(LoadNextScene());
+        GameManager.Instance.LoadNextScene();
     }
 
     IEnumerator TooHighAgainSequence(int offer)
@@ -350,7 +350,7 @@ public class TutorialManager : MonoBehaviour
         ));
 
         tutorialFinished = true;
-        StartCoroutine(LoadNextScene());
+        GameManager.Instance.LoadNextScene();
     }
 
     public void ShowNarrator(string text)

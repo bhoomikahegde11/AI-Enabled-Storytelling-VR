@@ -135,14 +135,12 @@ public class CoinSceneManager : MonoBehaviour
             tradingAheadClip
         );
 
+        GameManager.Instance.LoadNextScene();
 
         Debug.Log(
             "START CUSTOMER GAME LOOP HERE"
         );
 
-
-        // later:
-        // customerSpawner.StartCustomers();
     }
 
 
