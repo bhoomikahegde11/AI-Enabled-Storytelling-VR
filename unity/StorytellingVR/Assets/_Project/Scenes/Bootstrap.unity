@@ -150,8 +150,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   scenes:
   - SpicesIntro
-  - TraderLightingFix
-  - Transaction_Tutorial
+  - TraderIntoScene
   - CoinScene
   - MainScene1
   fader: {fileID: 1819468858}
