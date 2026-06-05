@@ -1959,6 +1959,52 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 7794f37d28c9e194ea14f7516bac1683, type: 3}
   m_PrefabInstance: {fileID: 534544268}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &756239750
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 756239752}
+  - component: {fileID: 756239751}
+  m_Layer: 0
+  m_Name: VRSpawnManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &756239751
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 756239750}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f00929261ad2cfd47b1d6994555fa17f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VRSpawnManager
+  playerRig: {fileID: 35991055}
+  spawnPoint: {fileID: 1775060728}
+--- !u!4 &756239752
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 756239750}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.10703, y: 2.86505, z: -6.5008}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &802985045
 GameObject:
   m_ObjectHideFlags: 0
@@ -3150,6 +3196,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 35991055}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1775060727
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1775060728}
+  m_Layer: 0
+  m_Name: PlayerspawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1775060728
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1775060727}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalPosition: {x: -0.348, y: 1.376, z: 1.397}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!1 &1784848074
 GameObject:
   m_ObjectHideFlags: 0
@@ -3661,6 +3738,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42fb33946cca7fa4083f66b3b745511f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialManager
+  speakerNameText: {fileID: 0}
+  dialogueText: {fileID: 0}
+  voiceRecognitionManager: {fileID: 0}
+  narratorAudioSource: {fileID: 0}
+  customerAudioSource: {fileID: 0}
+  narratorIntroClip: {fileID: 0}
+  customerIntroClip: {fileID: 0}
+  customerAngryClip: {fileID: 0}
+  narratorGreedClip: {fileID: 0}
+  customerAcceptClip: {fileID: 0}
+  narratorEndingClip: {fileID: 0}
+  customerTooHighClip: {fileID: 0}
+  narratorTryAgainClip: {fileID: 0}
+  customerTooLowClip: {fileID: 0}
+  narratorLowProfitClip: {fileID: 0}
+  coinsEarnedText: {fileID: 0}
+  spokenPriceText: {fileID: 0}
+  respectUIManager: {fileID: 0}
 --- !u!114 &1868099377
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4396,3 +4491,5 @@ SceneRoots:
   - {fileID: 392670757}
   - {fileID: 529414965}
   - {fileID: 6645823806036250803}
+  - {fileID: 1775060728}
+  - {fileID: 756239752}
