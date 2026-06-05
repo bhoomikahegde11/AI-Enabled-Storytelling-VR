@@ -360,7 +360,7 @@ MonoBehaviour:
   m_text: Name
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
-  m_sharedMaterial: {fileID: -7543732066147648486, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
+  m_sharedMaterial: {fileID: 7182229235248489404, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -497,7 +497,7 @@ MonoBehaviour:
   m_text: Type
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
-  m_sharedMaterial: {fileID: -7543732066147648486, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
+  m_sharedMaterial: {fileID: 7182229235248489404, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -3467,7 +3467,7 @@ MonoBehaviour:
   m_text: Desc
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
-  m_sharedMaterial: {fileID: -7543732066147648486, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
+  m_sharedMaterial: {fileID: 7182229235248489404, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -3663,6 +3663,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TutorialManager
   speakerNameText: {fileID: 0}
   dialogueText: {fileID: 0}
+  voiceRecognitionManager: {fileID: 0}
+  narratorAudioSource: {fileID: 0}
+  customerAudioSource: {fileID: 0}
+  narratorIntroClip: {fileID: 0}
+  customerIntroClip: {fileID: 0}
+  customerAngryClip: {fileID: 0}
+  narratorGreedClip: {fileID: 0}
+  customerAcceptClip: {fileID: 0}
+  narratorEndingClip: {fileID: 0}
+  customerTooHighClip: {fileID: 0}
+  narratorTryAgainClip: {fileID: 0}
+  customerTooLowClip: {fileID: 0}
+  narratorLowProfitClip: {fileID: 0}
   coinsEarnedText: {fileID: 0}
   spokenPriceText: {fileID: 0}
   respectUIManager: {fileID: 0}
@@ -3953,7 +3966,7 @@ MonoBehaviour:
   m_text: Namaskara, welcome to Hampi!
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
-  m_sharedMaterial: {fileID: -7543732066147648486, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
+  m_sharedMaterial: {fileID: 7182229235248489404, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
