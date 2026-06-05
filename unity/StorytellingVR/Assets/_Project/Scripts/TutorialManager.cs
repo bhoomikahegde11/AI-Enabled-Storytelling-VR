@@ -1,12 +1,11 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
+
 
 public class TutorialManager : MonoBehaviour
 {
-    IEnumerator LoadNextScene() 
-    { yield return new WaitForSeconds(2f); SceneManager.LoadScene(1); }
+   
     [Header("Dialogue UI")]
     public TMP_Text speakerNameText;
     public TMP_Text dialogueText;
@@ -291,8 +290,7 @@ public class TutorialManager : MonoBehaviour
             "A skilled merchant learns to find the right balance."
         ));
 
-        tutorialFinished = true;
-        GameManager.Instance.LoadNextScene();
+        FinishTutorial();
     }
 
     IEnumerator TooHighAgainSequence(int offer)
@@ -349,10 +347,30 @@ public class TutorialManager : MonoBehaviour
                 "To thrive in the markets of Vijayanagara, you must balance customer satisfaction with sustainable profit."
         ));
 
+        FinishTutorial();
+    }
+    void FinishTutorial()
+    {
         tutorialFinished = true;
+
+
+        Debug.Log(
+            "TRANSACTION TUTORIAL FINISHED"
+        );
+
+
+        if (GameManager.Instance == null)
+        {
+            Debug.LogError(
+                "NO GAME MANAGER FOUND"
+            );
+
+            return;
+        }
+
+
         GameManager.Instance.LoadNextScene();
     }
-
     public void ShowNarrator(string text)
     {
         speakerNameText.text = "Narrator:";
