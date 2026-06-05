@@ -795,6 +795,7 @@ GameObject:
   m_Component:
   - component: {fileID: 289138411}
   - component: {fileID: 289138412}
+  - component: {fileID: 289138413}
   m_Layer: 0
   m_Name: SpiceIntroManager
   m_TagString: Untagged
@@ -829,6 +830,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cf444a586fce4b241bc6a0573c29d9aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpiceIntroSequence
+  narratorAudioSource: {fileID: 289138413}
+  intro1: {fileID: 8300000, guid: 0350dc699771c6b4bbfa8f105bc3a8a9, type: 3}
+  intro2: {fileID: 8300000, guid: 274395814fd636a4596b82f19e69867f, type: 3}
+  intro3: {fileID: 8300000, guid: cccca8899a4890e4c99390e2a8ad4c21, type: 3}
+  intro4: {fileID: 8300000, guid: f0751da8ae0539d4f96f7bb18a1420c7, type: 3}
+  pepperClip: {fileID: 8300000, guid: c0af79e51af17ab48ab51eb8b8505d0e, type: 3}
+  turmericClip: {fileID: 8300000, guid: 3fa7a35433fd9eb4f9400df39fbe8ae5, type: 3}
+  cardamomClip: {fileID: 8300000, guid: a9d8ffad4a148444698c2e5a80bac95e, type: 3}
+  cinnamonClip: {fileID: 8300000, guid: 34ca75209cecff44aa2e3d2cf89649f5, type: 3}
+  endingClip: {fileID: 8300000, guid: 29dc6f4bab4ca4347822ff82e973f6da, type: 3}
   subtitleCanvas: {fileID: 1868099377}
   subtitleText: {fileID: 1976708503}
   spiceInfoCanvas: {fileID: 1758736404}
@@ -844,6 +855,103 @@ MonoBehaviour:
   cardamomUIAnchor: {fileID: 0}
   cinnamonUIAnchor: {fileID: 0}
   mainCamera: {fileID: 86862298}
+--- !u!82 &289138413
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 289138410}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -2863,70 +2971,6 @@ MonoBehaviour:
   installationRoutineCheckpoint:
     _installationRoutineId: 
     _installationVariants: []
---- !u!1001 &1184147966
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 99461784}
-    m_Modifications:
-    - target: {fileID: -8679921383154817045, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -27.7479
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: -3.6090734
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -6.5780053
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
-      propertyPath: m_Name
-      value: Cardamom
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects:
-    - {fileID: -8700617353114198275, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
-    - {fileID: 65702495048144492, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
---- !u!4 &1184147967 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 9f11ac1eeef54ec44836034cceb5479c, type: 3}
-  m_PrefabInstance: {fileID: 1184147966}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1202002935
 GameObject:
   m_ObjectHideFlags: 0
@@ -4241,6 +4285,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42fb33946cca7fa4083f66b3b745511f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialManager
+  speakerNameText: {fileID: 0}
+  dialogueText: {fileID: 0}
+  voiceRecognitionManager: {fileID: 0}
+  narratorAudioSource: {fileID: 0}
+  customerAudioSource: {fileID: 0}
+  narratorIntroClip: {fileID: 0}
+  customerIntroClip: {fileID: 0}
+  narratorNegotiationClip: {fileID: 0}
+  customerAngryClip: {fileID: 0}
+  narratorGreedClip: {fileID: 0}
+  customerAcceptClip: {fileID: 0}
+  narratorEndingClip: {fileID: 0}
+  customerTooHighClip: {fileID: 0}
+  narratorTryAgainClip: {fileID: 0}
+  customerTooLowClip: {fileID: 0}
+  narratorLowProfitClip: {fileID: 0}
+  coinsEarnedText: {fileID: 0}
+  spokenPriceText: {fileID: 0}
+  respectUIManager: {fileID: 0}
 --- !u!225 &1868099377
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -4508,25 +4571,22 @@ PrefabInstance:
     - {fileID: -1225250004524483486, guid: 9961594622026314e902f484642e7456, type: 3}
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 9961594622026314e902f484642e7456, type: 3}
-      insertIndex: 4
-      addedObject: {fileID: 1184147967}
-    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 9961594622026314e902f484642e7456, type: 3}
-      insertIndex: 16
+      insertIndex: 15
       addedObject: {fileID: 582376554}
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 9961594622026314e902f484642e7456, type: 3}
-      insertIndex: 23
+      insertIndex: 22
       addedObject: {fileID: 1562699076}
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 9961594622026314e902f484642e7456, type: 3}
-      insertIndex: 24
+      insertIndex: 23
       addedObject: {fileID: 1963353844}
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 9961594622026314e902f484642e7456, type: 3}
-      insertIndex: 25
+      insertIndex: 24
       addedObject: {fileID: 1658074272}
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 9961594622026314e902f484642e7456, type: 3}
-      insertIndex: 26
+      insertIndex: 25
       addedObject: {fileID: 591339329}
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 9961594622026314e902f484642e7456, type: 3}
-      insertIndex: 27
+      insertIndex: 26
       addedObject: {fileID: 262405480}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 122943629111533739, guid: 9961594622026314e902f484642e7456, type: 3}
