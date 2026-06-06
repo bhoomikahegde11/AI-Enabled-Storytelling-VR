@@ -202,11 +202,11 @@ public class ChatManager : MonoBehaviour
     }
 
     // 🤖 NPC RESPONSE (unchanged but safer)
-    void OnNPCReply(string text, string audioUrl, int reputation, int totalVarahas, bool done, TransactionSummary transaction)
+    void OnNPCReply(string text, string audioUrl, int reputation, int totalVarahas, bool done, TransactionSummary transaction, string action, CurrentTrade currentTrade, int reputationDelta)
     {
         if (showDebugLogs)
         {
-            Debug.Log($"[REP HUD] {reputation}");
+            Debug.Log($"[REP HUD] {reputation} (delta: {reputationDelta})");
         }
 
         Debug.Log("NPC Reply: " + text);
@@ -252,7 +252,7 @@ public class ChatManager : MonoBehaviour
             {
                 inputField.interactable = false; // Lock inputs during introduction sequence
             }
-            StartCoroutine(FirstReplyIntroRoutine(text, audioUrl, reputation, totalVarahas, done, transaction, npcAnim));
+            StartCoroutine(FirstReplyIntroRoutine(text, audioUrl, reputation, totalVarahas, done, transaction, npcAnim, currentTrade, reputationDelta));
             return;
         }
 
@@ -274,12 +274,22 @@ public class ChatManager : MonoBehaviour
             hudManager.UpdateMoney(totalVarahas);
             hudManager.UpdateRespect(reputation);
             TriggerSubtitleDisplay(!string.IsNullOrEmpty(api.currentBuyerName) ? api.currentBuyerName : "Customer", text);
+            if (currentTrade != null)
+            {
+                hudManager.UpdateCurrentTrade(currentTrade);
+            }
+            if (reputationDelta != 0)
+            {
+                hudManager.ShowReputationChange(reputationDelta);
+            }
         }
+
+        bool isSuccess = (action == "ACCEPT" && transaction != null && transaction.earned > 0);
 
         // 2. Trigger transaction completed feedback popups or respect warnings on done
         if (done && feedbackManager != null)
         {
-            if (transaction != null)
+            if (isSuccess)
             {
                 // Determine player archetype based on reputation score
                 string archetype = "Standard Merchant";
@@ -298,10 +308,7 @@ public class ChatManager : MonoBehaviour
         if (done && hudManager != null)
         {
             hudManager.HideCurrentTrade();
-            if (transaction != null)
-            {
-                hudManager.ShowTradeComplete(transaction);
-            }
+            hudManager.ShowTradeComplete(transaction, isSuccess, reputationDelta);
         }
 
         if (audioManager != null && !string.IsNullOrEmpty(audioUrl))
@@ -316,11 +323,11 @@ public class ChatManager : MonoBehaviour
 
         if (done && marketplaceManager != null)
         {
-            marketplaceManager.OnNegotiationFinished(transaction != null);
+            marketplaceManager.OnNegotiationFinished(isSuccess);
         }
     }
 
-    private IEnumerator FirstReplyIntroRoutine(string text, string audioUrl, int reputation, int totalVarahas, bool done, TransactionSummary transaction, Animator npcAnim)
+    private IEnumerator FirstReplyIntroRoutine(string text, string audioUrl, int reputation, int totalVarahas, bool done, TransactionSummary transaction, Animator npcAnim, CurrentTrade currentTrade, int reputationDelta)
     {
         // Stop browsing/thinking state and look at player when the response arrives
         if (feedbackManager != null)
@@ -347,6 +354,14 @@ public class ChatManager : MonoBehaviour
             hudManager.ShowCurrentTrade(api.currentSpiceName, api.currentSpiceQuantity, bName);
             hudManager.UpdateMoney(totalVarahas);
             hudManager.UpdateRespect(reputation);
+            if (currentTrade != null)
+            {
+                hudManager.UpdateCurrentTrade(currentTrade);
+            }
+            if (reputationDelta != 0)
+            {
+                hudManager.ShowReputationChange(reputationDelta);
+            }
         }
 
         // 2. Wait exactly 3.0 seconds to allow the intro card to play fully before greeting text/speech

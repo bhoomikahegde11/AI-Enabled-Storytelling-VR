@@ -35,17 +35,27 @@ public class Level1VoiceInputManager : MonoBehaviour
     private float startListeningTime;
     private bool isListening = false;
 
-    // Trigger tracking state
-    private bool wasKeyboardTriggered = false;
+    public enum VoiceInputState
+    {
+        Idle,
+        Recording,
+        Review
+    }
+    private VoiceInputState currentState = VoiceInputState.Idle;
+
+    private Level1HUDManager hudManager
+    {
+        get { return (chatManager != null) ? chatManager.hudManager : null; }
+    }
 
     private string GetIdleText()
     {
-        return IsXRDeviceActive() ? "Hold A to Speak" : "Hold V to Speak";
+        return IsXRDeviceActive() ? "Hold A to bargain" : "Hold V to bargain";
     }
 
     private string GetReviewText()
     {
-        return IsXRDeviceActive() ? "A Confirm | B Retry" : "ENTER Confirm | R Retry";
+        return IsXRDeviceActive() ? "A Confirm | B Retry" : "Press Enter to send  |  R to reset";
     }
 
     private bool IsXRDeviceActive()
@@ -64,16 +74,33 @@ public class Level1VoiceInputManager : MonoBehaviour
         #endif
     }
 
+    private void SetVoiceStatusText(string status)
+    {
+        if (voiceStatusText != null)
+        {
+            voiceStatusText.text = status;
+        }
+        if (hudManager != null)
+        {
+            hudManager.SetVoiceStatus(status);
+        }
+    }
+
+    private string GetCurrentVoiceStatusText()
+    {
+        if (voiceStatusText != null) return voiceStatusText.text;
+        if (hudManager != null && hudManager.voiceStatusText != null) return hudManager.voiceStatusText.text;
+        return "";
+    }
+
     public void ClearTranscript()
     {
         if (inputField != null)
         {
             inputField.text = "";
         }
-        if (voiceStatusText != null)
-        {
-            voiceStatusText.text = GetIdleText();
-        }
+        currentState = VoiceInputState.Idle;
+        SetVoiceStatusText(GetIdleText());
         Debug.Log("[VOICE CONFIRM] Transcript cleared");
     }
 
@@ -90,19 +117,27 @@ public class Level1VoiceInputManager : MonoBehaviour
             inputField = chatManager.inputField;
         }
 
-        // Set initial status text if reference is available
-        if (voiceStatusText != null)
+        if (voiceStatusText == null && hudManager != null)
         {
-            voiceStatusText.text = GetIdleText();
+            voiceStatusText = hudManager.voiceStatusText;
         }
+
+        // Set initial status text
+        SetVoiceStatusText(GetIdleText());
+        currentState = VoiceInputState.Idle;
     }
 
     private void Update()
     {
+        // Auto-discover voiceStatusText if it is null (in case hudManager initialized later)
+        if (voiceStatusText == null && hudManager != null)
+        {
+            voiceStatusText = hudManager.voiceStatusText;
+        }
+
         // Desktop testing hotkey: hold V to record, release to send
         if (Input.GetKeyDown(KeyCode.V))
         {
-            wasKeyboardTriggered = true;
             StartListening();
         }
         if (Input.GetKeyUp(KeyCode.V))
@@ -110,10 +145,33 @@ public class Level1VoiceInputManager : MonoBehaviour
             StopListening();
         }
 
-        // R key behavior: Clear transcript
-        if (Input.GetKeyDown(KeyCode.R))
+        // Keep VR mode unchanged: Only apply Enter/R review flow for keyboard testing.
+        if (currentState == VoiceInputState.Review && !IsXRDeviceActive())
         {
-            ClearTranscript();
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+            {
+                Debug.Log("[VOICE CONFIRM] Keyboard Enter confirm triggered");
+                if (chatManager != null)
+                {
+                    chatManager.OnSend();
+                }
+                currentState = VoiceInputState.Idle;
+                SetVoiceStatusText(GetIdleText());
+            }
+
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                Debug.Log("[VOICE CONFIRM] Keyboard R reset triggered");
+                ClearTranscript();
+            }
+        }
+        else
+        {
+            // Standard R key behavior when not reviewing: Clear transcript
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                ClearTranscript();
+            }
         }
 
         // VR Controller button checks safely
@@ -141,11 +199,12 @@ public class Level1VoiceInputManager : MonoBehaviour
         #endif
 
         // Auto-reset status back to Idle when the input text box is cleared
-        if (voiceStatusText != null && voiceStatusText.text == GetReviewText())
+        if (GetCurrentVoiceStatusText() == GetReviewText())
         {
             if (inputField != null && string.IsNullOrEmpty(inputField.text))
             {
-                voiceStatusText.text = GetIdleText();
+                currentState = VoiceInputState.Idle;
+                SetVoiceStatusText(GetIdleText());
             }
         }
     }
@@ -154,15 +213,22 @@ public class Level1VoiceInputManager : MonoBehaviour
     {
         if (isListening) return;
 
-        // Reset keyboard trigger flag if key V is not actually held down
-        if (!Input.GetKey(KeyCode.V))
-        {
-            wasKeyboardTriggered = false;
-        }
-
         Debug.Log("[STT] Recording started");
         isListening = true;
+        currentState = VoiceInputState.Recording;
         startListeningTime = Time.time;
+
+        // Trigger UI expansion and glow animation
+        if (chatManager != null && chatManager.hudManager != null)
+        {
+            chatManager.hudManager.StartListeningAnimation();
+        }
+
+        // Disable typing and clear focus to prevent push-to-talk key from typing into field
+        if (chatManager != null && chatManager.hudManager != null)
+        {
+            chatManager.hudManager.DisablePlayerTyping();
+        }
 
         // Clear input box
         if (inputField != null)
@@ -171,10 +237,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         }
 
         // Set status
-        if (voiceStatusText != null)
-        {
-            voiceStatusText.text = "Listening...";
-        }
+        SetVoiceStatusText("Listening...");
 
         // Start Unity Microphone capture
         recordingClip = Microphone.Start(deviceName, false, maxRecordingDuration, sampleRate);
@@ -188,6 +251,12 @@ public class Level1VoiceInputManager : MonoBehaviour
         float duration = Time.time - startListeningTime;
         Debug.Log("[STT] Recording stopped");
 
+        // Trigger UI scale-down and return to idle animation
+        if (chatManager != null && chatManager.hudManager != null)
+        {
+            chatManager.hudManager.StopListeningAnimation();
+        }
+
         // Stop Unity Microphone capture
         Microphone.End(deviceName);
 
@@ -195,27 +264,28 @@ public class Level1VoiceInputManager : MonoBehaviour
         if (duration < 0.5f)
         {
             Debug.LogWarning("[STT] Recording too short (< 0.5s), ignored.");
-            if (voiceStatusText != null)
+            if (chatManager != null && chatManager.hudManager != null)
             {
-                voiceStatusText.text = GetIdleText();
+                chatManager.hudManager.EnablePlayerTyping();
             }
+            currentState = VoiceInputState.Idle;
+            SetVoiceStatusText(GetIdleText());
             return;
         }
 
         if (recordingClip == null)
         {
             Debug.LogError("[STT] Microphone recording failed (clip is null)!");
-            if (voiceStatusText != null)
+            if (chatManager != null && chatManager.hudManager != null)
             {
-                voiceStatusText.text = GetIdleText();
+                chatManager.hudManager.EnablePlayerTyping();
             }
+            currentState = VoiceInputState.Idle;
+            SetVoiceStatusText(GetIdleText());
             return;
         }
 
-        if (voiceStatusText != null)
-        {
-            voiceStatusText.text = "Understanding speech...";
-        }
+        SetVoiceStatusText("Understanding speech...");
 
         // Encode recorded sample data to WAV byte format
         byte[] wavBytes = EncodeWav(recordingClip, duration);
@@ -303,30 +373,29 @@ public class Level1VoiceInputManager : MonoBehaviour
                     if (inputField != null)
                     {
                         inputField.text = transcript;
-                        inputField.ActivateInputField();
                     }
 
-                    if (voiceStatusText != null)
-                    {
-                        voiceStatusText.text = GetReviewText();
-                    }
+                    currentState = VoiceInputState.Review;
+                    SetVoiceStatusText(GetReviewText());
                 }
                 else
                 {
-                    if (voiceStatusText != null)
-                    {
-                        voiceStatusText.text = "Could not hear clearly. Please repeat.";
-                    }
+                    currentState = VoiceInputState.Idle;
+                    SetVoiceStatusText("Could not hear clearly. Please repeat.");
                 }
             }
             else
             {
                 Debug.LogError($"[STT] Audio upload failed: {request.error}");
-                if (voiceStatusText != null)
-                {
-                    voiceStatusText.text = GetIdleText();
-                }
+                currentState = VoiceInputState.Idle;
+                SetVoiceStatusText(GetIdleText());
             }
+        }
+
+        // Re-enable player typing after STT processes
+        if (chatManager != null && chatManager.hudManager != null)
+        {
+            chatManager.hudManager.EnablePlayerTyping();
         }
     }
 
