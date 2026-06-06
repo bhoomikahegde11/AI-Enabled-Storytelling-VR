@@ -13,16 +13,21 @@ public class RespectUIManager : MonoBehaviour
 
     void Start()
     {
-        displayedRespect = respectSlider.value;
-        targetRespect = respectSlider.value;
+        if (respectSlider != null)
+        {
+            displayedRespect = respectSlider.value;
+            targetRespect = respectSlider.value;
+        }
         UpdateColor();
     }
 
     void Update()
     {
         displayedRespect = Mathf.Lerp(displayedRespect, targetRespect, Time.deltaTime * 3f);
-        respectSlider.value = displayedRespect;
-        respectValueText.text = $"Respect: {Mathf.RoundToInt(displayedRespect)}";
+        if (respectSlider != null)
+            respectSlider.value = displayedRespect;
+        if (respectValueText != null)
+            respectValueText.text = $"Respect: {Mathf.RoundToInt(displayedRespect)}";
 
         UpdateColor();
     }
@@ -34,6 +39,8 @@ public class RespectUIManager : MonoBehaviour
 
     void UpdateColor()
     {
+        if (fillImage == null) return;
+
         if (displayedRespect > 70)
         {
             fillImage.color = new Color(0.2f, 0.8f, 0.2f);
