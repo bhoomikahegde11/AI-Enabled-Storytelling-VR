@@ -32,10 +32,9 @@ class NPCSession:
         # Load or initialize the persistent state on disk
         state = load_session(self.session_id)
         
-        self.buyer = Buyer()
-        
         # Adjust buyer parameters based on persistent player reputation
-        reputation = state.get("global_metrics", {}).get("reputation", 50)
+        reputation = state.get("global_metrics", {}).get("reputation", 20)
+        self.buyer = Buyer(reputation)
         self.buyer.adjust_from_reputation(reputation)
         
         # Randomize quantities capped by what the player has in stock
@@ -111,7 +110,8 @@ class NPCSession:
                 trust=trust,
                 frustration=frustration,
                 out_of_world_count=out_count,
-                outcome=action
+                outcome=action,
+                market_price=self.engine.market_price
             )
 
             # Compile transaction complete summary for acceptances

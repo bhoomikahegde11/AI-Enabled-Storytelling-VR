@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from npc_engine.interface import NPCSession
 from stt.whisper_service import transcribe_audio_file
-from npc_engine.utils.text_normalizer import normalize_text
+from npc_engine.utils.text_normalizer import normalize_text, normalize_trade_numbers
 from dotenv import load_dotenv
 from openai import OpenAI
 import requests
@@ -242,10 +242,10 @@ def start_session():
 
     response = session.start()
 
-    from npc_engine.core.persistence import load_session
+    from npc_engine.core.persistence import load_session, DEFAULT_REPUTATION, DEFAULT_VARAHAS
     state = load_session(session_id)
-    reputation = state.get("global_metrics", {}).get("reputation", 50)
-    total_varahas = state.get("global_metrics", {}).get("total_varahas", 100)
+    reputation = state.get("global_metrics", {}).get("reputation", DEFAULT_REPUTATION)
+    total_varahas = state.get("global_metrics", {}).get("total_varahas", DEFAULT_VARAHAS)
 
     print(f"[REP BACKEND] {reputation}")
 
@@ -264,6 +264,7 @@ def start_session():
         "active_event": active_event,
         "reputation": reputation,
         "total_varahas": total_varahas,
+        "reputation_delta": 0,
         
         # New HUD and identity keys
         "player_reputation": reputation,
@@ -272,6 +273,12 @@ def start_session():
         "buyer_origin": getattr(session.buyer, "origin", "Persian Trader"),
         "spice_name": spice_name.capitalize(),
         "spice_quantity": spice_qty,
+        "current_trade": {
+            "spice": spice_name.capitalize(),
+            "quantity": spice_qty,
+            "npc_offer": int(session.engine.current_offer),
+            "market_value": int(round(session.engine.market_price))
+        },
         
         "response": response
     }
@@ -289,14 +296,18 @@ def step_session(req: StepRequest):
 
     session = sessions[session_id]
 
+    from npc_engine.core.persistence import load_session, DEFAULT_REPUTATION, DEFAULT_VARAHAS
+    old_state = load_session(session_id)
+    rep_before = old_state.get("global_metrics", {}).get("reputation", DEFAULT_REPUTATION)
+
     response = session.step(req.player_input)
 
-    from npc_engine.core.persistence import load_session
     state = load_session(session_id)
-    reputation = state.get("global_metrics", {}).get("reputation", 50)
-    total_varahas = state.get("global_metrics", {}).get("total_varahas", 100)
+    reputation = state.get("global_metrics", {}).get("reputation", DEFAULT_REPUTATION)
+    total_varahas = state.get("global_metrics", {}).get("total_varahas", DEFAULT_VARAHAS)
+    reputation_delta = reputation - rep_before
 
-    print(f"[REP BACKEND] {reputation}")
+    print(f"[REP BACKEND] {reputation} (delta: {reputation_delta})")
 
     start_tts = time.time()
     audio_url = generate_audio_url(response.get("npc_text", ""))
@@ -328,6 +339,7 @@ def step_session(req: StepRequest):
         "reputation": reputation,
         "total_varahas": total_varahas,
         "transaction": response.get("transaction"),
+        "reputation_delta": reputation_delta,
         
         # New HUD and identity keys
         "player_reputation": reputation,
@@ -336,6 +348,12 @@ def step_session(req: StepRequest):
         "buyer_origin": getattr(session.buyer, "origin", "Persian Trader"),
         "spice_name": spice_name.capitalize(),
         "spice_quantity": spice_qty,
+        "current_trade": {
+            "spice": spice_name.capitalize(),
+            "quantity": spice_qty,
+            "npc_offer": int(session.engine.current_offer),
+            "market_value": int(round(session.engine.market_price))
+        },
         
         "response": response
     }
@@ -475,7 +493,7 @@ async def websocket_negotiation(websocket: WebSocket, session_id: str):
 
 # 🎙️ OFFLINE WHISPER SPEECH TO TEXT ENDPOINT
 @app.post("/stt")
-async def speech_to_text(file: UploadFile = File(...)):
+async def speech_to_text(file: UploadFile = File(...), session_id: str = None):
     import time
     import shutil
 
@@ -489,7 +507,18 @@ async def speech_to_text(file: UploadFile = File(...)):
             
         print(f"[STT] Transcribing received file: {file.filename}")
         transcript = transcribe_audio_file(temp_filepath)
+        
+        # Get active session's engine to enable context-aware number normalization
+        active_engine = None
+        if session_id and session_id in sessions:
+            active_engine = sessions[session_id].engine
+        elif sessions:
+            active_engine = list(sessions.values())[0].engine
+
         normalized_transcript = normalize_text(transcript)
+        from npc_engine.utils.text_normalizer import normalize_currency_tokens
+        normalized_transcript = normalize_currency_tokens(normalized_transcript)
+        normalized_transcript = normalize_trade_numbers(normalized_transcript, active_engine)
         
         elapsed_ms = int((time.time() - start_time) * 1000)
         print(f"[STT RAW]: {transcript}")

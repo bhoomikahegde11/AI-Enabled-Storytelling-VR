@@ -93,6 +93,8 @@ def parse_traditional_to_grams(text: str) -> float:
     and converts them to modern grams representation for internal backend logic.
     """
     text = str(text).lower().strip()
+    # Normalize spoken number names and articles to digits
+    text = re.sub(r'\b(one|a|an)\b', '1', text)
     
     # 1. Traditional Units Matchers
     # Bahar / Candy

@@ -142,6 +142,15 @@ class NegotiationEngine:
     def acceptable_price(self):
         return self.max_price * (0.9 - (0.3 * self.buyer.desperation))
 
+    def get_current_buyer_offer(self):
+        if hasattr(self, "current_offer") and self.current_offer is not None and self.current_offer > 0:
+            return int(self.current_offer)
+        if hasattr(self, "buyer") and self.buyer is not None and hasattr(self.buyer, "target_price") and self.buyer.target_price is not None:
+            return int(self.buyer.target_price)
+        if hasattr(self, "buyer") and self.buyer is not None and hasattr(self.buyer, "initial_offer") and hasattr(self, "market_price"):
+            return int(round(self.buyer.initial_offer(self.market_price)))
+        return 10
+
     def update_stage(self):
         if not self.has_made_first_offer:
             self.stage = "OPENING"
