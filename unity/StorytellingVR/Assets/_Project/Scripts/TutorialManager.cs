@@ -43,7 +43,7 @@ public class TutorialManager : MonoBehaviour
     void Start()
     {
         if (coinsEarnedText != null)
-            coinsEarnedText.text = "Coins Earned: 0";
+            coinsEarnedText.text = "0";
         if (spokenPriceText != null)
             spokenPriceText.text = "Spoken Price: --";
 
@@ -278,7 +278,7 @@ public class TutorialManager : MonoBehaviour
         {
             coins += offer;
             if (coinsEarnedText != null)
-                coinsEarnedText.text = "Varahas Earned: " + coins;
+                coinsEarnedText.text = coins.ToString();
 
             StartCoroutine(TooLowSequence(offer));
         }
@@ -292,7 +292,7 @@ public class TutorialManager : MonoBehaviour
     {
         coins += offer;
         if (coinsEarnedText != null)
-            coinsEarnedText.text = "Coins Earned: " + coins;
+            coinsEarnedText.text = coins.ToString();
 
         respect += 20;
         if (respectUIManager != null)
@@ -353,7 +353,7 @@ public class TutorialManager : MonoBehaviour
     {
         coins += offer;
         if (coinsEarnedText != null)
-            coinsEarnedText.text = "Coins Earned: " + coins;
+            coinsEarnedText.text = coins.ToString();
         respect += 30;
         if (respectUIManager != null)
             respectUIManager.SetRespect(respect);
