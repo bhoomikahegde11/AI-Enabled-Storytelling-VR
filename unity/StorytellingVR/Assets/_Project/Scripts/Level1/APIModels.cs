@@ -1,4 +1,13 @@
 [System.Serializable]
+public class CurrentTrade
+{
+    public string spice;
+    public string quantity;
+    public int npc_offer;
+    public int market_value;
+}
+
+[System.Serializable]
 public class StartResponse
 {
     public string session_id;
@@ -10,6 +19,7 @@ public class StartResponse
     public string audio_url;
     public int reputation;
     public int total_varahas;
+    public int reputation_delta;
     
     // Backend-driven HUD data
     public int player_reputation;
@@ -18,6 +28,7 @@ public class StartResponse
     public string buyer_origin;
     public string spice_name;
     public string spice_quantity;
+    public CurrentTrade current_trade;
 }
 
 [System.Serializable]
@@ -44,6 +55,7 @@ public class StepResponse
     public string audio_url;
     public int reputation;
     public int total_varahas;
+    public int reputation_delta;
     public TransactionSummary transaction;
 
     // Backend-driven HUD data
@@ -53,6 +65,7 @@ public class StepResponse
     public string buyer_origin;
     public string spice_name;
     public string spice_quantity;
+    public CurrentTrade current_trade;
 }
 
 [System.Serializable]

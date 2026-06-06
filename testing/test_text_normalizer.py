@@ -100,10 +100,7 @@ def test_normalizer():
     print(f" RESULTS: {passed} passed, {failed} failed")
     print("============================================================")
     
-    if failed > 0:
-        sys.exit(1)
-    else:
-        sys.exit(0)
+    assert failed == 0, f"{failed} tests failed"
 
 if __name__ == "__main__":
     test_normalizer()

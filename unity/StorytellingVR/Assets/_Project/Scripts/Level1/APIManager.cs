@@ -19,7 +19,7 @@ public class APIManager : MonoBehaviour
     public string currentSpiceQuantity;
 
     // 🔥 START SESSION
-    public IEnumerator StartSession(System.Action<string, string, int, int, bool, TransactionSummary> callback)
+    public IEnumerator StartSession(System.Action<string, string, int, int, bool, TransactionSummary, string, CurrentTrade, int> callback)
     {
         string url = baseURL + "/start";
 
@@ -65,17 +65,17 @@ public class APIManager : MonoBehaviour
             Debug.Log("Total Varahas: " + response.total_varahas);
             Debug.Log("Done: " + response.done);
 
-            callback(response.npc_text, response.audio_url, response.player_reputation, response.player_money, response.done, null);
+            callback(response.npc_text, response.audio_url, response.player_reputation, response.player_money, response.done, null, response.action, response.current_trade, response.reputation_delta);
         }
         else
         {
             Debug.LogError("StartSession Error: " + request.error);
-            callback(null, null, -1, -1, false, null);
+            callback(null, null, -1, -1, false, null, null, null, 0);
         }
     }
 
     // 🔥 SEND PLAYER MESSAGE
-    public IEnumerator SendMessage(string playerInput, System.Action<string, string, int, int, bool, TransactionSummary> callback)
+    public IEnumerator SendMessage(string playerInput, System.Action<string, string, int, int, bool, TransactionSummary, string, CurrentTrade, int> callback)
     {
         string url = baseURL + "/step";
 
@@ -130,12 +130,12 @@ public class APIManager : MonoBehaviour
             Debug.Log("Total Varahas: " + response.total_varahas);
             Debug.Log("Done: " + response.done);
 
-            callback(response.npc_text, response.audio_url, response.player_reputation, response.player_money, response.done, response.transaction);
+            callback(response.npc_text, response.audio_url, response.player_reputation, response.player_money, response.done, response.transaction, response.action, response.current_trade, response.reputation_delta);
         }
         else
         {
             Debug.LogError("SendMessage Error: " + request.error);
-            callback(null, null, -1, -1, false, null);
+            callback(null, null, -1, -1, false, null, null, null, 0);
         }
     }
 }
