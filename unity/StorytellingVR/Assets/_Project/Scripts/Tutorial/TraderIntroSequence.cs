@@ -46,12 +46,42 @@ public class TraderIntroSequence : MonoBehaviour
 
         cam = Camera.main;
 
-        // start normal
-        vignette.intensity.value = 0.12f; // subtle always-on
+        // start normal (disable vignette)
+        if (vignette != null)
+        {
+            vignette.intensity.value = 0f;
+        }
 
         // no blur initially (Bokeh approach)
         dof.focusDistance.value = 10f;
         dof.aperture.value = 5f;
+
+        // Disable any background image on the subtitles panel
+        if (subtitleText != null)
+        {
+            Transform parent = subtitleText.transform.parent;
+            if (parent != null)
+            {
+                var parentImage = parent.GetComponent<UnityEngine.UI.Image>();
+                if (parentImage != null)
+                {
+                    parentImage.enabled = false;
+                }
+
+                for (int i = 0; i < parent.childCount; i++)
+                {
+                    Transform child = parent.GetChild(i);
+                    if (child.name.ToLower().Contains("background") || child.name.ToLower().Contains("panel") || child.name.ToLower().Contains("bg"))
+                    {
+                        var childImage = child.GetComponent<UnityEngine.UI.Image>();
+                        if (childImage != null)
+                        {
+                            childImage.enabled = false;
+                        }
+                    }
+                }
+            }
+        }
 
         animator = npc.GetComponentInChildren<Animator>();
         animator.SetBool("isWalking", false);
@@ -270,8 +300,10 @@ public class TraderIntroSequence : MonoBehaviour
         // float startFOV = cam.fieldOfView;
         // float targetFOV = 75f;
 
-        float startVignette = vignette.intensity.value;
-        float targetVignette = 0.35f;
+        if (vignette != null)
+        {
+            vignette.intensity.value = 0f;
+        }
 
         while (t < 1)
         {
@@ -280,9 +312,6 @@ public class TraderIntroSequence : MonoBehaviour
             // 🎥 NOTE: Unity XR / VR restricts FOV tweaks native to stereoscopic lenses.
             // Executing math over fieldOfView in VR triggers motion sickness and SDK conflicts! (Left commented below)
             // cam.fieldOfView = Mathf.Lerp(startFOV, targetFOV, t);
-
-            // 🌑 Vignette increase
-            vignette.intensity.value = Mathf.Lerp(startVignette, targetVignette, t);
 
             yield return null;
         }
@@ -295,8 +324,10 @@ public class TraderIntroSequence : MonoBehaviour
         // float startFOV = cam.fieldOfView;
         // float targetFOV = 90f;
 
-        float startVignette = vignette.intensity.value;
-        float targetVignette = 0.12f; // back to subtle
+        if (vignette != null)
+        {
+            vignette.intensity.value = 0f;
+        }
 
         while (t < 1)
         {
@@ -304,8 +335,6 @@ public class TraderIntroSequence : MonoBehaviour
 
             // 🎥 Keep disabled for VR stability
             // cam.fieldOfView = Mathf.Lerp(startFOV, targetFOV, t);
-
-            vignette.intensity.value = Mathf.Lerp(startVignette, targetVignette, t);
 
             yield return null;
         }

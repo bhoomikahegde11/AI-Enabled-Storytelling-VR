@@ -404,6 +404,8 @@ public class TutorialManager : MonoBehaviour
             "TRANSACTION TUTORIAL FINISHED"
         );
 
+        Debug.Log("[SCENE FLOW] Loading MainScene1");
+
         // Load the Level 1 Marketplace scene directly by name as per safety requirements
         UnityEngine.SceneManagement.SceneManager.LoadScene("MainScene1");
     }

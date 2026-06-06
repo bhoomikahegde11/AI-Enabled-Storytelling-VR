@@ -32,6 +32,8 @@ public class GameManager : MonoBehaviour
         DontDestroyOnLoad(
             gameObject
         );
+
+        Debug.Log("[SCENE FLOW] Bootstrap loaded");
     }
 
 
@@ -68,11 +70,13 @@ public class GameManager : MonoBehaviour
             yield break;
         }
 
+        Debug.Log("[SCENE FLOW] Loading " + scenes[currentIndex]);
 
         yield return SceneManager.LoadSceneAsync(
             scenes[currentIndex]
         );
 
+        Debug.Log("[SCENE FLOW] " + scenes[currentIndex] + " loaded");
 
         if (fader != null)
             yield return fader.FadeIn();
