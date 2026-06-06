@@ -43,7 +43,7 @@ public class MarketplaceManager : MonoBehaviour
 
     private void Start()
     {
-        Debug.Log("[SCENE FLOW] MainScene1 loaded");
+        Debug.Log("[SCENE FLOW] " + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name + " loaded");
 
         // 1. Auto-discover references if they are not manually dragged in Inspector
         if (buyerNPC == null)
