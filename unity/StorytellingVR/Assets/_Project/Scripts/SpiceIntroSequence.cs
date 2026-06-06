@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using TMPro;
 using UnityEngine;
 
@@ -41,11 +41,11 @@ public class SpiceIntroSequence : MonoBehaviour
 
     IEnumerator PlaySequence()
     {
-        // hide all spice panels first
-        pepperUI.alpha = 0;
-        turmericUI.alpha = 0;
-        cardamomUI.alpha = 0;
-        cinnamonUI.alpha = 0;
+        // hide all spice panels first (guard against unassigned inspector references)
+        if (pepperUI != null)    pepperUI.alpha = 0;
+        if (turmericUI != null)  turmericUI.alpha = 0;
+        if (cardamomUI != null)  cardamomUI.alpha = 0;
+        if (cinnamonUI != null)  cinnamonUI.alpha = 0;
 
 
         yield return FadeCanvas(subtitleCanvas, 1f, 1f);
@@ -123,8 +123,8 @@ public class SpiceIntroSequence : MonoBehaviour
         string narration,
         AudioClip clip)
     {
-
-        yield return FadeCanvas(spiceUI, 1f, 0.5f);
+        if (spiceUI != null)
+            yield return FadeCanvas(spiceUI, 1f, 0.5f);
 
         yield return ShowSubtitle(
             narration,
@@ -133,7 +133,8 @@ public class SpiceIntroSequence : MonoBehaviour
 
         yield return new WaitForSeconds(1f);
 
-        yield return FadeCanvas(spiceUI, 0f, 0.5f);
+        if (spiceUI != null)
+            yield return FadeCanvas(spiceUI, 0f, 0.5f);
     }
 
 
@@ -165,6 +166,8 @@ public class SpiceIntroSequence : MonoBehaviour
         float targetAlpha,
         float duration)
     {
+        if (canvasGroup == null) yield break;
+
         float startAlpha = canvasGroup.alpha;
         float timer = 0f;
 
