@@ -42,12 +42,13 @@ public class TutorialManager : MonoBehaviour
 
     void Start()
     {
-        
+        if (coinsEarnedText != null)
+            coinsEarnedText.text = "Coins Earned: 0";
+        if (spokenPriceText != null)
+            spokenPriceText.text = "Spoken Price: --";
 
-        coinsEarnedText.text = "Coins Earned: 0";
-        spokenPriceText.text = "Spoken Price: --";
-
-        respectUIManager.SetRespect(respect);
+        if (respectUIManager != null)
+            respectUIManager.SetRespect(respect);
 
         StartCoroutine(TutorialSequence());
     }
@@ -58,10 +59,13 @@ public class TutorialManager : MonoBehaviour
     AudioClip audioClip,
     params string[] lines)
     {
-        speakerNameText.text = speaker;
-        speakerNameText.color = color;
+        if (speakerNameText != null)
+        {
+            speakerNameText.text = speaker;
+            speakerNameText.color = color;
+        }
 
-        if (audioClip != null)
+        if (audioClip != null && audioSource != null)
         {
             audioSource.clip = audioClip;
             audioSource.Play();
@@ -72,8 +76,11 @@ public class TutorialManager : MonoBehaviour
 
         foreach (string line in lines)
         {
-            dialogueText.text = line;
-            dialogueText.color = color;
+            if (dialogueText != null)
+            {
+                dialogueText.text = line;
+                dialogueText.color = color;
+            }
 
             yield return new WaitForSeconds(timePerLine);
         }
@@ -91,24 +98,41 @@ public class TutorialManager : MonoBehaviour
     string[] lines,
     float[] startTimes)
     {
-        speakerNameText.text = speaker;
-        speakerNameText.color = color;
+        if (speakerNameText != null)
+        {
+            speakerNameText.text = speaker;
+            speakerNameText.color = color;
+        }
 
-        dialogueText.color = color;
+        if (dialogueText != null)
+            dialogueText.color = color;
 
-        audioSource.clip = audioClip;
-        audioSource.Play();
+        if (audioClip != null && audioSource != null)
+        {
+            audioSource.clip = audioClip;
+            audioSource.Play();
+        }
 
         for (int i = 0; i < lines.Length; i++)
         {
-            yield return new WaitUntil(() =>
-                audioSource.time >= startTimes[i]);
+            if (audioSource != null)
+            {
+                yield return new WaitUntil(() =>
+                    audioSource.time >= startTimes[i]);
+            }
+            else
+            {
+                yield return new WaitForSeconds(2.0f);
+            }
 
-            dialogueText.text = lines[i];
+            if (dialogueText != null)
+                dialogueText.text = lines[i];
         }
 
-        yield return new WaitWhile(() =>
-            audioSource.isPlaying);
+        while (audioSource != null && audioSource.isPlaying)
+        {
+            yield return null;
+        }
     }
     IEnumerator TutorialSequence()
     {
@@ -164,7 +188,8 @@ public class TutorialManager : MonoBehaviour
         if (tutorialFinished)
             return;
 
-        spokenPriceText.text = "Spoken Price: " + offer + " Varahas";
+        if (spokenPriceText != null)
+            spokenPriceText.text = "Spoken Price: " + offer + " Varahas";
 
         if (waitingForHighPrice)
         {
@@ -186,7 +211,8 @@ public class TutorialManager : MonoBehaviour
             waitingForHighPrice = false;
 
             respect -= 40;
-            respectUIManager.SetRespect(respect);
+            if (respectUIManager != null)
+                respectUIManager.SetRespect(respect);
 
             StartCoroutine(HighPriceReactionSequence(offer));
         }
@@ -243,14 +269,16 @@ public class TutorialManager : MonoBehaviour
         else if (offer > 30)
         {
             respect -= 20;
-            respectUIManager.SetRespect(respect);
+            if (respectUIManager != null)
+                respectUIManager.SetRespect(respect);
 
             StartCoroutine(TooHighAgainSequence(offer));
         }
         else if (offer < 18)
         {
             coins += offer;
-            coinsEarnedText.text = "Varahas Earned: " + coins;
+            if (coinsEarnedText != null)
+                coinsEarnedText.text = "Varahas Earned: " + coins;
 
             StartCoroutine(TooLowSequence(offer));
         }
@@ -263,10 +291,12 @@ public class TutorialManager : MonoBehaviour
     IEnumerator FairPriceSequence(int offer)
     {
         coins += offer;
-        coinsEarnedText.text = "Coins Earned: " + coins;
+        if (coinsEarnedText != null)
+            coinsEarnedText.text = "Coins Earned: " + coins;
 
         respect += 20;
-        respectUIManager.SetRespect(respect);
+        if (respectUIManager != null)
+            respectUIManager.SetRespect(respect);
 
         yield return StartCoroutine(ShowDialogueSequence(
             "Rahim:",
@@ -322,9 +352,11 @@ public class TutorialManager : MonoBehaviour
     IEnumerator TooLowSequence(int offer)
     {
         coins += offer;
-        coinsEarnedText.text = "Coins Earned: " + coins;
+        if (coinsEarnedText != null)
+            coinsEarnedText.text = "Coins Earned: " + coins;
         respect += 30;
-        respectUIManager.SetRespect(respect);
+        if (respectUIManager != null)
+            respectUIManager.SetRespect(respect);
 
 
         yield return StartCoroutine(ShowDialogueSequence(
@@ -362,19 +394,31 @@ public class TutorialManager : MonoBehaviour
     }
     public void ShowNarrator(string text)
     {
-        speakerNameText.text = "Narrator:";
-        speakerNameText.color = Color.yellow;
+        if (speakerNameText != null)
+        {
+            speakerNameText.text = "Narrator:";
+            speakerNameText.color = Color.yellow;
+        }
 
-        dialogueText.text = text;
-        dialogueText.color = Color.yellow;
+        if (dialogueText != null)
+        {
+            dialogueText.text = text;
+            dialogueText.color = Color.yellow;
+        }
     }
 
     void ShowCustomer(string text)
     {
-        speakerNameText.text = "Rahim:";
-        speakerNameText.color = Color.white;
+        if (speakerNameText != null)
+        {
+            speakerNameText.text = "Rahim:";
+            speakerNameText.color = Color.white;
+        }
 
-        dialogueText.text = text;
-        dialogueText.color = Color.white;
+        if (dialogueText != null)
+        {
+            dialogueText.text = text;
+            dialogueText.color = Color.white;
+        }
     }
 }
