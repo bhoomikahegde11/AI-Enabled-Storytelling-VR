@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -121,6 +121,17 @@ public class SpiceIntroSequence : MonoBehaviour
             "Remember these goods well. Knowing their worth may decide the success of your trade.",
             endingClip
         );
+
+        yield return new WaitForSeconds(1f);
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.LoadNextScene();
+        }
+        else
+        {
+            Debug.LogWarning("GameManager.Instance is null. Cannot transition to next scene.");
+        }
     }
 
     IEnumerator FocusOnSpice(

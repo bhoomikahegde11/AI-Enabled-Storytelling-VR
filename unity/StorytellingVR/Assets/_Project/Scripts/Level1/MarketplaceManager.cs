@@ -43,6 +43,8 @@ public class MarketplaceManager : MonoBehaviour
 
     private void Start()
     {
+        Debug.Log("[SCENE FLOW] MainScene1 loaded");
+
         // 1. Auto-discover references if they are not manually dragged in Inspector
         if (buyerNPC == null)
         {
