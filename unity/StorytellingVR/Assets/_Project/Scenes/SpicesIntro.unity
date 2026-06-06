@@ -850,11 +850,11 @@ MonoBehaviour:
   turmericTarget: {fileID: 1019933077}
   cardamomTarget: {fileID: 1028498821}
   cinnamonTarget: {fileID: 1079713731}
-  pepperUIAnchor: {fileID: 0}
-  turmericUIAnchor: {fileID: 0}
-  cardamomUIAnchor: {fileID: 0}
-  cinnamonUIAnchor: {fileID: 0}
-  mainCamera: {fileID: 86862298}
+  pepperUIAnchor: {fileID: 1432543598}
+  turmericUIAnchor: {fileID: 1019933077}
+  cardamomUIAnchor: {fileID: 1028498821}
+  cinnamonUIAnchor: {fileID: 1079713731}
+  mainCamera: {fileID: 330585545}
 --- !u!82 &289138413
 AudioSource:
   m_ObjectHideFlags: 0
@@ -1997,8 +1997,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: New Text
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
-  m_sharedMaterial: {fileID: -7543732066147648486, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2578,6 +2578,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1019933077}
+  - component: {fileID: 1019933078}
   m_Layer: 0
   m_Name: TurmericFocus
   m_TagString: Untagged
@@ -2600,6 +2601,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!225 &1019933078
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1019933076}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1028498820
 GameObject:
   m_ObjectHideFlags: 0
@@ -2609,6 +2622,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1028498821}
+  - component: {fileID: 1028498822}
   m_Layer: 0
   m_Name: 'CardamomFocus '
   m_TagString: Untagged
@@ -2631,6 +2645,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!225 &1028498822
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1028498820}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1051075812
 GameObject:
   m_ObjectHideFlags: 0
@@ -2752,6 +2778,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1079713731}
+  - component: {fileID: 1079713732}
   m_Layer: 0
   m_Name: CinnamonFocus
   m_TagString: Untagged
@@ -2774,6 +2801,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!225 &1079713732
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1079713730}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1171714484
 GameObject:
   m_ObjectHideFlags: 0
@@ -3379,6 +3418,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1432543598}
+  - component: {fileID: 1432543599}
   m_Layer: 0
   m_Name: PepperFocus
   m_TagString: Untagged
@@ -3401,6 +3441,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!225 &1432543599
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1432543597}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1500459781
 GameObject:
   m_ObjectHideFlags: 0
@@ -3978,6 +4030,7 @@ GameObject:
   - component: {fileID: 1812169253}
   - component: {fileID: 1812169255}
   - component: {fileID: 1812169254}
+  - component: {fileID: 1812169256}
   m_Layer: 3
   m_Name: 'SpiceNameText '
   m_TagString: Untagged
@@ -4026,8 +4079,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: New Text
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
-  m_sharedMaterial: {fileID: -7543732066147648486, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -4104,6 +4157,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1812169252}
   m_CullTransparentMesh: 1
+--- !u!225 &1812169256
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1812169252}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1814326874
 GameObject:
   m_ObjectHideFlags: 0
@@ -4285,25 +4350,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42fb33946cca7fa4083f66b3b745511f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialManager
-  speakerNameText: {fileID: 0}
-  dialogueText: {fileID: 0}
-  voiceRecognitionManager: {fileID: 0}
-  narratorAudioSource: {fileID: 0}
-  customerAudioSource: {fileID: 0}
-  narratorIntroClip: {fileID: 0}
-  customerIntroClip: {fileID: 0}
-  narratorNegotiationClip: {fileID: 0}
-  customerAngryClip: {fileID: 0}
-  narratorGreedClip: {fileID: 0}
-  customerAcceptClip: {fileID: 0}
-  narratorEndingClip: {fileID: 0}
-  customerTooHighClip: {fileID: 0}
-  narratorTryAgainClip: {fileID: 0}
-  customerTooLowClip: {fileID: 0}
-  narratorLowProfitClip: {fileID: 0}
-  coinsEarnedText: {fileID: 0}
-  spokenPriceText: {fileID: 0}
-  respectUIManager: {fileID: 0}
 --- !u!225 &1868099377
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -4742,8 +4788,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: New Text
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
-  m_sharedMaterial: {fileID: -7543732066147648486, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -4879,8 +4925,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Namaskara, welcome to Hampi!
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
-  m_sharedMaterial: {fileID: -7543732066147648486, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
