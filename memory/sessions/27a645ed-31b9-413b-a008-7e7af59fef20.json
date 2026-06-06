@@ -1,4 +1,13 @@
 {
+  "player_name": "Merchant Traveler",
+  "current_level": 1,
+  "level_history": {
+    "level1_market": {
+      "completed": false,
+      "deals": [],
+      "reputation_archetype": "Standard Merchant"
+    }
+  },
   "global_metrics": {
     "reputation": 50,
     "total_varahas": 100,
@@ -7,7 +16,7 @@
   "inventory": {
     "pepper": 15000.0,
     "clove": 8000.0,
-    "cinnamon": 9200.0,
+    "cinnamon": 12000.0,
     "cardamom": 4000.0
   },
   "shift_stats": {
