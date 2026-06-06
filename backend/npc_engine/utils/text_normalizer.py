@@ -4,6 +4,7 @@ import re
 context_words = {
     # Currency
     "varaha", "varahas", "waraha", "warahas", "vara", "varas", "baraha", "barahas",
+    "vadahas", "bahdahas", "varahaas",
     "price", "prices", "offer", "offers", "pay", "pays", "paying",
     "sell", "sells", "selling", "buy", "buys", "buying", "cost", "costs",
     # Quantity / Weight
@@ -15,7 +16,9 @@ context_words = {
     "cardamom", "cardamoms", "cardamon", "cardamons", "cardimum", "cardamum", "cardam",
     "cinnamon", "cinnamons", "cinamon", "cinnamun", "clove", "cloves",
     # Bargaining confirmations
-    "ok", "okay", "fine", "good", "deal", "agree", "accept"
+    "ok", "okay", "fine", "good", "deal", "agree", "accept",
+    # Dialogue & Spoken numbers helpers
+    "want", "wants", "give", "gives", "make", "take", "demand", "demands", "willing", "spend", "budget", "it", "i"
 }
 
 # Mapping for converting single words to numbers
@@ -177,7 +180,10 @@ def normalize_numbers(text):
         if not group_words:
             continue
             
-        if not is_near_context(tokens, group, window=3):
+        word_tokens = [t for t in tokens if re.match(r'^[a-zA-Z]+$', t)]
+        if len(group_words) == len(word_tokens) or is_near_context(tokens, group, window=3):
+            pass
+        else:
             continue
         
         parsed_val = parse_number_word_sequence(group_words)
@@ -219,10 +225,8 @@ def normalize_text(text: str) -> str:
     text = normalize_numbers(text)
     
     # 3. Currency normalization (canonical: "varaha")
-    currency_pattern = r'\b(warahas?|varas?|varaha\'s|barahas?)\b'
+    currency_pattern = r'\b(vadahas?|bahdahas?|warahas?|varahaas?|varaha\'s|barahas?|varas?|varahas?)\b'
     text = re.sub(currency_pattern, 'varaha', text, flags=re.IGNORECASE)
-    # Ensure "varahas" also maps to "varaha"
-    text = re.sub(r'\bvarahas\b', 'varaha', text, flags=re.IGNORECASE)
     
     # 4. Weight unit normalization (canonical: "palam", "tula", "mana")
     text = re.sub(r'\b(palms?|palans?|palum)\b', 'palam', text, flags=re.IGNORECASE)
@@ -243,4 +247,53 @@ def normalize_text(text: str) -> str:
     # Clean up double spaces that might arise
     text = re.sub(r'\s+', ' ', text).strip()
     
+    return text
+
+def normalize_trade_numbers(text: str, engine=None) -> str:
+    """
+    Applies bargaining-aware STT number correction to fix common speech errors.
+    Only activates when awaiting player price input (engine.last_action in ["OFFER", "ASK_PRICE"]).
+    Mapping:
+      seven/seventeen -> 70
+      eight/eighteen -> 80
+      nine/nineteen -> 90
+      7/17 -> 70
+      8/18 -> 80
+      9/19 -> 90
+    (unless followed by quantity units like kg, veesai, seer, palam, etc.)
+    """
+    if engine is None:
+        return text
+
+    # Safeguard 1: STT price correction must only activate when awaiting player price input
+    price_expected = False
+    if hasattr(engine, "last_action") and engine.last_action in ["OFFER", "ASK_PRICE"]:
+        price_expected = True
+
+    if not price_expected:
+        return text
+
+    units_pattern = r"(?:kg|kgs|g|gm|grams?|veesai|viss|seers?|palams?|manangu|maunds?|bahars?|candy|candies)"
+    
+    # 1. Replace spoken words first (prevent matching units)
+    text = re.sub(rf'\b(seven|seventeen)\b(?!\s*{units_pattern}\b)', '70', text, flags=re.IGNORECASE)
+    text = re.sub(rf'\b(eight|eighteen)\b(?!\s*{units_pattern}\b)', '80', text, flags=re.IGNORECASE)
+    text = re.sub(rf'\b(nine|nineteen)\b(?!\s*{units_pattern}\b)', '90', text, flags=re.IGNORECASE)
+    
+    # 2. Replace numeric digits (prevent matching units)
+    text = re.sub(rf'\b(7|17)\b(?!\s*{units_pattern}\b)', '70', text)
+    text = re.sub(rf'\b(8|18)\b(?!\s*{units_pattern}\b)', '80', text)
+    text = re.sub(rf'\b(9|19)\b(?!\s*{units_pattern}\b)', '90', text)
+
+    return text
+
+def normalize_currency_tokens(text: str) -> str:
+    if not text:
+        return ""
+    # Convert "$60" or similar to "60"
+    text = re.sub(r'\$\s*(\d+)', r'\1', text)
+    # Convert "60 dollars" to "60"
+    text = re.sub(r'\b(\d+)\s*dollars?\b', r'\1', text, flags=re.IGNORECASE)
+    # Convert "60 varahas" or any Whisper currency variation to "60"
+    text = re.sub(r'\b(\d+)\s*(?:varaha|waraha|vadaha|bahdaha|varahaa)s?\b', r'\1', text, flags=re.IGNORECASE)
     return text
