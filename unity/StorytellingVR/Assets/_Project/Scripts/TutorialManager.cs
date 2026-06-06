@@ -10,6 +10,7 @@ public class TutorialManager : MonoBehaviour
     public TMP_Text speakerNameText;
     public TMP_Text dialogueText;
     public VoiceRecognitionManager voiceRecognitionManager;
+    public Level1HUDManager hudManager;
 
     [Header("Audio Sources")]
     public AudioSource narratorAudioSource;
@@ -62,13 +63,17 @@ public class TutorialManager : MonoBehaviour
         if (speakerNameText != null)
         {
             speakerNameText.text = speaker;
-            speakerNameText.color = color;
         }
 
         if (audioClip != null && audioSource != null)
         {
             audioSource.clip = audioClip;
             audioSource.Play();
+        }
+
+        if (hudManager != null)
+        {
+            hudManager.ShowSubtitle(speaker, lines.Length > 0 ? lines[0] : "");
         }
 
         float clipLength = audioClip != null ? audioClip.length : 5f;
@@ -79,7 +84,6 @@ public class TutorialManager : MonoBehaviour
             if (dialogueText != null)
             {
                 dialogueText.text = line;
-                dialogueText.color = color;
             }
 
             yield return new WaitForSeconds(timePerLine);
@@ -88,6 +92,11 @@ public class TutorialManager : MonoBehaviour
         while (audioSource != null && audioSource.isPlaying)
         {
             yield return null;
+        }
+
+        if (hudManager != null)
+        {
+            hudManager.HideSubtitle();
         }
     }
     IEnumerator ShowDialogueSequenceWithTimings(
@@ -101,16 +110,17 @@ public class TutorialManager : MonoBehaviour
         if (speakerNameText != null)
         {
             speakerNameText.text = speaker;
-            speakerNameText.color = color;
         }
-
-        if (dialogueText != null)
-            dialogueText.color = color;
 
         if (audioClip != null && audioSource != null)
         {
             audioSource.clip = audioClip;
             audioSource.Play();
+        }
+
+        if (hudManager != null)
+        {
+            hudManager.ShowSubtitle(speaker, lines.Length > 0 ? lines[0] : "");
         }
 
         for (int i = 0; i < lines.Length; i++)
@@ -132,6 +142,11 @@ public class TutorialManager : MonoBehaviour
         while (audioSource != null && audioSource.isPlaying)
         {
             yield return null;
+        }
+
+        if (hudManager != null)
+        {
+            hudManager.HideSubtitle();
         }
     }
     IEnumerator TutorialSequence()
@@ -397,13 +412,16 @@ public class TutorialManager : MonoBehaviour
         if (speakerNameText != null)
         {
             speakerNameText.text = "Narrator:";
-            speakerNameText.color = Color.yellow;
         }
 
         if (dialogueText != null)
         {
             dialogueText.text = text;
-            dialogueText.color = Color.yellow;
+        }
+
+        if (hudManager != null)
+        {
+            hudManager.ShowSubtitle("Narrator", text);
         }
     }
 
@@ -412,13 +430,16 @@ public class TutorialManager : MonoBehaviour
         if (speakerNameText != null)
         {
             speakerNameText.text = "Rahim:";
-            speakerNameText.color = Color.white;
         }
 
         if (dialogueText != null)
         {
             dialogueText.text = text;
-            dialogueText.color = Color.white;
+        }
+
+        if (hudManager != null)
+        {
+            hudManager.ShowSubtitle("Rahim", text);
         }
     }
 }
