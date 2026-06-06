@@ -353,23 +353,12 @@ public class TutorialManager : MonoBehaviour
     {
         tutorialFinished = true;
 
-
         Debug.Log(
             "TRANSACTION TUTORIAL FINISHED"
         );
 
-
-        if (GameManager.Instance == null)
-        {
-            Debug.LogError(
-                "NO GAME MANAGER FOUND"
-            );
-
-            return;
-        }
-
-
-        GameManager.Instance.LoadNextScene();
+        // Load the Level 1 Marketplace scene directly by name as per safety requirements
+        UnityEngine.SceneManagement.SceneManager.LoadScene("MainScene1");
     }
     public void ShowNarrator(string text)
     {
