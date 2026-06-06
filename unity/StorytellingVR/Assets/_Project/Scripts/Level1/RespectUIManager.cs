@@ -15,8 +15,11 @@ public class RespectUIManager : MonoBehaviour
     {
         if (respectSlider != null)
         {
-            displayedRespect = respectSlider.value;
-            targetRespect = respectSlider.value;
+            respectSlider.minValue = 0f;
+            respectSlider.maxValue = 100f;
+            displayedRespect = 100f;
+            targetRespect = 100f;
+            respectSlider.value = 100f;
         }
         UpdateColor();
     }
