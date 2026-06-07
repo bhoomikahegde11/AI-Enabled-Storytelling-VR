@@ -6,9 +6,17 @@ using UnityEngine.Networking;
 
 public class Level1VoiceInputManager : MonoBehaviour
 {
+    // Editor:
+    // http://localhost:8000/stt
+    //
+    // Quest:
+    // http://LAPTOP_WIFI_IP:8000/stt
+    //
+    // Example:
+    // http://192.168.1.50:8000/stt
     [Header("STT Service Configuration")]
     [Tooltip("FastAPI endpoint URL for Whisper transcription.")]
-    public string serverUrl = "http://127.0.0.1:8000/stt";
+    public string serverUrl = "http://localhost:8000/stt";
 
     [Tooltip("Microphone device name. Set empty/null to use default device.")]
     public string deviceName = null;
@@ -125,6 +133,8 @@ public class Level1VoiceInputManager : MonoBehaviour
         // Set initial status text
         SetVoiceStatusText(GetIdleText());
         currentState = VoiceInputState.Idle;
+
+        Debug.Log("[BACKEND] Using URL: " + serverUrl);
     }
 
     private void Update()
@@ -369,7 +379,7 @@ public class Level1VoiceInputManager : MonoBehaviour
             }
             else
             {
-                Debug.LogError($"[STT] Audio upload failed: {request.error}");
+                Debug.LogError($"[BACKEND] Request failed.\nURL Attempted: {serverUrl}\nError: {request.error}");
                 currentState = VoiceInputState.Idle;
                 SetVoiceStatusText(GetIdleText());
             }

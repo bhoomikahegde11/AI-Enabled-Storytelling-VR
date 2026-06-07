@@ -1,0 +1,39 @@
+{
+  "player_name": "Merchant Traveler",
+  "current_level": 1,
+  "level_history": {
+    "level1_market": {
+      "completed": false,
+      "deals": [
+        {
+          "spice_name": "cardamom",
+          "final_price": 27,
+          "final_quantity": 210.0,
+          "trust": 0.7,
+          "frustration": 0.05,
+          "out_of_world_count": 0,
+          "outcome": "ACCEPT",
+          "respect_change": 3,
+          "money_earned": 27
+        }
+      ],
+      "reputation_archetype": "Trusted Merchant"
+    }
+  },
+  "global_metrics": {
+    "reputation": 53,
+    "total_varahas": 127,
+    "completed_levels": []
+  },
+  "inventory": {
+    "pepper": 15000.0,
+    "clove": 8000.0,
+    "cinnamon": 12000.0,
+    "cardamom": 3790.0
+  },
+  "shift_stats": {
+    "shifts_completed": 0,
+    "total_varahas_earned": 0,
+    "total_deals_made": 0
+  }
+}
