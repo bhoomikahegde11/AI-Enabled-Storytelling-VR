@@ -135,22 +135,25 @@ public class Level1VoiceInputManager : MonoBehaviour
             voiceStatusText = hudManager.voiceStatusText;
         }
 
-        // Desktop testing hotkey: hold V to record, release to send
-        if (Input.GetKeyDown(KeyCode.V))
+        // Hold V (keyboard) or Right Trigger (controller) to record
+        if (Input.GetKeyDown(KeyCode.V)
+            || OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger))
         {
             StartListening();
         }
-        if (Input.GetKeyUp(KeyCode.V))
+        if (Input.GetKeyUp(KeyCode.V)
+            || OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger))
         {
             StopListening();
         }
 
-        // Keep VR mode unchanged: Only apply Enter/R review flow for keyboard testing.
-        if (currentState == VoiceInputState.Review && !IsXRDeviceActive())
+        // Enter / A confirm  |  R / B reset  (keyboard + controller)
+        if (currentState == VoiceInputState.Review)
         {
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)
+                || OVRInput.GetDown(OVRInput.Button.One))
             {
-                Debug.Log("[VOICE CONFIRM] Keyboard Enter confirm triggered");
+                Debug.Log("[VOICE CONFIRM] Confirm triggered (Enter / A)");
                 if (chatManager != null)
                 {
                     chatManager.OnSend();
@@ -159,44 +162,24 @@ public class Level1VoiceInputManager : MonoBehaviour
                 SetVoiceStatusText(GetIdleText());
             }
 
-            if (Input.GetKeyDown(KeyCode.R))
+            if (Input.GetKeyDown(KeyCode.R)
+                || OVRInput.GetDown(OVRInput.Button.Two))
             {
-                Debug.Log("[VOICE CONFIRM] Keyboard R reset triggered");
+                Debug.Log("[VOICE CONFIRM] Reset triggered (R / B)");
                 ClearTranscript();
             }
         }
         else
         {
-            // Standard R key behavior when not reviewing: Clear transcript
-            if (Input.GetKeyDown(KeyCode.R))
+            // Standard R / B when not reviewing: Clear transcript
+            if (Input.GetKeyDown(KeyCode.R)
+                || OVRInput.GetDown(OVRInput.Button.Two))
             {
                 ClearTranscript();
             }
         }
 
-        // VR Controller button checks safely
-        #if UNITY_ANDROID || UNITY_STANDALONE_WIN
-        try
-        {
-            if (OVRInput.GetDown(OVRInput.Button.One))
-            {
-                Debug.Log("[VR INPUT] A confirm");
-                if (chatManager != null)
-                {
-                    chatManager.OnSend();
-                }
-            }
-            if (OVRInput.GetDown(OVRInput.Button.Two))
-            {
-                Debug.Log("[VR INPUT] B retry");
-                ClearTranscript();
-            }
-        }
-        catch (System.Exception)
-        {
-            // OVRInput call failed or library missing/not initialized
-        }
-        #endif
+        // (A / B controller inputs handled above alongside Enter / R)
 
         // Auto-reset status back to Idle when the input text box is cleared
         if (GetCurrentVoiceStatusText() == GetReviewText())
