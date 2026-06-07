@@ -404,10 +404,12 @@ public class TutorialManager : MonoBehaviour
             "TRANSACTION TUTORIAL FINISHED"
         );
 
-        Debug.Log("[SCENE FLOW] Loading MainScene1_PreVRBackup");
+        Debug.Log("[SCENE FLOW] Transaction complete -> CoinScene");
 
-        // Load the Level 1 Marketplace scene directly by name as per safety requirements
-        UnityEngine.SceneManagement.SceneManager.LoadScene("MainScene1_PreVRBackup");
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.LoadNextScene();
+        }
     }
     public void ShowNarrator(string text)
     {
