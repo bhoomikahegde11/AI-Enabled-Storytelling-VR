@@ -291,15 +291,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 35991050}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.0071098134, y: 0.9978613, z: -0.06442822, w: 0.008441628}
-  m_LocalPosition: {x: -0.42, y: 2.56, z: 1.19}
+  m_LocalRotation: {x: 0, y: 0.99792635, z: -0.06436684, w: 0}
+  m_LocalPosition: {x: -0.38, y: 2.67, z: 1.25}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1784848075}
   - {fileID: 1695772830}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 7.381, y: 178.974, z: -0.883}
+  m_LocalEulerAnglesHint: {x: 7.381, y: 180, z: 0}
 --- !u!1 &39115545
 GameObject:
   m_ObjectHideFlags: 0
@@ -359,8 +359,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Name
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
-  m_sharedMaterial: {fileID: 3033140566915402974, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -496,8 +496,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Type
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
-  m_sharedMaterial: {fileID: 3033140566915402974, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -3543,8 +3543,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Desc
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
-  m_sharedMaterial: {fileID: 3033140566915402974, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -4042,8 +4042,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Namaskara, welcome to Hampi!
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
-  m_sharedMaterial: {fileID: 3033140566915402974, guid: c6db82d33112983418b3c12e37350ff0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
