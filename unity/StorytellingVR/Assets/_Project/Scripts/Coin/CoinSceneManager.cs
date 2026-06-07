@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using TMPro;
 using UnityEngine;
 
@@ -135,7 +135,16 @@ public class CoinSceneManager : MonoBehaviour
             tradingAheadClip
         );
 
-        GameManager.Instance.LoadNextScene();
+        Debug.Log("[SCENE FLOW] CoinScene complete -> MainScene1_PreVRBackup");
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.LoadNextScene();
+        }
+        else
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadScene("MainScene1_PreVRBackup");
+        }
 
         Debug.Log(
             "START CUSTOMER GAME LOOP HERE"
