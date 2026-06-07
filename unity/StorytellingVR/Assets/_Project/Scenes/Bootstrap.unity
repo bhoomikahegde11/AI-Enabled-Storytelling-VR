@@ -154,9 +154,8 @@ MonoBehaviour:
   - TraderIntoScene
   - Transcation_Tutorial
   - CoinScene
-  - MainScene1
-  fader: {fileID: 1819468858}
---- !u!4 &40321876
+  - MainScene1_PreVRBackup
+  fader: {fileID: 1819468858}--- !u!4 &40321876
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
