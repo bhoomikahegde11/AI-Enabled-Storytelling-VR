@@ -6,15 +6,24 @@ public class CoinSceneManager : MonoBehaviour
 {
     [Header("References")]
     public NPCAnimationController npc;
+
+    public TMP_Text speakerNameText;
     public TMP_Text dialogueText;
+
     public AudioSource voiceSource;
+
+    [Header("Subtitle UI")]
+    public GameObject subtitlePanel;
 
     [Header("Coins")]
     public GameObject varahaCoin;
 
+    [Header("Instruction")]
+    public InstructionPromptManager instructionPrompt;
 
     [Header("Sequence")]
     public CoinSequenceManager coinSequence;
+
 
     [Header("Voice Lines")]
     public AudioClip npcPaymentClip;
@@ -25,11 +34,12 @@ public class CoinSceneManager : MonoBehaviour
     public AudioClip tradingAheadClip;
 
 
+
     void Start()
     {
-        // listen for coin tutorial ending
-        coinSequence.OnCoinSequenceFinished += EndCoinTutorial;
+        subtitlePanel.SetActive(false);
 
+        coinSequence.OnCoinSequenceFinished += EndCoinTutorial;
 
         StartCoroutine(
             StartCoinScene()
@@ -44,72 +54,67 @@ public class CoinSceneManager : MonoBehaviour
 
 
         yield return ShowDialogue(
+            "Rahim:",
             "A pleasure doing business with you, trader. Here is your payment.",
             npcPaymentClip
-            
         );
 
 
-        // NPC raises hand
         npc.GiveCoin();
 
 
-
-        // wait for hand animation
         yield return new WaitForSeconds(1.2f);
 
 
-
-        // reveal Varaha
         varahaCoin.SetActive(true);
 
 
-
         yield return ShowDialogue(
+            "Narrator:",
             "Take a closer look at this coin.",
             inspectCoinClip
         );
-
-
-        /*
-         Player now:
-         
-         Trigger
-            ↓
-         CoinInteraction
-            ↓
-         Inspect mode
-            ↓
-         CoinSequence starts
-        */
-    }
-
-
-
-    // called from CoinInteraction
-    public void NarrateVaraha()
-    {
-        StartCoroutine(
-            ShowDialogue(
-                "The Varaha was a gold coin used for important trade and represented the wealth of the Vijayanagara Empire.",
-                varahaClip
-            )
+        instructionPrompt.ShowAButton(
+            "Inspect Coin"
         );
     }
 
 
 
-    // called from CoinSequenceManager
+    public void NarrateVaraha()
+    {
+        StartCoroutine(
+            VarahaRoutine()
+        );
+    }
+
+
+    IEnumerator VarahaRoutine()
+    {
+        yield return ShowDialogue(
+            "Narrator:",
+            "The Varaha was a gold coin used for important trade and represented the wealth of the Vijayanagara Empire.",
+            varahaClip
+        );
+
+
+        instructionPrompt.ShowAButton(
+            "Continue"
+        );
+    }
+
+
+
     public void NarrateKasu()
     {
         StartCoroutine(
             ShowDialogue(
+                "Narrator:",
                 "The Kasu was a bronze coin used by common people for everyday marketplace transactions.",
                 kasuClip
             )
         );
     }
-
 
 
 
@@ -125,45 +130,67 @@ public class CoinSceneManager : MonoBehaviour
     IEnumerator EndDialogue()
     {
         yield return ShowDialogue(
+            "Narrator:",
             "You now understand the coins used in Vijayanagara markets.",
             understandCoinsClip
         );
 
 
         yield return ShowDialogue(
+            "Narrator:",
             "Now use this knowledge while trading with the customers ahead.",
             tradingAheadClip
         );
 
-        Debug.Log("[SCENE FLOW] CoinScene complete -> MainScene1_PreVRBackup");
+
+        Debug.Log(
+            "[SCENE FLOW] CoinScene complete"
+        );
+
 
         if (GameManager.Instance != null)
         {
             GameManager.Instance.LoadNextScene();
         }
-        else
-        {
-            UnityEngine.SceneManagement.SceneManager.LoadScene("MainScene1_PreVRBackup");
-        }
-
-        Debug.Log(
-            "START CUSTOMER GAME LOOP HERE"
-        );
-
     }
 
 
 
 
-    IEnumerator ShowDialogue(string line, AudioClip clip)
+    IEnumerator ShowDialogue(
+    string speaker,
+    string line,
+    AudioClip clip
+)
     {
+        subtitlePanel.SetActive(true);
+
+
+        speakerNameText.text = speaker;
+
+
         dialogueText.text = line;
 
-        voiceSource.clip = clip;
-        voiceSource.Play();
 
-        yield return new WaitForSeconds(clip.length);
+        if (
+            clip != null &&
+            voiceSource != null
+        )
+        {
+            voiceSource.clip = clip;
+            voiceSource.Play();
 
-        dialogueText.text = "";
+            yield return new WaitForSeconds(
+                clip.length
+            );
+        }
+        else
+        {
+            yield return new WaitForSeconds(4);
+        }
+
+
+        subtitlePanel.SetActive(false);
     }
+
 }
