@@ -5,8 +5,22 @@ using System.Text;
 
 public class APIManager : MonoBehaviour
 {
-    private string baseURL = "http://127.0.0.1:8000";
+    // Editor:
+    // http://localhost:8000
+    //
+    // Quest:
+    // http://LAPTOP_WIFI_IP:8000
+    //
+    // Example:
+    // http://192.168.1.50:8000
+    [SerializeField]
+    private string backendUrl = "http://localhost:8000";
     private string sessionId;
+
+    private void Start()
+    {
+        Debug.Log("[BACKEND] Using URL: " + backendUrl);
+    }
 
     [Header("Debug Logging")]
     [SerializeField]
@@ -21,7 +35,7 @@ public class APIManager : MonoBehaviour
     // 🔥 START SESSION
     public IEnumerator StartSession(System.Action<string, string, int, int, bool, TransactionSummary, string, CurrentTrade, int> callback)
     {
-        string url = baseURL + "/start";
+        string url = backendUrl + "/start";
 
         UnityWebRequest request = new UnityWebRequest(url, "POST");
         request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes("{}"));
@@ -69,7 +83,7 @@ public class APIManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("StartSession Error: " + request.error);
+            Debug.LogError($"[BACKEND] Request failed.\nURL Attempted: {url}\nError: {request.error}");
             callback(null, null, -1, -1, false, null, null, null, 0);
         }
     }
@@ -77,7 +91,7 @@ public class APIManager : MonoBehaviour
     // 🔥 SEND PLAYER MESSAGE
     public IEnumerator SendMessage(string playerInput, System.Action<string, string, int, int, bool, TransactionSummary, string, CurrentTrade, int> callback)
     {
-        string url = baseURL + "/step";
+        string url = backendUrl + "/step";
 
         StepRequest data = new StepRequest
         {
@@ -134,7 +148,7 @@ public class APIManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("SendMessage Error: " + request.error);
+            Debug.LogError($"[BACKEND] Request failed.\nURL Attempted: {url}\nError: {request.error}");
             callback(null, null, -1, -1, false, null, null, null, 0);
         }
     }
