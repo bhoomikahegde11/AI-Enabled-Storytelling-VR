@@ -11,6 +11,7 @@ public class CoinInteraction : MonoBehaviour
     public NPCAnimationController npc;
     public Transform inspectPoint;
     public CoinSequenceManager sequenceManager;
+    public InstructionPromptManager instructionPrompt;
 
     [Header("Info")]
     public CoinInfoManager infoManager;
@@ -74,6 +75,10 @@ public class CoinInteraction : MonoBehaviour
 
     public void TakeCoin()
     {
+        if (instructionPrompt != null)
+        {
+            instructionPrompt.Hide();
+        }
         taken = true;
 
         Debug.Log("Coin Taken");
@@ -203,6 +208,10 @@ public class CoinInteraction : MonoBehaviour
 
 
         isInspecting = true;
+        instructionPrompt.ShowJoystick(
+            "Use joystick to rotate"
+        );
+
         if (sceneManager != null)
         {
             sceneManager.NarrateVaraha();
@@ -212,7 +221,7 @@ public class CoinInteraction : MonoBehaviour
         {
             sequenceManager.StartSequence();
         }
-
+        
 
         Debug.Log(
             "Inspect Started"
