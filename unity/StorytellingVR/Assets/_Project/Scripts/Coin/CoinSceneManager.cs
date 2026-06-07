@@ -18,6 +18,8 @@ public class CoinSceneManager : MonoBehaviour
     [Header("Coins")]
     public GameObject varahaCoin;
 
+    [Header("Instruction")]
+    public InstructionPromptManager instructionPrompt;
 
     [Header("Sequence")]
     public CoinSequenceManager coinSequence;
@@ -52,7 +54,7 @@ public class CoinSceneManager : MonoBehaviour
 
 
         yield return ShowDialogue(
-            "Customer:",
+            "Rahim:",
             "A pleasure doing business with you, trader. Here is your payment.",
             npcPaymentClip
         );
@@ -72,6 +74,9 @@ public class CoinSceneManager : MonoBehaviour
             "Take a closer look at this coin.",
             inspectCoinClip
         );
+        instructionPrompt.ShowAButton(
+            "Inspect Coin"
+        );
     }
 
 
@@ -79,11 +84,22 @@ public class CoinSceneManager : MonoBehaviour
     public void NarrateVaraha()
     {
         StartCoroutine(
-            ShowDialogue(
-                "Narrator:",
-                "The Varaha was a gold coin used for important trade and represented the wealth of the Vijayanagara Empire.",
-                varahaClip
-            )
+            VarahaRoutine()
+        );
+    }
+
+
+    IEnumerator VarahaRoutine()
+    {
+        yield return ShowDialogue(
+            "Narrator:",
+            "The Varaha was a gold coin used for important trade and represented the wealth of the Vijayanagara Empire.",
+            varahaClip
+        );
+
+
+        instructionPrompt.ShowAButton(
+            "Continue"
         );
     }
 
