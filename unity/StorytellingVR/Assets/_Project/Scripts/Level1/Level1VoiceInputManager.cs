@@ -16,7 +16,40 @@ public class Level1VoiceInputManager : MonoBehaviour
     // http://192.168.1.50:8000/stt
     [Header("STT Service Configuration")]
     [Tooltip("FastAPI endpoint URL for Whisper transcription.")]
-    public string serverUrl = "http://localhost:8000/stt";
+    public string serverUrl = "http://172.20.10.5:8000/stt";
+
+    [System.Serializable]
+    private class BackendConfig
+    {
+        public string baseUrl;
+    }
+
+    private void Awake()
+    {
+        LoadConfig();
+    }
+
+    private void LoadConfig()
+    {
+        string path = System.IO.Path.Combine(Application.persistentDataPath, "backend_config.json");
+        if (System.IO.File.Exists(path))
+        {
+            try
+            {
+                string jsonText = System.IO.File.ReadAllText(path);
+                BackendConfig config = JsonUtility.FromJson<BackendConfig>(jsonText);
+                if (config != null && !string.IsNullOrEmpty(config.baseUrl))
+                {
+                    serverUrl = config.baseUrl.TrimEnd('/') + "/stt";
+                    Debug.Log("[BACKEND CONFIG] Using URL: " + serverUrl);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError("[BACKEND CONFIG] Error reading config file: " + ex.Message);
+            }
+        }
+    }
 
     [Tooltip("Microphone device name. Set empty/null to use default device.")]
     public string deviceName = null;
