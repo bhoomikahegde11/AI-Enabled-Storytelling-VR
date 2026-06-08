@@ -14,8 +14,41 @@ public class APIManager : MonoBehaviour
     // Example:
     // http://192.168.1.50:8000
     [SerializeField]
-    private string backendUrl = "http://localhost:8000";
+    private string backendUrl = "http://172.20.10.5:8000";
     private string sessionId;
+
+    [System.Serializable]
+    private class BackendConfig
+    {
+        public string baseUrl;
+    }
+
+    private void Awake()
+    {
+        LoadConfig();
+    }
+
+    private void LoadConfig()
+    {
+        string path = System.IO.Path.Combine(Application.persistentDataPath, "backend_config.json");
+        if (System.IO.File.Exists(path))
+        {
+            try
+            {
+                string jsonText = System.IO.File.ReadAllText(path);
+                BackendConfig config = JsonUtility.FromJson<BackendConfig>(jsonText);
+                if (config != null && !string.IsNullOrEmpty(config.baseUrl))
+                {
+                    backendUrl = config.baseUrl;
+                    Debug.Log("[BACKEND CONFIG] Using URL: " + backendUrl);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError("[BACKEND CONFIG] Error reading config file: " + ex.Message);
+            }
+        }
+    }
 
     private void Start()
     {

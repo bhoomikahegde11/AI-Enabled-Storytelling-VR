@@ -56,7 +56,7 @@ To allow the headset to find your computer, you need to find your laptop's curre
     ```
 3.  Locate the section labeled **Wireless LAN adapter Wi-Fi**.
 4.  Find the **IPv4 Address**.
-    *   *Example*: `192.168.18.22`
+    *   *Example*: `172.20.10.5`
 
 ---
 
@@ -69,7 +69,7 @@ Before building or launching the Unity app, confirm that the backend is reachabl
     ```
     http://<LAPTOP_IP>:8000
     ```
-    *(e.g., `http://192.168.18.22:8000`)*
+    *(e.g., `http://172.20.10.5:8000`)*
 3.  If it returns a response (or standard API JSON), the connection is active.
 4.  **If it does not load**:
     *   Verify the backend terminal is running and did not crash.
@@ -78,11 +78,9 @@ Before building or launching the Unity app, confirm that the backend is reachabl
 
 ---
 
-## 6. Unity Backend URL Setup Before Building APK
+## 6. Unity Backend URL Setup (Build-Time Setup)
 
-In Unity, the URLs must point to your laptop's WiFi IP address instead of `localhost` before you compile the APK. 
-
-Configure these values in the Unity Inspector:
+To connect the built Quest APK to your laptop, the app needs to know your laptop's IP address. By default, the URLs are configured directly in the Unity Editor before compilation:
 
 1.  **Main Chat/Negotiation URL**
     *   Find the **APIManager** component in your active scene hierarchy (usually attached to a Managers or ChatManager object).
@@ -90,7 +88,7 @@ Configure these values in the Unity Inspector:
         ```
         http://<LAPTOP_IP>:8000
         ```
-        *(e.g., `http://192.168.18.22:8000`)*
+        *(e.g., `http://172.20.10.5:8000`)*
 
 2.  **Speech-To-Text (STT) URL**
     *   Find the **Level1VoiceInputManager** component in the active scene hierarchy.
@@ -98,10 +96,78 @@ Configure these values in the Unity Inspector:
         ```
         http://<LAPTOP_IP>:8000/stt
         ```
-        *(e.g., `http://192.168.18.22:8000/stt`)*
+        *(e.g., `http://172.20.10.5:8000/stt`)*
 
 > [!WARNING]
 > Do not commit your personal IP address to the git repository. Keep the defaults as `localhost` in the codebase, and only change them in your local Unity Inspector before building your APK.
+
+---
+
+## 6.5. Changing Backend IP After APK Build (Runtime Config Override)
+
+The Quest APK is hardcoded to the Inspector backend URL specified at build time. However, if your WiFi network changes after building (e.g., at a new venue or demo room), your laptop's IP address changes, and the Quest app will fail to reach the backend.
+
+To avoid rebuilding and reinstalling the APK, you can override the backend IP at runtime using a configuration file on the headset.
+
+### Creating the Configuration File
+1. Create a file named exactly: `backend_config.json` on your computer.
+2. Paste the following JSON structure into the file:
+    ```json
+    {
+      "baseUrl": "http://192.168.43.50:8000"
+    }
+    ```
+    *(Replace `192.168.43.50` with your laptop's current WiFi IPv4 address).*
+
+### Finding Your Laptop's WiFi IP
+On Windows:
+1. Open Command Prompt (`cmd`).
+2. Run the command: `ipconfig`
+3. Look for the **Wireless LAN adapter Wi-Fi** section.
+4. Find the **IPv4 Address**.
+   * *Example*: `IPv4 Address: 192.168.43.50`
+
+### Quest File Location
+The config file must be copied to the headset's persistent data directory (`Application.persistentDataPath` in Unity):
+```
+/Android/data/com.UnityTechnologies.com.unity.template.urpblank/files/backend_config.json
+```
+
+> [!IMPORTANT]
+> The target folders are created dynamically by the app. If you just installed the APK, the `files` folder will not exist yet. Follow this order:
+> 1. Install the APK to the Quest.
+> 2. Launch the app once on the headset (so it creates the directories).
+> 3. Close/Exit the app completely.
+> 4. Connect the headset to your computer and transfer `backend_config.json` to the directory.
+> 5. Restart the app.
+
+### Uploading with Meta Quest Developer Hub (MQDH)
+Using MQDH makes uploading the file extremely simple:
+1. Connect the Quest headset to your laptop using a USB-C cable.
+2. Put on the headset and **Allow USB Debugging** if prompted.
+3. Open the **Meta Quest Developer Hub** on your laptop.
+4. Select the connected Quest device from the sidebar.
+5. Click on **File Manager**.
+6. Navigate to:
+   **Android** $\rightarrow$ **data** $\rightarrow$ **com.UnityTechnologies.com.unity.template.urpblank** $\rightarrow$ **files**
+7. Upload or drag-and-drop the `backend_config.json` file into the `files` folder.
+
+### Connection Verification
+After copying the file and restarting the app, check the Unity Console/logcat outputs. You should see this log message confirming the runtime override succeeded:
+```
+[BACKEND CONFIG] Using URL: http://<your-ip>:8000
+```
+
+### Recommendation
+* **Preferred Demo Day Setup**: Connect both your laptop and the Quest headset to a stable phone hotspot (which prevents corporate/public WiFi isolation issues) and configure the correct IP in the Unity Inspector *before* building the final APK.
+* **Fallback**: Use the `backend_config.json` runtime override only as a backup if the WiFi network changes, the IP changes, or the APK has already been built and the built-in configuration is incorrect.
+
+### Troubleshooting Runtime Configuration
+* **Problem**: Config is placed on Quest, but the app still tries to connect to the old IP.
+  * **Fix**: Ensure the file name is spelled exactly `backend_config.json` (all lowercase, no extra `.txt` extension appended).
+  * **Fix**: Verify that the JSON formatting is valid (check for missing colons, quotes, or trailing commas).
+  * **Fix**: Confirm the file is placed inside the `/files` folder, not just the `/com.UnityTechnologies.com.unity.template.urpblank` root folder.
+  * **Fix**: Restart the app completely (force quit or reboot the headset if necessary).
 
 ---
 
@@ -168,6 +234,7 @@ Ensure you execute this flow order:
 
 ### Problem: Quest app says connection failed / cannot reach the backend
 *   **Fix**: Verify your laptop's IP has not changed (routers assign new IPs periodically). Ensure the server is started with `--host 0.0.0.0`. Check if Windows Firewall is blocking incoming Python connections.
+*   **Fix (IP Changed)**: If your laptop IP changed, you do not need to rebuild the APK. Simply update the `baseUrl` in your headset's `/Android/data/com.UnityTechnologies.com.unity.template.urpblank/files/backend_config.json` file to the new IP address and restart the game.
 
 ### Problem: Voice recording/transcription not working on Quest
 *   **Fix**: Go to Quest settings and verify that microphone permissions are enabled for the app. Check that your **Server Url** in `Level1VoiceInputManager` is pointing to the correct laptop IP and includes the `/stt` suffix. Check the backend console output for connection errors.
@@ -181,7 +248,7 @@ Ensure you execute this flow order:
 
 - [ ] Python backend is running on the laptop with `--host 0.0.0.0`.
 - [ ] Quest headset is on the exact same WiFi network as the laptop.
-- [ ] Correct WiFi IP address is configured in the Unity Inspector for `APIManager` and `Level1VoiceInputManager`.
+- [ ] Correct WiFi IP address is configured in the Unity Inspector for `APIManager` and `Level1VoiceInputManager` (or via `backend_config.json` on the headset).
 - [ ] Microphone permission has been allowed on the Quest headset.
 - [ ] Right-hand controller buttons (Trigger, A, B) are fully working.
 - [ ] Demo has been verified by playing the complete flow beginning at **Bootstrap**.
