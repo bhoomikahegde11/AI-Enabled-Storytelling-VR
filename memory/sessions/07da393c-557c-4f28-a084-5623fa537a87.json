@@ -1,4 +1,13 @@
 {
+  "player_name": "Merchant Traveler",
+  "current_level": 1,
+  "level_history": {
+    "level1_market": {
+      "completed": false,
+      "deals": [],
+      "reputation_archetype": "Standard Merchant"
+    }
+  },
   "global_metrics": {
     "reputation": 50,
     "total_varahas": 100,
