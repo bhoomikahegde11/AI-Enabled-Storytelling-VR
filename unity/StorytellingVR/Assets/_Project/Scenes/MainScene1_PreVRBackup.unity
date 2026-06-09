@@ -1462,7 +1462,7 @@ GameObject:
   - component: {fileID: 389689729}
   - component: {fileID: 389689731}
   - component: {fileID: 389689730}
-  m_Layer: 5
+  m_Layer: 3
   m_Name: 'IntroNameText '
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1758,7 +1758,7 @@ GameObject:
   - component: {fileID: 398418953}
   - component: {fileID: 398418955}
   - component: {fileID: 398418954}
-  m_Layer: 5
+  m_Layer: 3
   m_Name: 'IntroOriginText  '
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4501,7 +4501,7 @@ GameObject:
   - component: {fileID: 1213692522}
   - component: {fileID: 1213692524}
   - component: {fileID: 1213692523}
-  m_Layer: 5
+  m_Layer: 3
   m_Name: 'NPCIntroPanel '
   m_TagString: Untagged
   m_Icon: {fileID: 0}
