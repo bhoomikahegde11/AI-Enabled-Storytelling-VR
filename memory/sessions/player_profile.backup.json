@@ -1,14 +1,14 @@
 {
   "global_metrics": {
-    "reputation": 50,
-    "total_varahas": 100,
+    "reputation": 53,
+    "total_varahas": 130,
     "completed_levels": []
   },
   "inventory": {
     "pepper": 15000.0,
     "clove": 8000.0,
-    "cinnamon": 12000.0,
-    "cardamom": 3440.0
+    "cinnamon": 10600.0,
+    "cardamom": 4000.0
   },
   "shift_stats": {
     "shifts_completed": 0,

@@ -265,6 +265,9 @@ def start_session():
         "reputation": reputation,
         "total_varahas": total_varahas,
         "reputation_delta": 0,
+        "buyer_trust": round(session.engine.trust, 4),
+        "buyer_frustration": round(session.engine.frustration, 4),
+        "out_of_world_count": session.engine.out_of_world_count,
         
         # New HUD and identity keys
         "player_reputation": reputation,
@@ -340,6 +343,10 @@ def step_session(req: StepRequest):
         "total_varahas": total_varahas,
         "transaction": response.get("transaction"),
         "reputation_delta": reputation_delta,
+        "buyer_trust": round(session.engine.trust, 4),
+        "buyer_frustration": round(session.engine.frustration, 4),
+        "out_of_world_count": session.engine.out_of_world_count,
+        "active_event": session.active_event,
         
         # New HUD and identity keys
         "player_reputation": reputation,

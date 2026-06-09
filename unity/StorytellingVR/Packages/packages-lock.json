@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "com.defios.llamacppunity": {
+      "version": "https://github.com/DefiosLab/LlamaCppUnity.git?path=/Packages/",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "c078c05ec138f4cf63388dfc84d7e8ef937561ca"
+    },
     "com.merry-yellow.code-assist": {
       "version": "file:com.merry-yellow.code-assist",
       "depth": 0,
@@ -430,6 +437,13 @@
         "com.unity.xr.legacyinputhelpers": "2.1.2"
       },
       "url": "https://packages.unity.com"
+    },
+    "com.whisper.unity": {
+      "version": "https://github.com/Macoron/whisper.unity.git?path=/Packages/com.whisper.unity",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "529a628a915a97799e89e061af9cb7c71407124d"
     },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",

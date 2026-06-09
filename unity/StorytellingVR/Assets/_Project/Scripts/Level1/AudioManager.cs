@@ -115,7 +115,7 @@ public class AudioManager : MonoBehaviour
 
     private Animator GetNPCAnimator()
     {
-        MarketplaceManager mm = FindObjectOfType<MarketplaceManager>();
+        MarketplaceManager mm = FindFirstObjectByType<MarketplaceManager>();
         if (mm != null && mm.buyerNPC != null)
         {
             return mm.buyerNPC.GetComponent<Animator>() ?? mm.buyerNPC.GetComponentInChildren<Animator>();

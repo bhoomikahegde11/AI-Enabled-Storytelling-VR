@@ -44,6 +44,7 @@ public class MarketplaceManager : MonoBehaviour
     private void Start()
     {
         Debug.Log("[SCENE FLOW] " + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name + " loaded");
+        Level1GameState.Instance.EnsureInitialized();
 
         // 1. Auto-discover references if they are not manually dragged in Inspector
         if (buyerNPC == null)
@@ -78,7 +79,7 @@ public class MarketplaceManager : MonoBehaviour
 
         if (chatManager == null)
         {
-            chatManager = FindObjectOfType<ChatManager>();
+            chatManager = FindFirstObjectByType<ChatManager>();
         }
 
         // 2. Validate essential references
@@ -121,6 +122,11 @@ public class MarketplaceManager : MonoBehaviour
         {
             chatManager.autoStart = false; // Disable HTTP start on scene load
             chatManager.marketplaceManager = this; // Subscribe this manager to completed signals
+            if (chatManager.hudManager != null)
+            {
+                chatManager.hudManager.UpdateMoney(Level1GameState.Instance.CurrentMoney);
+                chatManager.hudManager.UpdateRespect(Level1GameState.Instance.CurrentReputation);
+            }
         }
 
         // 6. Reset NPC position and begin lifecycle loop

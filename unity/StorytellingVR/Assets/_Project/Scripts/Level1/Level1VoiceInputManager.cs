@@ -1,8 +1,6 @@
 using UnityEngine;
 using TMPro;
 using System.Collections;
-using System.Collections.Generic;
-using UnityEngine.Networking;
 
 public class Level1VoiceInputManager : MonoBehaviour
 {
@@ -17,6 +15,7 @@ public class Level1VoiceInputManager : MonoBehaviour
     [Header("STT Service Configuration")]
     [Tooltip("FastAPI endpoint URL for Whisper transcription.")]
     public string serverUrl = "http://172.20.10.5:8000/stt";
+    public bool useLocalSpeech = false;
 
     [System.Serializable]
     private class BackendConfig
@@ -75,6 +74,7 @@ public class Level1VoiceInputManager : MonoBehaviour
     private AudioClip recordingClip;
     private float startListeningTime;
     private bool isListening = false;
+    private ISpeechToTextProvider speechProvider;
 
     public enum VoiceInputState
     {
@@ -150,7 +150,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         // 1. Auto-discover references if not assigned in Inspector
         if (chatManager == null)
         {
-            chatManager = FindObjectOfType<ChatManager>();
+            chatManager = FindFirstObjectByType<ChatManager>();
         }
 
         if (inputField == null && chatManager != null)
@@ -166,6 +166,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         // Set initial status text
         SetVoiceStatusText(GetIdleText());
         currentState = VoiceInputState.Idle;
+        speechProvider = useLocalSpeech ? new LocalSpeechProvider() : new BackendSpeechProvider(serverUrl);
 
         Debug.Log("[BACKEND] Using URL: " + serverUrl);
     }
@@ -313,109 +314,60 @@ public class Level1VoiceInputManager : MonoBehaviour
 
         SetVoiceStatusText("Understanding speech...");
 
-        // Encode recorded sample data to WAV byte format
-        byte[] wavBytes = EncodeWav(recordingClip, duration);
-        if (wavBytes != null && wavBytes.Length > 0)
+        AudioClip trimmedClip = CreateTrimmedClip(recordingClip, duration);
+        if (trimmedClip != null)
         {
-            StartCoroutine(UploadAudioRoutine(wavBytes));
+            StartCoroutine(TranscribeAudioRoutine(trimmedClip));
         }
     }
 
-    private byte[] EncodeWav(AudioClip clip, float recordedDuration)
+    private AudioClip CreateTrimmedClip(AudioClip clip, float recordedDuration)
     {
         int channels = clip.channels;
         int frequency = clip.frequency;
-
-        // Calculate sample counts to read based on recorded time
         int totalSamples = Mathf.RoundToInt(recordedDuration * frequency * channels);
         totalSamples = Mathf.Min(totalSamples, clip.samples * channels);
-
         if (totalSamples <= 0) return null;
 
         float[] samples = new float[totalSamples];
         clip.GetData(samples, 0);
-
-        byte[] wavData = new byte[44 + totalSamples * 2];
-
-        // 1. WAV Header (RIFF / WAVE descriptor chunk)
-        System.Text.Encoding.ASCII.GetBytes("RIFF").CopyTo(wavData, 0);
-        System.BitConverter.GetBytes(36 + totalSamples * 2).CopyTo(wavData, 4);
-        System.Text.Encoding.ASCII.GetBytes("WAVE").CopyTo(wavData, 8);
-
-        // 2. Format subchunk ("fmt ")
-        System.Text.Encoding.ASCII.GetBytes("fmt ").CopyTo(wavData, 12);
-        System.BitConverter.GetBytes(16).CopyTo(wavData, 16); // Subchunk1Size
-        System.BitConverter.GetBytes((short)1).CopyTo(wavData, 20); // AudioFormat (1 = PCM)
-        System.BitConverter.GetBytes((short)channels).CopyTo(wavData, 22); // NumChannels
-        System.BitConverter.GetBytes(frequency).CopyTo(wavData, 24); // SampleRate
-        System.BitConverter.GetBytes(frequency * channels * 2).CopyTo(wavData, 28); // ByteRate
-        System.BitConverter.GetBytes((short)(channels * 2)).CopyTo(wavData, 32); // BlockAlign
-        System.BitConverter.GetBytes((short)16).CopyTo(wavData, 34); // BitsPerSample
-
-        // 3. Data subchunk
-        System.Text.Encoding.ASCII.GetBytes("data").CopyTo(wavData, 36);
-        System.BitConverter.GetBytes(totalSamples * 2).CopyTo(wavData, 40); // Subchunk2Size
-
-        // 4. Copy data samples and convert to 16-bit PCM shorts
-        int offset = 44;
-        for (int i = 0; i < totalSamples; i++)
-        {
-            short value = (short)Mathf.Clamp(samples[i] * 32767f, -32768f, 32767f);
-            System.BitConverter.GetBytes(value).CopyTo(wavData, offset);
-            offset += 2;
-        }
-
-        return wavData;
+        int sampleFrames = totalSamples / channels;
+        AudioClip trimmedClip = AudioClip.Create("RecordedSpeech", sampleFrames, channels, frequency, false);
+        trimmedClip.SetData(samples, 0);
+        return trimmedClip;
     }
 
-    private IEnumerator UploadAudioRoutine(byte[] wavBytes)
+    private IEnumerator TranscribeAudioRoutine(AudioClip clip)
     {
-        Debug.Log("[STT] Sending audio");
-        System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
-        // Construct multipart form data
-        List<IMultipartFormSection> formData = new List<IMultipartFormSection>();
-        formData.Add(new MultipartFormFileSection("file", wavBytes, "voice.wav", "audio/wav"));
-
-        using (UnityWebRequest request = UnityWebRequest.Post(serverUrl, formData))
+        if (speechProvider == null)
         {
-            yield return request.SendWebRequest();
-            stopwatch.Stop();
+            speechProvider = useLocalSpeech ? new LocalSpeechProvider() : new BackendSpeechProvider(serverUrl);
+        }
 
-            if (request.result == UnityWebRequest.Result.Success)
+        var task = speechProvider.Transcribe(clip);
+        while (!task.IsCompleted)
+        {
+            yield return null;
+        }
+
+        string transcript = task.IsFaulted || task.Result == null ? "" : task.Result.Trim();
+
+        if (IsValidTranscript(transcript))
+        {
+            Debug.Log("[VOICE CONFIRM] Awaiting player approval");
+
+            if (inputField != null)
             {
-                string jsonResponse = request.downloadHandler.text;
-                STTResponse response = JsonUtility.FromJson<STTResponse>(jsonResponse);
-                
-                string transcript = (response != null && !string.IsNullOrEmpty(response.text)) ? response.text.Trim() : "";
-
-                Debug.Log($"[STT] Transcript: {transcript}");
-                Debug.Log($"[PERF STT] {stopwatch.ElapsedMilliseconds} ms");
-
-                if (IsValidTranscript(transcript))
-                {
-                    Debug.Log("[VOICE CONFIRM] Awaiting player approval");
-
-                    if (inputField != null)
-                    {
-                        inputField.text = transcript;
-                    }
-
-                    currentState = VoiceInputState.Review;
-                    SetVoiceStatusText(GetReviewText());
-                }
-                else
-                {
-                    currentState = VoiceInputState.Idle;
-                    SetVoiceStatusText("Could not hear clearly. Please repeat.");
-                }
+                inputField.text = transcript;
             }
-            else
-            {
-                Debug.LogError($"[BACKEND] Request failed.\nURL Attempted: {serverUrl}\nError: {request.error}");
-                currentState = VoiceInputState.Idle;
-                SetVoiceStatusText(GetIdleText());
-            }
+
+            currentState = VoiceInputState.Review;
+            SetVoiceStatusText(GetReviewText());
+        }
+        else
+        {
+            currentState = VoiceInputState.Idle;
+            SetVoiceStatusText(useLocalSpeech ? GetIdleText() : "Could not hear clearly. Please repeat.");
         }
 
         // Re-enable player typing after STT processes
@@ -458,11 +410,5 @@ public class Level1VoiceInputManager : MonoBehaviour
         }
 
         return true;
-    }
-
-    [System.Serializable]
-    private class STTResponse
-    {
-        public string text;
     }
 }
