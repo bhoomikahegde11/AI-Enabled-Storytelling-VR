@@ -1,153 +1,121 @@
-# AI NPC Negotiation System – Project Instructions
+# AI NPC Negotiation System – Project Instructions & Agent Context
+
+Welcome, Agent! This file contains the complete, up-to-date system architecture, design rules, and integration protocols for the **1500s Vijayanagara Empire Marketplace VR Simulation**. 
+
+---
 
 ## 🧠 Project Overview
 
-This is a simulation system for AI-powered NPC negotiation in a VR marketplace set in the Vijayanagara Empire (1500s).
+The project is an AI-powered NPC negotiation engine set in the Hampi bazaars of the 1500s. The player acts as a **spice seller** and the NPC acts as a **cautious or aggressive buyer**. 
 
-This is NOT a chatbot.
-
-The system simulates realistic bargaining between:
-- Player (seller)
-- AI NPC (buyer)
+This is **NOT a chatbot**; it is a highly structured, deterministic bargaining game where LLMs are used *exclusively* for dialogue rephrasing and semantic intent safety nets. All pricing logic, emotional frustration thresholds, and concession math are fully deterministic.
 
 ---
 
-## ⚙️ Core Architecture (DO NOT BREAK)
+## ⚙️ Core Architecture
 
-### 1. Negotiation Engine (Python - deterministic)
-- Controls ALL price logic
-- Handles:
-  - current_offer
-  - max_price
-  - market_price
-  - patience
-  - desperation
-- Decides:
-  - OFFER
-  - ACCEPT
-  - WALK_AWAY
-  - ASK_ITEM
+The system utilizes a clean, modular split between pricing logic, natural language classification, and speech synthesis:
 
-🚫 NEVER allow LLM to control pricing
+```
+[ Player (VR Hand / Voice) ]
+          │
+          ▼
+[ Unity WebSockets Client ] ◄──(Dynamic 3D Audio & Blendshapes)
+          │
+      (ws://)
+          ▼
+[ FastAPI / uvicorn Server ]
+          │
+          ├───► [ Hybrid Intent Classifier ] ──► (PRICE, ACCEPT, QUANTITY, OOW)
+          │
+          ├───► [ Deterministic Negotiation Engine ] ──► (Bargaining State)
+          │
+          ├───► [ LLM Dialogue Rephraser ] ──► (Period-Appropriate Subtitles)
+          │
+          └───► [ Asynchronous Piper TTS Generator ] ──► (Non-blocking WAV compilation)
+```
 
----
+### 1. Persistent WebSocket Channel (`api.py`)
+* The core entry point for Unity VR clients is the persistent, full-duplex WebSocket route at `/ws/negotiate/{session_id}`.
+* **Low-Latency QoS Delivery**: The server processes steps and returns text dialogues, tones, and expressions *instantly* (within milliseconds) so subtitles render without lag.
+* **Asynchronous Voice Compilation**: Speech synthesis runs in a non-blocking background thread pool (`asyncio.to_thread`). Once the lossless `.wav` clip is compiled in `backend/audio/`, the server pushes an `{"type": "audio_ready", "audio_url": "..."}` signal over the socket to stream audio to the VR headset.
 
-### 2. Intent Classifier
-- Hybrid system:
-  - Rules for clear intents (PRICE, ACCEPT, etc.)
-  - LLM for semantic classification
-- Returns:
-  - intent
-  - tone
-  - persuasion
+### 2. Deterministic Negotiation Engine (`negotiation_engine.py`)
+* Manages the state machine (stages: `OPENING` -> `BARGAINING` -> `FINALIZATION`).
+* Calculates concession increments based on the buyer's personality (Aggressive Trader, Cautious Buyer, Polite Merchant), patience, and desperation levels.
+* **Overshoot Safeguard**: Concession concessions must *always* clamp at or below the seller's active asking price:
+  `self.current_offer = min(self.current_offer, self.last_seller_price)`
+  preventing logic desyncs where the buyer offers more than the seller asked.
 
----
-
-### 3. Dialogue Generator
-- Generates natural responses
-- Uses templates (NOT full LLM generation)
-- Must NOT affect logic
+### 3. Natural Language Interpreter & Safety Nets (`intent_classifier.py` & `input_interpreter.py`)
+* Extracts player counter-offers and quantity statements.
+* **Traditional Weight Safeguard**: Explicitly ignores numbers specified with traditional units (`veesai`, `seer`, `palam`, `manangu`, `bahar`, etc.) inside the price parser, preventing quantity declarations (e.g. `"I have 1 Veesai"`) from being falsely interpreted as a pricing offer of 1 varaha.
+* Standardizes all weights internally to **grams**, but displays them dynamically as dual-unit traditional labels (e.g. `1 Veesai (~1.4 kg)`).
 
 ---
 
 ## 📁 File Structure
 
-/engine/
-  negotiation_engine.py
+Keep files organized inside these precise paths:
 
-/llm/
-  intent_classifier.py
-  dialogue_generator.py
-
-/models/
-  model.gguf
-
-/core/
-  controller.py
-
-main.py
-
----
-
-## 🔒 Strict Rules (CRITICAL)
-
-1. Buyer prices must ALWAYS increase (monotonic)
-2. Buyer must NEVER:
-   - generate random prices
-   - accept invalid deals
-3. Buyer must WALK AWAY when:
-   - seller is irrelevant repeatedly
-   - seller gives unrealistic prices
-   - negotiation is stuck
-4. No infinite loops
-5. No decimal prices
-
----
-
-## 🧠 Behavior Goals
-
-The NPC must feel:
-- Human-like
-- Adaptive
-- Emotionally responsive
-- Context-aware
+```
+/backend/
+  ├── api.py                    # FastAPI server exposing REST routes & /ws/negotiate WebSocket
+  ├── requirements.txt          # Backend package dependencies (fastapi, uvicorn, piper-tts, etc.)
+  │
+  ├── npc_engine/
+  │     ├── interface.py        # NPCSession orchestrator; manages persistence & level loaders
+  │     ├── AGENTS.md           # This instructions & context file
+  │     │
+  │     ├── core/
+  │     │     ├── controller.py    # Level-agnostic flow runner & early exit filters
+  │     │     ├── measurements.py  # Traditional Vijayanagara measurement snapping & conversions
+  │     │     ├── persistence.py   # Disk persistence loader & deal ledger records
+  │     │     └── rag.py           # Historical RAG retriever
+  │     │
+  │     ├── levels/level1_market/
+  │     │     ├── negotiation_engine.py  # Core 1200+ line deterministic state machine
+  │     │     ├── intent_classifier.py   # Regex & LLM fallback classifier
+  │     │     ├── input_interpreter.py   # Semantic price & signal extractor
+  │     │     ├── dialogue_generator.py  # LLM dialogue rephraser & template validation
+  │     │     ├── buyer_model.py         # NPC personality specs
+  │     │     └── item_model.py          # Spice price multipliers
+  │     │
+  │     ├── piper/              # Precompiled Piper TTS executable & DLLs (Local Offline Windows)
+  │     └── models/             # GGUF LLM and Piper ONNX voice models (git-ignored)
+  │
+/testing/
+  ├── system_integration_test.py  # Integration test asserting persistence, RAG, and capping
+  ├── websocket_client_test.py    # Simulated automated WebSocket Unity client (Event synchronized)
+  └── terminal_test.py            # Local developer CLI sandbox playground
+```
 
 ---
 
-## 🔥 Current Systems Implemented
+## 🔒 Strict Engineering Rules (DO NOT BREAK)
 
-- Deterministic negotiation logic
-- Personality system
-- Persuasion system
-- Suspicion system
-- Repetition detection
-- Stuck negotiation detection
-
----
-
-## 🚫 What NOT to Do
-
-- Do NOT convert system into chatbot
-- Do NOT move logic into LLM
-- Do NOT rewrite architecture
-- Do NOT modify unrelated files
+1. **Deterministic Logic Only**: The LLM must **never** decide prices, acceptance thresholds, or session terminations. The GGUF model only handles intent classification safety-nets and rephrasing templates.
+2. **Monotonic Concessions**: Buyer offers must only increase during the bargaining stage. Cautious concessions must clamp at or below the seller's active asking price.
+3. **No Immersion-Breaking Suffixes**: Always output spice weights using traditional dual-unit labels (e.g. `1 Seer (~280g)`) and currency in `varahas`. Never allow modern terms (like `dollars`, `rupees`, `kg`, `decimals` in final deals) to leak into dialogue templates.
+4. **Non-Blocking WS Event Loop**: Never execute long-running subprocesses (like `piper.exe`) synchronously within an async WebSocket connection thread. Always delegate CPU-bound tasks to `asyncio.to_thread`.
+5. **No Model Files in Git**: Always keep `backend/models/*.gguf` and `backend/models/*.onnx` securely under `.gitignore`.
 
 ---
 
-## ✅ How to Work on This Project
+## 🔥 Current Systems Implemented & Verified
 
-When making changes:
-
-1. Only modify relevant files
-2. Keep logic deterministic
-3. Preserve architecture separation
-4. Keep changes minimal and clean
-
----
-
-## 🎯 Definition of Done
-
-A change is complete when:
-- Code runs without errors
-- Behavior improves (not degrades)
-- No core rules are broken
-- Output feels more realistic
+* **Duplex WebSocket Endpoint**: Verified with [websocket_client_test.py](file:///g:/Users/chitr/Desktop/Capstone/AI-Enabled-Storytelling-VR/testing/websocket_client_test.py).
+* **Asynchronous Offline Piper TTS**: Compiles lossless speech in background threads without blocking WebSocket latency.
+* **Deterministic Concession Capping**: Clamps buyer concession calculations.
+* **Traditional Snapping & Exclusions**: Quantity parser excludes traditional weights from price extraction.
+* **Disk Session Persistence**: Serializes global respect, varahas, and levels dynamically.
+* **Historical Fact Sheet RAG**: Context-aware injection from 1500s chronicles.
 
 ---
 
-## 🧠 Important Notes
+## 🚀 Future Development Scope
 
-- This is a simulation, NOT a chatbot
-- LLM is used ONLY for:
-  - understanding input
-  - improving dialogue
-- All decisions must remain rule-based
-
----
-
-## 🚀 Future Scope
-
-- Emotion system
-- Memory system
-- Multi-NPC interactions
-- Unity integration
+If you are picking up work, consider these upcoming modules:
+* **Lip-Sync & Visemes Pipeline**: Exposing standard mouth blendshape maps (visemes) inside the WebSocket JSON alongside dialogue text to drive real-time facial mesh lip-sync in Unity.
+* **Player Bazaar Reputation Progression**: Expanding persistence so player reputation spreads across customers in subsequent bargaining turns.
+* **Caravan & Port Scarcity Events**: Fluctuating base market multipliers based on dynamic bazaar news notifications.

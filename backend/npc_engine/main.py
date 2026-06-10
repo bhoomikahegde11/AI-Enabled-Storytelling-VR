@@ -1,9 +1,10 @@
-from npc_engine.engine.buyer_model import Buyer
-from npc_engine.engine.item_model import Item
-from npc_engine.engine.negotiation_engine import NegotiationEngine
-from npc_engine.llm.dialogue_generator import generate_dialogue
+from npc_engine.levels.level1_market.buyer_model import Buyer
+from npc_engine.levels.level1_market.item_model import Item
+from npc_engine.levels.level1_market.negotiation_engine import NegotiationEngine
+from npc_engine.levels.level1_market.dialogue_generator import generate_dialogue
+from npc_engine.levels.level1_market.intent_classifier import classify_intent, extract_quantity_info
+from npc_engine.levels.level1_market.input_interpreter import extract_price
 from npc_engine.core.controller import Controller
-from npc_engine.engine.item_model import Item
 import random
 
 ITEMS = [
@@ -32,7 +33,13 @@ def run():
         print(f"(Desperation: {buyer.desperation}, Patience: {buyer.patience})\n")
 
         engine = NegotiationEngine(buyer, item, all_items=ITEMS)
-        controller = Controller(engine, generate_dialogue)
+        controller = Controller(
+            engine,
+            classify_intent_fn=classify_intent,
+            extract_quantity_info_fn=extract_quantity_info,
+            extract_price_fn=extract_price,
+            dialogue_fn=generate_dialogue
+        )
 
         response = controller.step(None)
         print(f"Buyer: {response['npc_text']}")

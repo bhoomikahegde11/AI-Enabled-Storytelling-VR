@@ -1,150 +1,187 @@
-﻿using System.Collections;
+using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
+
 public class SpiceIntroSequence : MonoBehaviour
 {
-    [Header("Subtitle UI")]
+    [Header("Audio")]
+    public AudioSource narratorAudioSource;
+
+    [Header("Narration Clips")]
+    public AudioClip intro1;
+    public AudioClip intro2;
+    public AudioClip intro3;
+    public AudioClip intro4;
+
+    public AudioClip pepperClip;
+    public AudioClip turmericClip;
+    public AudioClip cardamomClip;
+    public AudioClip cinnamonClip;
+
+    public AudioClip endingClip;
+    [Header("UI")]
     public CanvasGroup subtitleCanvas;
     public TMP_Text subtitleText;
 
-    [Header("Spice UI (World Space / OVR Overlay)")]
-    public CanvasGroup pepperUI;
-    public CanvasGroup turmericUI;
-    public CanvasGroup cardamomUI;
-    public CanvasGroup cinnamonUI;
+    [Header("Spice Info UI")]
+    public CanvasGroup spiceInfoCanvas;
+    public TMP_Text spiceNameText;
+    public TMP_Text spicePriceText;
 
-    [Header("DOF (Optional)")]
+    [Header("Camera / Focus")]
     public Volume globalVolume;
     private DepthOfField dof;
 
+    [Header("UI Positions")]
+    public Transform pepperTarget;
+    public Transform turmericTarget;
+    public Transform cardamomTarget;
+    public Transform cinnamonTarget;
+
+    [Header("UI Anchors")]
+    public Transform pepperUIAnchor;
+    public Transform turmericUIAnchor;
+    public Transform cardamomUIAnchor;
+    public Transform cinnamonUIAnchor;
+
+    [Header("Camera")]
+    public Camera mainCamera;
+
     private void Start()
     {
-        // Hide all spice UI initially
-        pepperUI.alpha = 0f;
-        turmericUI.alpha = 0f;
-        cardamomUI.alpha = 0f;
-        cinnamonUI.alpha = 0f;
-
-        // Hide subtitle canvas initially
-        subtitleCanvas.alpha = 0f;
-
         StartCoroutine(PlaySequence());
     }
 
     public IEnumerator PlaySequence()
     {
-        // Enable DOF if available
-        if (globalVolume != null && globalVolume.profile.TryGet(out dof))
+        if (globalVolume.profile.TryGet(out dof))
         {
             dof.active = true;
-            dof.mode.value = DepthOfFieldMode.Gaussian;
-            dof.gaussianStart.value = 4f;
-            dof.gaussianEnd.value = 7f;
-            dof.gaussianMaxRadius.value = 1f;
         }
 
         yield return FadeCanvas(subtitleCanvas, 1f, 1f);
 
         yield return ShowSubtitle(
             "Welcome, traveller. Before you stands the great bazaar of Hampi, where voices from distant lands mingle with the scent of spice and dust.",
-            5f
+            intro1
         );
 
         yield return ShowSubtitle(
             "Here, merchants gather with horses, silk, gems, and goods from distant kingdoms.",
-            4f
+            intro2
         );
 
         yield return ShowSubtitle(
             "But among all treasures of the market, few are as valuable as spices.",
-            3f
+            intro3
         );
 
         yield return ShowSubtitle(
             "The stall before you is yours.",
-            2.5f
+            intro4
         );
 
-        yield return ShowSpice(
-            pepperUI,
+        yield return FocusOnSpice(
+            pepperTarget,
             "Pepper",
-            "12 Gold Coins / Sack",
-            "Pepper is among the most sought-after goods in the market, prized by traders from distant lands."
+            "12 Varahas / Veesai",
+            "Pepper is among the most sought-after goods in the market, prized by traders from distant lands.",
+            pepperClip
         );
 
-        yield return ShowSpice(
-            turmericUI,
+        yield return FocusOnSpice(
+            turmericTarget,
             "Turmeric",
-            "5 Gold Coins / Sack",
-            "Turmeric is valued for its colour, flavour, and medicinal use."
+            "5 Varahas / Veesai",
+            "Turmeric is valued for its colour, flavour, and medicinal use.",
+            turmericClip
         );
 
-        yield return ShowSpice(
-            cardamomUI,
+        yield return FocusOnSpice(
+            cardamomTarget,
             "Cardamom",
-            "18 Gold Coins / Sack",
-            "Cardamom is rare and fragrant, often found in royal kitchens and temple offerings."
+            "18 Varahas / Veesai",
+            "Cardamom is rare and fragrant, often found in royal kitchens and temple offerings.",
+            cardamomClip
         );
 
-        yield return ShowSpice(
-            cinnamonUI,
+        yield return FocusOnSpice(
+            cinnamonTarget,
             "Cinnamon",
-            "20 Gold Coins / Sack",
-            "Cinnamon travels through long trade routes, making it one of the most precious goods in the market."
+            "20 varahas / veesai",
+            "Cinnamon travels through long trade routes, making it one of the most precious goods in the market.",
+            cinnamonClip
         );
 
         yield return ShowSubtitle(
             "Remember these goods well. Knowing their worth may decide the success of your trade.",
-            4f
+            endingClip
         );
 
-        yield return ShowSubtitle(
-            "And now... it seems your first customer approaches.",
-            3f
-        );
+        yield return new WaitForSeconds(1f);
 
-        yield return FadeCanvas(subtitleCanvas, 0f, 1f);
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.LoadNextScene();
+        }
+        else
+        {
+            Debug.LogWarning("GameManager.Instance is null. Cannot transition to next scene.");
+        }
     }
 
-    IEnumerator ShowSpice(CanvasGroup ui, string spiceName, string spicePrice, string narration)
+    IEnumerator FocusOnSpice(
+    Transform target,
+    string spiceName,
+    string spicePrice,
+    string narration,
+    AudioClip narrationClip)
     {
-        ui.alpha = 0f;
-        ui.gameObject.SetActive(true);
-
-        TMP_Text[] texts = ui.GetComponentsInChildren<TMP_Text>(true);
-
-        if (texts.Length >= 2)
+        // Move popup to current spice location
+        if (target != null)
         {
-            texts[0].text = spiceName;
-            texts[1].text = spicePrice;
+            spiceInfoCanvas.transform.position =
+                target.position;
         }
 
-        float timer = 0f;
-        float duration = 0.5f;
-
-        while (timer < duration)
+        if (dof != null)
         {
-            timer += Time.deltaTime;
-            ui.alpha = Mathf.Lerp(0f, 1f, timer / duration);
-            yield return null;
+            dof.focusDistance.value = 2f;
+            dof.gaussianStart.value = 1f;
+            dof.gaussianEnd.value = 3f;
         }
 
-        ui.alpha = 1f;
+        spiceNameText.text = spiceName;
+        spicePriceText.text = spicePrice;
 
-        yield return ShowSubtitle(narration, 3.5f);
+        yield return FadeCanvas(spiceInfoCanvas, 1f, 0.5f);
 
-        yield return new WaitForSeconds(0.5f);
+        yield return ShowSubtitle(narration, narrationClip);
 
-        yield return FadeCanvas(ui, 0f, 0.3f);
+        yield return new WaitForSeconds(1f);
+
+        yield return FadeCanvas(spiceInfoCanvas, 0f, 0.5f);
     }
 
-    IEnumerator ShowSubtitle(string message, float duration)
+    IEnumerator ShowSubtitle(string message, AudioClip clip)
     {
         subtitleText.text = message;
-        yield return new WaitForSeconds(duration);
+
+        if (clip != null && narratorAudioSource != null)
+        {
+            narratorAudioSource.clip = clip;
+            narratorAudioSource.Play();
+
+            yield return new WaitWhile(() => narratorAudioSource.isPlaying);
+        }
+        else
+        {
+            yield return new WaitForSeconds(3f);
+        }
     }
 
     IEnumerator FadeCanvas(CanvasGroup canvasGroup, float targetAlpha, float duration)

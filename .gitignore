@@ -1,31 +1,10 @@
-[Ll]ibrary/
-[Tt]emp/
-[Oo]bj/
-[Bb]uild/
-[Bb]uilds/
-[Ll]ogs/
-UserSettings/
-
-*.csproj
-*.unityproj
-*.sln
-*.suo
-*.tmp
-*.user
-*.userprefs
-.vsconfig
-.vs/
-/unity/StorytellingVR/Assets/_Recovery
-
-# Environment Variables
-.env
-backend/.env
-
 # Large Models
 backend/npc_engine/models/model.gguf
+backend/models/model.gguf
 *.gguf
 backend/models/en_US-lessac-medium.onnx
-unity/StorytellingVR/Assets/Fonts/LibertinusSerifDisplay-Regular SDF.asset
+unity/StorytellingVR/Assets/StreamingAssets/Whisper/*.bin
+
 /backend/.venv
 /backend/npc_engine/core/__pycache__
 /backend/npc_engine/levels/level1_market/__pycache__

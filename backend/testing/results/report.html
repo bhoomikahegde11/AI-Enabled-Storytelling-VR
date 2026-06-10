@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Vijayanagara NPC Conversation Benchmark Report</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h1, h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+        .summary-boxes {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .summary-box {
+            flex: 1;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+        }
+        .summary-box.pass {
+            background: #e8f8f5;
+            border-color: #a3e4d7;
+            color: #117864;
+        }
+        .summary-box.fail {
+            background: #fdf2e9;
+            border-color: #fadbd8;
+            color: #922b21;
+        }
+        .summary-val {
+            font-size: 32px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .pass {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .fail {
+            color: #c0392b;
+            font-weight: bold;
+        }
+        .failure-card {
+            background: #fdf2f2;
+            border-left: 5px solid #ec7063;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .failure-header {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .fail-badge {
+            background: #ec7063;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        pre {
+            background: #eaeded;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 5px 0;
+            font-size: 13px;
+            white-space: pre-wrap;
+        }
+        .no-failures {
+            background: #ebf5fb;
+            color: #2e86c1;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .more-failures {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vijayanagara NPC Conversation Pipeline Benchmark</h1>
+        <p>This report documents the performance, accuracy, and robust dialog outcomes of the Vijayanagara marketplace AI agent.</p>
+        
+        <div class="summary-boxes">
+            <div class="summary-box">
+                <div>Total Test Cases</div>
+                <div class="summary-val">2090</div>
+            </div>
+            <div class="summary-box pass">
+                <div>Passed Cases</div>
+                <div class="summary-val">1950</div>
+            </div>
+            <div class="summary-box fail">
+                <div>Failed Cases</div>
+                <div class="summary-val">140</div>
+            </div>
+            <div class="summary-box">
+                <div>Overall Accuracy</div>
+                <div class="summary-val">93.3%</div>
+            </div>
+        </div>
+        
+        <h2>Category Accuracy</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Total Cases</th>
+                    <th>Passed Cases</th>
+                    <th>Accuracy</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+        <tr>
+            <td><strong>PRICE</strong></td>
+            <td>329</td>
+            <td>329</td>
+            <td class="pass">100.0%</td>
+        </tr>
+        
+        <tr>
+            <td><strong>BUYER_BUDGET</strong></td>
+            <td>451</td>
+            <td>420</td>
+            <td class="pass">93.13%</td>
+        </tr>
+        
+        <tr>
+            <td><strong>QUANTITY</strong></td>
+            <td>176</td>
+            <td>176</td>
+            <td class="pass">100.0%</td>
+        </tr>
+        
+        <tr>
+            <td><strong>ACCEPTANCE</strong></td>
+            <td>91</td>
+            <td>91</td>
+            <td class="pass">100.0%</td>
+        </tr>
+        
+        <tr>
+            <td><strong>REJECTION</strong></td>
+            <td>108</td>
+            <td>72</td>
+            <td class="fail">66.67%</td>
+        </tr>
+        
+        <tr>
+            <td><strong>HISTORICAL_CONVERSATION</strong></td>
+            <td>160</td>
+            <td>140</td>
+            <td class="fail">87.5%</td>
+        </tr>
+        
+        <tr>
+            <td><strong>OUT_OF_WORLD</strong></td>
+            <td>140</td>
+            <td>140</td>
+            <td class="pass">100.0%</td>
+        </tr>
+        
+        <tr>
+            <td><strong>PROMPT_INJECTION</strong></td>
+            <td>90</td>
+            <td>81</td>
+            <td class="pass">90.0%</td>
+        </tr>
+        
+        <tr>
+            <td><strong>GIBBERISH</strong></td>
+            <td>112</td>
+            <td>112</td>
+            <td class="pass">100.0%</td>
+        </tr>
+        
+        <tr>
+            <td><strong>STT_CORRUPTION</strong></td>
+            <td>126</td>
+            <td>106</td>
+            <td class="fail">84.13%</td>
+        </tr>
+        
+        <tr>
+            <td><strong>MULTI_INTENT</strong></td>
+            <td>60</td>
+            <td>36</td>
+            <td class="fail">60.0%</td>
+        </tr>
+        
+        <tr>
+            <td><strong>ADVERSARIAL_PLAYER</strong></td>
+            <td>99</td>
+            <td>99</td>
+            <td class="pass">100.0%</td>
+        </tr>
+        
+        <tr>
+            <td><strong>NATURAL_SPEECH_VARIATION</strong></td>
+            <td>44</td>
+            <td>44</td>
+            <td class="pass">100.0%</td>
+        </tr>
+        
+        <tr>
+            <td><strong>INTERRUPTED_SPEECH</strong></td>
+            <td>104</td>
+            <td>104</td>
+            <td class="pass">100.0%</td>
+        </tr>
+        
+            </tbody>
+        </table>
+        
+        <h2>Latency Analysis</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Pipeline Stage</th>
+                    <th>Average Latency</th>
+                    <th>p50 (Median)</th>
+                    <th>p90</th>
+                    <th>p95</th>
+                    <th>Maximum Latency</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+        <tr>
+            <td><strong>TOTAL</strong></td>
+            <td>35.0 ms</td>
+            <td>35.29 ms</td>
+            <td>43.5 ms</td>
+            <td>45.25 ms</td>
+            <td>49.4 ms</td>
+        </tr>
+        
+        <tr>
+            <td><strong>STT</strong></td>
+            <td>5.0 ms</td>
+            <td>5.0 ms</td>
+            <td>5.0 ms</td>
+            <td>5.0 ms</td>
+            <td>5.0 ms</td>
+        </tr>
+        
+        <tr>
+            <td><strong>INTENT</strong></td>
+            <td>9.89 ms</td>
+            <td>9.83 ms</td>
+            <td>13.79 ms</td>
+            <td>14.4 ms</td>
+            <td>15.0 ms</td>
+        </tr>
+        
+        <tr>
+            <td><strong>LLM</strong></td>
+            <td>25.11 ms</td>
+            <td>25.37 ms</td>
+            <td>32.94 ms</td>
+            <td>33.97 ms</td>
+            <td>34.99 ms</td>
+        </tr>
+        
+        <tr>
+            <td><strong>TTS</strong></td>
+            <td>10.0 ms</td>
+            <td>10.0 ms</td>
+            <td>10.0 ms</td>
+            <td>10.0 ms</td>
+            <td>10.0 ms</td>
+        </tr>
+        
+            </tbody>
+        </table>
+        
+        <h2>Worst Failure Cases (Top 50)</h2>
+        <div class="failure-list">
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_271</strong> [BUYER_BUDGET] - "How many varahas from your side?"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'By the marketplace, How many varahas do you want for 4 Seers (~1.1kg) of pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_272</strong> [BUYER_BUDGET] - "How many varahas from your side? for this"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'With all my heart, How many varahas do you want for 4 Seers (~1.1kg) of pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_273</strong> [BUYER_BUDGET] - "How many varahas from your side? for the pepper"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'By the gods, For 4 Seers (~1.1kg) of your pepper, tell me your price.'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_274</strong> [BUYER_BUDGET] - "How many varahas from your side? for the clove"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Listen, friend, I am seeking 4 Seers (~1.1kg) of pepper. What price do you demand?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_275</strong> [BUYER_BUDGET] - "How many varahas from your side? for my spice"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'On my travels, I am seeking 4 Seers (~1.1kg) of pepper. What price do you demand?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_276</strong> [BUYER_BUDGET] - "so How many varahas from your side?"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'By the temple of Virupaksha, I am seeking 4 Seers (~1.1kg) of pepper. What price do you demand?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_277</strong> [BUYER_BUDGET] - "so How many varahas from your side? for this"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'In Hampi, I am seeking 4 Seers (~1.1kg) of pepper. What price do you demand?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_278</strong> [BUYER_BUDGET] - "so How many varahas from your side? for the pepper"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Under the sun, For 4 Seers (~1.1kg) of your pepper, tell me your price.'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_279</strong> [BUYER_BUDGET] - "so How many varahas from your side? for the clove"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'I say to you, My caravan requires 4 Seers (~1.1kg) of pepper. Name your offer.'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_280</strong> [BUYER_BUDGET] - "so How many varahas from your side? for my spice"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'By the royal court, For 4 Seers (~1.1kg) of your pepper, tell me your price.'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_281</strong> [BUYER_BUDGET] - "tell me How many varahas from your side?"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'My friend, I am seeking 4 Seers (~1.1kg) of pepper. What price do you demand?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_282</strong> [BUYER_BUDGET] - "tell me How many varahas from your side? for this"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'I swear, For 4 Seers (~1.1kg) of your pepper, tell me your price.'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_283</strong> [BUYER_BUDGET] - "tell me How many varahas from your side? for the pepper"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Behold, How many varahas do you want for 4 Seers (~1.1kg) of pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_284</strong> [BUYER_BUDGET] - "tell me How many varahas from your side? for the clove"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Truly, My caravan requires 4 Seers (~1.1kg) of pepper. Name your offer.'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_285</strong> [BUYER_BUDGET] - "tell me How many varahas from your side? for my spice"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'By the river, My caravan requires 4 Seers (~1.1kg) of pepper. Name your offer.'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_286</strong> [BUYER_BUDGET] - "tell me friend How many varahas from your side?"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hear me, How many varahas do you want for 4 Seers (~1.1kg) of pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_287</strong> [BUYER_BUDGET] - "tell me friend How many varahas from your side? for this"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'With respect, How many varahas do you want for 4 Seers (~1.1kg) of pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_288</strong> [BUYER_BUDGET] - "tell me friend How many varahas from your side? for the pepper"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'As a trader, For 4 Seers (~1.1kg) of your pepper, tell me your price.'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_289</strong> [BUYER_BUDGET] - "tell me friend How many varahas from your side? for the clove"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Let it be known, For 4 Seers (~1.1kg) of your pepper, tell me your price.'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_290</strong> [BUYER_BUDGET] - "tell me friend How many varahas from your side? for my spice"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'I tell you, How many varahas do you want for 4 Seers (~1.1kg) of pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_291</strong> [BUYER_BUDGET] - "brother How many varahas from your side?"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'By the marketplace, For 4 Seers (~1.1kg) of your pepper, tell me your price.'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_292</strong> [BUYER_BUDGET] - "brother How many varahas from your side? for this"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'With all my heart, How many varahas do you want for 4 Seers (~1.1kg) of pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_293</strong> [BUYER_BUDGET] - "brother How many varahas from your side? for the pepper"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'By the gods, My caravan requires 4 Seers (~1.1kg) of pepper. Name your offer.'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_294</strong> [BUYER_BUDGET] - "brother How many varahas from your side? for the clove"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Listen, friend, How many varahas do you want for 4 Seers (~1.1kg) of pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_295</strong> [BUYER_BUDGET] - "brother How many varahas from your side? for my spice"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'On my travels, My caravan requires 4 Seers (~1.1kg) of pepper. Name your offer.'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_296</strong> [BUYER_BUDGET] - "merchant How many varahas from your side?"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'By the temple of Virupaksha, How many varahas do you want for 4 Seers (~1.1kg) of pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_297</strong> [BUYER_BUDGET] - "merchant How many varahas from your side? for this"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'In Hampi, I am seeking 4 Seers (~1.1kg) of pepper. What price do you demand?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_298</strong> [BUYER_BUDGET] - "merchant How many varahas from your side? for the pepper"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Under the sun, I am seeking 4 Seers (~1.1kg) of pepper. What price do you demand?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_299</strong> [BUYER_BUDGET] - "merchant How many varahas from your side? for the clove"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'I say to you, I am seeking 4 Seers (~1.1kg) of pepper. What price do you demand?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>BUDGET_300</strong> [BUYER_BUDGET] - "merchant How many varahas from your side? for my spice"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "OFFER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'QUERY_BUYER_BUDGET'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'By the royal court, For 4 Seers (~1.1kg) of your pepper, tell me your price.'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: QUERY_BUYER_BUDGET, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_002</strong> [REJECTION] - "No trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_005</strong> [REJECTION] - "no, No trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_008</strong> [REJECTION] - "sorry, No trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_011</strong> [REJECTION] - "No way trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_014</strong> [REJECTION] - "no, No way trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_017</strong> [REJECTION] - "sorry, No way trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_020</strong> [REJECTION] - "Too low trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_023</strong> [REJECTION] - "no, Too low trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_026</strong> [REJECTION] - "sorry, Too low trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_029</strong> [REJECTION] - "Too expensive trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_032</strong> [REJECTION] - "no, Too expensive trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_035</strong> [REJECTION] - "sorry, Too expensive trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_038</strong> [REJECTION] - "Not enough trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_041</strong> [REJECTION] - "no, Not enough trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_044</strong> [REJECTION] - "sorry, Not enough trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_047</strong> [REJECTION] - "Increase your offer trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_050</strong> [REJECTION] - "no, Increase your offer trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_053</strong> [REJECTION] - "sorry, Increase your offer trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_056</strong> [REJECTION] - "You insult my spices trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            
+            <div class="failure-card">
+                <div class="failure-header">
+                    <span class="fail-badge">FAILED</span>
+                    <strong>REJECT_059</strong> [REJECTION] - "no, You insult my spices trader"
+                </div>
+                <div class="failure-body">
+                    <p><strong>Context:</strong> <pre>{
+  "last_system_action": "COUNTER",
+  "current_spice": "pepper",
+  "current_offer": 50,
+  "in_negotiation": true
+}</pre></p>
+                    <p><strong>Expected:</strong> {'intent': 'REJECT'}</p>
+                    <p><strong>Actual:</strong> {'intent': 'GENERAL_DIALOGUE', 'price': None, 'npc_text': 'Hampi is a city of wonders, but I am here on business. What is your final offer for this pepper?'}</p>
+                    <p><strong>Detail:</strong> Intent mismatch. Expected: REJECT, Actual: GENERAL_DIALOGUE</p>
+                </div>
+            </div>
+            <div class='more-failures'>and 90 more failures (see failures.json)</div>
+        </div>
+    </div>
+</body>
+</html>

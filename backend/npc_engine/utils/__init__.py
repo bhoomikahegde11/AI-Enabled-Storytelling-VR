@@ -1,0 +1,1 @@
+from npc_engine.utils.text_normalizer import normalize_text
