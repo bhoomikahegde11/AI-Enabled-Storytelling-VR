@@ -26,6 +26,7 @@ backend/npc_engine/models/model.gguf
 backend/models/model.gguf
 *.gguf
 backend/models/en_US-lessac-medium.onnx
+unity/StorytellingVR/Assets/StreamingAssets/Whisper/*.bin
 
 /backend/.venv
 /backend
