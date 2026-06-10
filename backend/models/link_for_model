@@ -1,1 +1,14 @@
-https://huggingface.co/rhasspy/piper-voices/tree/main/en/en_US/lessac
+================================================================================
+🧠 LOCAL LLM & TTS MODELS DOWNLOAD REGISTRY
+================================================================================
+
+1. Intent Classification / Dialogue GGUF Model (model.gguf):
+   - Recommended: Llama-3-8B-Instruct-Q4_K_M.gguf
+   - Download Link: https://huggingface.co/MaziyarPanahi/Meta-Llama-3-8B-Instruct-GGUF/tree/main?show_file_info=Meta-Llama-3-8B-Instruct.Q4_K_M.gguf
+   - Instructions: Place under backend/models/ and rename exactly to "model.gguf".
+
+2. Text-to-Speech ONNX voice assets (en_US-lessac-medium.onnx):
+   - Source Voice: en_US-lessac-medium
+   - Download Link: https://huggingface.co/rhasspy/piper-voices/tree/main/en/en_US/lessac
+   - Instructions: Place both .onnx and .onnx.json files under backend/models/.
+================================================================================

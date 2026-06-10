@@ -1,0 +1,188 @@
+using System.Collections;
+using UnityEngine;
+using UnityEngine.Networking;
+using System.Text;
+
+public class APIManager : MonoBehaviour
+{
+    // Editor:
+    // http://localhost:8000
+    //
+    // Quest:
+    // http://LAPTOP_WIFI_IP:8000
+    //
+    // Example:
+    // http://192.168.1.50:8000
+    [SerializeField]
+    private string backendUrl = "http://172.20.10.5:8000";
+    private string sessionId;
+
+    [System.Serializable]
+    private class BackendConfig
+    {
+        public string baseUrl;
+    }
+
+    private void Awake()
+    {
+        LoadConfig();
+    }
+
+    private void LoadConfig()
+    {
+        string path = System.IO.Path.Combine(Application.persistentDataPath, "backend_config.json");
+        if (System.IO.File.Exists(path))
+        {
+            try
+            {
+                string jsonText = System.IO.File.ReadAllText(path);
+                BackendConfig config = JsonUtility.FromJson<BackendConfig>(jsonText);
+                if (config != null && !string.IsNullOrEmpty(config.baseUrl))
+                {
+                    backendUrl = config.baseUrl;
+                    Debug.Log("[BACKEND CONFIG] Using URL: " + backendUrl);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError("[BACKEND CONFIG] Error reading config file: " + ex.Message);
+            }
+        }
+    }
+
+    private void Start()
+    {
+        Debug.Log("[BACKEND] Using URL: " + backendUrl);
+    }
+
+    [Header("Debug Logging")]
+    [SerializeField]
+    private bool showDebugLogs = true;
+
+    [Header("Current Buyer / Trade Data cached from Backend")]
+    public string currentBuyerName;
+    public string currentBuyerOrigin;
+    public string currentSpiceName;
+    public string currentSpiceQuantity;
+
+    // 🔥 START SESSION
+    public IEnumerator StartSession(System.Action<string, string, int, int, bool, TransactionSummary, string, CurrentTrade, int> callback)
+    {
+        string url = backendUrl + "/start";
+
+        UnityWebRequest request = new UnityWebRequest(url, "POST");
+        request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes("{}"));
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        if (showDebugLogs)
+        {
+            Debug.Log($"[PERF API] Request sent timestamp: {System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")}");
+        }
+
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            if (showDebugLogs)
+            {
+                Debug.Log($"[PERF API] Response received timestamp: {System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")}");
+            }
+
+            string raw = request.downloadHandler.text;
+            Debug.Log("START RAW RESPONSE: " + raw);
+
+            StartResponse response = JsonUtility.FromJson<StartResponse>(raw);
+
+            sessionId = response.session_id;
+            currentBuyerName = response.buyer_name;
+            currentBuyerOrigin = response.buyer_origin;
+            currentSpiceName = response.spice_name;
+            currentSpiceQuantity = response.spice_quantity;
+
+            if (showDebugLogs)
+            {
+                Debug.Log($"[REP API] {response.player_reputation}");
+            }
+
+            Debug.Log("Session ID: " + sessionId);
+            Debug.Log("NPC Text: " + response.npc_text);
+            Debug.Log("Audio URL: " + response.audio_url);
+            Debug.Log("Reputation: " + response.reputation);
+            Debug.Log("Total Varahas: " + response.total_varahas);
+            Debug.Log("Done: " + response.done);
+
+            callback(response.npc_text, response.audio_url, response.player_reputation, response.player_money, response.done, null, response.action, response.current_trade, response.reputation_delta);
+        }
+        else
+        {
+            Debug.LogError($"[BACKEND] Request failed.\nURL Attempted: {url}\nError: {request.error}");
+            callback(null, null, -1, -1, false, null, null, null, 0);
+        }
+    }
+
+    // 🔥 SEND PLAYER MESSAGE
+    public IEnumerator SendMessage(string playerInput, System.Action<string, string, int, int, bool, TransactionSummary, string, CurrentTrade, int> callback)
+    {
+        string url = backendUrl + "/step";
+
+        StepRequest data = new StepRequest
+        {
+            session_id = sessionId,
+            player_input = playerInput
+        };
+
+        string json = JsonUtility.ToJson(data);
+
+        UnityWebRequest request = new UnityWebRequest(url, "POST");
+        request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        if (showDebugLogs)
+        {
+            Debug.Log($"[PERF API] Request sent timestamp: {System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")}");
+        }
+
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            if (showDebugLogs)
+            {
+                Debug.Log($"[PERF API] Response received timestamp: {System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")}");
+            }
+
+            string raw = request.downloadHandler.text;
+            Debug.Log("STEP RAW RESPONSE: " + raw);
+
+            StepResponse response = JsonUtility.FromJson<StepResponse>(raw);
+
+            if (response != null && !string.IsNullOrEmpty(response.buyer_name))
+            {
+                currentBuyerName = response.buyer_name;
+                currentBuyerOrigin = response.buyer_origin;
+                currentSpiceName = response.spice_name;
+                currentSpiceQuantity = response.spice_quantity;
+            }
+
+            if (showDebugLogs)
+            {
+                Debug.Log($"[REP API] {response.player_reputation}");
+            }
+
+            Debug.Log("NPC Text: " + response.npc_text);
+            Debug.Log("Audio URL: " + response.audio_url);
+            Debug.Log("Reputation: " + response.reputation);
+            Debug.Log("Total Varahas: " + response.total_varahas);
+            Debug.Log("Done: " + response.done);
+
+            callback(response.npc_text, response.audio_url, response.player_reputation, response.player_money, response.done, response.transaction, response.action, response.current_trade, response.reputation_delta);
+        }
+        else
+        {
+            Debug.LogError($"[BACKEND] Request failed.\nURL Attempted: {url}\nError: {request.error}");
+            callback(null, null, -1, -1, false, null, null, null, 0);
+        }
+    }
+}
