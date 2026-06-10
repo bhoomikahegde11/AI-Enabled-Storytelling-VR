@@ -49,6 +49,7 @@ public class ChatManager : MonoBehaviour
     private bool isFirstReplyOfSession = false;
     private readonly NegotiationStateManager negotiationStateManager = new NegotiationStateManager();
     private readonly RuleBasedNPCBrain localNpcBrain = new RuleBasedNPCBrain();
+    private readonly DialogueTableResponseProvider dialogueTableResponseProvider = new DialogueTableResponseProvider();
     private readonly LocalLLMInterpreter localLlmInterpreter = new LocalLLMInterpreter();
     private readonly LocalLLMDialogueGenerator localLlmDialogueGenerator = new LocalLLMDialogueGenerator();
     private int localDialogueTurnId = 0;
@@ -322,7 +323,26 @@ public class ChatManager : MonoBehaviour
         string fallbackReplyText = brainResult.replyText;
         int dialogueTurnId = ++localDialogueTurnId;
 
-        brainResult.replyText = fallbackReplyText;
+        string tableReplyText = fallbackReplyText;
+        try
+        {
+            string resolvedReply = dialogueTableResponseProvider.GetReply(
+                localInput,
+                trade,
+                brainResult,
+                negotiationStateManager.CurrentRound);
+
+            if (!string.IsNullOrWhiteSpace(resolvedReply))
+            {
+                tableReplyText = resolvedReply;
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning("[DIALOGUE-TABLE] Provider failed, using rule reply. Reason: " + ex.Message);
+        }
+
+        brainResult.replyText = tableReplyText;
 
         localGameState.UpdateActiveTradeOffer(brainResult.updatedOffer);
         negotiationStateManager.SetLastOffer(brainResult.updatedOffer);
