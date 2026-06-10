@@ -8,6 +8,17 @@ public class CurrentTrade
 }
 
 [System.Serializable]
+public class MarketEventData
+{
+    public string name;
+    public string description;
+    public string affected_spice;
+    public float price_multiplier;
+    public float quantity_multiplier;
+    public string dialogue_trigger;
+}
+
+[System.Serializable]
 public class StartResponse
 {
     public string session_id;
@@ -20,6 +31,9 @@ public class StartResponse
     public int reputation;
     public int total_varahas;
     public int reputation_delta;
+    public float buyer_trust;
+    public float buyer_frustration;
+    public int out_of_world_count;
     
     // Backend-driven HUD data
     public int player_reputation;
@@ -29,6 +43,7 @@ public class StartResponse
     public string spice_name;
     public string spice_quantity;
     public CurrentTrade current_trade;
+    public MarketEventData active_event;
 }
 
 [System.Serializable]
@@ -57,6 +72,10 @@ public class StepResponse
     public int total_varahas;
     public int reputation_delta;
     public TransactionSummary transaction;
+    public float buyer_trust;
+    public float buyer_frustration;
+    public int out_of_world_count;
+    public MarketEventData active_event;
 
     // Backend-driven HUD data
     public int player_reputation;
