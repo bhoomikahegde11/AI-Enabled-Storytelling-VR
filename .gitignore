@@ -26,3 +26,12 @@ backend/npc_engine/models/model.gguf
 *.gguf
 backend/models/en_US-lessac-medium.onnx
 unity/StorytellingVR/Assets/Fonts/LibertinusSerifDisplay-Regular SDF.asset
+/backend/.venv
+/backend/npc_engine/core/__pycache__
+/backend/npc_engine/levels/level1_market/__pycache__
+/backend/npc_engine/utils/__pycache__
+/backend/npc_engine/llm/__pycache__
+/backend/stt/__pycache__
+/backend/npc_engine/__pycache__
+/backend/__pycache__
+backend/audio/a8f25397-54e6-4b4e-aaf6-afd616e92498.wav
