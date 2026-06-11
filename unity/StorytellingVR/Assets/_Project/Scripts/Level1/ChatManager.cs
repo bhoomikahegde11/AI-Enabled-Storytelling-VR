@@ -53,6 +53,8 @@ public class ChatManager : MonoBehaviour
     private readonly LocalLLMInterpreter localLlmInterpreter = new LocalLLMInterpreter();
     private readonly LocalLLMDialogueGenerator localLlmDialogueGenerator = new LocalLLMDialogueGenerator();
     private int localDialogueTurnId = 0;
+    private bool hasPlayedGreetingForCurrentCustomer = false;
+    private string lastCustomerCharacterId = string.Empty;
 
     // 🔥 Prevent STT spam / multiple requests
     private bool isProcessing = false;
@@ -98,6 +100,7 @@ public class ChatManager : MonoBehaviour
     {
         isProcessing = false; // Reset lock for new session
         isFirstReplyOfSession = true;
+        hasPlayedGreetingForCurrentCustomer = false;
         Level1GameState.Instance.PrepareForNewCustomer();
         negotiationStateManager.ResetState(0);
         if (api != null)
@@ -121,8 +124,30 @@ public class ChatManager : MonoBehaviour
                 api.currentSpiceQuantity = localSession.quantityLabel;
             }
 
+            string currentCustomerCharacterId = DialogueCharacterRegistry.NormalizeCharacterId(localSession.buyerName);
+            bool isRepeatCustomer = !string.IsNullOrWhiteSpace(currentCustomerCharacterId) &&
+                currentCustomerCharacterId == lastCustomerCharacterId;
+            string greetingReply = dialogueTableResponseProvider.GetGreeting(
+                Level1GameState.Instance.ActiveTrade,
+                Level1GameState.Instance.CurrentReputation,
+                isRepeatCustomer);
+
+            if (string.IsNullOrWhiteSpace(greetingReply))
+            {
+                greetingReply = localSession.greetingText;
+            }
+
+            if (!hasPlayedGreetingForCurrentCustomer)
+            {
+                hasPlayedGreetingForCurrentCustomer = true;
+                lastCustomerCharacterId = currentCustomerCharacterId;
+                Debug.Log("[GREETING] Triggered for customer: " + localSession.buyerName);
+                Debug.Log("[GREETING] Scenario: " + (isRepeatCustomer ? "RepeatCustomerGreeting" : "CustomerGreeting"));
+                Debug.Log("[GREETING] Reply: " + greetingReply);
+            }
+
             StartCoroutine(FirstReplyIntroRoutine(
-                localSession.greetingText,
+                greetingReply,
                 string.Empty,
                 Level1GameState.Instance.CurrentReputation,
                 Level1GameState.Instance.CurrentMoney,
@@ -139,6 +164,8 @@ public class ChatManager : MonoBehaviour
 
     public void ResetConversationUI(string statusText = "Customer approaching...")
     {
+        hasPlayedGreetingForCurrentCustomer = false;
+
         if (npcText != null)
         {
             npcText.text = statusText;
