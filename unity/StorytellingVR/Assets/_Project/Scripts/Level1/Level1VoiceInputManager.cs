@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using System.Collections;
+using System.IO;
 
 public class Level1VoiceInputManager : MonoBehaviour
 {
@@ -58,6 +59,7 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     [Tooltip("Sample rate to record audio at (optimal for Whisper: 16000).")]
     public int sampleRate = 16000;
+    public bool debugKeepLastRecording = true;
 
     [Header("System References")]
     [Tooltip("Reference to the ChatManager script.")]
@@ -75,6 +77,7 @@ public class Level1VoiceInputManager : MonoBehaviour
     private float startListeningTime;
     private bool isListening = false;
     private ISpeechToTextProvider speechProvider;
+    private const float ExtremelyLowPeakThreshold = 0.005f;
 
     public enum VoiceInputState
     {
@@ -183,11 +186,13 @@ public class Level1VoiceInputManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.V)
             || OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger))
         {
+            Debug.Log("[STT-QUEST] Input held/down: true");
             StartListening();
         }
         if (Input.GetKeyUp(KeyCode.V)
             || OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger))
         {
+            Debug.Log("[STT-QUEST] Input held/down: false");
             StopListening();
         }
 
@@ -241,9 +246,11 @@ public class Level1VoiceInputManager : MonoBehaviour
         if (isListening) return;
 
         Debug.Log("[STT] Recording started");
+        Debug.Log("[STT-QUEST] Recording started: true");
         isListening = true;
         currentState = VoiceInputState.Recording;
         startListeningTime = Time.time;
+        LogMicrophoneDiagnostics();
 
         // Trigger UI expansion and glow animation
         if (chatManager != null && chatManager.hudManager != null)
@@ -268,6 +275,8 @@ public class Level1VoiceInputManager : MonoBehaviour
 
         // Start Unity Microphone capture
         recordingClip = Microphone.Start(deviceName, false, maxRecordingDuration, sampleRate);
+        Debug.Log("[STT-QUEST] Microphone device: " + ResolveMicrophoneDeviceName());
+        Debug.Log("[STT-QUEST] Sample rate: " + sampleRate);
     }
 
     public void StopListening()
@@ -277,6 +286,8 @@ public class Level1VoiceInputManager : MonoBehaviour
         isListening = false;
         float duration = Time.time - startListeningTime;
         Debug.Log("[STT] Recording stopped");
+        Debug.Log("[STT-QUEST] Recording stopped: true");
+        Debug.Log("[STT-QUEST] Recording duration seconds: " + duration.ToString("0.000"));
 
         // Trigger UI scale-down and return to idle animation
         if (chatManager != null && chatManager.hudManager != null)
@@ -291,6 +302,8 @@ public class Level1VoiceInputManager : MonoBehaviour
         if (duration < 0.5f)
         {
             Debug.LogWarning("[STT] Recording too short (< 0.5s), ignored.");
+            Debug.LogWarning("[STT-QUEST] Recording too short");
+            Debug.LogWarning("[STT-QUEST] Failure reason: Recording duration below 0.5 seconds.");
             if (chatManager != null && chatManager.hudManager != null)
             {
                 chatManager.hudManager.EnablePlayerTyping();
@@ -303,6 +316,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         if (recordingClip == null)
         {
             Debug.LogError("[STT] Microphone recording failed (clip is null)!");
+            Debug.LogError("[STT-QUEST] Failure reason: Microphone recording clip is null.");
             if (chatManager != null && chatManager.hudManager != null)
             {
                 chatManager.hudManager.EnablePlayerTyping();
@@ -317,7 +331,16 @@ public class Level1VoiceInputManager : MonoBehaviour
         AudioClip trimmedClip = CreateTrimmedClip(recordingClip, duration);
         if (trimmedClip != null)
         {
+            LogAudioDiagnostics(trimmedClip);
+            if (debugKeepLastRecording)
+            {
+                SaveRecordingDebug(trimmedClip);
+            }
             StartCoroutine(TranscribeAudioRoutine(trimmedClip));
+        }
+        else
+        {
+            Debug.LogError("[STT-QUEST] Failure reason: Trimmed recording clip is null.");
         }
     }
 
@@ -344,6 +367,17 @@ public class Level1VoiceInputManager : MonoBehaviour
             speechProvider = useLocalSpeech ? new LocalSpeechProvider() : new BackendSpeechProvider(serverUrl);
         }
 
+        Debug.Log("[STT-QUEST] Provider: " + (speechProvider != null ? speechProvider.GetType().Name : "(null)"));
+        if (useLocalSpeech)
+        {
+            Debug.Log("[STT-QUEST] Whisper model path: " + LocalSpeechProvider.WhisperModelPath);
+            Debug.Log("[STT-QUEST] Whisper model exists: " + LocalSpeechProvider.WhisperModelExists);
+            if (!LocalSpeechProvider.WhisperModelExists)
+            {
+                Debug.LogError("[STT-QUEST] Failure reason: Whisper model missing at " + LocalSpeechProvider.WhisperModelPath);
+            }
+        }
+
         var task = speechProvider.Transcribe(clip);
         while (!task.IsCompleted)
         {
@@ -351,6 +385,21 @@ public class Level1VoiceInputManager : MonoBehaviour
         }
 
         string transcript = task.IsFaulted || task.Result == null ? "" : task.Result.Trim();
+        string rawTranscript = useLocalSpeech ? LocalSpeechProvider.LastRawTranscription : transcript;
+        string normalizedTranscript = !string.IsNullOrWhiteSpace(transcript) ? InputNormalizer.Normalize(transcript, false) : string.Empty;
+
+        Debug.Log("[STT-QUEST] Transcription raw: " + rawTranscript);
+        Debug.Log("[STT-QUEST] Transcription normalized: " + normalizedTranscript);
+
+        if (task.IsFaulted)
+        {
+            Debug.LogError("[STT-QUEST] Failure reason: " + task.Exception?.GetBaseException().Message);
+        }
+        else if (string.IsNullOrWhiteSpace(transcript))
+        {
+            string reason = useLocalSpeech ? LocalSpeechProvider.LastFailureReason : "Transcription returned empty text.";
+            Debug.LogWarning("[STT-QUEST] Failure reason: " + reason);
+        }
 
         if (IsValidTranscript(transcript))
         {
@@ -366,6 +415,10 @@ public class Level1VoiceInputManager : MonoBehaviour
         }
         else
         {
+            if (!string.IsNullOrWhiteSpace(transcript))
+            {
+                Debug.LogWarning("[STT-QUEST] Failure reason: Transcript rejected by validation.");
+            }
             currentState = VoiceInputState.Idle;
             SetVoiceStatusText(useLocalSpeech ? GetIdleText() : "Could not hear clearly. Please repeat.");
         }
@@ -375,6 +428,107 @@ public class Level1VoiceInputManager : MonoBehaviour
         {
             chatManager.hudManager.EnablePlayerTyping();
         }
+    }
+
+    private void LogMicrophoneDiagnostics()
+    {
+        bool hasPermission = Application.HasUserAuthorization(UserAuthorization.Microphone);
+        Debug.Log("[STT-QUEST] Microphone permission: " + hasPermission);
+        Debug.Log("[STT-QUEST] Microphone devices count: " + Microphone.devices.Length);
+        Debug.Log("[STT-QUEST] Microphone device: " + ResolveMicrophoneDeviceName());
+    }
+
+    private string ResolveMicrophoneDeviceName()
+    {
+        if (!string.IsNullOrWhiteSpace(deviceName))
+        {
+            return deviceName;
+        }
+
+        return Microphone.devices.Length > 0 ? Microphone.devices[0] : "(default/no device)";
+    }
+
+    private void LogAudioDiagnostics(AudioClip clip)
+    {
+        if (clip == null)
+        {
+            Debug.LogError("[STT-QUEST] Failure reason: Cannot inspect null clip.");
+            return;
+        }
+
+        float[] samples = new float[clip.samples * clip.channels];
+        clip.GetData(samples, 0);
+
+        float peak = 0f;
+        float sumSquares = 0f;
+        for (int i = 0; i < samples.Length; i++)
+        {
+            float abs = Mathf.Abs(samples[i]);
+            if (abs > peak)
+            {
+                peak = abs;
+            }
+            sumSquares += samples[i] * samples[i];
+        }
+
+        float rms = samples.Length > 0 ? Mathf.Sqrt(sumSquares / samples.Length) : 0f;
+        bool isSilence = peak < ExtremelyLowPeakThreshold;
+
+        Debug.Log("[STT-QUEST] Clip samples: " + clip.samples);
+        Debug.Log("[STT-QUEST] Peak amplitude: " + peak.ToString("0.000000"));
+        Debug.Log("[STT-QUEST] RMS amplitude: " + rms.ToString("0.000000"));
+        Debug.Log("[STT-QUEST] Is silence: " + isSilence);
+
+        if (peak < ExtremelyLowPeakThreshold)
+        {
+            Debug.LogWarning("[STT-QUEST] Audio too quiet");
+        }
+    }
+
+    private void SaveRecordingDebug(AudioClip clip)
+    {
+        try
+        {
+            string path = Path.Combine(Application.persistentDataPath, "last_stt_recording.wav");
+            File.WriteAllBytes(path, EncodeWav(clip));
+            Debug.Log("[STT-QUEST] Saved recording to: " + path);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning("[STT-QUEST] Failure reason: Failed to save recording. " + ex.Message);
+        }
+    }
+
+    private byte[] EncodeWav(AudioClip clip)
+    {
+        int sampleCount = clip.samples * clip.channels;
+        float[] samples = new float[sampleCount];
+        clip.GetData(samples, 0);
+
+        byte[] wavData = new byte[44 + sampleCount * 2];
+        System.Text.Encoding.ASCII.GetBytes("RIFF").CopyTo(wavData, 0);
+        System.BitConverter.GetBytes(36 + sampleCount * 2).CopyTo(wavData, 4);
+        System.Text.Encoding.ASCII.GetBytes("WAVE").CopyTo(wavData, 8);
+        System.Text.Encoding.ASCII.GetBytes("fmt ").CopyTo(wavData, 12);
+        System.BitConverter.GetBytes(16).CopyTo(wavData, 16);
+        System.BitConverter.GetBytes((short)1).CopyTo(wavData, 20);
+        System.BitConverter.GetBytes((short)clip.channels).CopyTo(wavData, 22);
+        System.BitConverter.GetBytes(clip.frequency).CopyTo(wavData, 24);
+        System.BitConverter.GetBytes(clip.frequency * clip.channels * 2).CopyTo(wavData, 28);
+        System.BitConverter.GetBytes((short)(clip.channels * 2)).CopyTo(wavData, 32);
+        System.BitConverter.GetBytes((short)16).CopyTo(wavData, 34);
+        System.Text.Encoding.ASCII.GetBytes("data").CopyTo(wavData, 36);
+        System.BitConverter.GetBytes(sampleCount * 2).CopyTo(wavData, 40);
+
+        int offset = 44;
+        for (int i = 0; i < sampleCount; i++)
+        {
+            short value = (short)Mathf.Clamp(samples[i] * 32767f, -32768f, 32767f);
+            System.BitConverter.GetBytes(value).CopyTo(wavData, offset);
+            offset += 2;
+        }
+
+        return wavData;
     }
 
     private bool IsValidTranscript(string transcript)
