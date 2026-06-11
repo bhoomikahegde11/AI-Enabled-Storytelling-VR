@@ -1,9 +1,27 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
+
+public class DialogueCharacterProfile
+{
+    public string characterId;
+    public string displayName;
+    public string buyerOrigin;
+    public string buyerPersonality;
+
+    public DialogueCharacterProfile(string characterId, string displayName, string buyerOrigin, string buyerPersonality)
+    {
+        this.characterId = characterId;
+        this.displayName = displayName;
+        this.buyerOrigin = buyerOrigin;
+        this.buyerPersonality = buyerPersonality;
+    }
+}
 
 public class DialogueCharacterRegistry
 {
     private readonly Dictionary<string, CharacterDialogueSet> characterSets;
+    private readonly List<DialogueCharacterProfile> supportedProfiles;
 
     public CharacterDialogueSet GenericSet { get; private set; }
 
@@ -12,6 +30,13 @@ public class DialogueCharacterRegistry
         CharacterDialogueSet abdulRahman = AbdulRahmanDialogue.Create();
         CharacterDialogueSet francisco = FranciscoDialogue.Create();
         CharacterDialogueSet lakshmiAmma = LakshmiAmmaDialogue.Create();
+
+        supportedProfiles = new List<DialogueCharacterProfile>
+        {
+            new DialogueCharacterProfile("abdul_rahman", "Abdul Rahman", "Arab Caravan Trader", "Friendly"),
+            new DialogueCharacterProfile("francisco_de_almeida", "Francisco de Almeida", "Portuguese Trade Agent", "Strict"),
+            new DialogueCharacterProfile("lakshmi_amma", "Lakshmi Amma", "Local Household Buyer", "Friendly")
+        };
 
         GenericSet = new CharacterDialogueSet(
             "generic",
@@ -38,6 +63,40 @@ public class DialogueCharacterRegistry
         return characterSets.TryGetValue(characterId, out result) ? result : null;
     }
 
+    public bool IsRegisteredCharacterId(string characterId)
+    {
+        return !string.IsNullOrWhiteSpace(characterId) && characterSets.ContainsKey(characterId);
+    }
+
+    public DialogueCharacterProfile GetRandomRegisteredCharacter()
+    {
+        if (supportedProfiles.Count == 0)
+        {
+            return null;
+        }
+
+        return supportedProfiles[UnityEngine.Random.Range(0, supportedProfiles.Count)];
+    }
+
+    public DialogueCharacterProfile GetRegisteredCharacterOrRandom(string characterId)
+    {
+        for (int i = 0; i < supportedProfiles.Count; i++)
+        {
+            if (string.Equals(supportedProfiles[i].characterId, characterId, StringComparison.OrdinalIgnoreCase))
+            {
+                return supportedProfiles[i];
+            }
+        }
+
+        return GetRandomRegisteredCharacter();
+    }
+
+    // Add new customer characters by creating a CharacterDialogueSet and registering it in DialogueCharacterRegistry.
+    public IReadOnlyList<DialogueCharacterProfile> GetSupportedCharacterProfiles()
+    {
+        return supportedProfiles;
+    }
+
     public static string NormalizeCharacterId(string buyerName)
     {
         string normalized = (buyerName ?? string.Empty).Trim().ToLowerInvariant();
@@ -48,7 +107,7 @@ public class DialogueCharacterRegistry
 
         if (normalized.Contains("francisco"))
         {
-            return "francisco";
+            return "francisco_de_almeida";
         }
 
         if (normalized.Contains("lakshmi"))

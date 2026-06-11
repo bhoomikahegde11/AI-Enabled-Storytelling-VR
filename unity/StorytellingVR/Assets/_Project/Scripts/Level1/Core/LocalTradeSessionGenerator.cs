@@ -20,18 +20,10 @@ public class LocalGeneratedTradeSession
 
 public class LocalTradeSessionGenerator
 {
-    private static readonly string[] BuyerNames =
-    {
-        "Abdul Rahman", "Francisco de Almeida", "Chinappa Naik", "Siddharth Chetti"
-    };
-    private static readonly string[] BuyerOrigins =
-    {
-        "Persian Spice Merchant", "Portuguese Trade Agent", "Vijayanagara Wholesale Buyer", "Local Retail Shopkeeper"
-    };
-    private static readonly string[] BuyerPersonalities = { "Friendly", "Strict", "Merchant", "Impatient" };
     private static readonly string[] WealthTypes = { "Low", "Medium", "High", "Very High" };
     private static readonly int[] QuantityOptions = { 280, 560, 1400, 2800 };
     private static readonly string[] SpiceKeys = { "pepper", "clove", "cinnamon", "cardamom" };
+    private readonly DialogueCharacterRegistry dialogueCharacterRegistry = new DialogueCharacterRegistry();
 
     public LocalGeneratedTradeSession Generate(MarketManager marketManager, LocalProfileData profile, MarketEventData activeEvent)
     {
@@ -42,14 +34,24 @@ public class LocalTradeSessionGenerator
         int quantity = PickQuantity(stock);
         int marketValue = marketManager.CalculateMarketValue(spiceKey, quantity, activeEvent);
 
-        string buyerName = BuyerNames[Random.Range(0, BuyerNames.Length)];
-        string buyerOrigin = BuyerOrigins[Random.Range(0, BuyerOrigins.Length)];
-        string buyerPersonality = BuyerPersonalities[Random.Range(0, BuyerPersonalities.Length)];
+        DialogueCharacterProfile selectedCharacter = dialogueCharacterRegistry.GetRandomRegisteredCharacter();
+        if (selectedCharacter == null || !dialogueCharacterRegistry.IsRegisteredCharacterId(selectedCharacter.characterId))
+        {
+            selectedCharacter = dialogueCharacterRegistry.GetRegisteredCharacterOrRandom(string.Empty);
+        }
+
+        string buyerName = selectedCharacter != null ? selectedCharacter.displayName : "Abdul Rahman";
+        string buyerOrigin = selectedCharacter != null ? selectedCharacter.buyerOrigin : "Arab Caravan Trader";
+        string buyerPersonality = selectedCharacter != null ? selectedCharacter.buyerPersonality : "Friendly";
         string wealthType = WealthTypes[Random.Range(0, WealthTypes.Length)];
         float startMultiplier = GetStartMultiplier(buyerPersonality, wealthType);
         float maxMultiplier = GetMaxMultiplier(buyerPersonality, wealthType);
         int startingOffer = Mathf.Max(1, Mathf.RoundToInt(marketValue * startMultiplier));
         int maxAcceptablePrice = Mathf.Max(startingOffer, Mathf.RoundToInt(marketValue * maxMultiplier));
+
+        Debug.Log("[CUSTOMER] Selected dialogue character: " + (selectedCharacter != null ? selectedCharacter.characterId : "abdul_rahman"));
+        Debug.Log("[CUSTOMER] Display name: " + buyerName);
+        Debug.Log("[CUSTOMER] Personality: " + buyerPersonality);
 
         return new LocalGeneratedTradeSession
         {

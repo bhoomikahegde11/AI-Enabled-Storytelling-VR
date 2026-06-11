@@ -42,6 +42,9 @@ public class ChatManager : MonoBehaviour
     public Level1HUDManager hudManager;
     public GameObject sendButtonObject;
 
+    [Header("Standalone NPC Audio")]
+    public bool enableNpcTTS = true;
+
     [Header("Debug Logging")]
     [SerializeField]
     private bool showDebugLogs = true;
@@ -397,6 +400,8 @@ public class ChatManager : MonoBehaviour
                 hudManager.UpdateCurrentTrade(currentTrade);
             }
         }
+
+        TrySpeakNpcReply(brainResult.replyText);
 
         if (useLocalLLMGeneration)
         {
@@ -765,6 +770,11 @@ public class ChatManager : MonoBehaviour
 
         TriggerSubtitleDisplay(bName, text);
 
+        if (useLocalSessionGeneration || useLocalNpcBrain)
+        {
+            TrySpeakNpcReply(text);
+        }
+
         // 4. Trigger speech audio playback
         if (audioManager != null && !string.IsNullOrEmpty(audioUrl))
         {
@@ -774,6 +784,31 @@ public class ChatManager : MonoBehaviour
 
         // 5. Unlock conversation inputs
         EnableConversationUI();
+    }
+
+    private void TrySpeakNpcReply(string replyText)
+    {
+        if (!enableNpcTTS)
+        {
+            Debug.Log("[TTS] Skipped: NPC TTS disabled");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(replyText))
+        {
+            Debug.Log("[TTS] Skipped: empty NPC reply");
+            return;
+        }
+
+        Debug.Log("[TTS] Speaking NPC reply: " + replyText);
+
+        if (audioManager == null)
+        {
+            Debug.LogWarning("[TTS] Skipped: AudioManager missing");
+            return;
+        }
+
+        audioManager.TrySpeakText(replyText);
     }
 
     private Coroutine subtitleHideCoroutine;
