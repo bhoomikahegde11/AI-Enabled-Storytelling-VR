@@ -127,7 +127,7 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 40321876}
+  - component: {fileID: 40321878}
   - component: {fileID: 40321875}
   - component: {fileID: 40321877}
   m_Layer: 0
@@ -154,22 +154,7 @@ MonoBehaviour:
   - TraderIntoScene
   - Transcation_Tutorial
   - CoinScene
-  - MainScene1_PreVRBackup
-  fader: {fileID: 1819468858}--- !u!4 &40321876
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 40321874}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -10.55946, y: -0, z: 1.68959}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  fader: {fileID: 1819468858}
 --- !u!114 &40321877
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -182,6 +167,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 229bf613f564df640855a5e3ba168129, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SceneSkipTester
+--- !u!4 &40321878
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 40321874}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1075799399
 GameObject:
   m_ObjectHideFlags: 0
@@ -594,7 +594,7 @@ MonoBehaviour:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
+  - {fileID: 40321878}
   - {fileID: 1305362443}
-  - {fileID: 40321876}
   - {fileID: 1819468857}
   - {fileID: 1075799402}
