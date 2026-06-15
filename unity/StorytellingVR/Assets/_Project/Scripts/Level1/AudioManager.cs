@@ -5,6 +5,7 @@ using UnityEngine.Networking;
 public class AudioManager : MonoBehaviour
 {
     public AudioSource audioSource;
+    public UnityEngine.MonoBehaviour localNpcTtsProvider;
 
     private void Awake()
     {
@@ -15,6 +16,36 @@ public class AudioManager : MonoBehaviour
             {
                 Debug.LogWarning("[AudioManager] No AudioSource assigned! Falling back to self.");
                 audioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+
+        if (localNpcTtsProvider == null)
+        {
+            localNpcTtsProvider = GetComponent<MonoBehaviour>();
+            if (!(localNpcTtsProvider is INpcTtsProvider))
+            {
+                MonoBehaviour[] behaviours = GetComponents<MonoBehaviour>();
+                for (int i = 0; i < behaviours.Length; i++)
+                {
+                    if (behaviours[i] is INpcTtsProvider)
+                    {
+                        localNpcTtsProvider = behaviours[i];
+                        break;
+                    }
+                }
+            }
+
+            if (localNpcTtsProvider == null || !(localNpcTtsProvider is INpcTtsProvider))
+            {
+                MonoBehaviour[] sceneBehaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                for (int i = 0; i < sceneBehaviours.Length; i++)
+                {
+                    if (sceneBehaviours[i] is INpcTtsProvider)
+                    {
+                        localNpcTtsProvider = sceneBehaviours[i];
+                        break;
+                    }
+                }
             }
         }
     }
@@ -36,6 +67,39 @@ public class AudioManager : MonoBehaviour
         StopAllCoroutines();
 
         StartCoroutine(DownloadAndPlayAudioRoutine(url));
+    }
+
+    public bool TrySpeakText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            Debug.LogWarning("[TTS] Skipped: empty NPC reply");
+            return false;
+        }
+
+        if (localNpcTtsProvider == null)
+        {
+            Debug.LogWarning("[TTS] No local TTS provider assigned");
+            return false;
+        }
+
+        INpcTtsProvider provider = localNpcTtsProvider as INpcTtsProvider;
+        if (provider == null)
+        {
+            Debug.LogWarning("[TTS] Failed reason: assigned provider does not implement INpcTtsProvider");
+            return false;
+        }
+
+        try
+        {
+            provider.Speak(text);
+            return true;
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning("[TTS] Failed reason: " + ex.Message);
+            return false;
+        }
     }
 
     private IEnumerator DownloadAndPlayAudioRoutine(string url)
@@ -115,7 +179,7 @@ public class AudioManager : MonoBehaviour
 
     private Animator GetNPCAnimator()
     {
-        MarketplaceManager mm = FindObjectOfType<MarketplaceManager>();
+        MarketplaceManager mm = FindFirstObjectByType<MarketplaceManager>();
         if (mm != null && mm.buyerNPC != null)
         {
             return mm.buyerNPC.GetComponent<Animator>() ?? mm.buyerNPC.GetComponentInChildren<Animator>();

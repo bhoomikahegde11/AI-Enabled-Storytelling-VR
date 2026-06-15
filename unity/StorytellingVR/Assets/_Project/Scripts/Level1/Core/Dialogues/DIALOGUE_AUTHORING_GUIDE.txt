@@ -1,0 +1,425 @@
+==================================================
+LEVEL 1 DIALOGUE AUTHORING GUIDE
+==================================================
+
+This is the standalone VR dialogue system.
+
+Architecture:
+
+Player Voice
+↓
+STT
+↓
+InputNormalizer
+↓
+NegotiationStateManager
+↓
+RuleBasedNPCBrain
+↓
+DialogueTableResponseProvider
+↓
+Character Dialogue File
+↓
+Subtitle/TTS
+
+Important:
+RuleBasedNPCBrain decides gameplay.
+Dialogue files only decide wording.
+
+Never change:
+- prices
+- accepted deals
+- counters
+- reputation values
+- economy
+
+inside dialogue files.
+
+==================================================
+FOLDER STRUCTURE
+==================================================
+
+Core/Dialogues/
+
+DialogueScenario.cs
+- list of all possible situations
+
+DialogueBuckets.cs
+- reputation/patience/desperation/round/personality categories
+
+DialogueLine.cs
+- one dialogue entry
+
+CharacterDialogueSet.cs
+- stores one character's lines
+
+DialogueCharacterRegistry.cs
+- registers available characters
+
+Characters/
+- each NPC gets one file
+
+Examples:
+Characters/AbdulRahmanDialogue.cs
+Characters/FranciscoDialogue.cs
+Characters/LakshmiAmmaDialogue.cs
+
+==================================================
+ADDING MORE LINES TO A CHARACTER
+==================================================
+
+The current character files use `new DialogueLine(...)` entries inside the
+character's `Create()` method. Add more lines by appending new templates to the
+same scenario or by adding another `DialogueLine` for that scenario.
+
+Example:
+
+Find:
+
+new DialogueLine(DialogueScenario.SellerPriceTooHigh, new[]
+{
+    "Your line here"
+}, "character_id")
+
+Add more:
+
+new DialogueLine(DialogueScenario.SellerPriceTooHigh, new[]
+{
+    "{offeredPrice} {currency} is too much, merchant.",
+    "For {spiceName}, I can only offer {counterPrice} {currency}.",
+    "Meet me closer to {counterPrice} {currency} and we have a deal."
+}, "character_id")
+
+The system randomly chooses matching lines.
+
+You can also add a second `DialogueLine` for the same scenario if you want
+different bucket-specific behavior.
+
+==================================================
+ADDING CONDITION-SPECIFIC DIALOGUE
+==================================================
+
+Dialogue can depend on:
+
+Player reputation:
+Low
+Neutral
+High
+
+NPC patience:
+Low
+Medium
+High
+
+NPC desperation:
+Low
+Medium
+High
+
+Negotiation round:
+First
+Middle
+Final
+
+NPC personality:
+Friendly
+Normal
+Strict
+Impatient
+
+Examples:
+
+High reputation:
+
+new DialogueLine(
+    DialogueScenario.BuyerCounterMiddle,
+    new[]
+    {
+        "You have always traded fairly. I can offer {counterPrice} {currency}."
+    },
+    "character_id",
+    reputationBucket: PlayerReputationBucket.High)
+
+Low patience:
+
+new DialogueLine(
+    DialogueScenario.BuyerHoldsFirm,
+    new[]
+    {
+        "Enough bargaining. {counterPrice} {currency} is my final price."
+    },
+    "character_id",
+    patienceBucket: NpcPatienceBucket.Low)
+
+You may combine multiple buckets in a single line if you want highly specific
+matches. The provider checks more specific character matches before broader
+fallbacks.
+
+==================================================
+ADDING A NEW CHARACTER
+==================================================
+
+Step 1:
+Create:
+
+Characters/NewCharacterDialogue.cs
+
+Template:
+
+public static class NewCharacterDialogue
+{
+    public static CharacterDialogueSet Create()
+    {
+        return new CharacterDialogueSet(
+            "new_character_id",
+            "Character Display Name",
+            NpcPersonalityBucket.Friendly,
+            new List<DialogueLine>
+            {
+                new DialogueLine(DialogueScenario.CustomerGreeting, new[]
+                {
+                    "Greeting line."
+                }, "new_character_id"),
+
+                new DialogueLine(DialogueScenario.SellerPriceTooHigh, new[]
+                {
+                    "{offeredPrice} {currency} is high. I offer {counterPrice}."
+                }, "new_character_id"),
+
+                new DialogueLine(DialogueScenario.Unknown, new[]
+                {
+                    "{ruleReply}"
+                }, "new_character_id")
+            });
+    }
+}
+
+Step 2:
+Register in:
+
+DialogueCharacterRegistry.cs
+
+Add the new profile and register the new set.
+
+Example:
+
+CharacterDialogueSet newCharacter = NewCharacterDialogue.Create();
+
+supportedProfiles.Add(new DialogueCharacterProfile(
+    "new_character_id",
+    "Character Display Name",
+    "Character Origin",
+    "Friendly"));
+
+characterSets.Add(newCharacter.characterId, newCharacter);
+
+Step 3:
+Customer generator automatically includes registered dialogue characters.
+
+==================================================
+SCENARIO MEANINGS
+==================================================
+
+CustomerGreeting:
+NPC arrives.
+
+RepeatCustomerGreeting:
+Returning customer.
+
+AskWhatBuyerWants:
+Player asks what spice or quantity buyer wants.
+
+AskBuyerBudget:
+Player asks buyer price.
+
+AskQuantity:
+Player asks quantity.
+
+SellerPriceTooHigh:
+Player is seller and asks too much money.
+
+Example:
+Player: "I sell for 100"
+Buyer wanted around 70.
+
+Correct:
+"100 is expensive. I offer 70."
+
+Wrong:
+"100 is too low."
+
+SellerPriceSlightlyHigh:
+Player price is high but close.
+
+SellerPriceAccepted:
+Buyer accepts seller price.
+
+SellerPriceBelowExpected:
+Seller offered a very cheap deal.
+
+BuyerCounterFirst:
+First negotiation counter.
+
+BuyerCounterMiddle:
+Middle bargaining.
+
+BuyerCounterFinal:
+Final offer.
+
+BuyerHoldsFirm:
+NPC refuses to move further.
+
+PlayerAcceptedDeal:
+Trade completed.
+
+PlayerRejectedBuyerOffer:
+Player refuses.
+
+HistoryQuestion:
+Historical or cultural questions.
+
+SocialGreeting:
+Hello or who-are-you talk.
+
+OffTopic:
+Anything unrelated.
+
+UnclearSpeech:
+STT failed or unclear input.
+
+TransactionSuccess:
+Successful ending.
+
+TransactionFailure:
+Failed negotiation.
+
+TimePressure:
+Low time or patience.
+
+Unknown:
+Fallback.
+
+==================================================
+PLACEHOLDERS
+==================================================
+
+{buyerName}
+NPC name
+
+{characterName}
+Dialogue character name
+
+{spiceName}
+Current spice
+
+{quantityLabel}
+Amount being traded
+
+{offeredPrice}
+Seller or player price
+
+{counterPrice}
+Buyer counter
+
+{finalPrice}
+Deal price
+
+{currentBuyerOffer}
+Current buyer offer
+
+{minimumPrice}
+Lowest acceptable value
+
+{currency}
+Usually Varahas
+
+{round}
+Negotiation round
+
+{reputation}
+Player reputation value used for bucketing
+
+{patience}
+NPC patience value used for bucketing
+
+{desperation}
+NPC desperation value used for bucketing
+
+{ruleReply}
+Safe fallback from RuleBasedNPCBrain
+
+Always prefer placeholders over hardcoded numbers.
+
+==================================================
+CHARACTER PERSONALITY GUIDE
+==================================================
+
+Abdul Rahman:
+Friendly Arab trader
+Patient
+Respectful
+Uses:
+- caravans
+- trade routes
+- fairness
+
+Francisco de Almeida:
+Portuguese merchant
+Direct
+Profit focused
+Uses:
+- ships
+- ports
+- cargo
+
+Lakshmi Amma:
+Local buyer
+Warm
+Practical
+Careful with money
+Uses:
+- household
+- cooking
+- festivals
+
+==================================================
+STYLE RULES
+==================================================
+
+VR dialogue should be:
+
+GOOD:
+- 1 sentence preferred
+- max 2 sentences
+- natural speech
+- historically flavored
+- easy to understand
+
+BAD:
+- long paragraphs
+- modern slang
+- changing prices manually
+- inventing numbers
+- changing decisions
+
+Good:
+"That is costly, merchant. I can offer {counterPrice} {currency}."
+
+Bad:
+"I offer 50 varahas."
+
+Reason:
+Always use placeholders because the rule engine controls values.
+
+==================================================
+FINAL RULE
+==================================================
+
+If unsure:
+use {ruleReply}
+
+Gameplay correctness is more important than fancy dialogue.
+
+==================================================
+
+End of guide.

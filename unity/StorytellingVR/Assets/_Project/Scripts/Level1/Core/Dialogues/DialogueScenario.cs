@@ -1,0 +1,26 @@
+public enum DialogueScenario
+{
+    CustomerGreeting,
+    RepeatCustomerGreeting,
+    AskWhatBuyerWants,
+    AskBuyerBudget,
+    AskQuantity,
+    SellerPriceTooHigh,
+    SellerPriceSlightlyHigh,
+    SellerPriceAccepted,
+    SellerPriceBelowExpected,
+    BuyerCounterFirst,
+    BuyerCounterMiddle,
+    BuyerCounterFinal,
+    BuyerHoldsFirm,
+    PlayerAcceptedDeal,
+    PlayerRejectedBuyerOffer,
+    HistoryQuestion,
+    SocialGreeting,
+    OffTopic,
+    UnclearSpeech,
+    TransactionSuccess,
+    TransactionFailure,
+    TimePressure,
+    Unknown
+}
