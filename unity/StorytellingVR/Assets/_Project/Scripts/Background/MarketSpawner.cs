@@ -11,6 +11,8 @@ public class MarketSpawner : MonoBehaviour
     public Transform leftTarget;
     public Transform rightTarget;
 
+    private GameObject currentNPC;
+
     void Start()
     {
         StartCoroutine(SpawnLoop());
@@ -20,11 +22,11 @@ public class MarketSpawner : MonoBehaviour
     {
         while (true)
         {
-            SpawnNPC();
-
-            yield return new WaitForSeconds(
-                Random.Range(3f, 8f)
-            );
+            if(currentNPC == null)
+            {
+                SpawnNPC();
+            }
+            yield return new WaitForSeconds(10f);
         }
     }
 
@@ -38,14 +40,9 @@ public class MarketSpawner : MonoBehaviour
         Transform target =
             fromLeft ? rightTarget : leftTarget;
 
-        GameObject npc =
-            Instantiate(
-                npcPrefab,
-                spawn.position,
-                Quaternion.identity
-            );
+        currentNPC = Instantiate(npcPrefab, spawn.position, Quaternion.identity);
 
-        npc.GetComponent<NPCWalker>()
+        currentNPC.GetComponent<NPCWalker>()
             .Initialize(target.position);
     }
 }
