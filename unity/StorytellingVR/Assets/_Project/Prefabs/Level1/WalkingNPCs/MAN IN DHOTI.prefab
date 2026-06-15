@@ -72,6 +72,10 @@ PrefabInstance:
       propertyPath: m_Controller
       value: 
       objectReference: {fileID: 9100000, guid: 23dccb7e643d31742850cda57606aca0, type: 2}
+    - target: {fileID: 5866666021909216657, guid: 890759c6ff2fb184ea1a8888989ca6dc, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -97,3 +101,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d0865aa8f9e69d45becb73317afb770, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NPCWalker
+  moveSpeed: 1.5
+  turnSpeed: 5
