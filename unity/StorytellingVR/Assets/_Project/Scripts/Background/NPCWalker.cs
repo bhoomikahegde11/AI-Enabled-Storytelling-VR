@@ -3,29 +3,46 @@ using UnityEngine;
 public class NPCWalker : MonoBehaviour
 {
     private Vector3 target;
-    private float speed = 1.5f;
+
+    [SerializeField] private float moveSpeed = 0.85f;
+    [SerializeField] private float turnSpeed = 5f;
+
+    private Animator animator;
 
     public void Initialize(Vector3 destination)
     {
         target = destination;
+    }
 
-        Vector3 lookPos = target;
-        lookPos.y = transform.position.y;
+    void Start()
+    {
+        animator = GetComponent<Animator>();
 
-        transform.LookAt(lookPos);
+        if (animator != null)
+        {
+            animator.applyRootMotion = false;
+            animator.SetFloat("Speed", 1f);
+        }
     }
 
     void Update()
     {
-        transform.position = Vector3.MoveTowards(
-            transform.position,
-            target,
-            speed * Time.deltaTime
-        );
+        Vector3 direction = target - transform.position;
+        direction.y = 0f;
 
-        if (Vector3.Distance(transform.position, target) < 0.2f)
+        if (direction.magnitude < 0.2f)
         {
             Destroy(gameObject);
+            return;
         }
+
+        Quaternion targetRotation = Quaternion.LookRotation(direction);
+        transform.rotation = Quaternion.Slerp(
+            transform.rotation,
+            targetRotation,
+            turnSpeed * Time.deltaTime
+        );
+
+        transform.position += transform.forward * moveSpeed * Time.deltaTime;
     }
 }
