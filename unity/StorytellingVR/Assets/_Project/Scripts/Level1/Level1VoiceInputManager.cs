@@ -17,6 +17,8 @@ public class Level1VoiceInputManager : MonoBehaviour
     [Tooltip("FastAPI endpoint URL for Whisper transcription.")]
     public string serverUrl = "http://172.20.10.5:8000/stt";
     public bool useLocalSpeech = false;
+    [Tooltip("Optional provider component implementing ISpeechToTextProvider, such as VoskSpeechProvider. Overrides backend/local selection when assigned.")]
+    public MonoBehaviour speechProviderOverride;
 
     [System.Serializable]
     private class BackendConfig
@@ -169,7 +171,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         // Set initial status text
         SetVoiceStatusText(GetIdleText());
         currentState = VoiceInputState.Idle;
-        speechProvider = useLocalSpeech ? new LocalSpeechProvider() : new BackendSpeechProvider(serverUrl);
+        speechProvider = ResolveSpeechProvider();
 
         Debug.Log("[BACKEND] Using URL: " + serverUrl);
     }
@@ -362,13 +364,11 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     private IEnumerator TranscribeAudioRoutine(AudioClip clip)
     {
-        if (speechProvider == null)
-        {
-            speechProvider = useLocalSpeech ? new LocalSpeechProvider() : new BackendSpeechProvider(serverUrl);
-        }
+        speechProvider = ResolveSpeechProvider();
 
         Debug.Log("[STT-QUEST] Provider: " + (speechProvider != null ? speechProvider.GetType().Name : "(null)"));
-        if (useLocalSpeech)
+        bool usingWhisperProvider = speechProvider is LocalSpeechProvider;
+        if (usingWhisperProvider)
         {
             Debug.Log("[STT-QUEST] Whisper model path: " + LocalSpeechProvider.WhisperModelPath);
             Debug.Log("[STT-QUEST] Whisper model exists: " + LocalSpeechProvider.WhisperModelExists);
@@ -385,7 +385,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         }
 
         string transcript = task.IsFaulted || task.Result == null ? "" : task.Result.Trim();
-        string rawTranscript = useLocalSpeech ? LocalSpeechProvider.LastRawTranscription : transcript;
+        string rawTranscript = usingWhisperProvider ? LocalSpeechProvider.LastRawTranscription : transcript;
         string normalizedTranscript = !string.IsNullOrWhiteSpace(transcript) ? InputNormalizer.Normalize(transcript, false) : string.Empty;
 
         Debug.Log("[STT-QUEST] Transcription raw: " + rawTranscript);
@@ -397,7 +397,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         }
         else if (string.IsNullOrWhiteSpace(transcript))
         {
-            string reason = useLocalSpeech ? LocalSpeechProvider.LastFailureReason : "Transcription returned empty text.";
+            string reason = usingWhisperProvider ? LocalSpeechProvider.LastFailureReason : "Transcription returned empty text.";
             Debug.LogWarning("[STT-QUEST] Failure reason: " + reason);
         }
 
@@ -420,7 +420,7 @@ public class Level1VoiceInputManager : MonoBehaviour
                 Debug.LogWarning("[STT-QUEST] Failure reason: Transcript rejected by validation.");
             }
             currentState = VoiceInputState.Idle;
-            SetVoiceStatusText(useLocalSpeech ? GetIdleText() : "Could not hear clearly. Please repeat.");
+            SetVoiceStatusText((speechProviderOverride != null || usingWhisperProvider) ? GetIdleText() : "Could not hear clearly. Please repeat.");
         }
 
         // Re-enable player typing after STT processes
@@ -564,5 +564,21 @@ public class Level1VoiceInputManager : MonoBehaviour
         }
 
         return true;
+    }
+
+    private ISpeechToTextProvider ResolveSpeechProvider()
+    {
+        if (speechProviderOverride != null)
+        {
+            ISpeechToTextProvider overrideProvider = speechProviderOverride as ISpeechToTextProvider;
+            if (overrideProvider != null)
+            {
+                return overrideProvider;
+            }
+
+            Debug.LogWarning("[STT] Assigned speechProviderOverride does not implement ISpeechToTextProvider. Falling back to existing selection.");
+        }
+
+        return useLocalSpeech ? new LocalSpeechProvider() : new BackendSpeechProvider(serverUrl);
     }
 }

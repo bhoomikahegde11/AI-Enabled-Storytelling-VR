@@ -36,6 +36,8 @@ public static class InputNormalizer
             return string.Empty;
         }
 
+        Debug.Log("[INPUT-NORMALIZER] Raw: " + input);
+
         string text = input.Trim().ToLowerInvariant();
         text = text
             .Replace("?", " ")
@@ -119,6 +121,10 @@ public static class InputNormalizer
             .Replace("rs.", " varaha ")
             .Replace("rs", " varaha ")
             .Replace("my friend", " ")
+            .Replace("are eager for", "i give")
+            .Replace("are eager", "i give")
+            .Replace("a eager for", "i give")
+            .Replace("a eager", "i give")
             .Replace("okay then", "okay")
             .Replace("all right", "okay");
 
@@ -140,7 +146,33 @@ public static class InputNormalizer
         }
 
         string[] words = cleaned.ToString().Split((char[])null, System.StringSplitOptions.RemoveEmptyEntries);
-        StringBuilder normalized = new StringBuilder(cleaned.Length);
+        string wordNumberNormalized = NormalizeWordNumbers(words, awaitingPrice);
+        Debug.Log("[INPUT-NORMALIZER] Word-number normalized: " + wordNumberNormalized);
+
+        StringBuilder normalized = new StringBuilder(wordNumberNormalized.Length);
+        string[] normalizedWords = string.IsNullOrEmpty(wordNumberNormalized)
+            ? Empty
+            : wordNumberNormalized.Split((char[])null, System.StringSplitOptions.RemoveEmptyEntries);
+
+        for (int i = 0; i < normalizedWords.Length; i++)
+        {
+            string word = NormalizeWord(normalizedWords[i]);
+            if (Contains(FillerWords, word))
+            {
+                continue;
+            }
+
+            AppendToken(normalized, word);
+        }
+
+        string finalNormalized = normalized.ToString();
+        Debug.Log("[INPUT-NORMALIZER] Final normalized: " + finalNormalized);
+        return finalNormalized;
+    }
+
+    private static string NormalizeWordNumbers(string[] words, bool awaitingPrice)
+    {
+        StringBuilder normalized = new StringBuilder();
         for (int i = 0; i < words.Length; i++)
         {
             string rawWord = words[i];
@@ -148,11 +180,6 @@ public static class InputNormalizer
             if (TryNormalizeDigitBridge(words, ref i, awaitingPrice, out string bridgedNumber))
             {
                 AppendToken(normalized, bridgedNumber);
-                continue;
-            }
-
-            if (Contains(FillerWords, word))
-            {
                 continue;
             }
 
@@ -480,4 +507,20 @@ public static class InputNormalizer
 
         return false;
     }
+
+    /*
+    Debug examples:
+    Normalize("five hundred") => "500"
+    Normalize("one hundred") => "100"
+    Normalize("one hundred and ten") => "110"
+    Normalize("hundred and ten") => "110"
+    Normalize("one ten") => "110"
+    Normalize("ninety eight") => "98"
+    Normalize("twenty five") => "25"
+    Normalize("five hundred varahas") => "500 varahas"
+    Normalize("i will give it for five hundred") => "i give it for 500"
+    Normalize("i offer ninety eight") => "i offer 98"
+    Normalize("deal for one hundred and twenty") => "deal for 120"
+    Normalize("are eager for five hundred") => "i give 500"
+    */
 }

@@ -532,7 +532,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _monoscopic: 0
   _sharpenType: 0
-  _enableDynamicResolution: 0
+  _enableDynamicResolution: 1
   minDynamicResolutionScale: 1
   maxDynamicResolutionScale: 1
   quest2MinDynamicResolutionScale: 0.7
@@ -5952,6 +5952,7 @@ GameObject:
   - component: {fileID: 1573725608}
   - component: {fileID: 1573725607}
   - component: {fileID: 1573725610}
+  - component: {fileID: 1573725611}
   m_Layer: 0
   m_Name: '[BuildingBlock] Speech To Text'
   m_TagString: Untagged
@@ -6046,13 +6047,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   serverUrl: http://127.0.0.1:8000/stt
   useLocalSpeech: 1
+  speechProviderOverride: {fileID: 1573725611}
   deviceName: 
   maxRecordingDuration: 20
   sampleRate: 16000
-  debugKeepLastRecording: 1
+  debugKeepLastRecording: 0
   chatManager: {fileID: 2137732763}
   inputField: {fileID: 1119916240}
   voiceStatusText: {fileID: 0}
+--- !u!114 &1573725611
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1573725606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b036f31eedbccf4eaa3cf08ccf0e055, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VoskSpeechProvider
+  modelFolderName: vosk-model-small-en-us-0.15
+  debugLogs: 1
 --- !u!1 &1593397970
 GameObject:
   m_ObjectHideFlags: 0
