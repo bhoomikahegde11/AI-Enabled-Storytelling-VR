@@ -11,7 +11,11 @@ public class MarketSpawner : MonoBehaviour
     public Transform leftTarget;
     public Transform rightTarget;
 
-    private GameObject currentNPC;
+    public Transform[] stalls;
+
+    private int activeNPCs = 0;
+
+    public int maxNPCs = 3;
 
     void Start()
     {
@@ -22,11 +26,14 @@ public class MarketSpawner : MonoBehaviour
     {
         while (true)
         {
-            if(currentNPC == null)
+            if (activeNPCs < maxNPCs)
             {
                 SpawnNPC();
             }
-            yield return new WaitForSeconds(10f);
+
+            yield return new WaitForSeconds(
+                Random.Range(6f, 12f)
+            );
         }
     }
 
@@ -37,12 +44,43 @@ public class MarketSpawner : MonoBehaviour
         Transform spawn =
             fromLeft ? leftSpawn : rightSpawn;
 
-        Transform target =
+        Transform exitTarget =
             fromLeft ? rightTarget : leftTarget;
 
-        currentNPC = Instantiate(npcPrefab, spawn.position, Quaternion.identity);
+        GameObject npc = Instantiate(
+            npcPrefab,
+            spawn.position,
+            Quaternion.identity
+        );
 
-        currentNPC.GetComponent<NPCWalker>()
-            .Initialize(target.position);
+        activeNPCs++;
+
+        bool visitsStall = Random.value < 0.7f;
+
+        Vector3 firstDestination;
+
+        if (visitsStall && stalls.Length > 0)
+        {
+            Transform chosenStall =
+                stalls[Random.Range(0, stalls.Length)];
+
+            firstDestination = chosenStall.position;
+        }
+        else
+        {
+            firstDestination = exitTarget.position;
+        }
+
+        npc.GetComponent<NPCWalker>()
+            .Initialize(
+                firstDestination,
+                visitsStall,
+                exitTarget.position
+            );
+    }
+
+    public void NPCRemoved()
+    {
+        activeNPCs--;
     }
 }

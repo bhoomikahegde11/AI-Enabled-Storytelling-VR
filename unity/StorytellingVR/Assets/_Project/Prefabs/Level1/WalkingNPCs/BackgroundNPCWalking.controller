@@ -10,8 +10,8 @@ AnimatorStateMachine:
   m_Name: Base Layer
   m_ChildStates:
   - serializedVersion: 1
-    m_State: {fileID: -8247713826775153692}
-    m_Position: {x: 260, y: 220, z: 0}
+    m_State: {fileID: -876747790867357191}
+    m_Position: {x: 130.66667, y: 202.00002, z: 0}
   m_ChildStateMachines: []
   m_AnyStateTransitions: []
   m_EntryTransitions: []
@@ -21,16 +21,16 @@ AnimatorStateMachine:
   m_EntryPosition: {x: 50, y: 120, z: 0}
   m_ExitPosition: {x: 800, y: 120, z: 0}
   m_ParentStateMachinePosition: {x: 800, y: 20, z: 0}
-  m_DefaultState: {fileID: -8247713826775153692}
---- !u!1102 &-8247713826775153692
+  m_DefaultState: {fileID: -876747790867357191}
+--- !u!1102 &-876747790867357191
 AnimatorState:
   serializedVersion: 6
   m_ObjectHideFlags: 1
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: mixamo_com
-  m_Speed: 1.5
+  m_Name: Standard Walk
+  m_Speed: 1
   m_CycleOffset: 0
   m_Transitions: []
   m_StateMachineBehaviours: []
@@ -42,7 +42,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: -203655887218126122, guid: 4e80d5ebd03c4984390513a5a7ab0e4e, type: 3}
+  m_Motion: {fileID: -203655887218126122, guid: e77580e219fd1fc41939089f7664f45d, type: 3}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 
