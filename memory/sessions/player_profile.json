@@ -1,11 +1,11 @@
 {
   "global_metrics": {
-    "reputation": 50,
-    "total_varahas": 100,
+    "reputation": 53,
+    "total_varahas": 336,
     "completed_levels": []
   },
   "inventory": {
-    "pepper": 15000.0,
+    "pepper": 12200.0,
     "clove": 8000.0,
     "cinnamon": 12000.0,
     "cardamom": 4000.0
