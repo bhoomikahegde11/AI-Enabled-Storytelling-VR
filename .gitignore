@@ -211,3 +211,11 @@ unity/StorytellingVR/**/*.apk
 unity/StorytellingVR/**/*.aab
 unity/StorytellingVR/.utmp/
 unity/StorytellingVR/*_BurstDebugInformation_DoNotShip/
+
+# Unity builds
+**/*_BackUpThisFolder_ButDontShipItWithYourGame/
+**/*BurstDebugInformation_DoNotShip/
+**/.utmp/
+
+# Android/IL2CPP temp output
+**/il2cppOutput/
