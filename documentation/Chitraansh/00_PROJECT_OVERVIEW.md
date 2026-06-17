@@ -14,11 +14,16 @@ This project implements an immersive, interactive historical storytelling simula
 The Vijayanagara Empire (centered around the capital Hampi in modern-day Karnataka, India) was one of the wealthiest and most powerful empires in medieval Asia. Serving as a crucial hub for international spice and gem trading, the Hampi marketplace was frequented by global merchants. The system simulates these historical cross-cultural negotiations:
 - **Abdul Rahman**: A wealthy Persian merchant buying pepper for merchant fleets.
 - **Francisco de Almeida**: A Portuguese crown representative bargaining for cinnamon.
-- **Chinappa Naik**: A local wholesale buyer purchasing cloves for retail distribution.
+- **Lakshmi Amma**: A local experienced buyer negotiating practical market-rate spice purchases.
 
 ## 🎙️ Speech Integration
 
 To achieve maximum presence in Virtual Reality, keyboard input is replaced by natural spoken English:
 - **Whisper STT**: Real-time voice transcription using `faster-whisper` (CUDA accelerated) to transcribe the player's speech.
+- **Vosk Offline Quest STT**: Standalone Android speech recognition path for Quest builds, loading the Vosk model locally without a backend dependency.
 - **Fuzzy Speech Corrections**: Preprocessing homophones and common STT errors before intent classification to ensure colloquial voice patterns are correctly mapped.
 - **Piper TTS ONNX**: Real-time local speech synthesis, returning responses in low latency to prevent breaking the flow of immersive gameplay.
+
+## 🗣️ Standalone VR Dialogue Layer
+
+Recent Level 1 standalone VR work adds a character-driven dialogue table layer on top of the negotiation rules. The bargaining engine still decides the actual trade action (accept, counter, reject, ask quantity, ask price), but NPC delivery is now selected from reusable response templates with character-specific greetings, mood-sensitive phrasing, and placeholder substitution for prices, quantities, spices, and buyer identity.

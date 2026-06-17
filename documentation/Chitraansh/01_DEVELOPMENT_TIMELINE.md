@@ -18,6 +18,10 @@ gantt
     section Phase 3: Hardening
     Robustness Preprocessor & Fuzzy Matching:active, 2026-06-03, 2026-06-04
     Large Scale Benchmark & Documentation  :active, 2026-06-04, 2026-06-05
+    section Phase 4: Standalone VR Speech & Dialogue
+    Dialogue Table & Character Gating      :active, 2026-06-06, 2026-06-10
+    Quest Native TTS & STT Diagnostics     :active, 2026-06-10, 2026-06-13
+    Offline Vosk STT & Number Normalization:active, 2026-06-13, 2026-06-15
 ```
 
 ---
@@ -67,4 +71,28 @@ gantt
 - **June 5, 2026: Large-Scale Benchmark Suite & Capstone Archive**
   * *Focus*: Programmatically generated 1,750+ inputs, simulated 100 multi-turn negotiations, scored LLM rephrasing uniqueness, verified performance constraints, and compiled the documentation archive.
   * *Git Commit Ref*: `feat(testing/benchmark): implement 1,750+ input benchmark and metrics compiler`
+  * *Status*: COMPLETED.
+
+---
+
+### Phase 4: Standalone VR Dialogue & Quest Speech Stack (June 2026)
+
+- **June 6-10, 2026: Level 1 Standalone Dialogue Table System**
+  * *Focus*: Replaced fixed NPC reply strings in standalone VR mode with a rule-grounded dialogue table system. Added template buckets, scenario routing, placeholder replacement, character registries, greeting lines, and character-specific dialogue sets for Abdul Rahman, Francisco de Almeida, and Lakshmi Amma.
+  * *Git Commit Ref*: `feat(unity/dialogue): add standalone character dialogue tables and greetings`
+  * *Status*: COMPLETED.
+
+- **June 10-13, 2026: Quest Native TTS, Dialogue-Scoped Character Selection & STT Diagnostics**
+  * *Focus*: Added lightweight standalone NPC speech playback through the local audio path, implemented Android native TextToSpeech for Quest, restricted local customer generation to dialogue-registered characters, and instrumented the full Quest local STT pipeline with microphone/audio/model diagnostics.
+  * *Git Commit Ref*: `feat(unity/quest): add android tts, dialogue-safe customers, and stt diagnostics`
+  * *Status*: COMPLETED.
+
+- **June 13-15, 2026: Offline Vosk STT Integration & Numeric Speech Normalization**
+  * *Focus*: Integrated Vosk offline ASR for Quest as an alternative to the failing Android Whisper load path, added inspector-based STT provider selection while preserving backend and Whisper paths, copied Vosk models out of StreamingAssets for APK-safe runtime loading, and generalized spoken number normalization for bargaining phrases (e.g. "five hundred" -> `500`).
+  * *Git Commit Ref*: `feat(unity/stt): integrate vosk offline quest stt and word-number normalization`
+  * *Status*: COMPLETED.
+
+- **June 15, 2026: Repository Asset Hygiene for Local Speech Runtimes**
+  * *Focus*: Cleaned generated Unity/Quest build artifacts, removed oversized Whisper runtime model binaries from tracked project content, preserved placeholder/download metadata, and kept only project-required native speech runtime plugins (`libvosk.so`) and model assets.
+  * *Git Commit Ref*: `chore(unity/assets): clean generated build junk and shrink runtime speech assets`
   * *Status*: COMPLETED.
