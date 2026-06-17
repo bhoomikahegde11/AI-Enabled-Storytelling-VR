@@ -203,39 +203,17 @@ logs/
 *.tmp
 *.temp
 
+unity/StorytellingVR/build*/
+unity/StorytellingVR/*_BackUpThisFolder_ButDontShipItWithYourGame/
+unity/StorytellingVR/**/*.apk
+unity/StorytellingVR/**/*.aab
+unity/StorytellingVR/.utmp/
+unity/StorytellingVR/*_BurstDebugInformation_DoNotShip/
 
-############################################################
-# EXTRA UNITY GENERATED (NESTED PROJECT FIX)
-############################################################
+# Unity builds
+**/*_BackUpThisFolder_ButDontShipItWithYourGame/
+**/*BurstDebugInformation_DoNotShip/
+**/.utmp/
 
-**/[Ll]ibrary/
-**/[Tt]emp/
-**/[Oo]bj/
-**/[Bb]uild/
-**/[Bb]uilds/
-**/[Ll]ogs/
-**/[Uu]ser[Ss]ettings/
-
-# Visual Studio
-*.csproj
-*.sln
-.vs/
-*.user
-*.tmp
-
-# Unity recovery
-**/Assets/_Recovery/
-
-
-############################################################
-# PYTHON CACHE EXTRA
-############################################################
-
-/backend/.venv
-/backend/npc_engine/core/__pycache__
-/backend/npc_engine/levels/level1_market/__pycache__
-/backend/npc_engine/utils/__pycache__
-/backend/npc_engine/llm/__pycache__
-/backend/stt/__pycache__
-/backend/npc_engine/__pycache__
-/backend/__pycache__
+# Android/IL2CPP temp output
+**/il2cppOutput/
