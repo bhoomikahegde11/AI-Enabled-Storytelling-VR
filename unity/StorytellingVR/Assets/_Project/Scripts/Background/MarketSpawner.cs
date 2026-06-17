@@ -58,25 +58,28 @@ public class MarketSpawner : MonoBehaviour
         bool visitsStall = Random.value < 0.7f;
 
         Vector3 firstDestination;
+Quaternion stallRotation = Quaternion.identity;
 
-        if (visitsStall && stalls.Length > 0)
-        {
-            Transform chosenStall =
-                stalls[Random.Range(0, stalls.Length)];
+if (visitsStall && stalls.Length > 0)
+{
+    Transform chosenStall =
+        stalls[Random.Range(0, stalls.Length)];
 
-            firstDestination = chosenStall.position;
-        }
-        else
-        {
-            firstDestination = exitTarget.position;
-        }
+    firstDestination = chosenStall.position;
+    stallRotation = chosenStall.rotation;
+}
+else
+{
+    firstDestination = exitTarget.position;
+}
 
-        npc.GetComponent<NPCWalker>()
-            .Initialize(
-                firstDestination,
-                visitsStall,
-                exitTarget.position
-            );
+npc.GetComponent<NPCWalker>()
+    .Initialize(
+        firstDestination,
+        visitsStall,
+        exitTarget.position,
+        stallRotation
+    );
     }
 
     public void NPCRemoved()
