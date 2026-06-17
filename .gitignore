@@ -121,13 +121,11 @@ unity/StorytellingVR/Assets/StreamingAssets/LLM/*.gguf
 
 # Whisper models
 *.bin
-
 unity/StorytellingVR/Assets/StreamingAssets/Whisper/*.bin
 
 
 # ONNX TTS models
 *.onnx
-
 backend/models/en_US-lessac-medium.onnx
 
 
@@ -135,7 +133,9 @@ backend/models/en_US-lessac-medium.onnx
 # GENERATED AUDIO FILES
 ############################################################
 
+backend/audio/
 backend/audio/*.wav
+backend/audio/a8f25397-54e6-4b4e-aaf6-afd616e92498.wav
 
 *.wav
 *.mp3
@@ -146,7 +146,6 @@ backend/audio/*.wav
 ############################################################
 
 *.blend1
-
 *.fbx.backup
 
 *.zip
@@ -160,20 +159,18 @@ backend/audio/*.wav
 
 .env
 .env.local
-
 *.env
+backend/.env
 
 
 ############################################################
 # OPERATING SYSTEM FILES
 ############################################################
 
-# Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# Mac
 .DS_Store
 .AppleDouble
 .LSOverride
@@ -205,6 +202,7 @@ logs/
 *.bak
 *.tmp
 *.temp
+
 unity/StorytellingVR/build*/
 unity/StorytellingVR/*_BackUpThisFolder_ButDontShipItWithYourGame/
 unity/StorytellingVR/**/*.apk

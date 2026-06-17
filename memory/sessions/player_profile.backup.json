@@ -5,10 +5,10 @@
     "completed_levels": []
   },
   "inventory": {
-    "pepper": 15000.0,
+    "pepper": 12200.0,
     "clove": 8000.0,
     "cinnamon": 12000.0,
-    "cardamom": 3440.0
+    "cardamom": 4000.0
   },
   "shift_stats": {
     "shifts_completed": 0,
