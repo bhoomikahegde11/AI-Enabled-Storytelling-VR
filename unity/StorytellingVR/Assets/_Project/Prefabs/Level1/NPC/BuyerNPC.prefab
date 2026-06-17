@@ -76,6 +76,18 @@ PrefabInstance:
       propertyPath: m_Name
       value: BuyerNPC
       objectReference: {fileID: 0}
+    - target: {fileID: 1230774637263553270, guid: f148b6addfc553e45ad57930114e34b3, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1230774637263553270, guid: f148b6addfc553e45ad57930114e34b3, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1230774637263553270, guid: f148b6addfc553e45ad57930114e34b3, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.881
+      objectReference: {fileID: 0}
     - target: {fileID: 1399262706480193352, guid: f148b6addfc553e45ad57930114e34b3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
