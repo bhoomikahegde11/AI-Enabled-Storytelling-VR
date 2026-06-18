@@ -11,8 +11,7 @@ public class NPCWalker : MonoBehaviour
     private bool waiting = false;
     [SerializeField] private float moveSpeed = 0.85f;
     [SerializeField] private float turnSpeed = 5f;
-    [SerializeField] private float avoidanceRadius = 0.8f;
-    [SerializeField] private float avoidanceStrength = 0.5f;
+
 
     private float waitTime;
     private Animator animator;
@@ -49,55 +48,44 @@ public class NPCWalker : MonoBehaviour
     {
         if (waiting)
             return;
-        RaycastHit hit;
 
-        if (Physics.Raycast(
-            transform.position + Vector3.up * 0.5f,
-            transform.forward,
-            out hit))
-        {
-            if (hit.collider.CompareTag("NPC"))
-            {
-                return;
-            }
-        }
         Vector3 direction = target - transform.position;
         direction.y = 0f;
-        // Avoid nearby NPCs
-        Collider[] nearbyNPCs = Physics.OverlapSphere(
-            transform.position,
-            avoidanceRadius
-        );
+        Collider[] nearby = Physics.OverlapSphere(
+    transform.position,
+    1.2f
+);
 
-        Vector3 avoidance = Vector3.zero;
-
-        foreach (Collider c in nearbyNPCs)
+        foreach (Collider c in nearby)
         {
             if (c.gameObject == gameObject)
                 continue;
 
             if (c.CompareTag("NPC"))
             {
-                Vector3 away =
-                    transform.position -
-                    c.transform.position;
+                Vector3 toOther =
+                    c.transform.position - transform.position;
 
-                away.y = 0f;
+                toOther.y = 0f;
 
-                float distance = away.magnitude;
+                float dot =
+                    Vector3.Dot(
+                        transform.forward,
+                        toOther.normalized
+                    );
 
-                if (distance > 0.01f)
+                // Only avoid NPCs roughly in front
+                float distance = toOther.magnitude;
+
+                if (dot > 0.3f && distance < 0.8f)
                 {
-                    avoidance +=
-                        away.normalized / distance;
+                    Vector3 sideStep = -transform.right;
+
+                    direction += sideStep * 2f;
+                    direction -= toOther.normalized * 1f;
                 }
             }
         }
-
-        // Blend movement toward target with avoidance
-        direction += avoidance * avoidanceStrength;
-
-        direction.y = 0f;
         if (direction.magnitude < 0.05f)
         {
             if (goingToStall)
@@ -118,7 +106,7 @@ public class NPCWalker : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-
+        direction.Normalize();
         Quaternion targetRotation =
             Quaternion.LookRotation(direction);
 
@@ -160,5 +148,13 @@ public class NPCWalker : MonoBehaviour
         target = exitTarget;
 
         waiting = false;
+    }
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(
+            transform.position,
+            1.2f
+        );
     }
 }
