@@ -6097,6 +6097,8 @@ MonoBehaviour:
   maxRecordingDuration: 20
   sampleRate: 16000
   debugKeepLastRecording: 0
+  debugRawInput: i offer one hundred twenty three
+  debugTestNormalize: 0
   chatManager: {fileID: 2137732763}
   inputField: {fileID: 1119916240}
   voiceStatusText: {fileID: 0}
@@ -7601,10 +7603,10 @@ MonoBehaviour:
   feedbackManager: {fileID: 694718640}
   autoStart: 0
   marketplaceManager: {fileID: 1294257835}
-  useLocalIntentSystem: 0
-  useLocalNpcBrain: 0
-  useLocalSessionGeneration: 0
-  useOfflineTypedInputFallback: 0
+  useLocalIntentSystem: 1
+  useLocalNpcBrain: 1
+  useLocalSessionGeneration: 1
+  useOfflineTypedInputFallback: 1
   useLocalLLMUnderstanding: 0
   useLocalLLMGeneration: 0
   hudManager: {fileID: 799689586}
