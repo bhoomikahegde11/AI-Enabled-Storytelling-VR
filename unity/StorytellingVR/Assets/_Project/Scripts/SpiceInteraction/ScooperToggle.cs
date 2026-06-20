@@ -5,11 +5,13 @@ public class ScooperToggle : MonoBehaviour
     public GameObject scooper;
     public GameObject controllerModel;
 
+    private ScooperFill scooperFill;
     private Renderer[] controllerRenderers;
-    private bool scooperActive = false;
 
     void Start()
     {
+        scooperFill = scooper.GetComponent<ScooperFill>();
+
         scooper.SetActive(false);
 
         controllerRenderers =
@@ -18,16 +20,29 @@ public class ScooperToggle : MonoBehaviour
 
     void Update()
     {
-        if (OVRInput.GetDown(OVRInput.RawButton.RIndexTrigger))
+        // Trigger held
+        if (OVRInput.Get(OVRInput.RawButton.RIndexTrigger))
         {
-            scooperActive = !scooperActive;
+            scooper.SetActive(true);
 
-            scooper.SetActive(scooperActive);
+            SetControllerVisible(false);
+        }
 
-            foreach (Renderer r in controllerRenderers)
-            {
-                r.enabled = !scooperActive;
-            }
+        // Trigger released
+        if (OVRInput.GetUp(OVRInput.RawButton.RIndexTrigger))
+        {
+            scooper.SetActive(false);
+
+            SetControllerVisible(true);
+
+            scooperFill.ResetScooper();
+        }
+    }
+    void SetControllerVisible(bool visible)
+    {
+        foreach (Renderer r in controllerRenderers)
+        {
+            r.enabled = visible;
         }
     }
 }
