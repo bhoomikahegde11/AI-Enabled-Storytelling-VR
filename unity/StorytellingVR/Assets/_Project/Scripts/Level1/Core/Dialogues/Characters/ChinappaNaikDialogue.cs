@@ -5,20 +5,20 @@ public static class ChinappaNaikDialogue
     public static CharacterDialogueSet Create()
     {
         return new CharacterDialogueSet(
-            "chinappa_naik",
-            "Chinappa Naik",
+            "chinnamma_naik",
+            "Chinnamma Naik",
             NpcPersonalityBucket.Strict,
             new List<DialogueLine>
             {
                 new DialogueLine(DialogueScenario.CustomerGreeting, new[]
                 {
-                    "Chinappa Naik has come for {quantityLabel} of {spiceName}. Let us weigh words as carefully as goods.",
-                    "I am Chinappa Naik, buying for larger accounts. Show me a sensible path to {quantityLabel} of {spiceName}.",
+                    "Chinnamma Naik has come for {quantityLabel} of {spiceName}. Let us weigh words as carefully as goods.",
+                    "I am Chinnamma Naik, buying for larger accounts. Show me a sensible path to {quantityLabel} of {spiceName}.",
                     "Good day. I require {quantityLabel} of {spiceName} for warehouse trade in the royal city.",
-                    "Chinappa Naik stands here for bulk purchase. Speak clearly on {spiceName}.",
+                    "Chinnamma Naik stands here for bulk purchase. Speak clearly on {spiceName}.",
                     "I have come for {spiceName} in proper quantity. Let us proceed without fuss.",
                     "My business today is {quantityLabel} of {spiceName}. Keep your terms fit for a city account."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.RepeatCustomerGreeting, new[]
                 {
                     "We know each other already, merchant. Let us return to the matter of {spiceName}.",
@@ -27,7 +27,7 @@ public static class ChinappaNaikDialogue
                     "I return to your stall for business, not delay.",
                     "We know the matter already. Let us settle it efficiently.",
                     "I have come back to conclude this trade properly."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.AskWhatBuyerWants, new[]
                 {
                     "I am here for {quantityLabel} of {spiceName}, enough for a worthwhile city order.",
@@ -37,7 +37,7 @@ public static class ChinappaNaikDialogue
                     "It is {spiceName} I want, enough for a proper account in the royal city.",
                     "I came for {spiceName}. The quantity I need is {quantityLabel}.",
                     "I seek {quantityLabel} of {spiceName} for larger dealings under my seal."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.AskBuyerBudget, new[]
                 {
                     "For this quantity, I can justify {currentBuyerOffer} {currency}.",
@@ -47,7 +47,7 @@ public static class ChinappaNaikDialogue
                     "For this purchase, {currentBuyerOffer} {currency} is a defensible price.",
                     "My account allows {currentBuyerOffer} {currency} and no careless excess.",
                     "You may take {currentBuyerOffer} {currency} as my offer."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.AskQuantity, new[]
                 {
                     "I require {quantityLabel} of {spiceName} for this account.",
@@ -57,7 +57,7 @@ public static class ChinappaNaikDialogue
                     "The proper quantity is {quantityLabel} of {spiceName}.",
                     "I seek {quantityLabel} of {spiceName} in full measure.",
                     "My warehouse order is {quantityLabel} of {spiceName}."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.SellerPriceTooHigh, new[]
                 {
                     "{offeredPrice} {currency} is too swollen a figure for honest trade.",
@@ -67,19 +67,19 @@ public static class ChinappaNaikDialogue
                     "That price would damage the account from the start.",
                     "I will not pay {offeredPrice} {currency}. It is excessive.",
                     "Such a price does not suit a serious market."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.SellerPriceTooHigh, new[]
                 {
                     "That price is too high for a disciplined account.",
                     "{offeredPrice} {currency} exceeds what sound trade permits.",
                     "No, merchant. That figure remains above reason."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.SellerPriceTooHigh, new[]
                 {
                     "That price is too high, and I will not debate it much longer.",
                     "{offeredPrice} {currency} is excessive. Lower it or end this quickly.",
                     "You ask too much, merchant, and my time is already shortened."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.SellerPriceSlightlyHigh, new[]
                 {
                     "You ask somewhat above reason. I can step to {counterPrice} {currency}.",
@@ -89,19 +89,19 @@ public static class ChinappaNaikDialogue
                     "Lower it modestly, and {counterPrice} {currency} will settle it.",
                     "I can move to {counterPrice} {currency}, but not to your full demand.",
                     "Your price is close to fair, though {counterPrice} {currency} is fairer."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.SellerPriceSlightlyHigh, new[]
                 {
                     "You stand somewhat high. I can do {counterPrice} {currency}.",
                     "{counterPrice} {currency} is the proper adjustment from your price.",
                     "Come down modestly, merchant, and {counterPrice} {currency} will settle it."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.SellerPriceSlightlyHigh, new[]
                 {
                     "We are close, but quickly now. {counterPrice} {currency}.",
                     "A faster end would be {counterPrice} {currency}, merchant.",
                     "Lower it at once to {counterPrice} {currency}, or I move on."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.SellerPriceAccepted, new[]
                 {
                     "That number is sound. We may conclude this trade.",
@@ -111,7 +111,7 @@ public static class ChinappaNaikDialogue
                     "A sound price. We may proceed.",
                     "That number will do.",
                     "Very well. The trade may stand on that price."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.SellerPriceBelowExpected, new[]
                 {
                     "You have named less than I expected, merchant. Let us settle it before fortune changes.",
@@ -121,19 +121,19 @@ public static class ChinappaNaikDialogue
                     "A lower price than expected is no insult to me.",
                     "You surprise me. The number is better than anticipated.",
                     "That is beneath the price I had prepared to hear."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.SellerPriceBelowExpected, new[]
                 {
                     "That is lower than expected. Sensible.",
                     "You speak more reasonably than I had anticipated.",
                     "That figure sits better with a disciplined account."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.SellerPriceBelowExpected, new[]
                 {
                     "That is lower than expected. Good. Let us close this quickly.",
                     "A better figure than I expected, merchant. Do not waste it.",
                     "You speak more sensibly now. Finish the matter."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.BuyerCounterFirst, new[]
                 {
                     "My opening counter is {counterPrice} {currency}. Consider it seriously.",
@@ -143,7 +143,7 @@ public static class ChinappaNaikDialogue
                     "Set my opening figure at {counterPrice} {currency}.",
                     "I place {counterPrice} {currency} before you as my first counter.",
                     "Let the bargaining begin at {counterPrice} {currency}."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.BuyerCounterMiddle, new[]
                 {
                     "We are closing the distance. I can offer {counterPrice} {currency}.",
@@ -153,19 +153,19 @@ public static class ChinappaNaikDialogue
                     "I advance to {counterPrice} {currency}, and no further for the moment.",
                     "We approach agreement. I offer {counterPrice} {currency}.",
                     "I will step forward to {counterPrice} {currency}."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.BuyerCounterMiddle, new[]
                 {
                     "I can advance to {counterPrice} {currency}.",
                     "{counterPrice} {currency} is my next serious figure.",
                     "We move closer. I offer {counterPrice} {currency}."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.BuyerCounterMiddle, new[]
                 {
                     "I can move to {counterPrice} {currency}, but not for long.",
                     "{counterPrice} {currency} is my next step. Answer promptly.",
                     "Be quick, merchant. I offer {counterPrice} {currency}."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.BuyerCounterFinal, new[]
                 {
                     "This is my final working figure: {counterPrice} {currency}.",
@@ -175,19 +175,19 @@ public static class ChinappaNaikDialogue
                     "You have my final price, {counterPrice} {currency}.",
                     "No further concession. {counterPrice} {currency} is final.",
                     "That is my closing counter: {counterPrice} {currency}."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.BuyerCounterFinal, new[]
                 {
                     "{counterPrice} {currency} is my final figure.",
                     "I stop at {counterPrice} {currency}, merchant.",
                     "This is my closing offer: {counterPrice} {currency}."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.BuyerCounterFinal, new[]
                 {
                     "{counterPrice} {currency} is my last step. Decide now.",
                     "I end at {counterPrice} {currency}, merchant. I will not repeat it.",
                     "This is my final offer: {counterPrice} {currency}. Answer at once."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.BuyerHoldsFirm, new[]
                 {
                     "My position remains {currentBuyerOffer} {currency}. The accounts do not bend further.",
@@ -197,19 +197,19 @@ public static class ChinappaNaikDialogue
                     "No, merchant. {currentBuyerOffer} {currency} remains my position.",
                     "I stand firm at {currentBuyerOffer} {currency}.",
                     "The account ends at {currentBuyerOffer} {currency} and no higher."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.BuyerHoldsFirm, new[]
                 {
                     "I remain at {currentBuyerOffer} {currency}. That is the proper limit.",
                     "{currentBuyerOffer} {currency} is my standing figure.",
                     "No further, merchant. {currentBuyerOffer} {currency} is where I stand."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.BuyerHoldsFirm, new[]
                 {
                     "I hold at {currentBuyerOffer} {currency}, and I will not repeat myself often.",
                     "{currentBuyerOffer} {currency} is my limit. Conclude this now.",
                     "No more from me, merchant. {currentBuyerOffer} {currency}, final."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.PlayerAcceptedDeal, new[]
                 {
                     "Good. Then we are agreed at {finalPrice} {currency}.",
@@ -219,7 +219,7 @@ public static class ChinappaNaikDialogue
                     "Good. Let the account close at {finalPrice} {currency}.",
                     "That is acceptable. We conclude at {finalPrice} {currency}.",
                     "Agreed. {finalPrice} {currency} finishes the matter."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.PlayerRejectedBuyerOffer, new[]
                 {
                     "Then you decline a workable offer.",
@@ -229,7 +229,7 @@ public static class ChinappaNaikDialogue
                     "So the matter remains unsettled.",
                     "Then the trade halts here.",
                     "Your refusal leaves the account unfinished."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.HistoryQuestion, new[]
                 {
                     "Hampi's markets hold many stories, but this ledger comes first.",
@@ -239,7 +239,7 @@ public static class ChinappaNaikDialogue
                     "History may wait. Warehouse accounts cannot.",
                     "Ask of the market later. First we settle the goods and coin.",
                     "The city is old, merchant, but this bargain is the matter at hand."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.SocialGreeting, new[]
                 {
                     "Your courtesy is noted. Now let us return to terms and quantity.",
@@ -249,7 +249,7 @@ public static class ChinappaNaikDialogue
                     "Well enough. Now let us speak in figures.",
                     "Civil words are welcome. Accurate terms matter more.",
                     "Good. Now return to measure and price."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.OffTopic, new[]
                 {
                     "Keep to the bargain, merchant. My purpose here is trade.",
@@ -259,7 +259,7 @@ public static class ChinappaNaikDialogue
                     "Keep your words on quantity and price.",
                     "Off-topic talk serves no account, merchant.",
                     "Speak of {spiceName}, measure, and coin. Nothing else."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.UnclearSpeech, new[]
                 {
                     "The bazaar swallowed your meaning. {ruleReply}",
@@ -269,7 +269,7 @@ public static class ChinappaNaikDialogue
                     "State it again with precision. {ruleReply}",
                     "Your words were lost in the market noise. {ruleReply}",
                     "Be clearer, merchant. {ruleReply}"
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.TransactionSuccess, new[]
                 {
                     "This trade was concluded with good order.",
@@ -279,7 +279,7 @@ public static class ChinappaNaikDialogue
                     "This bargain serves both reputation and profit.",
                     "Well concluded. The market will remember proper dealing.",
                     "The trade stands complete and orderly."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.TransactionFailure, new[]
                 {
                     "Then we close the ledger without a sale today.",
@@ -289,19 +289,19 @@ public static class ChinappaNaikDialogue
                     "No sale. I will look to another stall.",
                     "The ledger closes empty for now.",
                     "Then we part without agreement."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.TransactionFailure, new[]
                 {
                     "Then we close without agreement today.",
                     "No purchase this time, merchant.",
                     "So be it. The account does not conclude."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.TransactionFailure, new[]
                 {
                     "Then I end this matter now and take my business elsewhere.",
                     "No bargain today, merchant. You have delayed it enough.",
                     "So be it. The trade fails, and I move on."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.TimePressure, new[]
                 {
                     "I have other stalls to inspect. Decide without delay.",
@@ -311,13 +311,13 @@ public static class ChinappaNaikDialogue
                     "Do not delay me further, merchant.",
                     "My time is not idle. Speak your answer now.",
                     "Come to a decision. I must move on."
-                }, "chinappa_naik"),
+                }, "chinnamma_naik"),
                 new DialogueLine(DialogueScenario.TimePressure, new[]
                 {
                     "Merchant, my patience is ending. Decide now.",
                     "I will not be delayed further. Speak your answer at once.",
                     "My time is spent here. Conclude this immediately."
-                }, "chinappa_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Strict),
+                }, "chinnamma_naik", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Strict),
                 new DialogueLine(DialogueScenario.Unknown, new[]
                 {
                     "{ruleReply}",
@@ -326,7 +326,7 @@ public static class ChinappaNaikDialogue
                     "State it plainly and correctly. {ruleReply}",
                     "I require a clearer statement. {ruleReply}",
                     "Speak in direct terms. {ruleReply}"
-                }, "chinappa_naik")
+                }, "chinnamma_naik")
             });
     }
 }
