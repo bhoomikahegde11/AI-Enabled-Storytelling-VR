@@ -1,0 +1,44 @@
+VOICE TEST REPORT
+
+Scope
+
+This report summarizes offline TTS voice experiments stored in docs/voice-testing.
+These are comparison tests only.
+Nothing here is integrated into Unity yet.
+
+Comparison Table
+
+Engine | Voice/Model | Gender impression | Accent impression | Naturalness | Good for NPCs | Notes
+Piper | en_IN_female_text_to_speech_en_IN_piper | Female-coded or female-leaning | Good Indian English accent | Usable for prototype review | Lakshmi Amma, possibly light-use female narration | Stronger Indian flavor than the fallback voices. Still needs listening review for Hampi-specific pronunciation.
+Piper | navgurukul-ai/Indian_English_piper hindi_accent | Female-coded or female-leaning | Good or usable Indian English accent | Usable for prototype review | Lakshmi Amma, possibly general female placeholder use | Good local comparison voice. Review pronunciation of Hampi, varahas, clove, and seer by listening.
+Piper | en_US_kusal_medium | Male-coded or neutral-coded | Not clearly Indian; possible soft fallback | Good | Abdul Rahman, Siddharth Chetti, Chinappa Naik as fallback only | Possible male fallback if an Indian English male voice is not found.
+Piper | en_GB_northern_english_male_medium | Male-coded | Foreign or neutral English fallback | Good | Francisco de Almeida, Father Penteado as fallback only | Strong male fallback for non-Indian characters.
+Piper | en_US_hfc_female_medium | Female-coded | Neutral US English fallback | Likely usable, but local WAV set is currently missing in this repo copy | Lakshmi Amma as fallback only | Clear fallback candidate in prior testing notes, but sample regeneration should be redone before review sign-off.
+Piper | en_GB_southern_english_female_low | Female-coded | Foreign English fallback | Fair to usable | Female fallback only | Lower model quality than the other main options.
+
+Current Findings
+
+- The Indian-accent Piper voices tested so far sound female-coded or female-leaning.
+- We are still missing a strong Indian English male offline voice.
+- The best non-Indian male fallback voices so far are en_US_kusal_medium and en_GB_northern_english_male_medium.
+- The best current Indian-accent options are the en_IN voice and the hindi_accent voice, but both should be treated as female-leaning until the team reviews them.
+
+Pronunciation Review Notes
+
+- Hampi: needs human listening check on the Indian-accent models.
+- varahas: needs human listening check on all voices because it is a domain-specific historical term.
+- clove: expected to be straightforward, but still verify clarity.
+- seer: needs listening review because it is a short trade term that may be mis-stressed.
+
+Needs Sorting / Uncertain Items
+
+- notes/needs_sorting/en_GB_southern_english_female_medium_empty
+  Empty leftover folder from an earlier failed or partial setup attempt.
+- en_US_hfc_female_medium
+  Model files are present, but the local WAV sample set is not currently preserved in this repo copy.
+
+Next Steps
+
+- Find and test an Indian English male offline voice.
+- Test Sherpa-ONNX voices in the parallel sherpa folder structure.
+- Only after voice choice is finalized, integrate the selected voice path into Unity.

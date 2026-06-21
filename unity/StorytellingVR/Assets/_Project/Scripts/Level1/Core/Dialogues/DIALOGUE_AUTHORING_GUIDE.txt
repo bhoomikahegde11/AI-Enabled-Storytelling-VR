@@ -45,8 +45,8 @@ The current registered dialogue characters are:
 - Abdul Rahman: abdul_rahman
 - Francisco de Almeida: francisco_de_almeida
 - Lakshmi Amma: lakshmi_amma
-- Chinappa Naik: chinappa_naik
-- Siddharth Chetti: siddharth_chetti
+- Chinnamma Naik: chinnamma_naik
+- Saraswati Chetti: saraswati_chetti
 - Father Penteado: father_penteado
 
 These are registered in DialogueCharacterRegistry.cs.
@@ -256,11 +256,11 @@ Current practical guidance:
 Friendly NPCs:
 - Abdul Rahman
 - Lakshmi Amma
-- Siddharth Chetti
+- Saraswati Chetti
 
 Strict NPCs:
 - Francisco de Almeida
-- Chinappa Naik
+- Chinnamma Naik
 
 Normal NPCs:
 - Father Penteado
@@ -375,9 +375,9 @@ References:
 - community feasts
 - daily market life
 
-Chinappa Naik:
-Vijayanagara wholesale or official buyer.
-Strict, authoritative, orderly.
+Chinnamma Naik:
+Senior Vijayanagara wholesale spice buyer.
+Strict, experienced, respected merchant woman.
 References:
 - warehouses
 - large orders
@@ -385,9 +385,9 @@ References:
 - market discipline
 - accounts
 
-Siddharth Chetti:
-Local retail shopkeeper.
-Friendly, clever, lively businessman.
+Saraswati Chetti:
+Local Vijayanagara retail shop owner.
+Friendly, knowledgeable, energetic merchant woman.
 References:
 - customers
 - shop
@@ -516,8 +516,8 @@ Before considering dialogue changes done:
 - Test at least one Normal NPC
 
 Good practical test set:
-- Abdul Rahman or Lakshmi Amma or Siddharth Chetti
-- Francisco de Almeida or Chinappa Naik
+- Abdul Rahman or Lakshmi Amma or Saraswati Chetti
+- Francisco de Almeida or Chinnamma Naik
 - Father Penteado
 
 ==================================================

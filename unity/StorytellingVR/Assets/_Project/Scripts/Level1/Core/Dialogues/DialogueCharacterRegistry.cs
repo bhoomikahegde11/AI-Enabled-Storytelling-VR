@@ -39,8 +39,8 @@ public class DialogueCharacterRegistry
             new DialogueCharacterProfile("abdul_rahman", "Abdul Rahman", "Arab Caravan Trader", "Friendly"),
             new DialogueCharacterProfile("francisco_de_almeida", "Francisco de Almeida", "Portuguese Trade Agent", "Strict"),
             new DialogueCharacterProfile("lakshmi_amma", "Lakshmi Amma", "Local Household Buyer", "Friendly"),
-            new DialogueCharacterProfile("chinappa_naik", "Chinappa Naik", "Vijayanagara Wholesale Buyer", "Strict"),
-            new DialogueCharacterProfile("siddharth_chetti", "Siddharth Chetti", "Local Retail Shopkeeper", "Friendly"),
+            new DialogueCharacterProfile("chinnamma_naik", "Chinnamma Naik", "Vijayanagara Wholesale Spice Buyer", "Strict"),
+            new DialogueCharacterProfile("saraswati_chetti", "Saraswati Chetti", "Local Vijayanagara Retail Shop Owner", "Friendly"),
             new DialogueCharacterProfile("father_penteado", "Father Penteado", "Jesuit Missionary", "Normal")
         };
 
@@ -124,14 +124,14 @@ public class DialogueCharacterRegistry
             return "lakshmi_amma";
         }
 
-        if (normalized.Contains("chinappa"))
+        if (normalized.Contains("chinnamma"))
         {
-            return "chinappa_naik";
+            return "chinnamma_naik";
         }
 
-        if (normalized.Contains("siddharth"))
+        if (normalized.Contains("saraswati"))
         {
-            return "siddharth_chetti";
+            return "saraswati_chetti";
         }
 
         if (normalized.Contains("penteado") || normalized.Contains("father"))
