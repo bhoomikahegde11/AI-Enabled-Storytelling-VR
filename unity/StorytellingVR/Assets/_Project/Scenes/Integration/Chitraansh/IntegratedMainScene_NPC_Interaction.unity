@@ -6783,6 +6783,58 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.y
       value: 180
       objectReference: {fileID: 0}
+    - target: {fileID: 271679567732576802, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: inputField
+      value: 
+      objectReference: {fileID: 477807451}
+    - target: {fileID: 271679567732576802, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: voiceStatusText
+      value: 
+      objectReference: {fileID: 1917875769}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: dividerLine
+      value: 
+      objectReference: {fileID: 1070068733}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: playerInput
+      value: 
+      objectReference: {fileID: 477807451}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: subtitleText
+      value: 
+      objectReference: {fileID: 1723711625}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: subtitlePanel
+      value: 
+      objectReference: {fileID: 2053185548}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: inputGlowImage
+      value: 
+      objectReference: {fileID: 477807452}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: npcSubtitleText
+      value: 
+      objectReference: {fileID: 1723711625}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: speakerNameText
+      value: 
+      objectReference: {fileID: 220873812}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: voiceStatusText
+      value: 
+      objectReference: {fileID: 1917875769}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: inputCanvasGroup
+      value: 
+      objectReference: {fileID: 1325257925}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: inputBoxTransform
+      value: 
+      objectReference: {fileID: 477807450}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: dialogueCanvasGroup
+      value: 
+      objectReference: {fileID: 2053185550}
     - target: {fileID: 1751171238468483710, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0.5
@@ -6795,9 +6847,21 @@ PrefabInstance:
       propertyPath: m_RenderMode
       value: 2
       objectReference: {fileID: 0}
+    - target: {fileID: 3574392965188834878, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: npcText
+      value: 
+      objectReference: {fileID: 1723711625}
+    - target: {fileID: 3574392965188834878, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: inputField
+      value: 
+      objectReference: {fileID: 477807451}
     - target: {fileID: 4305772044846134856, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
       propertyPath: m_Name
       value: Level1_InteractionSystem
+      objectReference: {fileID: 0}
+    - target: {fileID: 4305772044846134856, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6730577110469412068, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
       propertyPath: m_PresetInfoIsWorld
@@ -6847,66 +6911,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3574392965188834878, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: inputField
-      value: 
-      objectReference: {fileID: 477807451}
-    - target: {fileID: 3574392965188834878, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: npcText
-      value: 
-      objectReference: {fileID: 1723711625}
-    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: subtitlePanel
-      value: 
-      objectReference: {fileID: 2053185548}
-    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: speakerNameText
-      value: 
-      objectReference: {fileID: 220873812}
-    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: npcSubtitleText
-      value: 
-      objectReference: {fileID: 1723711625}
-    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: dialogueCanvasGroup
-      value: 
-      objectReference: {fileID: 2053185550}
-    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: dividerLine
-      value: 
-      objectReference: {fileID: 1070068733}
-    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: subtitleText
-      value: 
-      objectReference: {fileID: 1723711625}
-    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: inputCanvasGroup
-      value: 
-      objectReference: {fileID: 1325257925}
-    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: inputBoxTransform
-      value: 
-      objectReference: {fileID: 477807450}
-    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: inputGlowImage
-      value: 
-      objectReference: {fileID: 477807452}
-    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: playerInput
-      value: 
-      objectReference: {fileID: 477807451}
-    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: voiceStatusText
-      value: 
-      objectReference: {fileID: 1917875769}
-    - target: {fileID: 271679567732576802, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: inputField
-      value: 
-      objectReference: {fileID: 477807451}
-    - target: {fileID: 271679567732576802, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
-      propertyPath: voiceStatusText
-      value: 
-      objectReference: {fileID: 1917875769}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -7639,7 +7643,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1701145693}
   m_Father: {fileID: 2100992995}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!20 &1388768018
@@ -9919,9 +9924,9 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1701145692}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0.7}
+  m_LocalScale: {x: 0.0008, y: 0.0008, z: 0.0008}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 410290701}
@@ -9929,13 +9934,13 @@ RectTransform:
   - {fileID: 1325257924}
   - {fileID: 2053185549}
   - {fileID: 1509280035}
-  m_Father: {fileID: 2100992995}
+  m_Father: {fileID: 1388768017}
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0, y: 0}
+  m_SizeDelta: {x: 2222.488, y: 933.0084}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1701145694
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10003,7 +10008,7 @@ MonoBehaviour:
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 0
+  m_PresetInfoIsWorld: 1
 --- !u!223 &1701145697
 Canvas:
   m_ObjectHideFlags: 0
@@ -10013,7 +10018,7 @@ Canvas:
   m_GameObject: {fileID: 1701145692}
   m_Enabled: 1
   serializedVersion: 3
-  m_RenderMode: 0
+  m_RenderMode: 2
   m_Camera: {fileID: 0}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
@@ -12788,7 +12793,6 @@ Transform:
   m_Children:
   - {fileID: 1643102316}
   - {fileID: 1388768017}
-  - {fileID: 1701145693}
   - {fileID: 343053751}
   - {fileID: 2117881515}
   - {fileID: 616758041}
