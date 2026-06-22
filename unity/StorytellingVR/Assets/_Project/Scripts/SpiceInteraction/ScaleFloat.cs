@@ -3,46 +3,68 @@ using System.Collections;
 
 public class ScaleFloat : MonoBehaviour
 {
-    public Transform floatTarget;
+    public Transform raisedPosition;
 
-    public void FloatToPlayer()
+    Vector3 originalPosition;
+
+    void Start()
     {
-        StartCoroutine(FloatRoutine());
+        originalPosition = transform.position;
     }
 
-    IEnumerator FloatRoutine()
+    public void RaiseScale()
     {
-        Vector3 startPos = transform.position;
-        Quaternion startRot = transform.rotation;
+        StopAllCoroutines();
+        StartCoroutine(
+            MoveToPosition(
+                raisedPosition.position
+            )
+        );
+    }
 
-        float t = 0f;
+    public void LowerScale()
+    {
+        StopAllCoroutines();
+        StartCoroutine(
+            MoveToPosition(
+                originalPosition
+            )
+        );
+    }
 
-        while (t < 1f)
+    IEnumerator MoveToPosition(Vector3 target)
+    {
+        Vector3 start = transform.position;
+
+        float t = 0;
+
+        while (t < 1)
         {
             t += Time.deltaTime;
 
             transform.position =
                 Vector3.Lerp(
-                    startPos,
-                    floatTarget.position,
-                    t
-                );
-
-            transform.rotation =
-                Quaternion.Slerp(
-                    startRot,
-                    floatTarget.rotation,
+                    start,
+                    target,
                     t
                 );
 
             yield return null;
         }
     }
+
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.F))
+            if (Input.GetKeyDown(KeyCode.F))
+            {
+                Debug.Log("F PRESSED");
+
+                RaiseScale();
+            }
+
+        if (Input.GetKeyDown(KeyCode.G))
         {
-            FloatToPlayer();
+            LowerScale();
         }
     }
 }
