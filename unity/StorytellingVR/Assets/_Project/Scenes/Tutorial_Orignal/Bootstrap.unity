@@ -150,10 +150,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   scenes:
-  - SpicesIntro
-  - TraderIntoScene
-  - Transcation_Tutorial
-  - CoinScene
+  - NewCoinScene
+  - SpicesInteraction
   fader: {fileID: 1819468858}
 --- !u!114 &40321877
 MonoBehaviour:
