@@ -587,7 +587,7 @@ MonoBehaviour:
   requestBodyTrackingPermissionOnStartup: 0
   requestFaceTrackingPermissionOnStartup: 0
   requestEyeTrackingPermissionOnStartup: 0
-  requestScenePermissionOnStartup: 0
+  requestScenePermissionOnStartup: 1
   requestRecordAudioPermissionOnStartup: 0
   requestPassthroughCameraAccessPermissionOnStartup: 0
   _localDimming: 1
@@ -4454,7 +4454,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Hold V to bargain
+  m_text: Hold Trigger to speak
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -6092,11 +6092,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   serverUrl: http://127.0.0.1:8000/stt
   useLocalSpeech: 0
-  speechProviderOverride: {fileID: 0}
+  speechProviderOverride: {fileID: 1573725611}
   deviceName: 
   maxRecordingDuration: 20
   sampleRate: 16000
   debugKeepLastRecording: 0
+  debugRawInput: i offer one hundred twenty three
+  debugTestNormalize: 0
   chatManager: {fileID: 2137732763}
   inputField: {fileID: 1119916240}
   voiceStatusText: {fileID: 0}
@@ -7573,6 +7575,8 @@ GameObject:
   - component: {fileID: 2137732764}
   - component: {fileID: 2137732763}
   - component: {fileID: 2137732766}
+  - component: {fileID: 2137732768}
+  - component: {fileID: 2137732767}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -7601,15 +7605,16 @@ MonoBehaviour:
   feedbackManager: {fileID: 694718640}
   autoStart: 0
   marketplaceManager: {fileID: 1294257835}
-  useLocalIntentSystem: 0
-  useLocalNpcBrain: 0
-  useLocalSessionGeneration: 0
-  useOfflineTypedInputFallback: 0
+  useLocalIntentSystem: 1
+  useLocalNpcBrain: 1
+  useLocalSessionGeneration: 1
+  useOfflineTypedInputFallback: 1
   useLocalLLMUnderstanding: 0
   useLocalLLMGeneration: 0
   hudManager: {fileID: 799689586}
   sendButtonObject: {fileID: 0}
-  enableNpcTTS: 0
+  enableNpcTTS: 1
+  debugTtsCharacterOverride: 
   showDebugLogs: 1
 --- !u!114 &2137732764
 MonoBehaviour:
@@ -7657,7 +7662,142 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AudioManager
   audioSource: {fileID: 1903845976}
-  localNpcTtsProvider: {fileID: 0}
+  localNpcTtsProvider: {fileID: 2137732767}
+--- !u!114 &2137732767
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2137732762}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf520c53aae5ae7489a6ce94a2fd49ef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SherpaEditorTtsProvider
+  sherpaExePath: G:/Users/chitr/Desktop/Capstone/sherpa-onnx-win/sherpa-onnx-v1.13.0-win-x64-shared-MT-Release/bin/sherpa-onnx-offline-tts.exe
+  voiceRootRelativePath: Sherpa/voices
+  fallbackVoiceFolderName: en_IN_female
+  testText: Namaste traveler. Welcome to the Vijayanagara market. I have the finest
+    spices for trade.
+  debugSpeakNow: 0
+  audioSource: {fileID: 0}
+  voiceProfiles:
+  - characterId: lakshmi_amma
+    voiceFolderName: en_IN_female
+    displayName: Local Indian Female
+  - characterId: chinnamma_naik
+    voiceFolderName: en_IN_female
+    displayName: Local Indian Female
+  - characterId: saraswati_chetti
+    voiceFolderName: en_IN_female
+    displayName: Local Indian Female
+  - characterId: francisco_de_almeida
+    voiceFolderName: en_GB_male
+    displayName: Foreign Male
+  - characterId: father_penteado
+    voiceFolderName: en_GB_male
+    displayName: Foreign Male
+  - characterId: abdul_rahman
+    voiceFolderName: kusal_male
+    displayName: Abdul / Fallback Male
+--- !u!82 &2137732768
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2137732762}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 1
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!1001 &2850860075289529601
 PrefabInstance:
   m_ObjectHideFlags: 0

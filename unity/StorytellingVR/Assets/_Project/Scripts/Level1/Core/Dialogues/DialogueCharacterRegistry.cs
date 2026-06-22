@@ -30,12 +30,18 @@ public class DialogueCharacterRegistry
         CharacterDialogueSet abdulRahman = AbdulRahmanDialogue.Create();
         CharacterDialogueSet francisco = FranciscoDialogue.Create();
         CharacterDialogueSet lakshmiAmma = LakshmiAmmaDialogue.Create();
+        CharacterDialogueSet chinappaNaik = ChinappaNaikDialogue.Create();
+        CharacterDialogueSet siddharthChetti = SiddharthChettiDialogue.Create();
+        CharacterDialogueSet fatherPenteado = FatherPenteadoDialogue.Create();
 
         supportedProfiles = new List<DialogueCharacterProfile>
         {
             new DialogueCharacterProfile("abdul_rahman", "Abdul Rahman", "Arab Caravan Trader", "Friendly"),
             new DialogueCharacterProfile("francisco_de_almeida", "Francisco de Almeida", "Portuguese Trade Agent", "Strict"),
-            new DialogueCharacterProfile("lakshmi_amma", "Lakshmi Amma", "Local Household Buyer", "Friendly")
+            new DialogueCharacterProfile("lakshmi_amma", "Lakshmi Amma", "Local Household Buyer", "Friendly"),
+            new DialogueCharacterProfile("chinnamma_naik", "Chinnamma Naik", "Vijayanagara Wholesale Spice Buyer", "Strict"),
+            new DialogueCharacterProfile("saraswati_chetti", "Saraswati Chetti", "Local Vijayanagara Retail Shop Owner", "Friendly"),
+            new DialogueCharacterProfile("father_penteado", "Father Penteado", "Jesuit Missionary", "Normal")
         };
 
         GenericSet = new CharacterDialogueSet(
@@ -48,7 +54,10 @@ public class DialogueCharacterRegistry
         {
             { abdulRahman.characterId, abdulRahman },
             { francisco.characterId, francisco },
-            { lakshmiAmma.characterId, lakshmiAmma }
+            { lakshmiAmma.characterId, lakshmiAmma },
+            { chinappaNaik.characterId, chinappaNaik },
+            { siddharthChetti.characterId, siddharthChetti },
+            { fatherPenteado.characterId, fatherPenteado }
         };
     }
 
@@ -113,6 +122,21 @@ public class DialogueCharacterRegistry
         if (normalized.Contains("lakshmi"))
         {
             return "lakshmi_amma";
+        }
+
+        if (normalized.Contains("chinnamma"))
+        {
+            return "chinnamma_naik";
+        }
+
+        if (normalized.Contains("saraswati"))
+        {
+            return "saraswati_chetti";
+        }
+
+        if (normalized.Contains("penteado") || normalized.Contains("father"))
+        {
+            return "father_penteado";
         }
 
         return string.Empty;
