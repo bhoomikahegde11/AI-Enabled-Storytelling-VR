@@ -39,7 +39,10 @@ public class CoinSceneManager : MonoBehaviour
     {
         subtitlePanel.SetActive(false);
 
-        coinSequence.OnCoinSequenceFinished += EndCoinTutorial;
+        if (coinSequence != null)
+        {
+            coinSequence.OnCoinSequenceFinished += EndCoinTutorial;
+        }
 
         StartCoroutine(
             StartCoinScene()
@@ -60,7 +63,10 @@ public class CoinSceneManager : MonoBehaviour
         );
 
 
-        npc.GiveCoin();
+        if (npc != null)
+        {
+            npc.GiveCoin();
+        }
 
 
         yield return new WaitForSeconds(1.2f);
@@ -74,9 +80,14 @@ public class CoinSceneManager : MonoBehaviour
             "Take a closer look at this coin.",
             inspectCoinClip
         );
-        instructionPrompt.ShowAButton(
-            "Inspect Coin"
-        );
+
+
+        if (instructionPrompt != null)
+        {
+            instructionPrompt.ShowTrigger(
+                "Press right trigger to inspect coin"
+            );
+        }
     }
 
 
@@ -89,6 +100,7 @@ public class CoinSceneManager : MonoBehaviour
     }
 
 
+
     IEnumerator VarahaRoutine()
     {
         yield return ShowDialogue(
@@ -98,9 +110,12 @@ public class CoinSceneManager : MonoBehaviour
         );
 
 
-        instructionPrompt.ShowAButton(
-            "Continue"
-        );
+        if (instructionPrompt != null)
+        {
+            instructionPrompt.ShowTrigger(
+                "Press right trigger to continue"
+            );
+        }
     }
 
 
@@ -158,10 +173,10 @@ public class CoinSceneManager : MonoBehaviour
 
 
     IEnumerator ShowDialogue(
-    string speaker,
-    string line,
-    AudioClip clip
-)
+        string speaker,
+        string line,
+        AudioClip clip
+    )
     {
         subtitlePanel.SetActive(true);
 
@@ -178,7 +193,9 @@ public class CoinSceneManager : MonoBehaviour
         )
         {
             voiceSource.clip = clip;
+
             voiceSource.Play();
+
 
             yield return new WaitForSeconds(
                 clip.length
@@ -192,5 +209,4 @@ public class CoinSceneManager : MonoBehaviour
 
         subtitlePanel.SetActive(false);
     }
-
 }

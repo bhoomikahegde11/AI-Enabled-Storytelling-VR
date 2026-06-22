@@ -3427,8 +3427,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 05013545a7a2dc54ba407864b07c4330, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VRInspectRotate
-  rotationSpeed: 120
+  rightHandAnchor: {fileID: 177905679}
+  controller: 2
+  inspectButton: 8192
+  rotationSensitivity: 1.2
   smoothSpeed: 8
+  enterHapticAmplitude: 0.45
+  enterHapticFrequency: 0.35
+  rotateHapticAmplitude: 0.12
+  rotateHapticFrequency: 0.15
+  rotateHapticCooldown: 0.25
 --- !u!23 &680956316
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -5315,8 +5323,8 @@ MonoBehaviour:
   panel: {fileID: 494189288}
   iconImage: {fileID: 32322008}
   instructionText: {fileID: 1345371392}
-  aButtonIcon: {fileID: 21300000, guid: 1f811ce1426e527428e06120078df97a, type: 3}
-  joystickIcon: {fileID: 21300000, guid: e6f852e66c1aaf84d822fd6d4857840b, type: 3}
+  triggerIcon: {fileID: 21300000, guid: c2bc09e4357ee4c6bbb9d0e8ccf7f21d, type: 3}
+  wristRotateIcon: {fileID: 0}
 --- !u!114 &979231197
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5456,8 +5464,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 05013545a7a2dc54ba407864b07c4330, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VRInspectRotate
-  rotationSpeed: 120
+  rightHandAnchor: {fileID: 177905679}
+  controller: 2
+  inspectButton: 8192
+  rotationSensitivity: 1.2
   smoothSpeed: 8
+  enterHapticAmplitude: 0.45
+  enterHapticFrequency: 0.35
+  rotateHapticAmplitude: 0.12
+  rotateHapticFrequency: 0.15
+  rotateHapticCooldown: 0.25
 --- !u!65 &982612938
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -8652,6 +8668,30 @@ PrefabInstance:
       propertyPath: m_LocalPosition.z
       value: 0.58529
       objectReference: {fileID: 0}
+    - target: {fileID: 2806290354107157340, guid: d03ff2c940a64bc498c6f6ea53a9811a, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 96.47646
+      objectReference: {fileID: 0}
+    - target: {fileID: 2806290354107157340, guid: d03ff2c940a64bc498c6f6ea53a9811a, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 96.47646
+      objectReference: {fileID: 0}
+    - target: {fileID: 2806290354107157340, guid: d03ff2c940a64bc498c6f6ea53a9811a, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 96.47646
+      objectReference: {fileID: 0}
+    - target: {fileID: 2806290354107157340, guid: d03ff2c940a64bc498c6f6ea53a9811a, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 4.871
+      objectReference: {fileID: 0}
+    - target: {fileID: 2806290354107157340, guid: d03ff2c940a64bc498c6f6ea53a9811a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.6082
+      objectReference: {fileID: 0}
+    - target: {fileID: 2806290354107157340, guid: d03ff2c940a64bc498c6f6ea53a9811a, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.109
+      objectReference: {fileID: 0}
     - target: {fileID: 2900721524365905941, guid: d03ff2c940a64bc498c6f6ea53a9811a, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.06974048
@@ -9751,7 +9791,7 @@ Transform:
   m_GameObject: {fileID: 1901758060}
   serializedVersion: 2
   m_LocalRotation: {x: -0.00000003774895, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 5.33, y: -0.92, z: -2.248}
+  m_LocalPosition: {x: 5.322, y: -0.92, z: -2.049}
   m_LocalScale: {x: 114.73, y: 114.73, z: 114.73}
   m_ConstrainProportionsScale: 0
   m_Children: []
