@@ -1,5 +1,5 @@
 using UnityEngine;
-
+using System.Collections;
 public class ScooperFill : MonoBehaviour
 {
     public GameObject cardamomVisual;
@@ -28,8 +28,13 @@ public class ScooperFill : MonoBehaviour
         filled = true;
 
         cardamomVisual.SetActive(true);
-
-        Debug.Log("Filled!");
+        OVRInput.SetControllerVibration(
+            1f,
+            1f,
+            OVRInput.Controller.RTouch
+        );
+        StartCoroutine(StopHaptics());
+        
     }
 
     public void ResetScooper()
@@ -59,5 +64,15 @@ public class ScooperFill : MonoBehaviour
         {
             insideSack = false;
         }
+    }
+    IEnumerator StopHaptics()
+    {
+        yield return new WaitForSeconds(0.15f);
+
+        OVRInput.SetControllerVibration(
+            0,
+            0,
+            OVRInput.Controller.RTouch
+        );
     }
 }
