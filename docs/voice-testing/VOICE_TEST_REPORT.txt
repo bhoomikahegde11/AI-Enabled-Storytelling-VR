@@ -42,3 +42,119 @@ Next Steps
 - Find and test an Indian English male offline voice.
 - Test Sherpa-ONNX voices in the parallel sherpa folder structure.
 - Only after voice choice is finalized, integrate the selected voice path into Unity.
+
+Sherpa Preparation
+
+- Generated Sherpa-style `tokens.txt` files from `phoneme_id_map` for:
+  - `en_IN_female_text_to_speech_en_IN_piper`
+  - `hindi_accent_female`
+  - `en_US_kusal_medium`
+  - `en_GB_northern_english_male_medium`
+  - `en_US_hfc_female_medium`
+  - `en_US_hfc_male_medium`
+  - `en_GB_southern_english_female_low`
+- Created Sherpa test copies under `docs/voice-testing/models/sherpa/from_piper/<voice_name>/`
+- Each Sherpa test copy now contains:
+  - original `.onnx`
+  - original `.onnx.json` reference config
+  - generated `tokens.txt`
+
+Sherpa Readiness Status
+
+- `en_IN_female_text_to_speech_en_IN_piper`
+  - `phoneme_id_map` found
+  - `tokens.txt` generated
+  - Ready for Sherpa testing except for `espeak-ng-data`
+- `hindi_accent_female`
+  - `phoneme_id_map` found
+  - `tokens.txt` generated
+  - Ready for Sherpa testing except for `espeak-ng-data`
+- `en_US_kusal_medium`
+  - `phoneme_id_map` found
+  - `tokens.txt` generated
+  - Ready for Sherpa testing except for `espeak-ng-data`
+- `en_GB_northern_english_male_medium`
+  - `phoneme_id_map` found
+  - `tokens.txt` generated
+  - Ready for Sherpa testing except for `espeak-ng-data`
+- `en_US_hfc_female_medium`
+  - `phoneme_id_map` found
+  - `tokens.txt` generated
+  - Ready for Sherpa testing except for `espeak-ng-data`
+
+Pending Support Files
+
+- `espeak-ng-data` has now been copied from the official Sherpa test model into all Sherpa-from-Piper test folders used in this round.
+- Remaining blocker:
+  `en_US_hfc_female_medium` still fails during Sherpa generation even after metadata patching and `espeak-ng-data` setup.
+
+Sherpa Piper Patch + Generation Results
+
+Runtime
+
+- Sherpa executable used:
+  `G:/Users/chitr/Desktop/Capstone/sherpa-onnx-win/sherpa-onnx-v1.13.0-win-x64-shared-MT-Release/bin/sherpa-onnx-offline-tts.exe`
+- Patch method:
+  Safe copied `.sherpa.onnx` files were created beside each original Piper model.
+  The original `.onnx` files were not overwritten.
+  Metadata keys added to the copied models:
+  `model_type`, `comment`, `language`, `voice`, `has_espeak`, `n_speakers`, `sample_rate`
+
+Sherpa Result Table
+
+Engine | Voice/Model | Patch status | Generation status | Average RTF | Notes
+Sherpa-from-Piper | en_IN_female_text_to_speech_en_IN_piper | Success | Success | 0.085 | All 3 sample WAVs generated successfully.
+Sherpa-from-Piper | hindi_accent_female | Success | Success | 0.088 | All 3 sample WAVs generated successfully.
+Sherpa-from-Piper | en_US_kusal_medium | Success | Success | 0.095 | All 3 sample WAVs generated successfully.
+Sherpa-from-Piper | en_GB_northern_english_male_medium | Success | Success | 0.093 | All 3 sample WAVs generated successfully.
+Sherpa-from-Piper | en_US_hfc_male_medium | Success | Success | 0.096 | All 3 sample WAVs generated successfully.
+Sherpa-from-Piper | en_US_hfc_female_medium | Success | Failed | n/a | Sherpa process crashed for all 3 sample attempts after patching.
+
+Generated Sherpa Sample Locations
+
+- `docs/voice-testing/samples/sherpa/from_piper/en_IN_female_text_to_speech_en_IN_piper/`
+- `docs/voice-testing/samples/sherpa/from_piper/hindi_accent_female/`
+- `docs/voice-testing/samples/sherpa/from_piper/en_US_kusal_medium/`
+- `docs/voice-testing/samples/sherpa/from_piper/en_GB_northern_english_male_medium/`
+- `docs/voice-testing/samples/sherpa/from_piper/en_US_hfc_male_medium/`
+- `docs/voice-testing/samples/sherpa/from_piper/en_US_hfc_female_medium/`
+
+Subjective Review Placeholders
+
+- `en_IN_female_text_to_speech_en_IN_piper`
+  Accent:
+  Naturalness:
+  NPC fit:
+- `hindi_accent_female`
+  Accent:
+  Naturalness:
+  NPC fit:
+- `en_US_kusal_medium`
+  Accent:
+  Naturalness:
+  NPC fit:
+- `en_GB_northern_english_male_medium`
+  Accent:
+  Naturalness:
+  NPC fit:
+- `en_US_hfc_male_medium`
+  Accent:
+  Naturalness:
+  NPC fit:
+- `en_US_hfc_female_medium`
+  Accent:
+  Naturalness:
+  NPC fit:
+
+Recommended Mapping
+
+- Local female NPCs:
+  `en_IN_female_text_to_speech_en_IN_piper` as primary.
+  `hindi_accent_female` as alternate comparison.
+- Foreign male NPCs:
+  `en_GB_northern_english_male_medium` as primary for Francisco de Almeida and Father Penteado.
+  `en_US_hfc_male_medium` as secondary comparison.
+- Fallback NPCs:
+  `en_US_kusal_medium` as the most flexible non-Indian fallback for male-coded voices.
+  `en_US_hfc_male_medium` as an additional fallback.
+  `en_US_hfc_female_medium` is not recommended until the Sherpa crash is explained.
