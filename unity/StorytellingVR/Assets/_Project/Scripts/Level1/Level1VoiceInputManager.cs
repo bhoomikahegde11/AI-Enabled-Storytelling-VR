@@ -214,16 +214,27 @@ public class Level1VoiceInputManager : MonoBehaviour
             voiceStatusText = hudManager.voiceStatusText;
         }
 
-        // Hold V (keyboard) or Right Trigger (controller) to record
-        if (Input.GetKeyDown(KeyCode.V)
-            || OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger))
+        bool editorRecordDown = Input.GetKeyDown(KeyCode.V);
+        bool editorRecordUp = Input.GetKeyUp(KeyCode.V);
+        bool leftTriggerDown = OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.LTouch);
+        bool leftTriggerUp = OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.LTouch);
+
+        // Hold V (keyboard) or Left Trigger (controller) to record
+        if (editorRecordDown || leftTriggerDown)
         {
+            if (leftTriggerDown)
+            {
+                Debug.Log("[INPUT] Left trigger down");
+            }
             Debug.Log("[STT-QUEST] Input held/down: true");
             StartListening();
         }
-        if (Input.GetKeyUp(KeyCode.V)
-            || OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger))
+        if (editorRecordUp || leftTriggerUp)
         {
+            if (leftTriggerUp)
+            {
+                Debug.Log("[INPUT] Left trigger up");
+            }
             Debug.Log("[STT-QUEST] Input held/down: false");
             StopListening();
         }
@@ -231,9 +242,15 @@ public class Level1VoiceInputManager : MonoBehaviour
         // Enter / A confirm  |  R / B reset  (keyboard + controller)
         if (currentState == VoiceInputState.Review)
         {
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)
-                || OVRInput.GetDown(OVRInput.Button.One))
+            bool confirmPressed = Input.GetKeyDown(KeyCode.Return)
+                || Input.GetKeyDown(KeyCode.KeypadEnter)
+                || OVRInput.GetDown(OVRInput.Button.One);
+            if (confirmPressed)
             {
+                if (OVRInput.GetDown(OVRInput.Button.One))
+                {
+                    Debug.Log("[INPUT] A pressed");
+                }
                 Debug.Log("[VOICE CONFIRM] Confirm triggered (Enter / A)");
                 if (chatManager != null)
                 {
@@ -244,9 +261,14 @@ public class Level1VoiceInputManager : MonoBehaviour
                 SetVoiceStatusText(GetIdleText());
             }
 
-            if (Input.GetKeyDown(KeyCode.R)
-                || OVRInput.GetDown(OVRInput.Button.Two))
+            bool clearPressed = Input.GetKeyDown(KeyCode.R)
+                || OVRInput.GetDown(OVRInput.Button.Two);
+            if (clearPressed)
             {
+                if (OVRInput.GetDown(OVRInput.Button.Two))
+                {
+                    Debug.Log("[INPUT] B pressed");
+                }
                 Debug.Log("[VOICE CONFIRM] Reset triggered (R / B)");
                 ClearTranscript();
             }
@@ -254,9 +276,14 @@ public class Level1VoiceInputManager : MonoBehaviour
         else
         {
             // Standard R / B when not reviewing: Clear transcript
-            if (Input.GetKeyDown(KeyCode.R)
-                || OVRInput.GetDown(OVRInput.Button.Two))
+            bool clearPressed = Input.GetKeyDown(KeyCode.R)
+                || OVRInput.GetDown(OVRInput.Button.Two);
+            if (clearPressed)
             {
+                if (OVRInput.GetDown(OVRInput.Button.Two))
+                {
+                    Debug.Log("[INPUT] B pressed");
+                }
                 ClearTranscript();
             }
         }
@@ -304,7 +331,7 @@ public class Level1VoiceInputManager : MonoBehaviour
             chatManager.hudManager.DisablePlayerTyping();
         }
 
-        // Clear input box
+        // Starting a new recording always replaces any unsent transcript.
         if (inputField != null)
         {
             inputField.text = "";
