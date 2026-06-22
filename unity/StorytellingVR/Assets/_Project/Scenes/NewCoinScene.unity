@@ -714,15 +714,15 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 32322006}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 4}
+  m_LocalScale: {x: 1, y: 1.0618, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 494189289}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 105, y: 3}
+  m_AnchoredPosition: {x: -180, y: -164}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &32322008
@@ -1663,6 +1663,7 @@ MonoBehaviour:
   - {fileID: 982612935}
   - {fileID: 680956313}
   infoManager: {fileID: 1604353976}
+  instructionPrompt: {fileID: 979231196}
   names:
   - VARAHA
   - KASU
@@ -1674,6 +1675,8 @@ MonoBehaviour:
     and \nreligious symbols"
   - "\u2022 Everyday marketplace currency\r\n\u2022 Used by common people\r\n\u2022
     Small purchases"
+  controller: 2
+  continueButton: 8192
   transitionSpeed: 2
 --- !u!1 &287926682
 GameObject:
@@ -3429,11 +3432,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::VRInspectRotate
   rightHandAnchor: {fileID: 177905679}
   controller: 2
-  inspectButton: 8192
+  rotateButton: 16384
   rotationSensitivity: 1.2
   smoothSpeed: 8
-  enterHapticAmplitude: 0.45
-  enterHapticFrequency: 0.35
   rotateHapticAmplitude: 0.12
   rotateHapticFrequency: 0.15
   rotateHapticCooldown: 0.25
@@ -5323,8 +5324,8 @@ MonoBehaviour:
   panel: {fileID: 494189288}
   iconImage: {fileID: 32322008}
   instructionText: {fileID: 1345371392}
-  triggerIcon: {fileID: 21300000, guid: c2bc09e4357ee4c6bbb9d0e8ccf7f21d, type: 3}
-  wristRotateIcon: {fileID: 0}
+  triggerIcon: {fileID: 21300000, guid: e854b252bbd914e019576e0089dfc2d6, type: 3}
+  wristRotateIcon: {fileID: 21300000, guid: 03307529d9f01459599263d114b1ba47, type: 3}
 --- !u!114 &979231197
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5466,11 +5467,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::VRInspectRotate
   rightHandAnchor: {fileID: 177905679}
   controller: 2
-  inspectButton: 8192
+  rotateButton: 16384
   rotationSensitivity: 1.2
   smoothSpeed: 8
-  enterHapticAmplitude: 0.45
-  enterHapticFrequency: 0.35
   rotateHapticAmplitude: 0.12
   rotateHapticFrequency: 0.15
   rotateHapticCooldown: 0.25
@@ -6910,7 +6909,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1345371390}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6918,7 +6917,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -88.9, y: 0}
+  m_AnchoredPosition: {x: 28, y: -163}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1345371392
@@ -7007,7 +7006,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: -13.695343, w: 0}
+  m_margin: {x: 0, y: 0, z: -102.40712, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0

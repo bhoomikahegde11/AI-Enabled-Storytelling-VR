@@ -210,7 +210,7 @@ public class CoinInteraction : MonoBehaviour
 
         isInspecting = true;
         instructionPrompt.ShowWristRotate(
-            "Hold right trigger and rotate your wrist to inspect"
+            "Hold right grip and rotate your wrist to inspect"
         );
 
         if (sceneManager != null)

@@ -1,6 +1,5 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class CoinSequenceManager : MonoBehaviour
 {
@@ -13,6 +12,9 @@ public class CoinSequenceManager : MonoBehaviour
     [Header("Info")]
     public CoinInfoManager infoManager;
 
+    [Header("Instruction")]
+    public InstructionPromptManager instructionPrompt;
+
     [Header("Coin Data")]
     public string[] names;
     public string[] types;
@@ -20,21 +22,19 @@ public class CoinSequenceManager : MonoBehaviour
     [TextArea]
     public string[] descriptions;
 
+    [Header("Input")]
+    public OVRInput.Controller controller = OVRInput.Controller.RTouch;
+    public OVRInput.Button continueButton = OVRInput.Button.PrimaryIndexTrigger;
 
     [Header("Transition")]
     public float transitionSpeed = 2f;
 
-
     private int index = 0;
-
     private bool sequenceStarted = false;
     private bool switching = false;
+    private bool waitingForRelease = false;
 
-
-    // tells CoinSceneManager tutorial is finished
     public System.Action OnCoinSequenceFinished;
-
-
 
     void Start()
     {
@@ -44,70 +44,64 @@ public class CoinSequenceManager : MonoBehaviour
         }
     }
 
-
-
     void Update()
     {
-        if (
-            sequenceStarted &&
-            !switching &&
-            OVRInput.GetDown(
-                OVRInput.Button.One)
-        )
+        if (!sequenceStarted || switching)
+            return;
+
+        // Prevent same trigger press that started inspect from also immediately continuing.
+        if (waitingForRelease)
+        {
+            if (!OVRInput.Get(continueButton, controller))
+            {
+                waitingForRelease = false;
+            }
+
+            return;
+        }
+
+        if (OVRInput.GetDown(continueButton, controller))
         {
             Next();
         }
     }
 
-
-
     public void StartSequence()
     {
         sequenceStarted = true;
+        waitingForRelease = true;
+
+        if (instructionPrompt != null)
+        {
+            instructionPrompt.ShowTrigger(
+                "Press right trigger to continue"
+            );
+        }
     }
-
-
 
     void Next()
     {
-        // already on last coin
         if (index >= coins.Length - 1)
         {
             FinishSequence();
             return;
         }
 
-
-        StartCoroutine(
-            SwitchCoin()
-        );
+        StartCoroutine(SwitchCoin());
     }
-
-
 
     IEnumerator SwitchCoin()
     {
         switching = true;
 
-
-        GameObject oldCoin =
-            coins[index];
-
-
-        Vector3 targetScale =
-            oldCoin.transform.localScale;
-
+        GameObject oldCoin = coins[index];
+        Vector3 targetScale = oldCoin.transform.localScale;
 
         float t = 0;
 
-
-        // shrink old coin
         while (t < 1)
         {
-            t +=
-            Time.deltaTime *
-            transitionSpeed;
-
+            t += Time.deltaTime * transitionSpeed;
 
             oldCoin.transform.localScale =
                 Vector3.Lerp(
@@ -116,53 +110,40 @@ public class CoinSequenceManager : MonoBehaviour
                     t
                 );
 
-
             yield return null;
         }
 
-
-
         oldCoin.SetActive(false);
-
 
         index++;
 
-
-
-        GameObject newCoin =
-            coins[index];
-
+        GameObject newCoin = coins[index];
 
         newCoin.SetActive(true);
 
-
-        // same position as old coin
         newCoin.transform.position =
             oldCoin.transform.position;
-
 
         newCoin.transform.rotation =
             oldCoin.transform.rotation;
 
-
         newCoin.transform.localScale =
             Vector3.zero;
 
-
-
-        // update info card
-        infoManager.ShowInfo(
-            names[index],
-            types[index],
-            descriptions[index]
-        );
+        if (infoManager != null)
+        {
+            infoManager.ShowInfo(
+                names[index],
+                types[index],
+                descriptions[index]
+            );
+        }
 
         if (sceneManager != null)
         {
             sceneManager.NarrateKasu();
         }
 
-        // enable joystick rotate
         VRInspectRotate rotate =
             newCoin.GetComponent<VRInspectRotate>();
 
@@ -171,18 +152,11 @@ public class CoinSequenceManager : MonoBehaviour
             rotate.enabled = true;
         }
 
-
-
         t = 0;
 
-
-        // grow new coin
         while (t < 1)
         {
-            t +=
-            Time.deltaTime *
-            transitionSpeed;
-
+            t += Time.deltaTime * transitionSpeed;
 
             newCoin.transform.localScale =
                 Vector3.Lerp(
@@ -191,32 +165,37 @@ public class CoinSequenceManager : MonoBehaviour
                     t
                 );
 
-
             yield return null;
         }
 
-
         switching = false;
+        waitingForRelease = true;
+
+        if (instructionPrompt != null)
+        {
+            instructionPrompt.ShowTrigger(
+                "Press right trigger to continue"
+            );
+        }
     }
-
-
 
     void FinishSequence()
     {
-        Debug.Log(
-            "Coin tutorial finished"
-        );
+        Debug.Log("Coin tutorial finished");
 
+        coins[index].SetActive(false);
 
-        coins[index]
-            .SetActive(false);
-
-
-        infoManager.Hide();
-
+        if (infoManager != null)
+        {
+            infoManager.Hide();
+        }
 
         sequenceStarted = false;
 
+        if (instructionPrompt != null)
+        {
+            instructionPrompt.Hide();
+        }
 
         if (OnCoinSequenceFinished != null)
         {

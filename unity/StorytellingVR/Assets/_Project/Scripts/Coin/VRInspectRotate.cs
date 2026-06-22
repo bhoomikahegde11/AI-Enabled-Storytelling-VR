@@ -5,20 +5,20 @@ public class VRInspectRotate : MonoBehaviour
     [Header("Controller")]
     [SerializeField] private Transform rightHandAnchor;
     [SerializeField] private OVRInput.Controller controller = OVRInput.Controller.RTouch;
-    [SerializeField] private OVRInput.Button inspectButton = OVRInput.Button.PrimaryIndexTrigger;
+
+    [Header("Input")]
+    [SerializeField] private OVRInput.Button rotateButton = OVRInput.Button.PrimaryHandTrigger;
 
     [Header("Rotation")]
     [SerializeField] private float rotationSensitivity = 1.2f;
     [SerializeField] private float smoothSpeed = 10f;
 
     [Header("Haptics")]
-    [SerializeField] private float enterHapticAmplitude = 0.45f;
-    [SerializeField] private float enterHapticFrequency = 0.35f;
     [SerializeField] private float rotateHapticAmplitude = 0.12f;
     [SerializeField] private float rotateHapticFrequency = 0.15f;
     [SerializeField] private float rotateHapticCooldown = 0.25f;
 
-    private bool isInspecting;
+    private bool isRotating;
     private Quaternion lastHandRotation;
     private Quaternion targetRotation;
     private float hapticStopTime;
@@ -27,6 +27,7 @@ public class VRInspectRotate : MonoBehaviour
     private void OnEnable()
     {
         targetRotation = transform.rotation;
+        isRotating = false;
     }
 
     private void Update()
@@ -34,19 +35,22 @@ public class VRInspectRotate : MonoBehaviour
         if (rightHandAnchor == null)
             return;
 
-        if (OVRInput.GetDown(inspectButton, controller))
+        if (OVRInput.GetDown(rotateButton, controller))
         {
-            EnterInspectMode();
+            isRotating = true;
+            lastHandRotation = rightHandAnchor.rotation;
+            PlayHaptic(0.25f, 0.25f, 0.05f);
         }
 
-        if (OVRInput.Get(inspectButton, controller) && isInspecting)
+        if (OVRInput.Get(rotateButton, controller) && isRotating)
         {
             RotateUsingWrist();
         }
 
-        if (OVRInput.GetUp(inspectButton, controller))
+        if (OVRInput.GetUp(rotateButton, controller))
         {
-            ExitInspectMode();
+            isRotating = false;
+            OVRInput.SetControllerVibration(0, 0, controller);
         }
 
         transform.rotation = Quaternion.Slerp(
@@ -56,24 +60,6 @@ public class VRInspectRotate : MonoBehaviour
         );
 
         StopHapticsIfNeeded();
-    }
-
-    private void EnterInspectMode()
-    {
-        isInspecting = true;
-        lastHandRotation = rightHandAnchor.rotation;
-        targetRotation = transform.rotation;
-
-        PlayHaptic(enterHapticFrequency, enterHapticAmplitude, 0.08f);
-        Debug.Log("Coin inspect started");
-    }
-
-    private void ExitInspectMode()
-    {
-        isInspecting = false;
-        OVRInput.SetControllerVibration(0, 0, controller);
-
-        Debug.Log("Coin inspect ended");
     }
 
     private void RotateUsingWrist()
@@ -100,7 +86,12 @@ public class VRInspectRotate : MonoBehaviour
 
         if (movementAmount > 2.5f && Time.time >= nextRotateHapticTime)
         {
-            PlayHaptic(rotateHapticFrequency, rotateHapticAmplitude, 0.035f);
+            PlayHaptic(
+                rotateHapticFrequency,
+                rotateHapticAmplitude,
+                0.035f
+            );
+
             nextRotateHapticTime = Time.time + rotateHapticCooldown;
         }
 
