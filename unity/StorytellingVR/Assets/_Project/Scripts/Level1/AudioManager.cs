@@ -19,34 +19,11 @@ public class AudioManager : MonoBehaviour
             }
         }
 
+        localNpcTtsProvider = ResolveBestTtsProvider(localNpcTtsProvider);
+
         if (localNpcTtsProvider == null)
         {
-            localNpcTtsProvider = GetComponent<MonoBehaviour>();
-            if (!(localNpcTtsProvider is INpcTtsProvider))
-            {
-                MonoBehaviour[] behaviours = GetComponents<MonoBehaviour>();
-                for (int i = 0; i < behaviours.Length; i++)
-                {
-                    if (behaviours[i] is INpcTtsProvider)
-                    {
-                        localNpcTtsProvider = behaviours[i];
-                        break;
-                    }
-                }
-            }
-
-            if (localNpcTtsProvider == null || !(localNpcTtsProvider is INpcTtsProvider))
-            {
-                MonoBehaviour[] sceneBehaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
-                for (int i = 0; i < sceneBehaviours.Length; i++)
-                {
-                    if (sceneBehaviours[i] is INpcTtsProvider)
-                    {
-                        localNpcTtsProvider = sceneBehaviours[i];
-                        break;
-                    }
-                }
-            }
+            localNpcTtsProvider = ResolveBestTtsProvider(GetComponent<MonoBehaviour>());
         }
 
         if (localNpcTtsProvider == null)
@@ -57,6 +34,95 @@ public class AudioManager : MonoBehaviour
         {
             Debug.Log("[TTS] Active provider: " + localNpcTtsProvider.GetType().Name);
         }
+    }
+
+    private MonoBehaviour ResolveBestTtsProvider(MonoBehaviour currentProvider)
+    {
+        if (IsValidNpcTtsProvider(currentProvider) && !ShouldReplaceProviderForPlatform(currentProvider))
+        {
+            return currentProvider;
+        }
+
+        MonoBehaviour bestProvider = FindBestProvider(GetComponents<MonoBehaviour>());
+        if (bestProvider != null)
+        {
+            return bestProvider;
+        }
+
+        MonoBehaviour[] sceneBehaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        return FindBestProvider(sceneBehaviours);
+    }
+
+    private static MonoBehaviour FindBestProvider(MonoBehaviour[] behaviours)
+    {
+        MonoBehaviour bestProvider = null;
+        int bestScore = int.MinValue;
+
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            MonoBehaviour candidate = behaviours[i];
+            if (!IsValidNpcTtsProvider(candidate))
+            {
+                continue;
+            }
+
+            int score = ScoreProviderForPlatform(candidate);
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestProvider = candidate;
+            }
+        }
+
+        return bestProvider;
+    }
+
+    private static bool IsValidNpcTtsProvider(MonoBehaviour behaviour)
+    {
+        return behaviour != null && behaviour is INpcTtsProvider;
+    }
+
+    private static bool ShouldReplaceProviderForPlatform(MonoBehaviour provider)
+    {
+        string typeName = provider.GetType().Name;
+#if UNITY_ANDROID && !UNITY_EDITOR
+        return typeName == "SherpaEditorTtsProvider";
+#else
+        return typeName == "SherpaAndroidTtsProvider";
+#endif
+    }
+
+    private static int ScoreProviderForPlatform(MonoBehaviour provider)
+    {
+        string typeName = provider.GetType().Name;
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (typeName == "SherpaAndroidTtsProvider")
+        {
+            return 100;
+        }
+
+        if (typeName == "AndroidNativeTtsProvider")
+        {
+            return 90;
+        }
+
+        if (typeName == "SherpaEditorTtsProvider")
+        {
+            return 10;
+        }
+#else
+        if (typeName == "SherpaEditorTtsProvider")
+        {
+            return 100;
+        }
+
+        if (typeName == "SherpaAndroidTtsProvider")
+        {
+            return 10;
+        }
+#endif
+
+        return 50;
     }
 
     /// <summary>

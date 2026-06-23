@@ -141,7 +141,7 @@ public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacte
 #endif
     }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN
     private IEnumerator SpeakRoutine(string text, string characterId, string selectedVoice, string selectedModelPath, string selectedTokensPath, string selectedDataDirPath)
     {
         string resolvedSherpaExePath = ResolveSherpaExePath();
@@ -288,45 +288,6 @@ public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacte
         return true;
     }
 
-    private SherpaVoiceProfile GetVoiceProfile(string characterId)
-    {
-        if (voiceProfiles == null || voiceProfiles.Length == 0 || string.IsNullOrWhiteSpace(characterId))
-        {
-            return null;
-        }
-
-        for (int i = 0; i < voiceProfiles.Length; i++)
-        {
-            if (voiceProfiles[i] != null &&
-                string.Equals(voiceProfiles[i].characterId, characterId, System.StringComparison.OrdinalIgnoreCase))
-            {
-                return voiceProfiles[i];
-            }
-        }
-
-        return null;
-    }
-
-    private string GetResolvedModelPath(string voiceFolderName)
-    {
-        return Path.Combine(GetResolvedVoiceFolderPath(voiceFolderName), "model.onnx");
-    }
-
-    private string GetResolvedTokensPath(string voiceFolderName)
-    {
-        return Path.Combine(GetResolvedVoiceFolderPath(voiceFolderName), "tokens.txt");
-    }
-
-    private string GetResolvedDataDirPath(string voiceFolderName)
-    {
-        return Path.Combine(GetResolvedVoiceFolderPath(voiceFolderName), "espeak-ng-data");
-    }
-
-    private string GetResolvedVoiceFolderPath(string voiceFolderName)
-    {
-        return Path.Combine(Application.streamingAssetsPath, voiceRootRelativePath, voiceFolderName);
-    }
-
     private string ResolveSherpaExePath()
     {
         if (!string.IsNullOrWhiteSpace(sherpaExePath))
@@ -371,6 +332,45 @@ public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacte
         return "\"" + value.Replace("\"", "\\\"") + "\"";
     }
 #endif
+
+    private SherpaVoiceProfile GetVoiceProfile(string characterId)
+    {
+        if (voiceProfiles == null || voiceProfiles.Length == 0 || string.IsNullOrWhiteSpace(characterId))
+        {
+            return null;
+        }
+
+        for (int i = 0; i < voiceProfiles.Length; i++)
+        {
+            if (voiceProfiles[i] != null &&
+                string.Equals(voiceProfiles[i].characterId, characterId, System.StringComparison.OrdinalIgnoreCase))
+            {
+                return voiceProfiles[i];
+            }
+        }
+
+        return null;
+    }
+
+    private string GetResolvedModelPath(string voiceFolderName)
+    {
+        return Path.Combine(GetResolvedVoiceFolderPath(voiceFolderName), "model.onnx");
+    }
+
+    private string GetResolvedTokensPath(string voiceFolderName)
+    {
+        return Path.Combine(GetResolvedVoiceFolderPath(voiceFolderName), "tokens.txt");
+    }
+
+    private string GetResolvedDataDirPath(string voiceFolderName)
+    {
+        return Path.Combine(GetResolvedVoiceFolderPath(voiceFolderName), "espeak-ng-data");
+    }
+
+    private string GetResolvedVoiceFolderPath(string voiceFolderName)
+    {
+        return Path.Combine(Application.streamingAssetsPath, voiceRootRelativePath, voiceFolderName);
+    }
 
     private void EnsureAudioSource()
     {

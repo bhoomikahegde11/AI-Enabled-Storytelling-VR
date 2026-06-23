@@ -618,6 +618,55 @@ MonoBehaviour:
     _installationVariants:
     - _memberName: variant
       _value: '{"value__":0}'
+--- !u!1 &64933421 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2676814643144531384, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+  m_PrefabInstance: {fileID: 1204646100}
+  m_PrefabAsset: {fileID: 0}
+--- !u!82 &64933426 stripped
+AudioSource:
+  m_CorrespondingSourceObject: {fileID: 1168942287528805198, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+  m_PrefabInstance: {fileID: 1204646100}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &64933428
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 64933421}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1acaacb134eaa83459254a530b2028c7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SherpaAndroidTtsProvider
+  enableTts: 1
+  voiceRootRelativePath: Sherpa/voices
+  fallbackVoiceFolderName: en_IN_female
+  speechSpeed: 1
+  speakerId: 0
+  numThreads: 2
+  debugLogs: 1
+  audioSource: {fileID: 64933426}
+  voiceProfiles:
+  - characterId: lakshmi_amma
+    voiceFolderName: en_IN_female
+    displayName: Local Indian Female
+  - characterId: chinnamma_naik
+    voiceFolderName: en_IN_female
+    displayName: Local Indian Female
+  - characterId: saraswati_chetti
+    voiceFolderName: en_IN_female
+    displayName: Local Indian Female
+  - characterId: francisco_de_almeida
+    voiceFolderName: en_GB_male
+    displayName: Foreign Male
+  - characterId: father_penteado
+    voiceFolderName: en_GB_male
+    displayName: Foreign Male
+  - characterId: abdul_rahman
+    voiceFolderName: kusal_male
+    displayName: Abdul / Fallback Male
 --- !u!1 &101741638
 GameObject:
   m_ObjectHideFlags: 0
@@ -2152,7 +2201,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -35.38}
+  m_AnchoredPosition: {x: 0, y: 550}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &436392361
@@ -2920,7 +2969,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 386.8, y: 20}
+  m_AnchoredPosition: {x: 386.8, y: 415.5}
   m_SizeDelta: {x: 350, y: 459}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &495897948
@@ -6792,6 +6841,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1917875769}
     - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: varahaText
+      value: 
+      objectReference: {fileID: 405969029}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
       propertyPath: dividerLine
       value: 
       objectReference: {fileID: 1070068733}
@@ -6812,6 +6865,22 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 477807452}
     - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: reputationText
+      value: 
+      objectReference: {fileID: 865433568}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: tradeSpiceText
+      value: 
+      objectReference: {fileID: 1960196875}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: ledgerTitleText
+      value: 
+      objectReference: {fileID: 132556603}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: ledgerTransform
+      value: 
+      objectReference: {fileID: 1509280035}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
       propertyPath: npcSubtitleText
       value: 
       objectReference: {fileID: 1723711625}
@@ -6819,6 +6888,10 @@ PrefabInstance:
       propertyPath: speakerNameText
       value: 
       objectReference: {fileID: 220873812}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: varahaLabelText
+      value: 
+      objectReference: {fileID: 1826763225}
     - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
       propertyPath: voiceStatusText
       value: 
@@ -6828,13 +6901,73 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1325257925}
     - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: ledgerFooterText
+      value: 
+      objectReference: {fileID: 950686734}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: ledgerResultText
+      value: 
+      objectReference: {fileID: 1837536435}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: ledgerRewardText
+      value: 
+      objectReference: {fileID: 1179845574}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: reputationSlider
+      value: 
+      objectReference: {fileID: 2115100743}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: varahaAmountText
+      value: 
+      objectReference: {fileID: 405969029}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: currentTradePanel
+      value: 
+      objectReference: {fileID: 495897946}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
       propertyPath: inputBoxTransform
       value: 
       objectReference: {fileID: 477807450}
     - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: ledgerCanvasGroup
+      value: 
+      objectReference: {fileID: 1509280036}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: ledgerDetailsText
+      value: 
+      objectReference: {fileID: 2132282865}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: tradeNPCOfferText
+      value: 
+      objectReference: {fileID: 1048332182}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: reputationRankText
+      value: 
+      objectReference: {fileID: 1640321865}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: tradeCompletePanel
+      value: 
+      objectReference: {fileID: 1509280034}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
       propertyPath: dialogueCanvasGroup
       value: 
       objectReference: {fileID: 2053185550}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: moneyPanelTransform
+      value: 
+      objectReference: {fileID: 1766866953}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: reputationDeltaText
+      value: 
+      objectReference: {fileID: 1480962963}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: reputationFillImage
+      value: 
+      objectReference: {fileID: 1478133997}
+    - target: {fileID: 306185083876197616, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: tradeMarketValueText
+      value: 
+      objectReference: {fileID: 2125295860}
     - target: {fileID: 1751171238468483710, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0.5
@@ -6911,6 +7044,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8718828025096288626, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      propertyPath: audioSource
+      value: 
+      objectReference: {fileID: 64933426}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -6921,6 +7058,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 861040484837649662, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 0}
+    - targetCorrespondingSourceObject: {fileID: 2676814643144531384, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 64933428}
   m_SourcePrefab: {fileID: 100100000, guid: 0b6cbbbb8f09d834c8fb97f12165fa9c, type: 3}
 --- !u!1 &1236233143
 GameObject:
@@ -7385,8 +7525,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.012731102, y: 0}
   m_AnchorMax: {x: 1, y: 0.97817606}
-  m_AnchoredPosition: {x: 225, y: 8.850036}
-  m_SizeDelta: {x: -450, y: 17.699928}
+  m_AnchoredPosition: {x: 225, y: 500}
+  m_SizeDelta: {x: -450, y: 1000}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!225 &1325257925
 CanvasGroup:
@@ -7643,8 +7783,7 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1701145693}
+  m_Children: []
   m_Father: {fileID: 2100992995}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!20 &1388768018
@@ -8733,7 +8872,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1509280034}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.00035762787}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1.5, y: 1.5000002, z: 1.5}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -8748,7 +8887,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 75.00464}
+  m_AnchoredPosition: {x: -62.9, y: 505.5}
   m_SizeDelta: {x: 600, y: 520}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!225 &1509280036
@@ -9925,8 +10064,8 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1701145692}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.7}
-  m_LocalScale: {x: 0.0008, y: 0.0008, z: 0.0008}
+  m_LocalPosition: {x: 0, y: 0, z: 5.475}
+  m_LocalScale: {x: 0.002, y: 0.002, z: 0.002}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 410290701}
@@ -9934,11 +10073,11 @@ RectTransform:
   - {fileID: 1325257924}
   - {fileID: 2053185549}
   - {fileID: 1509280035}
-  m_Father: {fileID: 1388768017}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 29.95, y: -0.558}
   m_SizeDelta: {x: 2222.488, y: 933.0084}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1701145694
@@ -10328,8 +10467,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 400, y: 300}
-  m_SizeDelta: {x: -800, y: 600}
+  m_AnchoredPosition: {x: 520.85, y: 300}
+  m_SizeDelta: {x: -1041.7, y: 600}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1766866954
 MonoBehaviour:
@@ -11682,8 +11821,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -375, y: 275.00003}
-  m_SizeDelta: {x: 850, y: 499.99994}
+  m_AnchoredPosition: {x: -458.8, y: 275.00003}
+  m_SizeDelta: {x: 1017.6, y: 499.99994}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1925214910
 MonoBehaviour:
@@ -12262,7 +12401,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2053185548}
   m_LocalRotation: {x: -0, y: -0, z: 1.4915709e-10, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -355.71}
+  m_LocalPosition: {x: 0, y: 0, z: -482.6}
   m_LocalScale: {x: 1.5, y: 1.5, z: 1.5}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -12273,8 +12412,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -250}
-  m_SizeDelta: {x: 0, y: -500}
+  m_AnchoredPosition: {x: -109.29996, y: 262.59998}
+  m_SizeDelta: {x: 218.6001, y: 525.2001}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!225 &2053185550
 CanvasGroup:
@@ -15123,6 +15262,7 @@ SceneRoots:
   - {fileID: 481504629}
   - {fileID: 1603972735}
   - {fileID: 1640086614}
+  - {fileID: 1701145693}
   - {fileID: 316868948}
   - {fileID: 596149021}
   - {fileID: 1259146559}
