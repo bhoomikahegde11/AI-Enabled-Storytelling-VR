@@ -76,6 +76,7 @@ public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacte
     private void Awake()
     {
         EnsureAudioSource();
+        LogProviderDiagnostics();
     }
 
     private void Update()
@@ -109,6 +110,20 @@ public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacte
             return;
         }
 
+        SherpaVoiceProfile selectedProfile = GetVoiceProfile(characterId);
+        string selectedVoiceFolderName = selectedProfile != null && !string.IsNullOrWhiteSpace(selectedProfile.voiceFolderName)
+            ? selectedProfile.voiceFolderName
+            : fallbackVoiceFolderName;
+        string selectedVoice = selectedProfile != null && !string.IsNullOrWhiteSpace(selectedProfile.displayName)
+            ? selectedProfile.displayName
+            : "Fallback Voice";
+        string selectedVoiceFolderPath = GetResolvedVoiceFolderPath(selectedVoiceFolderName);
+        string selectedModelPath = GetResolvedModelPath(selectedVoiceFolderName);
+        string selectedTokensPath = GetResolvedTokensPath(selectedVoiceFolderName);
+        string selectedDataDirPath = GetResolvedDataDirPath(selectedVoiceFolderName);
+
+        LogVoiceDiagnostics(characterId, selectedVoice, selectedVoiceFolderPath, selectedModelPath, selectedTokensPath, selectedDataDirPath);
+
 #if UNITY_EDITOR
         EnsureAudioSource();
 
@@ -118,33 +133,17 @@ public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacte
             activeSpeakRoutine = null;
         }
 
-        activeSpeakRoutine = StartCoroutine(SpeakRoutine(text, characterId));
+        activeSpeakRoutine = StartCoroutine(SpeakRoutine(text, characterId, selectedVoice, selectedModelPath, selectedTokensPath, selectedDataDirPath));
 #else
-        Debug.Log("[TTS] SherpaEditorTtsProvider is Editor-only and does nothing on this platform");
-        NotifyPlaybackFailed("SherpaEditorTtsProvider is Editor-only");
+        Debug.LogWarning("[TTS] Quest TTS unavailable: SherpaEditorTtsProvider uses desktop executable only.");
+        Debug.LogWarning("[TTS] Android runtime provider missing. Voice assets are present but no Android Sherpa native/plugin provider is implemented.");
+        NotifyPlaybackFailed("Quest TTS unavailable: SherpaEditorTtsProvider uses desktop executable only.");
 #endif
     }
 
 #if UNITY_EDITOR
-    private IEnumerator SpeakRoutine(string text, string characterId)
+    private IEnumerator SpeakRoutine(string text, string characterId, string selectedVoice, string selectedModelPath, string selectedTokensPath, string selectedDataDirPath)
     {
-        SherpaVoiceProfile selectedProfile = GetVoiceProfile(characterId);
-        string selectedVoiceFolderName = selectedProfile != null && !string.IsNullOrWhiteSpace(selectedProfile.voiceFolderName)
-            ? selectedProfile.voiceFolderName
-            : fallbackVoiceFolderName;
-        string selectedVoice = selectedProfile != null && !string.IsNullOrWhiteSpace(selectedProfile.displayName)
-            ? selectedProfile.displayName
-            : "Fallback Voice";
-        string selectedModelPath = GetResolvedModelPath(selectedVoiceFolderName);
-        string selectedTokensPath = GetResolvedTokensPath(selectedVoiceFolderName);
-        string selectedDataDirPath = GetResolvedDataDirPath(selectedVoiceFolderName);
-
-        Debug.Log("[TTS] Character: " + characterId);
-        Debug.Log("[TTS] Selected voice: " + selectedVoice);
-        Debug.Log("[TTS] Model: " + selectedModelPath);
-        Debug.Log("[TTS] Resolved tokens path: " + selectedTokensPath);
-        Debug.Log("[TTS] Resolved data dir path: " + selectedDataDirPath);
-
         string resolvedSherpaExePath = ResolveSherpaExePath();
         if (!ValidatePaths(resolvedSherpaExePath, selectedModelPath, selectedTokensPath, selectedDataDirPath))
         {
@@ -389,5 +388,29 @@ public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacte
     private void NotifyPlaybackFailed(string reason)
     {
         PlaybackFailed?.Invoke(reason);
+    }
+
+    private void LogProviderDiagnostics()
+    {
+        Debug.Log("[TTS] Active provider: " + GetType().Name);
+        Debug.Log("[TTS] Voice root path: " + Path.Combine(Application.streamingAssetsPath, voiceRootRelativePath));
+#if UNITY_EDITOR
+        Debug.Log("[TTS] Platform mode: Editor/Desktop Sherpa executable");
+#else
+        Debug.LogWarning("[TTS] Platform mode: Android/Quest. SherpaEditorTtsProvider cannot synthesize speech here because it depends on a desktop executable.");
+#endif
+    }
+
+    private void LogVoiceDiagnostics(string characterId, string selectedVoice, string selectedVoiceFolderPath, string selectedModelPath, string selectedTokensPath, string selectedDataDirPath)
+    {
+        Debug.Log("[TTS] Character: " + characterId);
+        Debug.Log("[TTS] Selected voice: " + selectedVoice);
+        Debug.Log("[TTS] Voice folder path: " + selectedVoiceFolderPath);
+        Debug.Log("[TTS] Model path: " + selectedModelPath);
+        Debug.Log("[TTS] Tokens path: " + selectedTokensPath);
+        Debug.Log("[TTS] Espeak data path: " + selectedDataDirPath);
+        Debug.Log("[TTS] Model exists: " + File.Exists(selectedModelPath));
+        Debug.Log("[TTS] Tokens exist: " + File.Exists(selectedTokensPath));
+        Debug.Log("[TTS] Espeak data exists: " + Directory.Exists(selectedDataDirPath));
     }
 }

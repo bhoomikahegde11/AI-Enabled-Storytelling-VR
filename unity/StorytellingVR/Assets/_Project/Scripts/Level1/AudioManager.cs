@@ -48,6 +48,15 @@ public class AudioManager : MonoBehaviour
                 }
             }
         }
+
+        if (localNpcTtsProvider == null)
+        {
+            Debug.LogWarning("[TTS] Active provider: none");
+        }
+        else
+        {
+            Debug.Log("[TTS] Active provider: " + localNpcTtsProvider.GetType().Name);
+        }
     }
 
     /// <summary>
@@ -92,6 +101,7 @@ public class AudioManager : MonoBehaviour
 
         try
         {
+            Debug.Log("[TTS] Attempting provider speak via " + localNpcTtsProvider.GetType().Name);
             provider.Speak(text);
             return true;
         }
@@ -121,6 +131,7 @@ public class AudioManager : MonoBehaviour
         {
             try
             {
+                Debug.Log("[TTS] Attempting character-aware provider speak via " + localNpcTtsProvider.GetType().Name);
                 characterProvider.Speak(text, characterId);
                 return true;
             }
