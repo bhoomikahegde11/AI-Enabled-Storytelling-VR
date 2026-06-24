@@ -31,10 +31,14 @@ public class ScooperFill : MonoBehaviour
 
         cardamomVisual.SetActive(true);
 
-        Debug.Log(
-            "Filled with " +
-            currentSpice
-        );
+        
+        OVRInput.SetControllerVibration(
+        0.8f,
+        0.8f,
+        OVRInput.Controller.RTouch
+    );
+        StartCoroutine(StopHaptics());
+
     }
 
     public void ResetScooper()
@@ -85,4 +89,15 @@ public class ScooperFill : MonoBehaviour
     {
         return filled;
     }
+    public void EmptyScooper()
+    {
+        filled = false;
+
+        currentSpice = SpiceType.None;
+
+        cardamomVisual.SetActive(false);
+
+        Debug.Log("Scooper Emptied");
+    }
+
 }

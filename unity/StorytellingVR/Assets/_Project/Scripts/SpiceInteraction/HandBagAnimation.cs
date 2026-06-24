@@ -14,6 +14,7 @@ public class HandBagAnimation : MonoBehaviour
 
     private Vector3 originalBagPos;
     private Quaternion originalBagRot;
+    public GameObject spiceVisual;
 
     void Awake()
     {
@@ -107,6 +108,9 @@ public class HandBagAnimation : MonoBehaviour
 
             yield return null;
         }
+        handBag.SetActive(false);
+
+        spiceVisual.SetActive(false);
 
         ResumeAnimation();
     }
@@ -116,4 +120,19 @@ public class HandBagAnimation : MonoBehaviour
 
         StartOrder();
     }
+    public void FillBag()
+    {
+        spiceVisual.SetActive(true);
+
+        subtitleCanvas.SetActive(false);
+
+        StartCoroutine(FillAndReturn());
+    }
+    IEnumerator FillAndReturn()
+    {
+        yield return new WaitForSeconds(0.5f);
+
+        StartCoroutine(ReturnBag());
+    }
+
 }
