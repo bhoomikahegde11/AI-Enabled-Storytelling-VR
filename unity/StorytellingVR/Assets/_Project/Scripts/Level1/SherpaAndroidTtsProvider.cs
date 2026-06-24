@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.Networking;
 
 [RequireComponent(typeof(AudioSource))]
 public class SherpaAndroidTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacterNpcTtsProvider, INpcTtsPlaybackAware
@@ -24,6 +25,10 @@ public class SherpaAndroidTtsProvider : MonoBehaviour, INpcTtsProvider, ICharact
     public int numThreads = 2;
     public bool debugLogs = true;
     public AudioSource audioSource;
+
+    [Header("Android Test Override")]
+    public bool forceSingleVoiceForAndroidTest = true;
+    public string forcedAndroidTestVoiceFolderName = "official_hfc_female";
 
     [Header("Character Voice Profiles")]
     public SherpaVoiceProfile[] voiceProfiles = new SherpaVoiceProfile[]
@@ -77,6 +82,12 @@ public class SherpaAndroidTtsProvider : MonoBehaviour, INpcTtsProvider, ICharact
     private AndroidJavaObject offlineTts;
     private string loadedVoiceFolderName = string.Empty;
     private readonly Dictionary<string, string> runtimeVoiceFolderCache = new Dictionary<string, string>();
+
+    private struct CopyResult
+    {
+        public bool success;
+        public string failureReason;
+    }
 #endif
 
     private void Awake()
@@ -265,41 +276,28 @@ public class SherpaAndroidTtsProvider : MonoBehaviour, INpcTtsProvider, ICharact
         if (ValidateRuntimeVoiceFolder(runtimeVoiceFolderPath))
         {
             runtimeVoiceFolderCache[voiceFolderName] = runtimeVoiceFolderPath;
+            LogRuntimeVoiceValidation(runtimeVoiceFolderPath);
             yield break;
         }
 
         if (!EnsureAndroidContext())
         {
+            LogFailure("EnsureVoicePrepared returned false: Unity Android context unavailable", null);
             NotifyPlaybackFailed("Unity Android context unavailable");
             yield break;
         }
 
         Directory.CreateDirectory(runtimeVoiceFolderPath);
 
-        string sourceRoot = GetAndroidStreamingAssetsRelativeRoot();
-        if (string.IsNullOrWhiteSpace(sourceRoot))
-        {
-            NotifyPlaybackFailed("unable to resolve Android StreamingAssets root");
-            yield break;
-        }
-
-        string sourceVoiceRoot = CombineAndroidAssetPath(sourceRoot, voiceRootRelativePath);
-        sourceVoiceRoot = CombineAndroidAssetPath(sourceVoiceRoot, voiceFolderName);
-
         bool copySucceeded = false;
         string copyFailureReason = string.Empty;
+        string sourceVoiceRoot = CombineAndroidAssetPath(voiceRootRelativePath, voiceFolderName);
 
-        try
+        yield return CopyVoiceAssets(sourceVoiceRoot, runtimeVoiceFolderPath, result =>
         {
-            CopyAssetDirectoryRecursive(sourceVoiceRoot, runtimeVoiceFolderPath);
-            copySucceeded = true;
-        }
-        catch (Exception ex)
-        {
-            copyFailureReason = ex.Message;
-        }
-
-        yield return null;
+            copySucceeded = result.success;
+            copyFailureReason = result.failureReason;
+        });
 
         if (!copySucceeded)
         {
@@ -309,6 +307,7 @@ public class SherpaAndroidTtsProvider : MonoBehaviour, INpcTtsProvider, ICharact
         }
 
         runtimeVoiceFolderCache[voiceFolderName] = runtimeVoiceFolderPath;
+        LogRuntimeVoiceValidation(runtimeVoiceFolderPath);
     }
 
     private bool EnsureOfflineTtsLoaded(string voiceFolderName, string runtimeVoiceFolderPath, string tokensPath, string dataDirPath)
@@ -321,6 +320,12 @@ public class SherpaAndroidTtsProvider : MonoBehaviour, INpcTtsProvider, ICharact
         ReleaseOfflineTts();
 
         string modelPath = Path.Combine(runtimeVoiceFolderPath, "model.onnx");
+
+        if (!LogVoicePreflight(voiceFolderName, modelPath, tokensPath, dataDirPath))
+        {
+            NotifyPlaybackFailed("voice preflight failed");
+            return false;
+        }
 
         try
         {
@@ -335,6 +340,10 @@ public class SherpaAndroidTtsProvider : MonoBehaviour, INpcTtsProvider, ICharact
             vitsConfig.Call("setTokens", tokensPath);
             vitsConfig.Call("setDataDir", dataDirPath);
             vitsConfig.Call("setLexicon", string.Empty);
+            vitsConfig.Call("setDictDir", string.Empty);
+            vitsConfig.Call("setNoiseScale", 0.667f);
+            vitsConfig.Call("setNoiseScaleW", 0.8f);
+            vitsConfig.Call("setLengthScale", 1.0f);
 
             LogInfo("Loading AndroidJavaObject class: " + modelConfigClass);
             AndroidJavaObject modelConfig = new AndroidJavaObject(modelConfigClass);
@@ -350,6 +359,7 @@ public class SherpaAndroidTtsProvider : MonoBehaviour, INpcTtsProvider, ICharact
             config.Call("setSilenceScale", 0.2f);
 
             LogInfo("Loading AndroidJavaObject class: " + offlineTtsClass);
+            LogInfo("Using file-path based Sherpa init (newFromFile equivalent) with persistentDataPath assets only");
             offlineTts = new AndroidJavaObject(offlineTtsClass, null, config);
             loadedVoiceFolderName = voiceFolderName;
             return true;
@@ -363,13 +373,76 @@ public class SherpaAndroidTtsProvider : MonoBehaviour, INpcTtsProvider, ICharact
         }
     }
 
-    private void CopyAssetDirectoryRecursive(string assetRelativePath, string destinationPath)
+    private IEnumerator CopyVoiceAssets(string sourceVoiceRoot, string runtimeVoiceFolderPath, Action<CopyResult> onComplete)
     {
-        string[] entries = assetManager.Call<string[]>("list", assetRelativePath);
+        string modelRelativePath = CombineAndroidAssetPath(sourceVoiceRoot, "model.onnx");
+        string tokensRelativePath = CombineAndroidAssetPath(sourceVoiceRoot, "tokens.txt");
+        string espeakRelativePath = CombineAndroidAssetPath(sourceVoiceRoot, "espeak-ng-data");
+
+        string modelDestinationPath = Path.Combine(runtimeVoiceFolderPath, "model.onnx");
+        string tokensDestinationPath = Path.Combine(runtimeVoiceFolderPath, "tokens.txt");
+        string espeakDestinationPath = Path.Combine(runtimeVoiceFolderPath, "espeak-ng-data");
+
+        bool stepSuccess = false;
+        string stepFailure = string.Empty;
+
+        yield return CopyAssetFileUnityWebRequest(modelRelativePath, modelDestinationPath, result =>
+        {
+            stepSuccess = result.success;
+            stepFailure = result.failureReason;
+        });
+        if (!stepSuccess)
+        {
+            onComplete?.Invoke(new CopyResult { success = false, failureReason = stepFailure });
+            yield break;
+        }
+
+        yield return CopyAssetFileUnityWebRequest(tokensRelativePath, tokensDestinationPath, result =>
+        {
+            stepSuccess = result.success;
+            stepFailure = result.failureReason;
+        });
+        if (!stepSuccess)
+        {
+            onComplete?.Invoke(new CopyResult { success = false, failureReason = stepFailure });
+            yield break;
+        }
+
+        yield return CopyAssetDirectoryRecursiveUnityWebRequest(espeakRelativePath, espeakDestinationPath, result =>
+        {
+            stepSuccess = result.success;
+            stepFailure = result.failureReason;
+        });
+        if (!stepSuccess)
+        {
+            onComplete?.Invoke(new CopyResult { success = false, failureReason = stepFailure });
+            yield break;
+        }
+
+        onComplete?.Invoke(new CopyResult { success = true, failureReason = string.Empty });
+    }
+
+    private IEnumerator CopyAssetDirectoryRecursiveUnityWebRequest(string assetRelativePath, string destinationPath, Action<CopyResult> onComplete)
+    {
+        string[] entries = null;
+        try
+        {
+            entries = assetManager.Call<string[]>("list", assetRelativePath);
+        }
+        catch (Exception ex)
+        {
+            onComplete?.Invoke(new CopyResult
+            {
+                success = false,
+                failureReason = "assetManager.list failed for " + assetRelativePath + ": " + ex.Message
+            });
+            yield break;
+        }
+
         if (entries == null || entries.Length == 0)
         {
-            CopyAssetFile(assetRelativePath, destinationPath);
-            return;
+            yield return CopyAssetFileUnityWebRequest(assetRelativePath, destinationPath, onComplete);
+            yield break;
         }
 
         Directory.CreateDirectory(destinationPath);
@@ -379,40 +452,91 @@ public class SherpaAndroidTtsProvider : MonoBehaviour, INpcTtsProvider, ICharact
             string entryName = entries[i];
             string childAssetPath = CombineAndroidAssetPath(assetRelativePath, entryName);
             string childDestinationPath = Path.Combine(destinationPath, entryName);
-            string[] childEntries = assetManager.Call<string[]>("list", childAssetPath);
+
+            string[] childEntries = null;
+            try
+            {
+                childEntries = assetManager.Call<string[]>("list", childAssetPath);
+            }
+            catch (Exception ex)
+            {
+                onComplete?.Invoke(new CopyResult
+                {
+                    success = false,
+                    failureReason = "assetManager.list failed for " + childAssetPath + ": " + ex.Message
+                });
+                yield break;
+            }
+
+            bool childSuccess = false;
+            string childFailure = string.Empty;
 
             if (childEntries == null || childEntries.Length == 0)
             {
-                CopyAssetFile(childAssetPath, childDestinationPath);
+                yield return CopyAssetFileUnityWebRequest(childAssetPath, childDestinationPath, result =>
+                {
+                    childSuccess = result.success;
+                    childFailure = result.failureReason;
+                });
             }
             else
             {
-                CopyAssetDirectoryRecursive(childAssetPath, childDestinationPath);
+                yield return CopyAssetDirectoryRecursiveUnityWebRequest(childAssetPath, childDestinationPath, result =>
+                {
+                    childSuccess = result.success;
+                    childFailure = result.failureReason;
+                });
+            }
+
+            if (!childSuccess)
+            {
+                onComplete?.Invoke(new CopyResult { success = false, failureReason = childFailure });
+                yield break;
             }
         }
+
+        onComplete?.Invoke(new CopyResult { success = true, failureReason = string.Empty });
     }
 
-    private void CopyAssetFile(string assetRelativePath, string destinationPath)
+    private IEnumerator CopyAssetFileUnityWebRequest(string assetRelativePath, string destinationPath, Action<CopyResult> onComplete)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
-
-        using (AndroidJavaObject inputStream = assetManager.Call<AndroidJavaObject>("open", assetRelativePath))
-        using (FileStream outputStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write))
+        string destinationDirectory = Path.GetDirectoryName(destinationPath);
+        if (!string.IsNullOrEmpty(destinationDirectory))
         {
-            byte[] buffer = new byte[8192];
-            while (true)
-            {
-                int bytesRead = inputStream.Call<int>("read", buffer);
-                if (bytesRead <= 0)
-                {
-                    break;
-                }
+            Directory.CreateDirectory(destinationDirectory);
+        }
 
-                outputStream.Write(buffer, 0, bytesRead);
+        string requestUrl = BuildStreamingAssetUrl(assetRelativePath);
+        using (UnityWebRequest request = UnityWebRequest.Get(requestUrl))
+        {
+            yield return request.SendWebRequest();
+
+            if (request.result != UnityWebRequest.Result.Success)
+            {
+                onComplete?.Invoke(new CopyResult
+                {
+                    success = false,
+                    failureReason = "UnityWebRequest failed for " + requestUrl + ": " + request.error
+                });
+                yield break;
             }
 
-            inputStream.Call("close");
+            try
+            {
+                File.WriteAllBytes(destinationPath, request.downloadHandler.data);
+            }
+            catch (Exception ex)
+            {
+                onComplete?.Invoke(new CopyResult
+                {
+                    success = false,
+                    failureReason = "Failed to write file " + destinationPath + ": " + ex.Message
+                });
+                yield break;
+            }
         }
+
+        onComplete?.Invoke(new CopyResult { success = true, failureReason = string.Empty });
     }
 
     private bool EnsureAndroidContext()
@@ -465,24 +589,98 @@ public class SherpaAndroidTtsProvider : MonoBehaviour, INpcTtsProvider, ICharact
         return File.Exists(modelPath) && File.Exists(tokensPath) && Directory.Exists(espeakPath);
     }
 
-    private string GetAndroidStreamingAssetsRelativeRoot()
+    private void LogRuntimeVoiceValidation(string runtimeVoiceFolderPath)
     {
-        string streamingAssetsPath = Application.streamingAssetsPath.Replace("\\", "/");
-        const string assetsMarker = "!/assets/";
-        int assetsMarkerIndex = streamingAssetsPath.IndexOf(assetsMarker, StringComparison.OrdinalIgnoreCase);
-        if (assetsMarkerIndex >= 0)
-        {
-            return streamingAssetsPath.Substring(assetsMarkerIndex + assetsMarker.Length).Trim('/');
-        }
+        string modelPath = Path.Combine(runtimeVoiceFolderPath, "model.onnx");
+        string tokensPath = Path.Combine(runtimeVoiceFolderPath, "tokens.txt");
+        string espeakPath = Path.Combine(runtimeVoiceFolderPath, "espeak-ng-data");
 
-        const string plainAssetsMarker = "/assets/";
-        int plainIndex = streamingAssetsPath.IndexOf(plainAssetsMarker, StringComparison.OrdinalIgnoreCase);
-        if (plainIndex >= 0)
-        {
-            return streamingAssetsPath.Substring(plainIndex + plainAssetsMarker.Length).Trim('/');
-        }
+        LogInfo("Runtime voice path: " + runtimeVoiceFolderPath);
+        LogInfo("model exists " + File.Exists(modelPath));
+        LogInfo("tokens exists " + File.Exists(tokensPath));
+        LogInfo("espeak exists " + Directory.Exists(espeakPath));
+    }
 
-        return string.Empty;
+    private bool LogVoicePreflight(
+        string voiceFolderName,
+        string persistentModelPath,
+        string persistentTokensPath,
+        string persistentDataDir)
+    {
+        try
+        {
+            LogInfo("Preflight character voice folder: " + voiceFolderName);
+            LogInfo("Preflight mode: file-path only");
+            LogInfo("Preflight persistent model path: " + persistentModelPath);
+            LogInfo("Preflight persistent tokens path: " + persistentTokensPath);
+            LogInfo("Preflight persistent data dir: " + persistentDataDir);
+
+            bool modelExists = File.Exists(persistentModelPath);
+            bool tokensExists = File.Exists(persistentTokensPath);
+            bool dataDirExists = Directory.Exists(persistentDataDir);
+
+            LogInfo("Preflight model exists: " + modelExists);
+            LogInfo("Preflight tokens exists: " + tokensExists);
+            LogInfo("Preflight data dir exists: " + dataDirExists);
+
+            if (!modelExists)
+            {
+                LogFailure("Preflight failed: persistent model missing at " + persistentModelPath, null);
+                return false;
+            }
+
+            if (!tokensExists)
+            {
+                LogFailure("Preflight failed: persistent tokens missing at " + persistentTokensPath, null);
+                return false;
+            }
+
+            if (!dataDirExists)
+            {
+                LogFailure("Preflight failed: persistent data dir missing at " + persistentDataDir, null);
+                return false;
+            }
+
+            long modelSize = new FileInfo(persistentModelPath).Length;
+            long tokensSize = new FileInfo(persistentTokensPath).Length;
+            LogInfo("Preflight model file size bytes: " + modelSize);
+            LogInfo("Preflight tokens file size bytes: " + tokensSize);
+
+            string[] tokenPreviewLines = File.ReadAllLines(persistentTokensPath);
+            int tokenPreviewCount = Mathf.Min(8, tokenPreviewLines.Length);
+            for (int i = 0; i < tokenPreviewCount; i++)
+            {
+                LogInfo("Preflight tokens[" + i + "]: " + tokenPreviewLines[i]);
+            }
+
+            string[] requiredEspeakFiles =
+            {
+                "phontab",
+                "phonindex",
+                "phondata",
+                "intonations"
+            };
+
+            for (int i = 0; i < requiredEspeakFiles.Length; i++)
+            {
+                string requiredPath = Path.Combine(persistentDataDir, requiredEspeakFiles[i]);
+                bool exists = File.Exists(requiredPath);
+                LogInfo("Preflight espeak file exists? " + exists + " | " + requiredPath);
+
+                if (!exists)
+                {
+                    LogFailure("Preflight failed: required espeak file missing at " + requiredPath, null);
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LogFailure("Preflight failed with exception", ex);
+            return false;
+        }
     }
 
     private static string CombineAndroidAssetPath(string left, string right)
@@ -498,6 +696,13 @@ public class SherpaAndroidTtsProvider : MonoBehaviour, INpcTtsProvider, ICharact
         }
 
         return left.TrimEnd('/') + "/" + right.TrimStart('/');
+    }
+
+    private string BuildStreamingAssetUrl(string assetRelativePath)
+    {
+        string root = Application.streamingAssetsPath.TrimEnd('/', '\\');
+        string relative = assetRelativePath.TrimStart('/', '\\').Replace("\\", "/");
+        return root + "/" + relative;
     }
 
     private void ReleaseOfflineTts()
@@ -527,6 +732,14 @@ public class SherpaAndroidTtsProvider : MonoBehaviour, INpcTtsProvider, ICharact
 
     private string ResolveVoiceFolderName(string characterId)
     {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (forceSingleVoiceForAndroidTest && !string.IsNullOrWhiteSpace(forcedAndroidTestVoiceFolderName))
+        {
+            LogInfo("Android test override active. Using forced voice folder: " + forcedAndroidTestVoiceFolderName);
+            return forcedAndroidTestVoiceFolderName;
+        }
+#endif
+
         if (!string.IsNullOrWhiteSpace(characterId) && voiceProfiles != null)
         {
             for (int i = 0; i < voiceProfiles.Length; i++)
