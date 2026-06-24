@@ -6,26 +6,20 @@ public class BagReceiver : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        Debug.Log("Bag Trigger Hit: " + other.name);
+        Debug.Log(
+            "BAG RECEIVED: " +
+            other.name
+        );
+
         ScooperFill scooper =
             other.GetComponent<ScooperFill>();
 
         if (scooper == null)
-            return;
-
-        if (!scooper.IsFilled())
-            return;
-
-        if (
-            scooper.currentSpice ==
-            OrderManager.Instance.requestedSpice
-        )
         {
-            customer.ReceiveBag();
+            Debug.Log("No ScooperFill found");
+            return;
         }
-        else
-        {
-            Debug.Log("Wrong Spice");
-        }
+
+        Debug.Log("Scooper Found");
     }
 }
