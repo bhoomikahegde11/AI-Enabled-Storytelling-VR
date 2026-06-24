@@ -6,7 +6,8 @@ public class ScooperFill : MonoBehaviour
 
     private bool insideSack = false;
     private bool filled = false;
-
+    public SpiceType currentSpice = SpiceType.None;
+    private SpiceZone currentZone;
     void Start()
     {
         cardamomVisual.SetActive(false);
@@ -14,27 +15,26 @@ public class ScooperFill : MonoBehaviour
 
     void Update()
     {
-        // If holding trigger and inside sack
-        if (!filled &&
-            insideSack &&
-            OVRInput.Get(OVRInput.RawButton.RIndexTrigger))
+        if (!filled && insideSack && currentZone != null && OVRInput.Get(OVRInput.RawButton.RIndexTrigger))
         {
+            currentSpice = currentZone.spiceType;
+
             FillScooper();
         }
     }
 
     void FillScooper()
     {
+        if (filled) return;
+
         filled = true;
 
         cardamomVisual.SetActive(true);
-        OVRInput.SetControllerVibration(
-            1f,
-            1f,
-            OVRInput.Controller.RTouch
+
+        Debug.Log(
+            "Filled with " +
+            currentSpice
         );
-        StartCoroutine(StopHaptics());
-        
     }
 
     public void ResetScooper()
@@ -50,9 +50,12 @@ public class ScooperFill : MonoBehaviour
     {
         Debug.Log("Entered " + other.name);
 
-        if (other.CompareTag("CardamomZone"))
+        SpiceZone zone = other.GetComponent<SpiceZone>();
+
+        if (zone != null)
         {
             insideSack = true;
+            currentZone = zone;
         }
     }
 
@@ -60,9 +63,12 @@ public class ScooperFill : MonoBehaviour
     {
         Debug.Log("Exited " + other.name);
 
-        if (other.CompareTag("CardamomZone"))
+        SpiceZone zone = other.GetComponent<SpiceZone>();
+
+        if (zone != null)
         {
             insideSack = false;
+            currentZone = null;
         }
     }
     IEnumerator StopHaptics()
@@ -74,5 +80,9 @@ public class ScooperFill : MonoBehaviour
             0,
             OVRInput.Controller.RTouch
         );
+    }
+    public bool IsFilled()
+    {
+        return filled;
     }
 }
