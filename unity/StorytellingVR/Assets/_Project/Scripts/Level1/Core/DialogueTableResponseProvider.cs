@@ -291,6 +291,7 @@ public class DialogueTableResponseProvider
         bool hasOfferedPrice = input != null && input.hasSellerPrice;
         bool offerMovedUp = trade != null && brainResult.updatedOffer > trade.npcOffer;
         bool buyerHeldFirm = trade != null && brainResult.updatedOffer <= trade.npcOffer;
+        bool isDemoMode = Level1GameState.Instance != null && Level1GameState.Instance.IsPrerecordedVoiceDemoModeEnabled;
 
         if (brainResult.isAccepted || string.Equals(brainResult.resolutionAction, "ACCEPT", StringComparison.OrdinalIgnoreCase))
         {
@@ -317,6 +318,20 @@ public class DialogueTableResponseProvider
 
             case NegotiationIntent.QUERY_BUYER_BUDGET:
             case NegotiationIntent.PRICE_QUERY:
+                if (isDemoMode && trade != null)
+                {
+                    if (offerMovedUp)
+                    {
+                        return trade.repeatedPriceQueries >= 3
+                            ? DialogueScenario.BuyerCounterFinal
+                            : ToCounterScenario(Mathf.Max(2, roundCount));
+                    }
+
+                    if (trade.repeatedPriceQueries >= 3 || trade.npcOffer >= trade.maxBuyerPrice)
+                    {
+                        return DialogueScenario.BuyerCounterFinal;
+                    }
+                }
                 return DialogueScenario.AskBuyerBudget;
 
             case NegotiationIntent.QUANTITY_QUERY:

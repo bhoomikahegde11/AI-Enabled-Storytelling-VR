@@ -1,8 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [RequireComponent(typeof(AudioSource))]
 public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacterNpcTtsProvider, INpcTtsPlaybackAware
@@ -59,22 +63,52 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
     private static readonly string IntentPriceTooHigh = "price_too_high";
     private static readonly string IntentHoldFirm = "hold_firm";
     private static readonly string IntentAcceptDeal = "accept_deal";
+    private static readonly string IntentAcceptPrice = "accept_price";
     private static readonly string IntentWalkAway = "walk_away";
     private static readonly string IntentClarification = "clarification";
     private static readonly string IntentFallback = "fallback";
+    private static readonly string IntentFinalCounterOffer = "final_counter_offer";
 
     private static readonly Regex DigitsRegex = new Regex(@"\d+", RegexOptions.Compiled);
+    private static readonly Regex VariantSuffixRegex = new Regex(@"_\d+$", RegexOptions.Compiled);
 
     private void Awake()
     {
         EnsureAudioSource();
     }
 
-    [ContextMenu("Speak Test Text")]
-    public void SpeakTestText()
+    [ContextMenu("Test PreRecorded Voice")]
+    private void TestPreRecordedVoice()
     {
         Speak(testText, testCharacterId);
     }
+
+#if UNITY_EDITOR
+    [ContextMenu("Auto Fill Test Merchant Voice Clips")]
+    private void AutoFillTestMerchantVoiceClips()
+    {
+        string root = "Assets/_Project/Audio/NPCVoices/Level1/test_merchant_voice";
+        string fullPath = root + "/full";
+        string prefixPath = root + "/prefix";
+        string variablePath = root + "/variable";
+        string suffixPath = root + "/suffix";
+
+        Undo.RecordObject(this, "Auto Fill Test Merchant Voice Clips");
+        CharacterVoiceProfile profile = GetOrCreateProfile("test_merchant_voice");
+        profile.fullClips = BuildIntentClipSetsFromFolder(fullPath, stripTrailingVariantNumber: true);
+        profile.prefixClips = BuildIntentClipSetsFromFolder(prefixPath, stripTrailingVariantNumber: true);
+        profile.variableClips = BuildVariableClipsFromFolder(variablePath);
+        profile.suffixClips = BuildSuffixClipSetsFromFolder(suffixPath);
+
+        EditorUtility.SetDirty(this);
+
+        LogDebug("Auto-filled test_merchant_voice profile");
+        LogDebug("Full clips: " + SafeLength(profile.fullClips) +
+                 " | Prefix clips: " + SafeLength(profile.prefixClips) +
+                 " | Variable clips: " + SafeLength(profile.variableClips) +
+                 " | Suffix clips: " + SafeLength(profile.suffixClips));
+    }
+#endif
 
     public void Speak(string text)
     {
@@ -85,7 +119,13 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
     {
         if (string.IsNullOrWhiteSpace(text))
         {
-            NotifyPlaybackFailed("empty NPC reply");
+            LogDebug("Ignoring empty startup TTS request");
+            return;
+        }
+
+        if (IsIgnorableStartupText(text))
+        {
+            LogDebug("Ignoring empty startup TTS request");
             return;
         }
 
@@ -100,6 +140,7 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
             ? characterId.Trim().ToLowerInvariant()
             : (defaultCharacterId ?? string.Empty).Trim().ToLowerInvariant();
         string intent = DetectIntent(text);
+        LogDebug("Detected intent: " + intent + " | character=" + resolvedCharacterId + " | text=" + text);
 
         CharacterVoiceProfile profile = ResolveProfile(resolvedCharacterId);
         CharacterVoiceProfile fallbackProfile = genericProfile;
@@ -118,6 +159,7 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
 
         if (fullClip != null)
         {
+            LogDebug("Selected full clip for intent " + intent + ": " + fullClip.name);
             StartPlayback(new List<AudioClip> { fullClip }, resolvedCharacterId, intent, text);
             return;
         }
@@ -125,6 +167,7 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
         List<AudioClip> sequence = BuildClipSequence(profile, fallbackProfile, intent, text);
         if (sequence.Count > 0)
         {
+            LogDebug("Selected sequence for intent " + intent + ": " + string.Join(" -> ", sequence.Select(clip => clip != null ? clip.name : "<null>").ToArray()));
             StartPlayback(sequence, resolvedCharacterId, intent, text);
             return;
         }
@@ -137,10 +180,12 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
 
         if (fallbackClip != null)
         {
+            LogDebug("Falling back to full fallback clip: " + fallbackClip.name + " | original intent=" + intent);
             StartPlayback(new List<AudioClip> { fallbackClip }, resolvedCharacterId, IntentFallback, text);
             return;
         }
 
+        LogDebug("Fallback failed. No full clip, no sequence, no fallback clip for intent " + intent);
         NotifyPlaybackFailed("no playable clip sequence found");
     }
 
@@ -266,6 +311,16 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
 
     private List<AudioClip> BuildClipSequence(CharacterVoiceProfile profile, CharacterVoiceProfile fallbackProfile, string intent, string text)
     {
+        if (IsOfferIntent(intent))
+        {
+            return BuildOfferSequence(profile, fallbackProfile, intent, text);
+        }
+
+        if (string.Equals(intent, IntentAcceptPrice, StringComparison.OrdinalIgnoreCase))
+        {
+            return BuildAcceptPriceSequence(profile, fallbackProfile, intent, text);
+        }
+
         List<AudioClip> clips = new List<AudioClip>();
 
         AudioClip prefix = GetIntentClip(profile, intent, ClipKind.Prefix);
@@ -281,11 +336,23 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
         }
 
         List<string> variableKeys = BuildVariableKeys(text);
-        List<AudioClip> variableClips = ResolveVariableClips(profile, fallbackProfile, variableKeys);
+        if (!TryResolveVariableClips(profile, fallbackProfile, variableKeys, requireAll: false, out List<AudioClip> variableClips, out List<string> missingKeys))
+        {
+            LogDebug("Missing required keys for intent " + intent + ": " + string.Join(", ", missingKeys.ToArray()));
+            return clips;
+        }
 
         bool hasUsefulSequence = prefix != null && (variableClips.Count > 0 || suffix != null);
         if (!hasUsefulSequence)
         {
+            if (prefix == null)
+            {
+                LogDebug("Missing prefix for intent " + intent);
+            }
+            if (suffix == null)
+            {
+                LogDebug("Missing suffix for intent " + intent);
+            }
             return clips;
         }
 
@@ -297,6 +364,137 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
         }
 
         return clips;
+    }
+
+    private List<AudioClip> BuildOfferSequence(CharacterVoiceProfile profile, CharacterVoiceProfile fallbackProfile, string intent, string text)
+    {
+        List<AudioClip> clips = new List<AudioClip>();
+        AudioClip prefix = GetIntentClip(profile, intent, ClipKind.Prefix);
+        if (prefix == null)
+        {
+            prefix = GetIntentClip(fallbackProfile, intent, ClipKind.Prefix);
+        }
+
+        if (prefix == null)
+        {
+            LogDebug("Missing prefix for intent " + intent);
+            return clips;
+        }
+
+        if (!TryExtractPriceNumber(Normalize(text), out int price))
+        {
+            LogDebug("Fallback reason: could not extract offer price for intent " + intent);
+            return clips;
+        }
+
+        if (!TryDetectSpiceKey(text, out string spiceKey))
+        {
+            LogDebug("Fallback reason: could not detect spice key for intent " + intent);
+            return clips;
+        }
+
+        List<string> sequenceKeys = new List<string>();
+        sequenceKeys.AddRange(BuildNumberClipKeys(price));
+        sequenceKeys.Add("currency_varahas");
+        sequenceKeys.Add(spiceKey);
+
+        AudioClip forSuffix = GetIntentClip(profile, "for", ClipKind.Suffix);
+        if (forSuffix == null)
+        {
+            forSuffix = GetIntentClip(fallbackProfile, "for", ClipKind.Suffix);
+        }
+
+        if (forSuffix == null)
+        {
+            LogDebug("Missing suffix key: for");
+            LogDebug("Fallback reason: incomplete stitched offer sequence");
+            return clips;
+        }
+
+        if (!TryResolveVariableClips(profile, fallbackProfile, sequenceKeys, requireAll: true, out List<AudioClip> resolvedClips, out List<string> missingKeys))
+        {
+            LogDebug("Missing required keys for intent " + intent + ": " + string.Join(", ", missingKeys.ToArray()));
+            LogDebug("Fallback reason: incomplete stitched offer sequence");
+            return clips;
+        }
+
+        LogDebug("Selected sequence clip keys for intent " + intent + ": prefix:" + intent + " -> " +
+                 string.Join(" -> ", BuildOfferDebugKeys(sequenceKeys).ToArray()));
+
+        clips.Add(prefix);
+        clips.AddRange(resolvedClips.GetRange(0, resolvedClips.Count - 1));
+        clips.Add(forSuffix);
+        clips.Add(resolvedClips[resolvedClips.Count - 1]);
+        return clips;
+    }
+
+    private List<AudioClip> BuildAcceptPriceSequence(CharacterVoiceProfile profile, CharacterVoiceProfile fallbackProfile, string intent, string text)
+    {
+        List<AudioClip> clips = new List<AudioClip>();
+        AudioClip prefix = GetIntentClip(profile, intent, ClipKind.Prefix);
+        if (prefix == null)
+        {
+            prefix = GetIntentClip(fallbackProfile, intent, ClipKind.Prefix);
+        }
+
+        if (prefix == null)
+        {
+            LogDebug("Missing prefix for intent " + intent);
+            return clips;
+        }
+
+        if (!TryExtractPriceNumber(Normalize(text), out int price))
+        {
+            LogDebug("Fallback reason: could not extract accepted price");
+            return clips;
+        }
+
+        List<string> sequenceKeys = new List<string>();
+        sequenceKeys.AddRange(BuildNumberClipKeys(price));
+        sequenceKeys.Add("currency_varahas");
+
+        if (!TryResolveVariableClips(profile, fallbackProfile, sequenceKeys, requireAll: true, out List<AudioClip> resolvedClips, out List<string> missingKeys))
+        {
+            LogDebug("Missing required keys for intent " + intent + ": " + string.Join(", ", missingKeys.ToArray()));
+            LogDebug("Fallback reason: incomplete stitched accepted-price sequence");
+            return clips;
+        }
+
+        LogDebug("Selected sequence clip keys for intent " + intent + ": prefix:" + intent + " -> " + string.Join(" -> ", sequenceKeys.ToArray()));
+
+        clips.Add(prefix);
+        clips.AddRange(resolvedClips);
+        return clips;
+    }
+
+    private static bool IsOfferIntent(string intent)
+    {
+        return
+            string.Equals(intent, IntentInitialOffer, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(intent, IntentCounterOffer, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(intent, IntentFinalCounterOffer, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static List<string> BuildOfferDebugKeys(List<string> variableKeys)
+    {
+        List<string> debugKeys = new List<string>();
+        if (variableKeys == null || variableKeys.Count == 0)
+        {
+            return debugKeys;
+        }
+
+        int spiceIndex = variableKeys.Count - 1;
+        for (int i = 0; i < variableKeys.Count; i++)
+        {
+            if (i == spiceIndex)
+            {
+                debugKeys.Add("suffix:for");
+            }
+
+            debugKeys.Add(variableKeys[i]);
+        }
+
+        return debugKeys;
     }
 
     private List<string> BuildVariableKeys(string text)
@@ -406,9 +604,17 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
         return 0;
     }
 
-    private List<AudioClip> ResolveVariableClips(CharacterVoiceProfile profile, CharacterVoiceProfile fallbackProfile, List<string> keys)
+    private bool TryResolveVariableClips(
+        CharacterVoiceProfile profile,
+        CharacterVoiceProfile fallbackProfile,
+        List<string> keys,
+        bool requireAll,
+        out List<AudioClip> clips,
+        out List<string> missingKeys)
     {
-        List<AudioClip> clips = new List<AudioClip>();
+        clips = new List<AudioClip>();
+        missingKeys = new List<string>();
+
         for (int i = 0; i < keys.Count; i++)
         {
             AudioClip clip = GetVariableClip(profile, keys[i]);
@@ -421,46 +627,71 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
             {
                 clips.Add(clip);
             }
+            else
+            {
+                LogDebug("Missing variable key: " + keys[i]);
+                missingKeys.Add(keys[i]);
+                if (requireAll)
+                {
+                    clips.Clear();
+                    return false;
+                }
+            }
         }
 
-        return clips;
+        return missingKeys.Count == 0 || !requireAll;
     }
 
     private string DetectIntent(string text)
     {
         string normalized = Normalize(text);
 
-        if (ContainsAnyPhrase(normalized, "did not understand", "say again", "repeat", "unclear", "could you repeat"))
+        if (ContainsAny(normalized, "please say that again", "say that again", "did not understand", "could you repeat", "repeat that", "repeat", "unclear"))
         {
             return IntentClarification;
         }
 
-        if (ContainsAnyPhrase(normalized, "no deal", "cannot trade", "go elsewhere", "take my leave", "we are finished"))
+        if (ContainsAny(normalized, "no deal", "i will go elsewhere", "go elsewhere", "take my leave", "we are finished", "cannot trade"))
         {
             return IntentWalkAway;
         }
 
-        if (ContainsAnyPhrase(normalized, "agreed", "we have a deal", "deal", "accepted", "fair bargain"))
+        if (ContainsAny(normalized, "agreed at") && ContainsAny(normalized, "varaha", "varahas"))
+        {
+            return IntentAcceptPrice;
+        }
+
+        if (ContainsAny(normalized, "we have a deal", "agreed", "accepted", "fair bargain"))
         {
             return IntentAcceptDeal;
         }
 
-        if (ContainsAnyPhrase(normalized, "final", "last offer", "i hold", "hold at", "cannot go higher", "cannot move beyond"))
-        {
-            return IntentHoldFirm;
-        }
-
-        if (ContainsAnyPhrase(normalized, "too high", "costly", "expensive", "reduce", "lower"))
+        if (ContainsAny(normalized, "too high", "costly", "expensive", "reduce", "lower"))
         {
             return IntentPriceTooHigh;
         }
 
-        if (ContainsAnyPhrase(normalized, "raise", "move to", "counter", "better price", "closer", "increase my offer"))
+        if (StartsWithAnyPhrase(normalized, "good day", "hello", "greetings", "welcome"))
+        {
+            return IntentGreeting;
+        }
+
+        if (ContainsAny(normalized, "my final offer is", "final offer", "last offer"))
+        {
+            return IntentFinalCounterOffer;
+        }
+
+        if (ContainsAny(normalized, "i hold", "hold at", "cannot go higher", "cannot move beyond"))
+        {
+            return IntentHoldFirm;
+        }
+
+        if (ContainsAny(normalized, "increase my offer to", "raise my offer to", "counter offer", "counter at", "move to", "better price", "closer"))
         {
             return IntentCounterOffer;
         }
 
-        if (ContainsAnyPhrase(normalized, "i can offer", "my offer", "i can pay", "offer stands"))
+        if (ContainsAny(normalized, "i can offer", "my offer is", "my offer", "i can pay", "offer stands"))
         {
             return IntentInitialOffer;
         }
@@ -470,14 +701,9 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
             return IntentAskQuantity;
         }
 
-        if (ContainsAnyPhrase(normalized, "what are you selling", "spice", "pepper", "cardamom", "cinnamon", "clove"))
+        if (ContainsAny(normalized, "what are you selling", "spice", "pepper", "cardamom", "cinnamon", "clove"))
         {
             return IntentAskSpice;
-        }
-
-        if (ContainsAnyPhrase(normalized, "hello", "welcome", "greetings", "good day"))
-        {
-            return IntentGreeting;
         }
 
         return IntentFallback;
@@ -598,6 +824,32 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
         }
     }
 
+    private static bool IsIgnorableStartupText(string text)
+    {
+        string normalized = Normalize(text);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return true;
+        }
+
+        return
+            string.Equals(normalized, "customer approaching...", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, "customer approaching", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, "approaching...", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, "thinking...", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, "listening...", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, "processing...", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, "loading...", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void LogDebug(string message)
+    {
+        if (debugLogs)
+        {
+            Debug.Log("[PreRecordedNpcTtsProvider] " + message);
+        }
+    }
+
     private void NotifyPlaybackFailed(string reason)
     {
         if (debugLogs)
@@ -655,6 +907,31 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
         return false;
     }
 
+    private static bool StartsWithAnyPhrase(string text, params string[] phrases)
+    {
+        for (int i = 0; i < phrases.Length; i++)
+        {
+            string phrase = phrases[i];
+            if (!text.StartsWith(phrase, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (text.Length == phrase.Length)
+            {
+                return true;
+            }
+
+            char next = text[phrase.Length];
+            if (!char.IsLetterOrDigit(next))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static bool ContainsPhrase(string text, string phrase)
     {
         return (" " + text + " ").Contains(" " + phrase + " ");
@@ -664,4 +941,168 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
     {
         return ContainsAnyPhrase(text, phrases);
     }
+
+    private static int SafeLength(Array array)
+    {
+        return array != null ? array.Length : 0;
+    }
+
+    private bool TryDetectSpiceKey(string text, out string spiceKey)
+    {
+        string normalized = Normalize(text);
+        if (normalized.Contains("pepper"))
+        {
+            spiceKey = "spice_pepper";
+            return true;
+        }
+
+        if (normalized.Contains("cardamom"))
+        {
+            spiceKey = "spice_cardamom";
+            return true;
+        }
+
+        if (normalized.Contains("cinnamon"))
+        {
+            spiceKey = "spice_cinnamon";
+            return true;
+        }
+
+        if (normalized.Contains("clove") || normalized.Contains("cloves"))
+        {
+            spiceKey = "spice_clove";
+            return true;
+        }
+
+        spiceKey = string.Empty;
+        return false;
+    }
+
+#if UNITY_EDITOR
+    private CharacterVoiceProfile GetOrCreateProfile(string characterId)
+    {
+        if (characterProfiles == null)
+        {
+            characterProfiles = Array.Empty<CharacterVoiceProfile>();
+        }
+
+        for (int i = 0; i < characterProfiles.Length; i++)
+        {
+            if (characterProfiles[i] != null &&
+                string.Equals(characterProfiles[i].characterId, characterId, StringComparison.OrdinalIgnoreCase))
+            {
+                return characterProfiles[i];
+            }
+        }
+
+        CharacterVoiceProfile profile = new CharacterVoiceProfile
+        {
+            characterId = characterId,
+            fullClips = Array.Empty<IntentClipSet>(),
+            prefixClips = Array.Empty<IntentClipSet>(),
+            suffixClips = Array.Empty<IntentClipSet>(),
+            variableClips = Array.Empty<VariableClip>()
+        };
+
+        Array.Resize(ref characterProfiles, characterProfiles.Length + 1);
+        characterProfiles[characterProfiles.Length - 1] = profile;
+        return profile;
+    }
+
+    private IntentClipSet[] BuildIntentClipSetsFromFolder(string assetFolder, bool stripTrailingVariantNumber)
+    {
+        Dictionary<string, List<AudioClip>> grouped = new Dictionary<string, List<AudioClip>>(StringComparer.OrdinalIgnoreCase);
+        string[] guids = AssetDatabase.FindAssets("t:AudioClip", new[] { assetFolder });
+        for (int i = 0; i < guids.Length; i++)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+            AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+            if (clip == null)
+            {
+                continue;
+            }
+
+            string name = System.IO.Path.GetFileNameWithoutExtension(path);
+            string key = stripTrailingVariantNumber ? StripTrailingVariantNumber(name) : name;
+            if (!grouped.TryGetValue(key, out List<AudioClip> list))
+            {
+                list = new List<AudioClip>();
+                grouped[key] = list;
+            }
+            list.Add(clip);
+        }
+
+        return grouped
+            .OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(pair => new IntentClipSet
+            {
+                intent = pair.Key,
+                clips = pair.Value.Where(clip => clip != null).ToArray()
+            })
+            .ToArray();
+    }
+
+    private VariableClip[] BuildVariableClipsFromFolder(string assetFolder)
+    {
+        List<VariableClip> clips = new List<VariableClip>();
+        string[] guids = AssetDatabase.FindAssets("t:AudioClip", new[] { assetFolder });
+        for (int i = 0; i < guids.Length; i++)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+            AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+            if (clip == null)
+            {
+                continue;
+            }
+
+            string key = System.IO.Path.GetFileNameWithoutExtension(path);
+            clips.Add(new VariableClip
+            {
+                key = key,
+                clip = clip
+            });
+        }
+
+        return clips
+            .OrderBy(item => item.key, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private IntentClipSet[] BuildSuffixClipSetsFromFolder(string assetFolder)
+    {
+        Dictionary<string, List<AudioClip>> grouped = new Dictionary<string, List<AudioClip>>(StringComparer.OrdinalIgnoreCase);
+        string[] guids = AssetDatabase.FindAssets("t:AudioClip", new[] { assetFolder });
+        for (int i = 0; i < guids.Length; i++)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+            AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+            if (clip == null)
+            {
+                continue;
+            }
+
+            string key = StripTrailingVariantNumber(System.IO.Path.GetFileNameWithoutExtension(path));
+            if (!grouped.TryGetValue(key, out List<AudioClip> list))
+            {
+                list = new List<AudioClip>();
+                grouped[key] = list;
+            }
+            list.Add(clip);
+        }
+
+        return grouped
+            .OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(pair => new IntentClipSet
+            {
+                intent = pair.Key,
+                clips = pair.Value.Where(clip => clip != null).Distinct().ToArray()
+            })
+            .ToArray();
+    }
+
+    private static string StripTrailingVariantNumber(string name)
+    {
+        return VariantSuffixRegex.Replace(name ?? string.Empty, string.Empty);
+    }
+#endif
 }

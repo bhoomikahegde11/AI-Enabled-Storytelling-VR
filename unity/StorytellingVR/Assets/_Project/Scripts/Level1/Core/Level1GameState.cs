@@ -49,6 +49,7 @@ public class Level1GameState : MonoBehaviour
 
     #if UNITY_EDITOR
     [Header("Editor Debug")]
+    [SerializeField] private bool enablePrerecordedVoiceDemoMode = false;
     [SerializeField] private string debugForceCharacterId = "";
     #endif
 
@@ -81,6 +82,17 @@ public class Level1GameState : MonoBehaviour
     public int CurrentReputation => playerState.CurrentReputation;
     public LocalTradeState ActiveTrade => activeTrade;
     public MarketEventData ActiveEvent => activeEvent;
+    public bool IsPrerecordedVoiceDemoModeEnabled
+    {
+        get
+        {
+            #if UNITY_EDITOR
+            return enablePrerecordedVoiceDemoMode;
+            #else
+            return false;
+            #endif
+        }
+    }
 
     private void Awake()
     {
@@ -174,7 +186,13 @@ public class Level1GameState : MonoBehaviour
         }
 
         #if UNITY_EDITOR
-        LocalGeneratedTradeSession session = localTradeSessionGenerator.Generate(marketManager, profile, activeEvent, debugForceCharacterId);
+        string forcedCharacterId = enablePrerecordedVoiceDemoMode ? "test_merchant_voice" : debugForceCharacterId;
+        LocalGeneratedTradeSession session = localTradeSessionGenerator.Generate(
+            marketManager,
+            profile,
+            activeEvent,
+            forcedCharacterId,
+            enablePrerecordedVoiceDemoMode);
         #else
         LocalGeneratedTradeSession session = localTradeSessionGenerator.Generate(marketManager, profile, activeEvent);
         #endif

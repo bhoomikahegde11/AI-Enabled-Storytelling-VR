@@ -23,11 +23,21 @@ public class LocalTradeSessionGenerator
     private static readonly string[] WealthTypes = { "Low", "Medium", "High", "Very High" };
     private static readonly int[] QuantityOptions = { 280, 560, 1400, 2800 };
     private static readonly string[] SpiceKeys = { "pepper", "clove", "cinnamon", "cardamom" };
+    private static readonly string[] DemoSpiceKeys = { "pepper", "cardamom" };
+    private static readonly int[] DemoOfferValues = { 20, 25, 30, 35, 40, 45, 49 };
+    private static readonly int[] DemoStartingOffers = { 25, 30 };
     private readonly DialogueCharacterRegistry dialogueCharacterRegistry = new DialogueCharacterRegistry();
 
-    public LocalGeneratedTradeSession Generate(MarketManager marketManager, LocalProfileData profile, MarketEventData activeEvent, string forcedCharacterId = "")
+    public LocalGeneratedTradeSession Generate(
+        MarketManager marketManager,
+        LocalProfileData profile,
+        MarketEventData activeEvent,
+        string forcedCharacterId = "",
+        bool enablePrerecordedVoiceDemoMode = false)
     {
-        string spiceKey = PickAvailableSpice(profile);
+        string spiceKey = enablePrerecordedVoiceDemoMode
+            ? PickDemoSpice(profile)
+            : PickAvailableSpice(profile);
         marketManager.TryGetSpice(spiceKey, out SpiceData spiceData);
 
         int stock = GetInventory(profile, spiceKey);
@@ -45,15 +55,27 @@ public class LocalTradeSessionGenerator
         string buyerName = selectedCharacter != null ? selectedCharacter.displayName : "Abdul Rahman";
         string buyerOrigin = selectedCharacter != null ? selectedCharacter.buyerOrigin : "Arab Caravan Trader";
         string buyerPersonality = selectedCharacter != null ? selectedCharacter.buyerPersonality : "Friendly";
-        string wealthType = WealthTypes[Random.Range(0, WealthTypes.Length)];
-        float startMultiplier = GetStartMultiplier(buyerPersonality, wealthType);
-        float maxMultiplier = GetMaxMultiplier(buyerPersonality, wealthType);
-        int startingOffer = Mathf.Max(1, Mathf.RoundToInt(marketValue * startMultiplier));
-        int maxAcceptablePrice = Mathf.Max(startingOffer, Mathf.RoundToInt(marketValue * maxMultiplier));
+        int startingOffer;
+        int maxAcceptablePrice;
+
+        if (enablePrerecordedVoiceDemoMode)
+        {
+            startingOffer = PickDemoOpeningOffer();
+            maxAcceptablePrice = PickDemoMaxAcceptablePrice(startingOffer);
+        }
+        else
+        {
+            string wealthType = WealthTypes[Random.Range(0, WealthTypes.Length)];
+            float startMultiplier = GetStartMultiplier(buyerPersonality, wealthType);
+            float maxMultiplier = GetMaxMultiplier(buyerPersonality, wealthType);
+            startingOffer = Mathf.Max(1, Mathf.RoundToInt(marketValue * startMultiplier));
+            maxAcceptablePrice = Mathf.Max(startingOffer, Mathf.RoundToInt(marketValue * maxMultiplier));
+        }
 
         Debug.Log("[CUSTOMER] Selected dialogue character: " + (selectedCharacter != null ? selectedCharacter.characterId : "abdul_rahman"));
         Debug.Log("[CUSTOMER] Display name: " + buyerName);
         Debug.Log("[CUSTOMER] Personality: " + buyerPersonality);
+        Debug.Log("[CUSTOMER] Prerecorded voice demo mode: " + enablePrerecordedVoiceDemoMode);
 
         return new LocalGeneratedTradeSession
         {
@@ -65,11 +87,13 @@ public class LocalTradeSessionGenerator
             quantityGrams = quantity,
             startingOffer = startingOffer,
             maxAcceptablePrice = maxAcceptablePrice,
-            buyerPatience = GetBuyerPatience(buyerPersonality),
+            buyerPatience = enablePrerecordedVoiceDemoMode ? 6 : GetBuyerPatience(buyerPersonality),
             buyerTrust = GetStartingTrust(buyerPersonality),
             buyerFrustration = GetStartingFrustration(buyerPersonality),
             buyerDesperation = GetDesperation(buyerPersonality),
-            greetingText = BuildGreeting(
+            greetingText = enablePrerecordedVoiceDemoMode
+                ? BuildDemoGreeting(spiceData != null ? spiceData.displayName : "pepper")
+                : BuildGreeting(
                 buyerName,
                 buyerPersonality,
                 marketManager.FormatTraditionalQuantity(quantity),
@@ -85,6 +109,20 @@ public class LocalTradeSessionGenerator
             if (GetInventory(profile, spiceKey) > 0)
             {
                 available.Add(spiceKey);
+            }
+        }
+
+        return available.Count > 0 ? available[Random.Range(0, available.Count)] : "pepper";
+    }
+
+    private static string PickDemoSpice(LocalProfileData profile)
+    {
+        List<string> available = new List<string>();
+        for (int i = 0; i < DemoSpiceKeys.Length; i++)
+        {
+            if (GetInventory(profile, DemoSpiceKeys[i]) > 0)
+            {
+                available.Add(DemoSpiceKeys[i]);
             }
         }
 
@@ -126,6 +164,27 @@ public class LocalTradeSessionGenerator
             default:
                 return $"Greetings, merchant. I seek {quantityLabel} of {spice}.";
         }
+    }
+
+    private static string BuildDemoGreeting(string spiceName)
+    {
+        string spice = (spiceName ?? "pepper").Trim().ToLowerInvariant();
+        return $"Good day, merchant. I am here to buy {spice}.";
+    }
+
+    private static int PickDemoOpeningOffer()
+    {
+        return DemoStartingOffers[Random.Range(0, DemoStartingOffers.Length)];
+    }
+
+    private static int PickDemoMaxAcceptablePrice(int startingOffer)
+    {
+        if (startingOffer <= 25)
+        {
+            return 40;
+        }
+
+        return 35;
     }
 
     private static float GetStartMultiplier(string buyerPersonality, string wealthType)

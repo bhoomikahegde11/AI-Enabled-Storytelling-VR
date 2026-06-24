@@ -1719,6 +1719,7 @@ GameObject:
   m_Component:
   - component: {fileID: 395775330}
   - component: {fileID: 395775331}
+  - component: {fileID: 395775332}
   m_Layer: 0
   m_Name: RightEyeAnchor
   m_TagString: Untagged
@@ -1792,6 +1793,50 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &395775332
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 395775329}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 0
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
 --- !u!1 &398418952
 GameObject:
   m_ObjectHideFlags: 0
@@ -6153,7 +6198,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.012731102, y: 0}
   m_AnchorMax: {x: 1, y: 0.97817606}
-  m_AnchoredPosition: {x: 225, y: 8.850036}
+  m_AnchoredPosition: {x: 225, y: 8.849976}
   m_SizeDelta: {x: -450, y: 17.699928}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1593397972
@@ -7577,6 +7622,8 @@ GameObject:
   - component: {fileID: 2137732766}
   - component: {fileID: 2137732768}
   - component: {fileID: 2137732767}
+  - component: {fileID: 2137732769}
+  - component: {fileID: 2137732770}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -7662,7 +7709,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AudioManager
   audioSource: {fileID: 1903845976}
-  localNpcTtsProvider: {fileID: 2137732767}
+  localNpcTtsProvider: {fileID: 2137732769}
 --- !u!114 &2137732767
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7670,7 +7717,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2137732762}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cf520c53aae5ae7489a6ce94a2fd49ef, type: 3}
   m_Name: 
@@ -7712,7 +7759,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 0}
+  m_Resource: {fileID: 8300000, guid: 9aef723c2606da845959f3e1ecf85021, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
@@ -7798,6 +7845,154 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &2137732769
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2137732762}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53334def7099c8948adf06ac3e978d82, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PreRecordedNpcTtsProvider
+  audioSource: {fileID: 2137732768}
+  clipGapSeconds: 0.03
+  defaultCharacterId: test_merchant_voice
+  debugLogs: 1
+  genericProfile:
+    characterId: test_merchant_voice
+    fullClips:
+    - intent: greeting
+      clips:
+      - {fileID: 8300000, guid: af54f2f649bdac047bc16619108a66ee, type: 3}
+    - intent: price_too_high
+      clips:
+      - {fileID: 8300000, guid: 1975d69ed59d7e84f9933423e3521124, type: 3}
+    - intent: accept_deal
+      clips:
+      - {fileID: 8300000, guid: b92599c02a34bd1479445e79009efbdf, type: 3}
+    - intent: fallback
+      clips:
+      - {fileID: 8300000, guid: 9aef723c2606da845959f3e1ecf85021, type: 3}
+    prefixClips:
+    - intent: initial_offer
+      clips:
+      - {fileID: 8300000, guid: 55200dd1b675f224ca37d52d9c032a42, type: 3}
+    suffixClips:
+    - intent: initial_offer
+      clips:
+      - {fileID: 8300000, guid: 6b699cd105dbf1e4eb9b37944bf79471, type: 3}
+    variableClips:
+    - key: number_20
+      clip: {fileID: 8300000, guid: aea69472fe0b2ed489e418a3ada725fc, type: 3}
+    - key: number_30
+      clip: {fileID: 8300000, guid: f0cc47c82e985c74c8de89052d4e7157, type: 3}
+    - key: number_7
+      clip: {fileID: 8300000, guid: 732eb36cca50f6a448e8deea66e41af3, type: 3}
+    - key: currency_varahas
+      clip: {fileID: 8300000, guid: 4387a6ae9f66a954d8a84224a101207c, type: 3}
+    - key: spice_pepper
+      clip: {fileID: 8300000, guid: 40bca7f941c354a47ac45474e7e5cfdd, type: 3}
+  characterProfiles:
+  - characterId: test_merchant_voice
+    fullClips:
+    - intent: accept_deal
+      clips:
+      - {fileID: 8300000, guid: b92599c02a34bd1479445e79009efbdf, type: 3}
+    - intent: clarification
+      clips:
+      - {fileID: 8300000, guid: 2a479d117f6aed34f86c5a8db7c1a708, type: 3}
+    - intent: fallback
+      clips:
+      - {fileID: 8300000, guid: 9aef723c2606da845959f3e1ecf85021, type: 3}
+    - intent: greeting
+      clips:
+      - {fileID: 8300000, guid: af54f2f649bdac047bc16619108a66ee, type: 3}
+    - intent: price_too_high
+      clips:
+      - {fileID: 8300000, guid: 1975d69ed59d7e84f9933423e3521124, type: 3}
+    - intent: walk_away
+      clips:
+      - {fileID: 8300000, guid: 13c2104517afeff428ba7e6b7b5607ca, type: 3}
+    prefixClips:
+    - intent: accept_price
+      clips:
+      - {fileID: 8300000, guid: e2d43bdb11917e244b8bda83d181aa7d, type: 3}
+    - intent: counter_offer
+      clips:
+      - {fileID: 8300000, guid: 21f123c4e2a61984b9311351dd403e39, type: 3}
+    - intent: final_counter_offer
+      clips:
+      - {fileID: 8300000, guid: a4bb5ac3f92109743825b980a277edf0, type: 3}
+    - intent: initial_offer
+      clips:
+      - {fileID: 8300000, guid: 55200dd1b675f224ca37d52d9c032a42, type: 3}
+    suffixClips:
+    - intent: for
+      clips:
+      - {fileID: 8300000, guid: 739152e1f8439a54fbad984036e3ed0b, type: 3}
+    - intent: for_pepper
+      clips:
+      - {fileID: 8300000, guid: 6b699cd105dbf1e4eb9b37944bf79471, type: 3}
+    - intent: for_this_lot
+      clips:
+      - {fileID: 8300000, guid: d60f142f3adc54e4d8110f75cddf959e, type: 3}
+    - intent: we_have_a_deal
+      clips:
+      - {fileID: 8300000, guid: bea98e1f34eb0364983c35c03d5c32f0, type: 3}
+    variableClips:
+    - key: currency_varahas
+      clip: {fileID: 8300000, guid: 4387a6ae9f66a954d8a84224a101207c, type: 3}
+    - key: number_1
+      clip: {fileID: 8300000, guid: d1c00841c789d5147affa690c464b28e, type: 3}
+    - key: number_10
+      clip: {fileID: 8300000, guid: 112b102033ea7364496cf8ba7f15ee98, type: 3}
+    - key: number_2
+      clip: {fileID: 8300000, guid: 5f36d63fc635280419408812a21cd6fd, type: 3}
+    - key: number_20
+      clip: {fileID: 8300000, guid: aea69472fe0b2ed489e418a3ada725fc, type: 3}
+    - key: number_3
+      clip: {fileID: 8300000, guid: 94f214c8cf152fa4083c2aefa42b37c2, type: 3}
+    - key: number_30
+      clip: {fileID: 8300000, guid: f0cc47c82e985c74c8de89052d4e7157, type: 3}
+    - key: number_4
+      clip: {fileID: 8300000, guid: fc46f540bfb519449bb7206123f2969e, type: 3}
+    - key: number_40
+      clip: {fileID: 8300000, guid: fb2053498d44b8345a1569d78f295904, type: 3}
+    - key: number_5
+      clip: {fileID: 8300000, guid: d6e16897c224a994f87e482ba44989a0, type: 3}
+    - key: number_50
+      clip: {fileID: 8300000, guid: 4d6e875fb5f570e4dbe149c519e215de, type: 3}
+    - key: number_6
+      clip: {fileID: 8300000, guid: 2cac9a130400db141b70a7c466b694b1, type: 3}
+    - key: number_7
+      clip: {fileID: 8300000, guid: 732eb36cca50f6a448e8deea66e41af3, type: 3}
+    - key: number_8
+      clip: {fileID: 8300000, guid: 8ce223fa5aef4294dbdfb0d56ebd84ce, type: 3}
+    - key: number_9
+      clip: {fileID: 8300000, guid: 4c8e5e14b9487af4c825a353d698f94b, type: 3}
+    - key: spice_cardamom
+      clip: {fileID: 8300000, guid: 075ef628eff18db46bfbbcb59176cbde, type: 3}
+    - key: spice_pepper
+      clip: {fileID: 8300000, guid: 40bca7f941c354a47ac45474e7e5cfdd, type: 3}
+  testText: Agreed. We have a deal.
+  testCharacterId: test_merchant_voice
+--- !u!114 &2137732770
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2137732762}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2130427f8b4cf2944ac43d4ababbe303, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Level1GameState
+  enablePrerecordedVoiceDemoMode: 1
+  debugForceCharacterId: 
 --- !u!1001 &2850860075289529601
 PrefabInstance:
   m_ObjectHideFlags: 0

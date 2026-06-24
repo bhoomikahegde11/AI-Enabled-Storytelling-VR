@@ -18,6 +18,8 @@ public class RuleBasedNPCBrainResult
 
 public class RuleBasedNPCBrain
 {
+    private static readonly int[] DemoOfferValues = { 20, 25, 30, 35, 40, 45, 49 };
+
     public RuleBasedNPCBrainResult GenerateReply(
         string playerText,
         NegotiationInput input,
@@ -64,6 +66,8 @@ public class RuleBasedNPCBrain
             return WalkAway(result, trade, GetWalkAwayLine(buyerName, personality), "WALK_AWAY");
         }
 
+        bool isDemoMode = IsPrerecordedVoiceDemoMode();
+
         switch (input.intent)
         {
             case NegotiationIntent.GREETING:
@@ -81,6 +85,10 @@ public class RuleBasedNPCBrain
             case NegotiationIntent.QUERY_BUYER_BUDGET:
                 trade.priceIntroduced = true;
                 trade.budgetRevealed = true;
+                if (isDemoMode)
+                {
+                    return HandleDemoBudgetOrPriceQuery(result, trade, currentOffer, spiceDescriptor);
+                }
                 result.replyText = $"I can offer {currentOffer} varahas for {quantity} of {spiceDescriptor}. That is fair for today's bazaar.";
                 return SyncState(result, trade);
 
@@ -183,6 +191,11 @@ public class RuleBasedNPCBrain
                 return SyncState(result, trade);
 
             case NegotiationIntent.COUNTER:
+                if (isDemoMode)
+                {
+                    return HandleDemoCounter(result, trade, input, currentOffer, spiceDescriptor);
+                }
+
                 trade.counterCount++;
                 AdjustEmotion(trade, 0.08f, 0f);
                 if (trade.counterCount > GetMaxCounters(personality, trade))
@@ -218,6 +231,11 @@ public class RuleBasedNPCBrain
                 {
                     result.replyText = "I did not catch your price. Say it plainly.";
                     return SyncState(result, trade);
+                }
+
+                if (isDemoMode)
+                {
+                    return HandleDemoSellerPrice(result, trade, input, currentOffer, quantityGrams, spiceDescriptor, roundCount);
                 }
 
                 trade.priceIntroduced = true;
@@ -314,6 +332,11 @@ public class RuleBasedNPCBrain
                 return SyncState(result, trade);
 
             case NegotiationIntent.BARGAIN:
+                if (isDemoMode)
+                {
+                    return HandleDemoBargain(result, trade, currentOffer, spiceDescriptor);
+                }
+
                 trade.repeatedBargains++;
                 AdjustEmotion(trade, 0.04f, 0.01f);
                 result.updatedOffer = Mathf.Min(currentOffer + Mathf.Max(GetMinimumVisibleMovement(currentOffer), trade.minIncrement), trade.maxBuyerPrice);
@@ -322,6 +345,11 @@ public class RuleBasedNPCBrain
                 return SyncState(result, trade);
 
             case NegotiationIntent.PRICE_QUERY:
+                if (isDemoMode)
+                {
+                    return HandleDemoBudgetOrPriceQuery(result, trade, currentOffer, spiceDescriptor);
+                }
+
                 result.replyText = $"I am offering {currentOffer} varahas for {quantity} of {spiceDescriptor}.";
                 return SyncState(result, trade);
 
@@ -369,6 +397,18 @@ public class RuleBasedNPCBrain
             return;
         }
 
+        if (IsPrerecordedVoiceDemoMode())
+        {
+            trade.npcOffer = ClampToDemoOffer(trade.npcOffer > 0 ? trade.npcOffer : 25);
+            trade.maxBuyerPrice = Mathf.Clamp(ClampToDemoOffer(trade.maxBuyerPrice > 0 ? trade.maxBuyerPrice : 40), 35, 40);
+            trade.buyerPatience = Mathf.Max(trade.buyerPatience, 6);
+            trade.buyerTrust = Mathf.Max(trade.buyerTrust, 0.65f);
+            trade.buyerFrustration = Mathf.Min(trade.buyerFrustration, 0.12f);
+            trade.buyerDesperation = Mathf.Clamp01(trade.buyerDesperation > 0f ? trade.buyerDesperation : 0.45f);
+            trade.minIncrement = 5;
+            return;
+        }
+
         if (trade.maxBuyerPrice <= 0)
         {
             trade.maxBuyerPrice = Mathf.Max(trade.npcOffer, Mathf.RoundToInt(trade.marketValue * GetMaxMultiplier(trade.buyerPersonality)));
@@ -400,6 +440,206 @@ public class RuleBasedNPCBrain
             float anchored = (0.7f * trade.npcOffer) + (0.3f * trade.referencePrice);
             trade.npcOffer = Mathf.Min(trade.maxBuyerPrice, Mathf.Max(trade.npcOffer, Mathf.RoundToInt(anchored)));
         }
+    }
+
+    private static RuleBasedNPCBrainResult HandleDemoBudgetOrPriceQuery(
+        RuleBasedNPCBrainResult result,
+        LocalTradeState trade,
+        int currentOffer,
+        string spiceDescriptor)
+    {
+        trade.priceIntroduced = true;
+        trade.budgetRevealed = true;
+        trade.repeatedPriceQueries++;
+
+        if (trade.repeatedPriceQueries <= 1)
+        {
+            result.replyText = $"I can offer {currentOffer} varahas for {spiceDescriptor}.";
+            return SyncState(result, trade);
+        }
+
+        int nextOffer = GetDemoNextOffer(currentOffer, trade.maxBuyerPrice);
+        if (nextOffer > currentOffer)
+        {
+            result.updatedOffer = nextOffer;
+            result.replyText = $"I can increase my offer to {nextOffer} varahas for {spiceDescriptor}.";
+            return SyncState(result, trade);
+        }
+
+        result.replyText = $"My final offer is {currentOffer} varahas for {spiceDescriptor}.";
+        return SyncState(result, trade);
+    }
+
+    private static RuleBasedNPCBrainResult HandleDemoCounter(
+        RuleBasedNPCBrainResult result,
+        LocalTradeState trade,
+        NegotiationInput input,
+        int currentOffer,
+        string spiceDescriptor)
+    {
+        trade.counterCount++;
+        trade.priceIntroduced = true;
+
+        if (input.hasSellerPrice)
+        {
+            return HandleDemoSellerPrice(result, trade, input, currentOffer, trade.quantityGrams, spiceDescriptor, 0);
+        }
+
+        int nextOffer = GetDemoNextOffer(currentOffer, trade.maxBuyerPrice);
+        if (nextOffer > currentOffer)
+        {
+            result.updatedOffer = nextOffer;
+            result.replyText = $"I can increase my offer to {nextOffer} varahas for {spiceDescriptor}.";
+            return SyncState(result, trade);
+        }
+
+        result.replyText = $"My final offer is {currentOffer} varahas for {spiceDescriptor}.";
+        return SyncState(result, trade);
+    }
+
+    private static RuleBasedNPCBrainResult HandleDemoBargain(
+        RuleBasedNPCBrainResult result,
+        LocalTradeState trade,
+        int currentOffer,
+        string spiceDescriptor)
+    {
+        trade.repeatedBargains++;
+        trade.priceIntroduced = true;
+
+        int nextOffer = GetDemoNextOffer(currentOffer, trade.maxBuyerPrice);
+        if (nextOffer > currentOffer)
+        {
+            result.updatedOffer = nextOffer;
+            result.replyText = $"I can increase my offer to {nextOffer} varahas for {spiceDescriptor}.";
+            return SyncState(result, trade);
+        }
+
+        result.replyText = $"My final offer is {currentOffer} varahas for {spiceDescriptor}.";
+        return SyncState(result, trade);
+    }
+
+    private static RuleBasedNPCBrainResult HandleDemoSellerPrice(
+        RuleBasedNPCBrainResult result,
+        LocalTradeState trade,
+        NegotiationInput input,
+        int currentOffer,
+        int quantityGrams,
+        string spiceDescriptor,
+        int roundCount)
+    {
+        int sellerPrice = input.sellerPrice;
+        trade.priceIntroduced = true;
+        trade.lastSellerPrice = sellerPrice;
+
+        if (CanAcceptDemoSellerPrice(trade, input, sellerPrice, currentOffer, roundCount))
+        {
+            result.resolvedPrice = sellerPrice;
+            result.resolvedQuantityGrams = quantityGrams > 0 ? quantityGrams : trade.quantityGrams;
+            result.replyText = $"Agreed. We have a deal.";
+            result.isFinished = true;
+            result.isAccepted = true;
+            result.resolutionAction = "ACCEPT";
+            LogNegotiation(trade, input, currentOffer, sellerPrice, roundCount, "ACCEPT");
+            return SyncState(result, trade);
+        }
+
+        int nextOffer = GetDemoNextOffer(currentOffer, trade.maxBuyerPrice);
+        if (nextOffer > currentOffer)
+        {
+            result.updatedOffer = nextOffer;
+            result.replyText = nextOffer >= trade.maxBuyerPrice
+                ? $"My final offer is {nextOffer} varahas for {spiceDescriptor}."
+                : $"I can increase my offer to {nextOffer} varahas for {spiceDescriptor}.";
+            LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, "COUNTER");
+            return SyncState(result, trade);
+        }
+
+        result.replyText = $"My final offer is {currentOffer} varahas for {spiceDescriptor}.";
+        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "HOLD");
+        return SyncState(result, trade);
+    }
+
+    private static bool CanAcceptDemoSellerPrice(
+        LocalTradeState trade,
+        NegotiationInput input,
+        int sellerPrice,
+        int currentOffer,
+        int roundCount)
+    {
+        if (sellerPrice <= 0)
+        {
+            return false;
+        }
+
+        if (input != null && input.hasExplicitAcceptance)
+        {
+            return true;
+        }
+
+        if (sellerPrice <= currentOffer + 5)
+        {
+            return true;
+        }
+
+        bool hasCounterOccurred = trade != null &&
+            (trade.counterCount > 0 ||
+             trade.repeatedBargains > 0 ||
+             trade.repeatedPriceQueries > 1 ||
+             trade.npcOffer > trade.startingNpcOffer);
+
+        int finalDemoTarget = trade != null
+            ? ClampToDemoOffer(Mathf.Clamp(trade.maxBuyerPrice, 35, 40))
+            : 40;
+
+        if (roundCount <= 2 && sellerPrice >= 40 && !hasCounterOccurred)
+        {
+            return false;
+        }
+
+        if (hasCounterOccurred && sellerPrice <= finalDemoTarget)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static int GetDemoNextOffer(int currentOffer, int maxBuyerPrice)
+    {
+        int clampedCurrent = ClampToDemoOffer(currentOffer);
+        int clampedMax = ClampToDemoOffer(Mathf.Clamp(maxBuyerPrice, 35, 49));
+        for (int i = 0; i < DemoOfferValues.Length; i++)
+        {
+            if (DemoOfferValues[i] > clampedCurrent && DemoOfferValues[i] <= clampedMax)
+            {
+                return DemoOfferValues[i];
+            }
+        }
+
+        return clampedCurrent;
+    }
+
+    private static int ClampToDemoOffer(int value)
+    {
+        int closest = DemoOfferValues[0];
+        int bestDistance = Mathf.Abs(value - closest);
+        for (int i = 1; i < DemoOfferValues.Length; i++)
+        {
+            int distance = Mathf.Abs(value - DemoOfferValues[i]);
+            if (distance < bestDistance)
+            {
+                closest = DemoOfferValues[i];
+                bestDistance = distance;
+            }
+        }
+
+        return closest;
+    }
+
+    private static bool IsPrerecordedVoiceDemoMode()
+    {
+        Level1GameState state = UnityEngine.Object.FindFirstObjectByType<Level1GameState>();
+        return state != null && state.IsPrerecordedVoiceDemoModeEnabled;
     }
 
     private static void UpdateMemory(LocalTradeState trade, NegotiationInput input)

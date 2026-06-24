@@ -21,6 +21,7 @@ public class DialogueCharacterProfile
 public class DialogueCharacterRegistry
 {
     private readonly Dictionary<string, CharacterDialogueSet> characterSets;
+    private readonly Dictionary<string, DialogueCharacterProfile> profilesById;
     private readonly List<DialogueCharacterProfile> supportedProfiles;
 
     public CharacterDialogueSet GenericSet { get; private set; }
@@ -33,6 +34,9 @@ public class DialogueCharacterRegistry
         CharacterDialogueSet chinappaNaik = ChinappaNaikDialogue.Create();
         CharacterDialogueSet siddharthChetti = SiddharthChettiDialogue.Create();
         CharacterDialogueSet fatherPenteado = FatherPenteadoDialogue.Create();
+        CharacterDialogueSet testMerchantVoice = TestMerchantVoiceDialogue.Create();
+
+        DialogueCharacterProfile testMerchantVoiceProfile = new DialogueCharacterProfile("test_merchant_voice", "Test Merchant Voice", "Level 1 Voice Test Buyer", "Normal");
 
         supportedProfiles = new List<DialogueCharacterProfile>
         {
@@ -43,6 +47,13 @@ public class DialogueCharacterRegistry
             new DialogueCharacterProfile("saraswati_chetti", "Saraswati Chetti", "Local Vijayanagara Retail Shop Owner", "Friendly"),
             new DialogueCharacterProfile("father_penteado", "Father Penteado", "Jesuit Missionary", "Normal")
         };
+
+        profilesById = new Dictionary<string, DialogueCharacterProfile>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < supportedProfiles.Count; i++)
+        {
+            profilesById[supportedProfiles[i].characterId] = supportedProfiles[i];
+        }
+        profilesById[testMerchantVoiceProfile.characterId] = testMerchantVoiceProfile;
 
         GenericSet = new CharacterDialogueSet(
             "generic",
@@ -57,7 +68,8 @@ public class DialogueCharacterRegistry
             { lakshmiAmma.characterId, lakshmiAmma },
             { chinappaNaik.characterId, chinappaNaik },
             { siddharthChetti.characterId, siddharthChetti },
-            { fatherPenteado.characterId, fatherPenteado }
+            { fatherPenteado.characterId, fatherPenteado },
+            { testMerchantVoice.characterId, testMerchantVoice }
         };
     }
 
@@ -89,12 +101,9 @@ public class DialogueCharacterRegistry
 
     public DialogueCharacterProfile GetRegisteredCharacterOrRandom(string characterId)
     {
-        for (int i = 0; i < supportedProfiles.Count; i++)
+        if (!string.IsNullOrWhiteSpace(characterId) && profilesById.TryGetValue(characterId, out DialogueCharacterProfile profile))
         {
-            if (string.Equals(supportedProfiles[i].characterId, characterId, StringComparison.OrdinalIgnoreCase))
-            {
-                return supportedProfiles[i];
-            }
+            return profile;
         }
 
         return GetRandomRegisteredCharacter();
@@ -137,6 +146,11 @@ public class DialogueCharacterRegistry
         if (normalized.Contains("penteado") || normalized.Contains("father"))
         {
             return "father_penteado";
+        }
+
+        if (normalized.Contains("test merchant voice"))
+        {
+            return "test_merchant_voice";
         }
 
         return string.Empty;
