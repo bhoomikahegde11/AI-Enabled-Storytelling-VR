@@ -17,7 +17,7 @@ public class BagReceiver : MonoBehaviour
         );
 
         ScooperFill scooper =
-            other.GetComponent<ScooperFill>();
+     other.GetComponentInParent<ScooperFill>();
 
         if (scooper == null)
         {
