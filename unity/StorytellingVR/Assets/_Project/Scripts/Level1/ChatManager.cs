@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using System.Collections;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 [System.Serializable]
@@ -44,6 +45,7 @@ public class ChatManager : MonoBehaviour
 
     [Header("Standalone NPC Audio")]
     public bool enableNpcTTS = true;
+    public string debugTtsCharacterOverride = "";
 
     [Header("Debug Logging")]
     [SerializeField]
@@ -58,6 +60,10 @@ public class ChatManager : MonoBehaviour
     private int localDialogueTurnId = 0;
     private bool hasPlayedGreetingForCurrentCustomer = false;
     private string lastCustomerCharacterId = string.Empty;
+    private Coroutine ttsSubtitleFallbackCoroutine;
+    private string pendingTtsSubtitleSpeaker = string.Empty;
+    private string pendingTtsSubtitleText = string.Empty;
+    private INpcTtsPlaybackAware subscribedTtsPlaybackProvider;
 
     // 🔥 Prevent STT spam / multiple requests
     private bool isProcessing = false;
@@ -394,14 +400,16 @@ public class ChatManager : MonoBehaviour
         {
             hudManager.UpdateMoney(localMoney);
             hudManager.UpdateRespect(localReputation);
-            TriggerSubtitleDisplay(!string.IsNullOrEmpty(trade.buyerName) ? trade.buyerName : "Customer", brainResult.replyText);
             if (currentTrade != null)
             {
                 hudManager.UpdateCurrentTrade(currentTrade);
             }
         }
 
-        TrySpeakNpcReply(brainResult.replyText);
+        PresentNpcSubtitleAndTts(
+            !string.IsNullOrEmpty(trade.buyerName) ? trade.buyerName : "Customer",
+            brainResult.replyText,
+            DialogueCharacterRegistry.NormalizeCharacterId(trade.buyerName));
 
         if (useLocalLLMGeneration)
         {
@@ -768,11 +776,13 @@ public class ChatManager : MonoBehaviour
             npcText.text = text;
         }
 
-        TriggerSubtitleDisplay(bName, text);
-
         if (useLocalSessionGeneration || useLocalNpcBrain)
         {
-            TrySpeakNpcReply(text);
+            PresentNpcSubtitleAndTts(bName, text, DialogueCharacterRegistry.NormalizeCharacterId(bName));
+        }
+        else
+        {
+            TriggerSubtitleDisplay(bName, text);
         }
 
         // 4. Trigger speech audio playback
@@ -786,29 +796,148 @@ public class ChatManager : MonoBehaviour
         EnableConversationUI();
     }
 
-    private void TrySpeakNpcReply(string replyText)
+    private bool TrySpeakNpcReply(string replyText, string characterId = "")
     {
         if (!enableNpcTTS)
         {
             Debug.Log("[TTS] Skipped: NPC TTS disabled");
-            return;
+            return false;
         }
 
         if (string.IsNullOrWhiteSpace(replyText))
         {
             Debug.Log("[TTS] Skipped: empty NPC reply");
-            return;
+            return false;
         }
-
-        Debug.Log("[TTS] Speaking NPC reply: " + replyText);
 
         if (audioManager == null)
         {
             Debug.LogWarning("[TTS] Skipped: AudioManager missing");
+            return false;
+        }
+
+#if UNITY_EDITOR
+        string ttsCharacterId = !string.IsNullOrWhiteSpace(debugTtsCharacterOverride)
+            ? debugTtsCharacterOverride
+            : characterId;
+#else
+        string ttsCharacterId = characterId;
+#endif
+
+        string cleanedReplyText = SanitizeTextForTts(replyText);
+        if (string.IsNullOrWhiteSpace(cleanedReplyText))
+        {
+            cleanedReplyText = replyText;
+        }
+
+        Debug.Log("[TTS] Speaking NPC reply: " + cleanedReplyText);
+        Debug.Log("[TTS] Character: " + ttsCharacterId);
+
+        return audioManager.TrySpeakText(cleanedReplyText, ttsCharacterId);
+    }
+
+    private void PresentNpcSubtitleAndTts(string speaker, string replyText, string characterId)
+    {
+        if (!enableNpcTTS || audioManager == null)
+        {
+            TriggerSubtitleDisplay(speaker, replyText);
+            TrySpeakNpcReply(replyText, characterId);
             return;
         }
 
-        audioManager.TrySpeakText(replyText);
+        INpcTtsPlaybackAware playbackAwareProvider = audioManager.localNpcTtsProvider as INpcTtsPlaybackAware;
+        if (playbackAwareProvider == null)
+        {
+            TriggerSubtitleDisplay(speaker, replyText);
+            TrySpeakNpcReply(replyText, characterId);
+            return;
+        }
+
+        CleanupPendingTtsSubtitleWait();
+        pendingTtsSubtitleSpeaker = speaker;
+        pendingTtsSubtitleText = replyText;
+        subscribedTtsPlaybackProvider = playbackAwareProvider;
+        subscribedTtsPlaybackProvider.PlaybackStarted += OnNpcTtsPlaybackStarted;
+        subscribedTtsPlaybackProvider.PlaybackFailed += OnNpcTtsPlaybackFailed;
+
+        bool ttsAccepted = TrySpeakNpcReply(replyText, characterId);
+        if (!ttsAccepted)
+        {
+            CleanupPendingTtsSubtitleWait();
+            TriggerSubtitleDisplay(speaker, replyText);
+            return;
+        }
+
+        ttsSubtitleFallbackCoroutine = StartCoroutine(TtsSubtitleFallbackRoutine(5f));
+    }
+
+    private void OnNpcTtsPlaybackStarted()
+    {
+        if (string.IsNullOrWhiteSpace(pendingTtsSubtitleText))
+        {
+            CleanupPendingTtsSubtitleWait();
+            return;
+        }
+
+        TriggerSubtitleDisplay(pendingTtsSubtitleSpeaker, pendingTtsSubtitleText);
+        CleanupPendingTtsSubtitleWait();
+    }
+
+    private void OnNpcTtsPlaybackFailed(string reason)
+    {
+        Debug.LogWarning("[TTS] Failed reason: " + reason);
+
+        if (!string.IsNullOrWhiteSpace(pendingTtsSubtitleText))
+        {
+            TriggerSubtitleDisplay(pendingTtsSubtitleSpeaker, pendingTtsSubtitleText);
+        }
+
+        CleanupPendingTtsSubtitleWait();
+    }
+
+    private IEnumerator TtsSubtitleFallbackRoutine(float timeoutSeconds)
+    {
+        yield return new WaitForSeconds(timeoutSeconds);
+
+        if (!string.IsNullOrWhiteSpace(pendingTtsSubtitleText))
+        {
+            Debug.LogWarning("[TTS] Failed reason: playback start timeout");
+            TriggerSubtitleDisplay(pendingTtsSubtitleSpeaker, pendingTtsSubtitleText);
+        }
+
+        CleanupPendingTtsSubtitleWait();
+    }
+
+    private void CleanupPendingTtsSubtitleWait()
+    {
+        if (ttsSubtitleFallbackCoroutine != null)
+        {
+            StopCoroutine(ttsSubtitleFallbackCoroutine);
+            ttsSubtitleFallbackCoroutine = null;
+        }
+
+        if (subscribedTtsPlaybackProvider != null)
+        {
+            subscribedTtsPlaybackProvider.PlaybackStarted -= OnNpcTtsPlaybackStarted;
+            subscribedTtsPlaybackProvider.PlaybackFailed -= OnNpcTtsPlaybackFailed;
+            subscribedTtsPlaybackProvider = null;
+        }
+
+        pendingTtsSubtitleSpeaker = string.Empty;
+        pendingTtsSubtitleText = string.Empty;
+    }
+
+    private static string SanitizeTextForTts(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        string cleaned = Regex.Replace(text, "\\([^\\)]*\\)", string.Empty);
+        cleaned = Regex.Replace(cleaned, "\\[[^\\]]*\\]", string.Empty);
+        cleaned = Regex.Replace(cleaned, "\\s+", " ").Trim();
+        return cleaned;
     }
 
     private Coroutine subtitleHideCoroutine;

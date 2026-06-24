@@ -217,3 +217,17 @@ unity/StorytellingVR/*_BurstDebugInformation_DoNotShip/
 
 # Android/IL2CPP temp output
 **/il2cppOutput/
+
+
+############################################################
+# DOCS / VOICE TESTING REVIEW ARTIFACTS
+############################################################
+
+# Keep the repo-wide large-file ignores above, but allow the
+# curated review assets in docs/voice-testing to be committed.
+!docs/voice-testing/
+!docs/voice-testing/**
+!docs/voice-testing/**/*.wav
+!docs/voice-testing/**/*.mp3
+!docs/voice-testing/**/*.onnx
+!docs/voice-testing/**/*.json

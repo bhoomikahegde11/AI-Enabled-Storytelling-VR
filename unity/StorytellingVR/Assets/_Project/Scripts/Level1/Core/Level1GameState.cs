@@ -47,6 +47,11 @@ public class Level1GameState : MonoBehaviour
 {
     private static Level1GameState instance;
 
+    #if UNITY_EDITOR
+    [Header("Editor Debug")]
+    [SerializeField] private string debugForceCharacterId = "";
+    #endif
+
     public static Level1GameState Instance
     {
         get
@@ -168,7 +173,11 @@ public class Level1GameState : MonoBehaviour
             activeEvent = marketManager.RollRandomMarketEvent();
         }
 
+        #if UNITY_EDITOR
+        LocalGeneratedTradeSession session = localTradeSessionGenerator.Generate(marketManager, profile, activeEvent, debugForceCharacterId);
+        #else
         LocalGeneratedTradeSession session = localTradeSessionGenerator.Generate(marketManager, profile, activeEvent);
+        #endif
         string spiceKey = marketManager.NormalizeSpiceKey(session.spiceName);
         marketManager.TryGetSpice(spiceKey, out SpiceData spiceData);
 

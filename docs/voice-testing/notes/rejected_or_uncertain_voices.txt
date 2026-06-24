@@ -1,0 +1,4 @@
+Rejected or uncertain voices
+
+- en_GB_southern_english_female_medium_empty: empty leftover folder from an earlier failed or partial setup attempt; moved to notes/needs_sorting.
+- en_US_hfc_female_medium: model files are present, but the local WAV sample set is not currently preserved in this repo copy.
