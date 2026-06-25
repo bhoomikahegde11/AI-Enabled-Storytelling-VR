@@ -39,6 +39,7 @@ public class LocalTradeState
     public float buyerTrust;
     public float buyerFrustration;
     public float buyerDesperation;
+    public float buyerAggression;
     public bool priceIntroduced;
     public bool budgetRevealed;
 }
@@ -172,7 +173,8 @@ public class Level1GameState : MonoBehaviour
             npcOffer = npcOffer,
             previousNpcOffer = npcOffer,
             marketValue = marketManager.CalculateMarketValue(spiceData.key, safeQuantity, activeEvent),
-            referencePrice = lastDealReferencePrice
+            referencePrice = lastDealReferencePrice,
+            buyerAggression = 0.5f
         };
     }
 
@@ -217,6 +219,7 @@ public class Level1GameState : MonoBehaviour
             buyerTrust = session.buyerTrust,
             buyerFrustration = session.buyerFrustration,
             buyerDesperation = session.buyerDesperation,
+            buyerAggression = session.buyerAggression,
             referencePrice = lastDealReferencePrice
         };
 

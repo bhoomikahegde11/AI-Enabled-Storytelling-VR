@@ -9,7 +9,7 @@ using UnityEditor;
 #endif
 
 [RequireComponent(typeof(AudioSource))]
-public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacterNpcTtsProvider, INpcTtsPlaybackAware
+public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacterNpcTtsProvider, IScenarioNpcTtsProvider, INpcTtsPlaybackAware
 {
     [Serializable]
     public class IntentClipSet
@@ -56,6 +56,7 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
     private Coroutine activePlaybackCoroutine;
 
     private static readonly string IntentGreeting = "greeting";
+    private static readonly string IntentRepeatGreeting = "repeat_greeting";
     private static readonly string IntentAskSpice = "ask_spice";
     private static readonly string IntentAskQuantity = "ask_quantity";
     private static readonly string IntentInitialOffer = "initial_offer";
@@ -68,6 +69,10 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
     private static readonly string IntentClarification = "clarification";
     private static readonly string IntentFallback = "fallback";
     private static readonly string IntentFinalCounterOffer = "final_counter_offer";
+    private static readonly string IntentHistoryQuestion = "history_question";
+    private static readonly string IntentSocialGreeting = "social_greeting";
+    private static readonly string IntentOffTopic = "off_topic";
+    private static readonly string IntentTimePressure = "time_pressure";
 
     private static readonly Regex DigitsRegex = new Regex(@"\d+", RegexOptions.Compiled);
     private static readonly Regex VariantSuffixRegex = new Regex(@"_\d+$", RegexOptions.Compiled);
@@ -117,6 +122,16 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
 
     public void Speak(string text, string characterId)
     {
+        SpeakInternal(text, characterId, null);
+    }
+
+    public void Speak(string text, string characterId, DialogueScenario scenario)
+    {
+        SpeakInternal(text, characterId, scenario);
+    }
+
+    private void SpeakInternal(string text, string characterId, DialogueScenario? scenario)
+    {
         if (string.IsNullOrWhiteSpace(text))
         {
             LogDebug("Ignoring empty startup TTS request");
@@ -139,7 +154,10 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
         string resolvedCharacterId = !string.IsNullOrWhiteSpace(characterId)
             ? characterId.Trim().ToLowerInvariant()
             : (defaultCharacterId ?? string.Empty).Trim().ToLowerInvariant();
-        string intent = DetectIntent(text);
+        string intent = scenario.HasValue && scenario.Value != DialogueScenario.Unknown
+            ? MapScenarioToIntent(scenario.Value)
+            : DetectIntent(text);
+        bool usedScenarioIntent = scenario.HasValue && scenario.Value != DialogueScenario.Unknown;
         LogDebug("Detected intent: " + intent + " | character=" + resolvedCharacterId + " | text=" + text);
 
         CharacterVoiceProfile profile = ResolveProfile(resolvedCharacterId);
@@ -157,6 +175,12 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
             fullClip = GetIntentClip(fallbackProfile, intent, ClipKind.Full);
         }
 
+        if (fullClip == null && usedScenarioIntent && string.Equals(intent, IntentRepeatGreeting, StringComparison.OrdinalIgnoreCase))
+        {
+            fullClip = GetIntentClip(profile, IntentGreeting, ClipKind.Full) ??
+                       GetIntentClip(fallbackProfile, IntentGreeting, ClipKind.Full);
+        }
+
         if (fullClip != null)
         {
             LogDebug("Selected full clip for intent " + intent + ": " + fullClip.name);
@@ -170,6 +194,37 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
             LogDebug("Selected sequence for intent " + intent + ": " + string.Join(" -> ", sequence.Select(clip => clip != null ? clip.name : "<null>").ToArray()));
             StartPlayback(sequence, resolvedCharacterId, intent, text);
             return;
+        }
+
+        if (usedScenarioIntent)
+        {
+            string fallbackIntent = DetectIntent(text);
+            if (!string.Equals(fallbackIntent, intent, StringComparison.OrdinalIgnoreCase))
+            {
+                LogDebug("Scenario intent fallback to text intent: " + fallbackIntent + " | scenario=" + scenario.Value);
+                intent = fallbackIntent;
+
+                fullClip = GetIntentClip(profile, intent, ClipKind.Full);
+                if (fullClip == null)
+                {
+                    fullClip = GetIntentClip(fallbackProfile, intent, ClipKind.Full);
+                }
+
+                if (fullClip != null)
+                {
+                    LogDebug("Selected fallback full clip for intent " + intent + ": " + fullClip.name);
+                    StartPlayback(new List<AudioClip> { fullClip }, resolvedCharacterId, intent, text);
+                    return;
+                }
+
+                sequence = BuildClipSequence(profile, fallbackProfile, intent, text);
+                if (sequence.Count > 0)
+                {
+                    LogDebug("Selected fallback sequence for intent " + intent + ": " + string.Join(" -> ", sequence.Select(clip => clip != null ? clip.name : "<null>").ToArray()));
+                    StartPlayback(sequence, resolvedCharacterId, intent, text);
+                    return;
+                }
+            }
         }
 
         AudioClip fallbackClip = GetIntentClip(profile, IntentFallback, ClipKind.Full);
@@ -187,6 +242,56 @@ public class PreRecordedNpcTtsProvider : MonoBehaviour, INpcTtsProvider, ICharac
 
         LogDebug("Fallback failed. No full clip, no sequence, no fallback clip for intent " + intent);
         NotifyPlaybackFailed("no playable clip sequence found");
+    }
+
+    private string MapScenarioToIntent(DialogueScenario scenario)
+    {
+        switch (scenario)
+        {
+            case DialogueScenario.CustomerGreeting:
+                return IntentGreeting;
+            case DialogueScenario.RepeatCustomerGreeting:
+                return IntentRepeatGreeting;
+            case DialogueScenario.AskWhatBuyerWants:
+                return IntentAskSpice;
+            case DialogueScenario.AskQuantity:
+                return IntentAskQuantity;
+            case DialogueScenario.AskBuyerBudget:
+                return IntentInitialOffer;
+            case DialogueScenario.SellerPriceTooHigh:
+                return IntentPriceTooHigh;
+            case DialogueScenario.SellerPriceSlightlyHigh:
+            case DialogueScenario.SellerPriceBelowExpected:
+            case DialogueScenario.BuyerCounterMiddle:
+                return IntentCounterOffer;
+            case DialogueScenario.BuyerCounterFirst:
+                return IntentInitialOffer;
+            case DialogueScenario.BuyerCounterFinal:
+                return IntentFinalCounterOffer;
+            case DialogueScenario.BuyerHoldsFirm:
+                return IntentHoldFirm;
+            case DialogueScenario.SellerPriceAccepted:
+            case DialogueScenario.TransactionSuccess:
+                return IntentAcceptDeal;
+            case DialogueScenario.PlayerAcceptedDeal:
+                return IntentAcceptPrice;
+            case DialogueScenario.PlayerRejectedBuyerOffer:
+            case DialogueScenario.TransactionFailure:
+                return IntentWalkAway;
+            case DialogueScenario.HistoryQuestion:
+                return IntentHistoryQuestion;
+            case DialogueScenario.SocialGreeting:
+                return IntentSocialGreeting;
+            case DialogueScenario.OffTopic:
+                return IntentOffTopic;
+            case DialogueScenario.UnclearSpeech:
+                return IntentClarification;
+            case DialogueScenario.TimePressure:
+                return IntentTimePressure;
+            case DialogueScenario.Unknown:
+            default:
+                return IntentFallback;
+        }
     }
 
     public List<string> BuildNumberClipKeys(int number)

@@ -134,6 +134,38 @@ public class AudioManager : MonoBehaviour
         return TrySpeakText(text);
     }
 
+    public bool TrySpeakText(string text, string characterId, DialogueScenario scenario)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            Debug.LogWarning("[TTS] Skipped: empty NPC reply");
+            return false;
+        }
+
+        if (localNpcTtsProvider == null)
+        {
+            Debug.LogWarning("[TTS] No local TTS provider assigned");
+            return false;
+        }
+
+        IScenarioNpcTtsProvider scenarioProvider = localNpcTtsProvider as IScenarioNpcTtsProvider;
+        if (scenarioProvider != null)
+        {
+            try
+            {
+                scenarioProvider.Speak(text, characterId, scenario);
+                return true;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning("[TTS] Failed reason: " + ex.Message);
+                return false;
+            }
+        }
+
+        return TrySpeakText(text, characterId);
+    }
+
     private IEnumerator DownloadAndPlayAudioRoutine(string url)
     {
         AudioType audioType = AudioType.MPEG;

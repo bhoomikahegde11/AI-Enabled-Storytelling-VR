@@ -8,6 +8,7 @@ public class DialogueLine
     public PlayerReputationBucket? reputationBucket;
     public NpcPatienceBucket? patienceBucket;
     public NpcDesperationBucket? desperationBucket;
+    public NpcAggressionBucket? aggressionBucket;
     public RoundBucket? roundBucket;
     public NpcPersonalityBucket? personalityBucket;
     public string[] templates;
@@ -20,7 +21,8 @@ public class DialogueLine
         NpcPatienceBucket? patienceBucket = null,
         NpcDesperationBucket? desperationBucket = null,
         RoundBucket? roundBucket = null,
-        NpcPersonalityBucket? personalityBucket = null)
+        NpcPersonalityBucket? personalityBucket = null,
+        NpcAggressionBucket? aggressionBucket = null)
     {
         this.scenario = scenario;
         this.templates = templates;
@@ -30,5 +32,6 @@ public class DialogueLine
         this.desperationBucket = desperationBucket;
         this.roundBucket = roundBucket;
         this.personalityBucket = personalityBucket;
+        this.aggressionBucket = aggressionBucket;
     }
 }

@@ -16,6 +16,7 @@ public class LocalGeneratedTradeSession
     public float buyerTrust;
     public float buyerFrustration;
     public float buyerDesperation;
+    public float buyerAggression;
 }
 
 public class LocalTradeSessionGenerator
@@ -55,6 +56,9 @@ public class LocalTradeSessionGenerator
         string buyerName = selectedCharacter != null ? selectedCharacter.displayName : "Abdul Rahman";
         string buyerOrigin = selectedCharacter != null ? selectedCharacter.buyerOrigin : "Arab Caravan Trader";
         string buyerPersonality = selectedCharacter != null ? selectedCharacter.buyerPersonality : "Friendly";
+        int buyerPatience = enablePrerecordedVoiceDemoMode ? 6 : GetBuyerPatience(buyerPersonality);
+        float buyerDesperation = GetDesperation(buyerPersonality);
+        float buyerAggression = enablePrerecordedVoiceDemoMode ? 0.5f : GetAggression(buyerPersonality);
         int startingOffer;
         int maxAcceptablePrice;
 
@@ -75,6 +79,9 @@ public class LocalTradeSessionGenerator
         Debug.Log("[CUSTOMER] Selected dialogue character: " + (selectedCharacter != null ? selectedCharacter.characterId : "abdul_rahman"));
         Debug.Log("[CUSTOMER] Display name: " + buyerName);
         Debug.Log("[CUSTOMER] Personality: " + buyerPersonality);
+        Debug.Log("[CUSTOMER] Patience: " + buyerPatience);
+        Debug.Log("[CUSTOMER] Desperation: " + buyerDesperation.ToString("0.00"));
+        Debug.Log("[CUSTOMER] Aggression: " + buyerAggression.ToString("0.00"));
         Debug.Log("[CUSTOMER] Prerecorded voice demo mode: " + enablePrerecordedVoiceDemoMode);
 
         return new LocalGeneratedTradeSession
@@ -87,10 +94,11 @@ public class LocalTradeSessionGenerator
             quantityGrams = quantity,
             startingOffer = startingOffer,
             maxAcceptablePrice = maxAcceptablePrice,
-            buyerPatience = enablePrerecordedVoiceDemoMode ? 6 : GetBuyerPatience(buyerPersonality),
+            buyerPatience = buyerPatience,
             buyerTrust = GetStartingTrust(buyerPersonality),
             buyerFrustration = GetStartingFrustration(buyerPersonality),
-            buyerDesperation = GetDesperation(buyerPersonality),
+            buyerDesperation = buyerDesperation,
+            buyerAggression = buyerAggression,
             greetingText = enablePrerecordedVoiceDemoMode
                 ? BuildDemoGreeting(spiceData != null ? spiceData.displayName : "pepper")
                 : BuildGreeting(
@@ -308,6 +316,21 @@ public class LocalTradeSessionGenerator
                 return 0.72f;
             default:
                 return 0.5f;
+        }
+    }
+
+    private static float GetAggression(string buyerPersonality)
+    {
+        switch (buyerPersonality)
+        {
+            case "Friendly":
+                return Random.Range(0.2f, 0.6f);
+            case "Strict":
+                return Random.Range(0.45f, 0.8f);
+            case "Impatient":
+                return Random.Range(0.55f, 0.9f);
+            default:
+                return Random.Range(0.3f, 0.7f);
         }
     }
 }

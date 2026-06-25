@@ -1,0 +1,35 @@
+character_id,voice_actor,scenario,aggression_bucket,clip_type,file_name,folder_path,dialogue_text,recording_note
+shared,,number,,variable,number_1.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,1,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_2.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,2,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_3.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,3,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_4.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,4,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_5.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,5,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_6.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,6,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_7.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,7,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_8.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,8,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_9.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,9,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_10.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,10,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_11.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,11,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_12.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,12,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_13.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,13,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_14.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,14,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_15.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,15,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_16.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,16,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_17.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,17,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_18.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,18,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_19.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,19,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_20.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,20,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_30.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,30,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_40.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,40,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_50.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,50,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_60.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,60,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_70.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,70,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_80.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,80,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_90.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,90,Shared number clip for stitched price or quantity playback.
+shared,,number,,variable,number_100.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,100,Shared number clip for stitched price or quantity playback.
+shared,,shared_token,,variable,currency_varahas.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,varahas,Shared reusable stitched clip.
+shared,,shared_token,,variable,spice_pepper.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,pepper,Shared reusable stitched clip.
+shared,,shared_token,,variable,spice_cardamom.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,cardamom,Shared reusable stitched clip.
+shared,,shared_token,,variable,spice_cinnamon.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,cinnamon,Shared reusable stitched clip.
+shared,,shared_token,,variable,spice_clove.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/variable/,clove,Shared reusable stitched clip.
+shared,,shared_token,,suffix,suffix_for.wav,Assets/_Project/Audio/NPCVoices/Level1/shared/suffix/,for,Shared reusable stitched clip.

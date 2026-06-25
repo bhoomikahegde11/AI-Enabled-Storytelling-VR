@@ -13,6 +13,18 @@ public class APIResponse
 
 public class ChatManager : MonoBehaviour
 {
+    private readonly struct DialogueReplyResult
+    {
+        public DialogueReplyResult(string replyText, DialogueScenario scenario)
+        {
+            ReplyText = replyText;
+            Scenario = scenario;
+        }
+
+        public string ReplyText { get; }
+        public DialogueScenario Scenario { get; }
+    }
+
     public APIManager api;
 
     public TMP_InputField inputField;
@@ -136,10 +148,11 @@ public class ChatManager : MonoBehaviour
             string currentCustomerCharacterId = DialogueCharacterRegistry.NormalizeCharacterId(localSession.buyerName);
             bool isRepeatCustomer = !string.IsNullOrWhiteSpace(currentCustomerCharacterId) &&
                 currentCustomerCharacterId == lastCustomerCharacterId;
-            string greetingReply = dialogueTableResponseProvider.GetGreeting(
+            DialogueReplyResult greetingResult = GetGreetingReplyResult(
                 Level1GameState.Instance.ActiveTrade,
                 Level1GameState.Instance.CurrentReputation,
                 isRepeatCustomer);
+            string greetingReply = greetingResult.ReplyText;
 
             if (string.IsNullOrWhiteSpace(greetingReply))
             {
@@ -164,7 +177,8 @@ public class ChatManager : MonoBehaviour
                 null,
                 null,
                 Level1GameState.Instance.BuildCurrentTradeForHud(),
-                0));
+                0,
+                greetingResult.Scenario));
             return;
         }
 
@@ -359,18 +373,18 @@ public class ChatManager : MonoBehaviour
         string fallbackReplyText = brainResult.replyText;
         int dialogueTurnId = ++localDialogueTurnId;
 
-        string tableReplyText = fallbackReplyText;
+        DialogueReplyResult dialogueReplyResult = new DialogueReplyResult(fallbackReplyText, DialogueScenario.Unknown);
         try
         {
-            string resolvedReply = dialogueTableResponseProvider.GetReply(
+            DialogueTableResponseProvider.ReplyResult resolvedResult = dialogueTableResponseProvider.GetReplyResult(
                 localInput,
                 trade,
                 brainResult,
                 negotiationStateManager.CurrentRound);
 
-            if (!string.IsNullOrWhiteSpace(resolvedReply))
+            if (!string.IsNullOrWhiteSpace(resolvedResult.replyText))
             {
-                tableReplyText = resolvedReply;
+                dialogueReplyResult = new DialogueReplyResult(resolvedResult.replyText, resolvedResult.scenario);
             }
         }
         catch (System.Exception ex)
@@ -378,7 +392,7 @@ public class ChatManager : MonoBehaviour
             Debug.LogWarning("[DIALOGUE-TABLE] Provider failed, using rule reply. Reason: " + ex.Message);
         }
 
-        brainResult.replyText = tableReplyText;
+        brainResult.replyText = dialogueReplyResult.ReplyText;
 
         localGameState.UpdateActiveTradeOffer(brainResult.updatedOffer);
         negotiationStateManager.SetLastOffer(brainResult.updatedOffer);
@@ -409,7 +423,8 @@ public class ChatManager : MonoBehaviour
         PresentNpcSubtitleAndTts(
             !string.IsNullOrEmpty(trade.buyerName) ? trade.buyerName : "Customer",
             brainResult.replyText,
-            DialogueCharacterRegistry.NormalizeCharacterId(trade.buyerName));
+            DialogueCharacterRegistry.NormalizeCharacterId(trade.buyerName),
+            dialogueReplyResult.Scenario);
 
         if (useLocalLLMGeneration)
         {
@@ -729,7 +744,7 @@ public class ChatManager : MonoBehaviour
         }
     }
 
-    private IEnumerator FirstReplyIntroRoutine(string text, string audioUrl, int reputation, int totalVarahas, bool done, TransactionSummary transaction, Animator npcAnim, CurrentTrade currentTrade, int reputationDelta)
+    private IEnumerator FirstReplyIntroRoutine(string text, string audioUrl, int reputation, int totalVarahas, bool done, TransactionSummary transaction, Animator npcAnim, CurrentTrade currentTrade, int reputationDelta, DialogueScenario greetingScenario = DialogueScenario.Unknown)
     {
         // Stop browsing/thinking state and look at player when the response arrives
         if (feedbackManager != null)
@@ -778,7 +793,7 @@ public class ChatManager : MonoBehaviour
 
         if (useLocalSessionGeneration || useLocalNpcBrain)
         {
-            PresentNpcSubtitleAndTts(bName, text, DialogueCharacterRegistry.NormalizeCharacterId(bName));
+            PresentNpcSubtitleAndTts(bName, text, DialogueCharacterRegistry.NormalizeCharacterId(bName), greetingScenario);
         }
         else
         {
@@ -796,7 +811,7 @@ public class ChatManager : MonoBehaviour
         EnableConversationUI();
     }
 
-    private bool TrySpeakNpcReply(string replyText, string characterId = "")
+    private bool TrySpeakNpcReply(string replyText, string characterId = "", DialogueScenario scenario = DialogueScenario.Unknown)
     {
         if (!enableNpcTTS)
         {
@@ -832,16 +847,17 @@ public class ChatManager : MonoBehaviour
 
         Debug.Log("[TTS] Speaking NPC reply: " + cleanedReplyText);
         Debug.Log("[TTS] Character: " + ttsCharacterId);
+        Debug.Log("[TTS] Scenario: " + scenario);
 
-        return audioManager.TrySpeakText(cleanedReplyText, ttsCharacterId);
+        return audioManager.TrySpeakText(cleanedReplyText, ttsCharacterId, scenario);
     }
 
-    private void PresentNpcSubtitleAndTts(string speaker, string replyText, string characterId)
+    private void PresentNpcSubtitleAndTts(string speaker, string replyText, string characterId, DialogueScenario scenario = DialogueScenario.Unknown)
     {
         if (!enableNpcTTS || audioManager == null)
         {
             TriggerSubtitleDisplay(speaker, replyText);
-            TrySpeakNpcReply(replyText, characterId);
+            TrySpeakNpcReply(replyText, characterId, scenario);
             return;
         }
 
@@ -849,7 +865,7 @@ public class ChatManager : MonoBehaviour
         if (playbackAwareProvider == null)
         {
             TriggerSubtitleDisplay(speaker, replyText);
-            TrySpeakNpcReply(replyText, characterId);
+            TrySpeakNpcReply(replyText, characterId, scenario);
             return;
         }
 
@@ -860,7 +876,7 @@ public class ChatManager : MonoBehaviour
         subscribedTtsPlaybackProvider.PlaybackStarted += OnNpcTtsPlaybackStarted;
         subscribedTtsPlaybackProvider.PlaybackFailed += OnNpcTtsPlaybackFailed;
 
-        bool ttsAccepted = TrySpeakNpcReply(replyText, characterId);
+        bool ttsAccepted = TrySpeakNpcReply(replyText, characterId, scenario);
         if (!ttsAccepted)
         {
             CleanupPendingTtsSubtitleWait();
@@ -1079,5 +1095,14 @@ public class ChatManager : MonoBehaviour
         }
 
         return 0;
+    }
+
+    private DialogueReplyResult GetGreetingReplyResult(LocalTradeState trade, int reputation, bool isRepeatCustomer)
+    {
+        string reply = dialogueTableResponseProvider.GetGreeting(trade, reputation, isRepeatCustomer);
+        DialogueScenario scenario = isRepeatCustomer
+            ? DialogueScenario.RepeatCustomerGreeting
+            : DialogueScenario.CustomerGreeting;
+        return new DialogueReplyResult(reply, scenario);
     }
 }

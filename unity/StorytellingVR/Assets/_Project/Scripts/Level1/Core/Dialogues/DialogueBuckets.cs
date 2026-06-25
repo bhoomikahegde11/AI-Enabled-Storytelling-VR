@@ -19,6 +19,13 @@ public enum NpcDesperationBucket
     High
 }
 
+public enum NpcAggressionBucket
+{
+    Low,
+    Medium,
+    High
+}
+
 public enum RoundBucket
 {
     First,

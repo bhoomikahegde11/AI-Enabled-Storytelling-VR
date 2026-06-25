@@ -7,6 +7,18 @@ using UnityEngine;
 // AI backend can later replace or augment this text layer, but is not part of this task.
 public class DialogueTableResponseProvider
 {
+    public readonly struct ReplyResult
+    {
+        public ReplyResult(string replyText, DialogueScenario scenario)
+        {
+            this.replyText = replyText;
+            this.scenario = scenario;
+        }
+
+        public readonly string replyText;
+        public readonly DialogueScenario scenario;
+    }
+
     private sealed class DialogueContext
     {
         public string characterId;
@@ -15,6 +27,7 @@ public class DialogueTableResponseProvider
         public PlayerReputationBucket reputationBucket;
         public NpcPatienceBucket patienceBucket;
         public NpcDesperationBucket desperationBucket;
+        public NpcAggressionBucket aggressionBucket;
         public RoundBucket roundBucket;
         public NpcPersonalityBucket personalityBucket;
         public string buyerName;
@@ -30,6 +43,7 @@ public class DialogueTableResponseProvider
         public int reputation;
         public int patience;
         public float desperation;
+        public float aggression;
         public string ruleReply;
     }
 
@@ -52,6 +66,7 @@ public class DialogueTableResponseProvider
                 reputationBucket = ToReputationBucket(reputation),
                 patienceBucket = ToPatienceBucket(trade.buyerPatience),
                 desperationBucket = ToDesperationBucket(trade.buyerDesperation),
+                aggressionBucket = ToAggressionBucket(trade.buyerAggression),
                 roundBucket = RoundBucket.First,
                 personalityBucket = ToPersonalityBucket(trade.buyerPersonality),
                 buyerName = !string.IsNullOrWhiteSpace(trade.buyerName) ? trade.buyerName : "Customer",
@@ -67,6 +82,7 @@ public class DialogueTableResponseProvider
                 reputation = reputation,
                 patience = trade.buyerPatience,
                 desperation = trade.buyerDesperation,
+                aggression = trade.buyerAggression,
                 ruleReply = "Greetings, merchant."
             };
 
@@ -88,10 +104,15 @@ public class DialogueTableResponseProvider
 
     public string GetReply(NegotiationInput input, LocalTradeState trade, RuleBasedNPCBrainResult brainResult, int roundCount)
     {
+        return GetReplyResult(input, trade, brainResult, roundCount).replyText;
+    }
+
+    public ReplyResult GetReplyResult(NegotiationInput input, LocalTradeState trade, RuleBasedNPCBrainResult brainResult, int roundCount)
+    {
         string fallbackReply = brainResult != null ? brainResult.replyText : string.Empty;
         if (brainResult == null)
         {
-            return fallbackReply;
+            return new ReplyResult(fallbackReply, DialogueScenario.Unknown);
         }
 
         try
@@ -102,16 +123,18 @@ public class DialogueTableResponseProvider
             string template = FindTemplate(context, characterSet, out matchLevel);
 
             Debug.Log("[DIALOGUE-TABLE] Character: " + (characterSet != null ? characterSet.displayName : "Generic"));
+            Debug.Log("[DIALOGUE-TABLE] Character Id: " + context.characterId);
             Debug.Log("[DIALOGUE-TABLE] Scenario: " + context.scenario);
             Debug.Log("[DIALOGUE-TABLE] Reputation: " + context.reputationBucket);
-            Debug.Log("[DIALOGUE-TABLE] Patience: " + context.patienceBucket);
-            Debug.Log("[DIALOGUE-TABLE] Desperation: " + context.desperationBucket);
+            Debug.Log("[DIALOGUE-TABLE] Patience: " + context.patienceBucket + " (" + context.patience + ")");
+            Debug.Log("[DIALOGUE-TABLE] Desperation: " + context.desperationBucket + " (" + context.desperation.ToString("0.00") + ")");
+            Debug.Log("[DIALOGUE-TABLE] Aggression: " + context.aggressionBucket + " (" + context.aggression.ToString("0.00") + ")");
             Debug.Log("[DIALOGUE-TABLE] RoundBucket: " + context.roundBucket);
             Debug.Log("[DIALOGUE-TABLE] Match level: " + matchLevel);
 
             if (string.IsNullOrWhiteSpace(template))
             {
-                return fallbackReply;
+                return new ReplyResult(fallbackReply, context.scenario);
             }
 
             Debug.Log("[DIALOGUE-TABLE] Template selected: " + template);
@@ -119,16 +142,16 @@ public class DialogueTableResponseProvider
             string finalReply = ReplacePlaceholders(template, context);
             if (string.IsNullOrWhiteSpace(finalReply))
             {
-                return fallbackReply;
+                return new ReplyResult(fallbackReply, context.scenario);
             }
 
             Debug.Log("[DIALOGUE-TABLE] Final reply: " + finalReply);
-            return finalReply;
+            return new ReplyResult(finalReply, context.scenario);
         }
         catch (Exception ex)
         {
             Debug.LogWarning("[DIALOGUE-TABLE] Provider failed, using rule reply. Reason: " + ex.Message);
-            return fallbackReply;
+            return new ReplyResult(fallbackReply, DialogueScenario.Unknown);
         }
     }
 
@@ -136,6 +159,13 @@ public class DialogueTableResponseProvider
     {
         if (characterSet != null)
         {
+            string aggressionTemplate = TryFindTemplate(characterSet.lines, context, requireAllBuckets: true, requireAggressionBucket: true);
+            if (!string.IsNullOrWhiteSpace(aggressionTemplate))
+            {
+                matchLevel = "Exact character + scenario + buckets + aggression";
+                return aggressionTemplate;
+            }
+
             string exactTemplate = TryFindTemplate(characterSet.lines, context, requireAllBuckets: true);
             if (!string.IsNullOrWhiteSpace(exactTemplate))
             {
@@ -169,7 +199,12 @@ public class DialogueTableResponseProvider
         return null;
     }
 
-    private static string TryFindTemplate(List<DialogueLine> lines, DialogueContext context, bool requireAllBuckets, bool onlyRoundAndPersonality = false)
+    private static string TryFindTemplate(
+        List<DialogueLine> lines,
+        DialogueContext context,
+        bool requireAllBuckets,
+        bool onlyRoundAndPersonality = false,
+        bool requireAggressionBucket = false)
     {
         if (lines == null)
         {
@@ -210,9 +245,15 @@ public class DialogueTableResponseProvider
                     continue;
                 }
 
+                if (requireAggressionBucket && !line.aggressionBucket.HasValue)
+                {
+                    continue;
+                }
+
                 if (!MatchesBucket(line.reputationBucket, context.reputationBucket) ||
                     !MatchesBucket(line.patienceBucket, context.patienceBucket) ||
                     !MatchesBucket(line.desperationBucket, context.desperationBucket) ||
+                    !MatchesBucket(line.aggressionBucket, context.aggressionBucket) ||
                     !MatchesBucket(line.roundBucket, context.roundBucket) ||
                     !MatchesBucket(line.personalityBucket, context.personalityBucket))
                 {
@@ -252,6 +293,7 @@ public class DialogueTableResponseProvider
         int reputation = Level1GameState.Instance != null ? Level1GameState.Instance.CurrentReputation : PlayerState.DefaultReputation;
         int patience = trade != null ? trade.buyerPatience : 5;
         float desperation = trade != null ? trade.buyerDesperation : 0.5f;
+        float aggression = trade != null ? trade.buyerAggression : 0.5f;
         int offeredPrice = input != null && input.hasSellerPrice ? input.sellerPrice : (trade != null ? trade.lastSellerPrice : 0);
         int currentBuyerOffer = trade != null ? trade.npcOffer : brainResult.updatedOffer;
         int counterPrice = brainResult.updatedOffer > 0 ? brainResult.updatedOffer : currentBuyerOffer;
@@ -266,6 +308,7 @@ public class DialogueTableResponseProvider
             reputationBucket = ToReputationBucket(reputation),
             patienceBucket = ToPatienceBucket(patience),
             desperationBucket = ToDesperationBucket(desperation),
+            aggressionBucket = ToAggressionBucket(aggression),
             roundBucket = ToRoundBucket(roundCount),
             personalityBucket = ToPersonalityBucket(trade != null ? trade.buyerPersonality : string.Empty),
             buyerName = !string.IsNullOrWhiteSpace(trade != null ? trade.buyerName : string.Empty) ? trade.buyerName : "Customer",
@@ -281,6 +324,7 @@ public class DialogueTableResponseProvider
             reputation = reputation,
             patience = patience,
             desperation = desperation,
+            aggression = aggression,
             ruleReply = !string.IsNullOrWhiteSpace(brainResult.replyText) ? brainResult.replyText : "Speak plainly, merchant."
         };
     }
@@ -462,6 +506,21 @@ public class DialogueTableResponseProvider
         }
 
         return NpcDesperationBucket.Medium;
+    }
+
+    private static NpcAggressionBucket ToAggressionBucket(float aggression)
+    {
+        if (aggression <= 0.35f)
+        {
+            return NpcAggressionBucket.Low;
+        }
+
+        if (aggression >= 0.67f)
+        {
+            return NpcAggressionBucket.High;
+        }
+
+        return NpcAggressionBucket.Medium;
     }
 
     private static RoundBucket ToRoundBucket(int roundCount)
