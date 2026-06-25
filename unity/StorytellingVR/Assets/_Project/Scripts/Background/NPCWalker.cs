@@ -3,6 +3,7 @@ using System.Collections;
 
 public class NPCWalker : MonoBehaviour
 {
+    private MarketSpawner spawner;
     private Vector3 target;
     private Vector3 exitTarget;
     private StallPoint myStall;
@@ -28,12 +29,14 @@ public class NPCWalker : MonoBehaviour
     }
 
     public void Initialize(
+    MarketSpawner ownerSpawner,
     Vector3 destination,
     bool stopAtStall,
     Vector3 leaveDestination,
     Quaternion stallRot,
     StallPoint stall)
     {
+        spawner = ownerSpawner;
         target = destination;
         goingToStall = stopAtStall;
         exitTarget = leaveDestination;
@@ -94,9 +97,6 @@ public class NPCWalker : MonoBehaviour
                 StartCoroutine(WaitAtStall());
                 return;
             }
-
-            MarketSpawner spawner =
-                FindFirstObjectByType<MarketSpawner>();
 
             if (spawner != null)
             {

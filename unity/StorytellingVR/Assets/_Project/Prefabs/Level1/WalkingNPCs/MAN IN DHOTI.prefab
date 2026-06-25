@@ -102,7 +102,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NPCWalker
   moveSpeed: 1.5
   turnSpeed: 5
-  detectionDistance: 1
 --- !u!136 &8603992006361178107
 CapsuleCollider:
   m_ObjectHideFlags: 0

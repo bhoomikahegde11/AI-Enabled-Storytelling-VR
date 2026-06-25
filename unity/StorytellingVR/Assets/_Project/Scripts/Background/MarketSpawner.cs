@@ -9,9 +9,6 @@ public class MarketSpawner : MonoBehaviour
     public Transform leftSpawn;
     public Transform rightSpawn;
 
-    public Transform leftTarget;
-    public Transform rightTarget;
-
     public StallPoint[] stalls;
     public Transform[] leftExits;
     public Transform[] rightExits;
@@ -121,6 +118,7 @@ public class MarketSpawner : MonoBehaviour
 
         npc.GetComponent<NPCWalker>()
         .Initialize(
+        this,
         firstDestination,
         visitsStall,
         exitTarget.position,

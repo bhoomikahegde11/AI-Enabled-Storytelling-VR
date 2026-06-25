@@ -2255,8 +2255,6 @@ MonoBehaviour:
   npcPrefab: {fileID: 7632564849704470384, guid: 791b49d738c7c4b4baf1f61787cbcad7, type: 3}
   leftSpawn: {fileID: 1649508376}
   rightSpawn: {fileID: 436392362}
-  leftTarget: {fileID: 1966559372}
-  rightTarget: {fileID: 343507271}
   stalls:
   - {fileID: 1987628688}
   - {fileID: 934137781}
