@@ -33,6 +33,25 @@ public class BagReceiver : MonoBehaviour
             Debug.Log("Scooper Empty");
             return;
         }
+        if (scooper.currentSpice != OrderManager.Instance.requestedSpice)
+        {
+            Debug.Log("Wrong Spice!");
+
+            if (SpiceTutorialManager.Instance != null)
+                SpiceTutorialManager.Instance.NotifyWrongSpiceBroughtToBag();
+
+            OVRInput.SetControllerVibration(
+        0.3f,
+        0.3f,
+        OVRInput.Controller.RTouch
+    );
+
+            scooper.EmptyScooper();
+
+            StartCoroutine(StopHaptics());
+
+            return;
+        }
 
         completed = true;
 
@@ -43,20 +62,12 @@ public class BagReceiver : MonoBehaviour
         OVRInput.Controller.RTouch
     );
 
-        if (scooper.currentSpice != OrderManager.Instance.requestedSpice)
-        {
-            Debug.Log("Wrong Spice!");
-
-            return;
-        }
-
-        Debug.Log("Correct Spice!");
-
-        customer.FillBag();
-
+        customer.FillBag(scooper.currentSpice);
         scooper.EmptyScooper();
 
-        scooper.EmptyScooper();
+        if (SpiceTutorialManager.Instance != null)
+            SpiceTutorialManager.Instance.NotifyCorrectBagFilled();
+
 
         StartCoroutine(StopHaptics());
 
@@ -71,5 +82,9 @@ public class BagReceiver : MonoBehaviour
             0,
             OVRInput.Controller.RTouch
         );
+    }
+    public void ResetBag()
+    {
+        completed = false;
     }
 }

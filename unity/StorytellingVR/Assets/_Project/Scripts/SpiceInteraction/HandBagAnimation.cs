@@ -4,7 +4,7 @@ using System.Collections;
 public class HandBagAnimation : MonoBehaviour
 {
     private Animator animator;
-
+    public BagReceiver bagReceiver;
     public GameObject subtitleCanvas;
 
     [Header("Bag")]
@@ -14,7 +14,7 @@ public class HandBagAnimation : MonoBehaviour
 
     private Vector3 originalBagPos;
     private Quaternion originalBagRot;
-    public GameObject spiceVisual;
+    public SpiceVisualSet[] spiceVisuals;
 
     void Awake()
     {
@@ -35,7 +35,14 @@ public class HandBagAnimation : MonoBehaviour
 
     public void StartOrder()
     {
-        subtitleCanvas.SetActive(true);
+        if (bagReceiver != null)
+            bagReceiver.ResetBag();
+
+        if (subtitleCanvas != null)
+            subtitleCanvas.SetActive(true);
+
+        if (SpiceTutorialManager.Instance != null)
+            SpiceTutorialManager.Instance.NotifyCustomerHandedBag();
 
         GiveHandBag();
     }
@@ -108,9 +115,8 @@ public class HandBagAnimation : MonoBehaviour
 
             yield return null;
         }
+        ShowBagSpice(SpiceType.None);
         handBag.SetActive(false);
-
-        spiceVisual.SetActive(false);
 
         ResumeAnimation();
     }
@@ -120,11 +126,15 @@ public class HandBagAnimation : MonoBehaviour
 
         StartOrder();
     }
-    public void FillBag()
+    public void FillBag(SpiceType spice)
     {
-        spiceVisual.SetActive(true);
+        ShowBagSpice(spice);
 
-        subtitleCanvas.SetActive(false);
+        if (subtitleCanvas != null &&
+            (OrderManager.Instance == null || !OrderManager.Instance.tutorialMode))
+        {
+            subtitleCanvas.SetActive(false);
+        }
 
         StartCoroutine(FillAndReturn());
     }
@@ -134,5 +144,18 @@ public class HandBagAnimation : MonoBehaviour
 
         StartCoroutine(ReturnBag());
     }
-
+    void ShowBagSpice(SpiceType spice)
+    {
+        foreach (SpiceVisualSet item in spiceVisuals)
+        {
+            if (spice == SpiceType.None)
+            {
+                item.visual.SetActive(false);
+            }
+            else
+            {
+                item.visual.SetActive(item.spiceType == spice);
+            }
+        }
+    }
 }

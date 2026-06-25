@@ -7,6 +7,7 @@ public class ScooperToggle : MonoBehaviour
 
     private ScooperFill scooperFill;
     private Renderer[] controllerRenderers;
+    private bool scooperWasVisible = false;
 
     void Start()
     {
@@ -26,6 +27,14 @@ public class ScooperToggle : MonoBehaviour
             scooper.SetActive(true);
 
             SetControllerVisible(false);
+
+            if (!scooperWasVisible)
+            {
+                scooperWasVisible = true;
+
+                if (SpiceTutorialManager.Instance != null)
+                    SpiceTutorialManager.Instance.NotifyScooperAppeared();
+            }
         }
 
         // Trigger released
@@ -36,6 +45,8 @@ public class ScooperToggle : MonoBehaviour
             SetControllerVisible(true);
 
             scooperFill.ResetScooper();
+
+            scooperWasVisible = false;
         }
     }
     void SetControllerVisible(bool visible)

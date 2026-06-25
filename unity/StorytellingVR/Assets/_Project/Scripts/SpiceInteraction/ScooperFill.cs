@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections;
 public class ScooperFill : MonoBehaviour
 {
-    public GameObject cardamomVisual;
+    public SpiceVisualSet[] spiceVisuals;
 
     private bool insideSack = false;
     private bool filled = false;
@@ -15,7 +15,7 @@ public class ScooperFill : MonoBehaviour
     }
     void Start()
     {
-        cardamomVisual.SetActive(false);
+        ShowSpiceVisual(SpiceType.None);
     }
 
     void Update()
@@ -34,9 +34,12 @@ public class ScooperFill : MonoBehaviour
 
         filled = true;
 
-        cardamomVisual.SetActive(true);
+        ShowSpiceVisual(currentSpice);
 
-        
+        if (SpiceTutorialManager.Instance != null)
+            SpiceTutorialManager.Instance.NotifyScooperFilled(currentSpice);
+
+
         OVRInput.SetControllerVibration(
         0.8f,
         0.8f,
@@ -50,7 +53,7 @@ public class ScooperFill : MonoBehaviour
     {
         filled = false;
 
-        cardamomVisual.SetActive(false);
+        ShowSpiceVisual(SpiceType.None);
 
         Debug.Log("Reset");
     }
@@ -65,6 +68,9 @@ public class ScooperFill : MonoBehaviour
         {
             insideSack = true;
             currentZone = zone;
+
+            if (SpiceTutorialManager.Instance != null)
+                SpiceTutorialManager.Instance.NotifyScooperEnteredSack(zone.spiceType);
         }
     }
 
@@ -100,9 +106,15 @@ public class ScooperFill : MonoBehaviour
 
         currentSpice = SpiceType.None;
 
-        cardamomVisual.SetActive(false);
+        ShowSpiceVisual(currentSpice);
 
         Debug.Log("Scooper Emptied");
     }
-
+    void ShowSpiceVisual(SpiceType spice)
+    {
+        foreach (SpiceVisualSet item in spiceVisuals)
+        {
+            item.visual.SetActive(item.spiceType == spice);
+        }
+    }
 }
