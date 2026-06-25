@@ -137,7 +137,7 @@ backend/models/en_US-lessac-medium.onnx
 
 backend/audio/*.wav
 
-*.wav
+
 *.mp3
 
 
