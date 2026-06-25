@@ -1,15 +1,21 @@
 using UnityEngine;
 
-public class OpenDialogue : MonoBehaviour
+public class NPCInteraction : MonoBehaviour
 {
     public GameObject dialoguePanel;
+    public GameObject interactionHint;
     public SilkTraderDialogueManager dialogueManager;
 
-    public void OpenPanel()
+    public void OpenDialogue()
     {
         if (dialoguePanel != null)
         {
             dialoguePanel.SetActive(true);
+        }
+
+        if (interactionHint != null)
+        {
+            interactionHint.SetActive(false);
         }
 
         if (dialogueManager == null)
@@ -23,11 +29,16 @@ public class OpenDialogue : MonoBehaviour
         }
     }
 
-    public void ClosePanel()
+    public void CloseDialogue()
     {
         if (dialoguePanel != null)
         {
             dialoguePanel.SetActive(false);
+        }
+
+        if (interactionHint != null)
+        {
+            interactionHint.SetActive(true);
         }
     }
 }
