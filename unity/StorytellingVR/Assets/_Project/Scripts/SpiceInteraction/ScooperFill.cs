@@ -8,6 +8,11 @@ public class ScooperFill : MonoBehaviour
     private bool filled = false;
     public SpiceType currentSpice = SpiceType.None;
     private SpiceZone currentZone;
+    public static ScooperFill Instance;
+    void Awake()
+    {
+        Instance = this;
+    }
     void Start()
     {
         cardamomVisual.SetActive(false);

@@ -16,14 +16,17 @@ public class BagReceiver : MonoBehaviour
             other.name
         );
 
-        ScooperFill scooper =
-     other.GetComponentInParent<ScooperFill>();
+        ScooperFill scooper = ScooperFill.Instance;
 
         if (scooper == null)
         {
-            Debug.Log("No ScooperFill found");
+            Debug.Log("Scooper doesn't exist!");
             return;
         }
+
+        Debug.Log("Scooper Instance Found");
+        Debug.Log("Scooper Filled: " + scooper.IsFilled());
+        Debug.Log("Current Spice: " + scooper.currentSpice);
 
         if (!scooper.IsFilled())
         {
@@ -40,7 +43,18 @@ public class BagReceiver : MonoBehaviour
         OVRInput.Controller.RTouch
     );
 
+        if (scooper.currentSpice != OrderManager.Instance.requestedSpice)
+        {
+            Debug.Log("Wrong Spice!");
+
+            return;
+        }
+
+        Debug.Log("Correct Spice!");
+
         customer.FillBag();
+
+        scooper.EmptyScooper();
 
         scooper.EmptyScooper();
 
