@@ -137,7 +137,7 @@ backend/audio/
 backend/audio/*.wav
 backend/audio/a8f25397-54e6-4b4e-aaf6-afd616e92498.wav
 
-*.wav
+
 *.mp3
 
 
