@@ -51,6 +51,8 @@ public class SpiceIntroSequence : MonoBehaviour
     [Header("Scene Transition")]
     [SerializeField] private bool loadNextSceneAfterSequence = true;
 
+    [Header("Spice Guide Tutorial")]
+    [SerializeField] private SpiceGuideTutorialPrompt spiceGuideTutorialPrompt;
     private void Awake()
     {
         if (globalVolume != null)
@@ -88,6 +90,11 @@ public class SpiceIntroSequence : MonoBehaviour
             endingClip,
             4f
         );
+
+        if (spiceGuideTutorialPrompt != null)
+        {
+            yield return spiceGuideTutorialPrompt.RunTutorial();
+        }
 
         yield return ShowSubtitle(finalPromptText, null, finalPromptDuration);
 
