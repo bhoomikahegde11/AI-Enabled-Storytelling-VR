@@ -7,19 +7,16 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
 
-
     [Header("Scene Order")]
     public string[] scenes;
 
-
     private int currentIndex = -1;
 
-
     public ScreenFader fader;
-    [Header("Skip")]
-    public float skipHoldDuration = 1f;
 
-    private float skipHoldTimer = 0f;
+    [Header("Skip")]
+    private bool xButtonHeld = false;
+
     private bool isLoading = false;
 
     void Awake()
@@ -30,16 +27,12 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-
         Instance = this;
 
-        DontDestroyOnLoad(
-            gameObject
-        );
+        DontDestroyOnLoad(gameObject);
 
         Debug.Log("[SCENE FLOW] Bootstrap loaded");
     }
-
 
     void Start()
     {
@@ -51,11 +44,7 @@ public class GameManager : MonoBehaviour
         InputDevice leftHand =
             InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
 
-        InputDevice rightHand =
-            InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
-
         bool xPressed = false;
-        bool aPressed = false;
 
         // Left controller X button
         leftHand.TryGetFeatureValue(
@@ -63,27 +52,21 @@ public class GameManager : MonoBehaviour
             out xPressed
         );
 
-        // Right controller A button
-        rightHand.TryGetFeatureValue(
-            CommonUsages.primaryButton,
-            out aPressed
-        );
-
-        if (xPressed && aPressed)
+        if (xPressed && !xButtonHeld)
         {
-            skipHoldTimer += Time.deltaTime;
+            xButtonHeld = true;
 
-            if (skipHoldTimer >= skipHoldDuration)
-            {
-                skipHoldTimer = 0f;
-                SkipScene();
-            }
+            Debug.Log("[SCENE FLOW] Skip triggered");
+
+            SkipScene();
         }
-        else
+
+        if (!xPressed)
         {
-            skipHoldTimer = 0f;
+            xButtonHeld = false;
         }
     }
+
     public void LoadNextScene()
     {
         if (isLoading)
@@ -107,21 +90,17 @@ public class GameManager : MonoBehaviour
     IEnumerator LoadRoutine()
     {
         isLoading = true;
+
         if (fader != null)
             yield return fader.FadeOut();
 
-
         currentIndex++;
-
 
         if (currentIndex >= scenes.Length)
         {
-            Debug.Log(
-                "GAME COMPLETE"
-            );
+            Debug.Log("GAME COMPLETE");
 
             isLoading = false;
-
             yield break;
         }
 
@@ -135,5 +114,8 @@ public class GameManager : MonoBehaviour
 
         if (fader != null)
             yield return fader.FadeIn();
+
+        isLoading = false;
     }
+
 }
