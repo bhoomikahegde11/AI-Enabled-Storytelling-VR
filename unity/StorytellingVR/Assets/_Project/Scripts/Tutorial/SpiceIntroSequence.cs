@@ -51,6 +51,9 @@ public class SpiceIntroSequence : MonoBehaviour
     [Header("Scene Transition")]
     [SerializeField] private bool loadNextSceneAfterSequence = true;
 
+    [Header("Spice Cost Guide")]
+    [SerializeField] private SpiceCostGuideController spiceCostGuideController;
+
     [Header("Spice Guide Tutorial")]
     [SerializeField] private SpiceGuideTutorialPrompt spiceGuideTutorialPrompt;
     private void Awake()
@@ -91,12 +94,16 @@ public class SpiceIntroSequence : MonoBehaviour
             4f
         );
 
+        yield return ShowSubtitle(finalPromptText, null, finalPromptDuration);
+
         if (spiceGuideTutorialPrompt != null)
         {
             yield return spiceGuideTutorialPrompt.RunTutorial();
+            spiceCostGuideController.UnlockGuide();
         }
+        
 
-        yield return ShowSubtitle(finalPromptText, null, finalPromptDuration);
+
 
         yield return new WaitForSeconds(1f);
 

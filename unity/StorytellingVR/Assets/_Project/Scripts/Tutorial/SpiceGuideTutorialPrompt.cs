@@ -9,8 +9,8 @@ public class SpiceGuideTutorialPrompt : MonoBehaviour
     [SerializeField] private CanvasGroup promptCanvas;
     [SerializeField] private TMP_Text promptText;
 
-    [Header("Spice Guide UI")]
-    [SerializeField] private CanvasGroup spiceGuideCanvas;
+    [Header("Spice Guide Controller")]
+    [SerializeField] private SpiceCostGuideController guideController;
 
     [Header("Input")]
     [SerializeField] private InputActionReference holdGuideAction;
@@ -29,7 +29,9 @@ public class SpiceGuideTutorialPrompt : MonoBehaviour
     private void Awake()
     {
         SetCanvas(promptCanvas, 0f);
-        SetCanvas(spiceGuideCanvas, 0f);
+
+        if (guideController != null)
+            guideController.LockGuide();
 
         originalVolumes = new float[audioSourcesToLower.Length];
 
@@ -48,7 +50,7 @@ public class SpiceGuideTutorialPrompt : MonoBehaviour
         {
             promptText.text =
                 "NEW REFERENCE TOOL\n\n" +
-                "Hold X to open the Spice Price Guide.\n\n" +
+                "Hold X to open the Spice Cost Guide.\n\n" +
                 "Release X after checking the prices.";
         }
 
@@ -56,18 +58,24 @@ public class SpiceGuideTutorialPrompt : MonoBehaviour
 
         EnableInput();
 
-        yield return new WaitUntil(() => isHolding);
+        //yield return new WaitUntil(() => isHolding);
 
-        yield return FadeCanvas(promptCanvas, 0f, 0.25f);
-        yield return FadeCanvas(spiceGuideCanvas, 1f, 0.25f);
+        //yield return FadeCanvas(promptCanvas, 0f, 0.25f);
 
-        yield return new WaitForSeconds(1.5f);
+        //if (guideController != null)
+        //    guideController.ShowGuide();
 
-        yield return new WaitUntil(() => !isHolding);
+        //yield return new WaitForSeconds(1.5f);
 
-        yield return FadeCanvas(spiceGuideCanvas, 0f, 0.25f);
+        //yield return new WaitUntil(() => !isHolding);
+
+        //if (guideController != null)
+        //    guideController.HideGuide();
 
         DisableInput();
+
+        //if (guideController != null)
+            //guideController.UnlockGuide();
 
         ResumeWorld();
     }
