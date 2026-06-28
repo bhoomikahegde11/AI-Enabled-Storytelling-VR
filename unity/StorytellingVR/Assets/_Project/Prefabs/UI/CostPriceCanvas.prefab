@@ -2722,7 +2722,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpiceCostGuideController
   guideCanvas: {fileID: 5925786819667904143}
-  guideUnlocked: 0
+  guideUnlocked: 1
 --- !u!1 &8694358636904287823
 GameObject:
   m_ObjectHideFlags: 0
