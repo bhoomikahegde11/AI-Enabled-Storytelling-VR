@@ -15,7 +15,7 @@ public class GameManager : MonoBehaviour
     public ScreenFader fader;
 
     [Header("Skip")]
-    private bool xButtonHeld = false;
+    private bool yButtonHeld = false;
 
     private bool isLoading = false;
 
@@ -44,26 +44,26 @@ public class GameManager : MonoBehaviour
         InputDevice leftHand =
             InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
 
-        bool xPressed = false;
+        bool yPressed = false;
 
         // Left controller X button
         leftHand.TryGetFeatureValue(
-            CommonUsages.primaryButton,
-            out xPressed
+            CommonUsages.secondaryButton,
+            out yPressed
         );
 
-        if (xPressed && !xButtonHeld)
+        if (yPressed && !yButtonHeld)
         {
-            xButtonHeld = true;
+            yButtonHeld = true;
 
             Debug.Log("[SCENE FLOW] Skip triggered");
 
             SkipScene();
         }
 
-        if (!xPressed)
+        if (!yPressed)
         {
-            xButtonHeld = false;
+            yButtonHeld = false;
         }
     }
 
