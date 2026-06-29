@@ -150,7 +150,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   scenes:
-  - FreeRoam
   - NewSpiceScene
   - NewTransactionTutorial
   - NewCoinScene
