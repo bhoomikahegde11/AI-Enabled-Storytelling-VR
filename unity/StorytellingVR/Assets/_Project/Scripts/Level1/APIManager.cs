@@ -65,6 +65,9 @@ public class APIManager : MonoBehaviour
     public string currentSpiceName;
     public string currentSpiceQuantity;
 
+    public StartResponse LastStartResponse { get; private set; }
+    public StepResponse LastStepResponse { get; private set; }
+
     // 🔥 START SESSION
     public IEnumerator StartSession(System.Action<string, string, int, int, bool, TransactionSummary, string, CurrentTrade, int> callback)
     {
@@ -93,6 +96,8 @@ public class APIManager : MonoBehaviour
             Debug.Log("START RAW RESPONSE: " + raw);
 
             StartResponse response = JsonUtility.FromJson<StartResponse>(raw);
+            LastStartResponse = response;
+            LastStepResponse = null;
 
             sessionId = response.session_id;
             currentBuyerName = response.buyer_name;
@@ -157,6 +162,7 @@ public class APIManager : MonoBehaviour
             Debug.Log("STEP RAW RESPONSE: " + raw);
 
             StepResponse response = JsonUtility.FromJson<StepResponse>(raw);
+            LastStepResponse = response;
 
             if (response != null && !string.IsNullOrEmpty(response.buyer_name))
             {

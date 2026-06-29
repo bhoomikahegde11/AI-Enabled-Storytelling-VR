@@ -1,6 +1,8 @@
 using UnityEngine;
 using TMPro;
 using System.Collections;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 [System.Serializable]
 public class APIResponse
@@ -29,15 +31,39 @@ public class ChatManager : MonoBehaviour
     public bool autoStart = false;
     public MarketplaceManager marketplaceManager;
 
+    [Header("Local Intent Migration")]
+    public bool useLocalIntentSystem = false;
+    public bool useLocalNpcBrain = false;
+    public bool useLocalSessionGeneration = false;
+    public bool useOfflineTypedInputFallback = false;
+    public bool useLocalLLMUnderstanding = false;
+    public bool useLocalLLMGeneration = false;
+
     [Header("Level 1 HUD References")]
     public Level1HUDManager hudManager;
     public GameObject sendButtonObject;
+
+    [Header("Standalone NPC Audio")]
+    public bool enableNpcTTS = true;
+    public string debugTtsCharacterOverride = "";
 
     [Header("Debug Logging")]
     [SerializeField]
     private bool showDebugLogs = true;
 
     private bool isFirstReplyOfSession = false;
+    private readonly NegotiationStateManager negotiationStateManager = new NegotiationStateManager();
+    private readonly RuleBasedNPCBrain localNpcBrain = new RuleBasedNPCBrain();
+    private readonly DialogueTableResponseProvider dialogueTableResponseProvider = new DialogueTableResponseProvider();
+    private readonly LocalLLMInterpreter localLlmInterpreter = new LocalLLMInterpreter();
+    private readonly LocalLLMDialogueGenerator localLlmDialogueGenerator = new LocalLLMDialogueGenerator();
+    private int localDialogueTurnId = 0;
+    private bool hasPlayedGreetingForCurrentCustomer = false;
+    private string lastCustomerCharacterId = string.Empty;
+    private Coroutine ttsSubtitleFallbackCoroutine;
+    private string pendingTtsSubtitleSpeaker = string.Empty;
+    private string pendingTtsSubtitleText = string.Empty;
+    private INpcTtsPlaybackAware subscribedTtsPlaybackProvider;
 
     // 🔥 Prevent STT spam / multiple requests
     private bool isProcessing = false;
@@ -68,12 +94,24 @@ public class ChatManager : MonoBehaviour
                 OnSend();
             }
         }
+
+        if (useOfflineTypedInputFallback && inputField != null && !string.IsNullOrEmpty(inputField.text))
+        {
+            if (OVRInput.GetDown(OVRInput.Button.One))
+            {
+                Debug.Log("[INPUT] Controller confirm triggered");
+                OnSend();
+            }
+        }
     }
 
     public void StartNewSession()
     {
         isProcessing = false; // Reset lock for new session
         isFirstReplyOfSession = true;
+        hasPlayedGreetingForCurrentCustomer = false;
+        Level1GameState.Instance.PrepareForNewCustomer();
+        negotiationStateManager.ResetState(0);
         if (api != null)
         {
             api.currentBuyerName = "";
@@ -81,11 +119,62 @@ public class ChatManager : MonoBehaviour
             api.currentSpiceName = "";
             api.currentSpiceQuantity = "";
         }
+
+        if (useLocalSessionGeneration)
+        {
+            LocalGeneratedTradeSession localSession = Level1GameState.Instance.GenerateLocalSession();
+            negotiationStateManager.ResetState(localSession.startingOffer, localSession.buyerPatience);
+
+            if (api != null)
+            {
+                api.currentBuyerName = localSession.buyerName;
+                api.currentBuyerOrigin = localSession.buyerOrigin;
+                api.currentSpiceName = localSession.spiceName;
+                api.currentSpiceQuantity = localSession.quantityLabel;
+            }
+
+            string currentCustomerCharacterId = DialogueCharacterRegistry.NormalizeCharacterId(localSession.buyerName);
+            bool isRepeatCustomer = !string.IsNullOrWhiteSpace(currentCustomerCharacterId) &&
+                currentCustomerCharacterId == lastCustomerCharacterId;
+            string greetingReply = dialogueTableResponseProvider.GetGreeting(
+                Level1GameState.Instance.ActiveTrade,
+                Level1GameState.Instance.CurrentReputation,
+                isRepeatCustomer);
+
+            if (string.IsNullOrWhiteSpace(greetingReply))
+            {
+                greetingReply = localSession.greetingText;
+            }
+
+            if (!hasPlayedGreetingForCurrentCustomer)
+            {
+                hasPlayedGreetingForCurrentCustomer = true;
+                lastCustomerCharacterId = currentCustomerCharacterId;
+                Debug.Log("[GREETING] Triggered for customer: " + localSession.buyerName);
+                Debug.Log("[GREETING] Scenario: " + (isRepeatCustomer ? "RepeatCustomerGreeting" : "CustomerGreeting"));
+                Debug.Log("[GREETING] Reply: " + greetingReply);
+            }
+
+            StartCoroutine(FirstReplyIntroRoutine(
+                greetingReply,
+                string.Empty,
+                Level1GameState.Instance.CurrentReputation,
+                Level1GameState.Instance.CurrentMoney,
+                false,
+                null,
+                null,
+                Level1GameState.Instance.BuildCurrentTradeForHud(),
+                0));
+            return;
+        }
+
         StartCoroutine(api.StartSession(OnNPCReply));
     }
 
     public void ResetConversationUI(string statusText = "Customer approaching...")
     {
+        hasPlayedGreetingForCurrentCustomer = false;
+
         if (npcText != null)
         {
             npcText.text = statusText;
@@ -145,13 +234,34 @@ public class ChatManager : MonoBehaviour
         inputField.text = "";
     }
 
+    public void SubmitOfflineText(string text)
+    {
+        if (!useOfflineTypedInputFallback || string.IsNullOrWhiteSpace(text) || isProcessing)
+        {
+            return;
+        }
+
+        if (inputField != null)
+        {
+            inputField.text = text;
+        }
+
+        OnSend();
+    }
+
     // 🎤 VOICE INPUT (fixed + throttled)
     public void OnVoiceInput(string spokenText)
-    {
-        if (string.IsNullOrEmpty(spokenText)) return;
+{
+    if (isProcessing) return;
 
-        // 🔥 Ignore repeated / similar inputs
-        if (spokenText == lastProcessedText) return;
+    isProcessing = true;
+
+    if (string.IsNullOrEmpty(spokenText))
+    {
+        isProcessing = false;
+        return;
+    }
+    if (spokenText == lastProcessedText) return;
 
         // 🔥 Cooldown check (3 seconds)
         if (Time.time - lastProcessedTime < 3f) return;
@@ -193,6 +303,20 @@ public class ChatManager : MonoBehaviour
             Debug.LogError("[THINK] feedbackManager is NULL in ChatManager!");
         }
 
+        if (useLocalNpcBrain || useLocalSessionGeneration)
+        {
+            HandleLocalNpcTurn(text, npcAnim);
+            yield return new WaitForSeconds(0.2f);
+            isProcessing = false;
+            yield break;
+        }
+
+        if (useLocalIntentSystem)
+        {
+            NegotiationInput localInput = BuildNegotiationInput(text, Level1GameState.Instance.ActiveTrade);
+            negotiationStateManager.ProcessNegotiationTurn(localInput);
+        }
+
         yield return api.SendMessage(text, OnNPCReply);
 
         // 🔥 cooldown to prevent API spam (VERY IMPORTANT)
@@ -201,15 +325,289 @@ public class ChatManager : MonoBehaviour
         isProcessing = false;
     }
 
+    private void HandleLocalNpcTurn(string playerText, Animator npcAnim)
+    {
+        Level1GameState localGameState = Level1GameState.Instance;
+        LocalTradeState trade = localGameState.ActiveTrade;
+
+        if (trade == null)
+        {
+            if (feedbackManager != null)
+            {
+                feedbackManager.StopNPCThinking(npcAnim);
+            }
+            npcText.text = "The market is too noisy, could you repeat that?";
+            EnableConversationUI();
+            return;
+        }
+
+        NegotiationInput localInput = BuildNegotiationInput(playerText, trade);
+        if (localInput.hasQuantity && localInput.quantityGrams > 0)
+        {
+            localGameState.UpdateActiveTradeQuantity(localInput.quantityGrams);
+            trade = localGameState.ActiveTrade;
+        }
+        negotiationStateManager.ProcessNegotiationTurn(localInput);
+
+        RuleBasedNPCBrainResult brainResult = localNpcBrain.GenerateReply(
+            playerText,
+            localInput,
+            trade,
+            negotiationStateManager.CurrentRound,
+            negotiationStateManager.BuyerPatience
+        );
+        string fallbackReplyText = brainResult.replyText;
+        int dialogueTurnId = ++localDialogueTurnId;
+
+        string tableReplyText = fallbackReplyText;
+        try
+        {
+            string resolvedReply = dialogueTableResponseProvider.GetReply(
+                localInput,
+                trade,
+                brainResult,
+                negotiationStateManager.CurrentRound);
+
+            if (!string.IsNullOrWhiteSpace(resolvedReply))
+            {
+                tableReplyText = resolvedReply;
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning("[DIALOGUE-TABLE] Provider failed, using rule reply. Reason: " + ex.Message);
+        }
+
+        brainResult.replyText = tableReplyText;
+
+        localGameState.UpdateActiveTradeOffer(brainResult.updatedOffer);
+        negotiationStateManager.SetLastOffer(brainResult.updatedOffer);
+
+        if (feedbackManager != null)
+        {
+            feedbackManager.StopNPCThinking(npcAnim);
+        }
+
+        npcText.text = brainResult.replyText;
+
+        CurrentTrade currentTrade = localGameState.BuildCurrentTradeForHud();
+        int localMoney = localGameState.CurrentMoney;
+        int localReputation = localGameState.CurrentReputation;
+        int localReputationDelta = 0;
+        TransactionSummary localTransaction = null;
+
+        if (hudManager != null)
+        {
+            hudManager.UpdateMoney(localMoney);
+            hudManager.UpdateRespect(localReputation);
+            if (currentTrade != null)
+            {
+                hudManager.UpdateCurrentTrade(currentTrade);
+            }
+        }
+
+        PresentNpcSubtitleAndTts(
+            !string.IsNullOrEmpty(trade.buyerName) ? trade.buyerName : "Customer",
+            brainResult.replyText,
+            DialogueCharacterRegistry.NormalizeCharacterId(trade.buyerName));
+
+        if (useLocalLLMGeneration)
+        {
+            StartCoroutine(ApplyLocalLlmDialogueWhenReady(
+                dialogueTurnId,
+                playerText,
+                localInput,
+                trade,
+                brainResult,
+                fallbackReplyText));
+        }
+
+        if (brainResult.isFinished)
+        {
+            string action = brainResult.resolutionAction;
+            LocalTradeOutcome localOutcome = localGameState.ResolveTradeFromBackend(
+                action,
+                brainResult.resolvedPrice > 0 ? brainResult.resolvedPrice : brainResult.updatedOffer,
+                brainResult.resolvedQuantityGrams > 0 ? brainResult.resolvedQuantityGrams : trade.quantityGrams,
+                brainResult.trust,
+                brainResult.frustration,
+                brainResult.outOfWorldCount
+            );
+
+            localMoney = localOutcome.currentMoney;
+            localReputation = localOutcome.currentReputation;
+            localReputationDelta = localOutcome.reputationDelta;
+            localTransaction = localOutcome.transaction;
+
+            if (respectUIManager != null)
+            {
+                respectUIManager.SetRespect(localReputation);
+            }
+
+            if (coinsEarnedText != null)
+            {
+                coinsEarnedText.text = "Coins Earned: " + localMoney;
+            }
+
+            if (hudManager != null)
+            {
+                hudManager.UpdateMoney(localMoney);
+                hudManager.UpdateRespect(localReputation);
+                hudManager.HideCurrentTrade();
+                if (localReputationDelta != 0)
+                {
+                    hudManager.ShowReputationChange(localReputationDelta);
+                }
+                hudManager.ShowTradeComplete(localTransaction, brainResult.isAccepted, localReputationDelta);
+            }
+
+            if (feedbackManager != null)
+            {
+                if (brainResult.isAccepted && localTransaction != null)
+                {
+                    string archetype = "Standard Merchant";
+                    if (localReputation >= 80) archetype = "Fair Trader";
+                    else if (localReputation <= 35) archetype = "Greedy Haggler";
+                    feedbackManager.ShowTransactionFeedback(localTransaction, archetype);
+                }
+                else
+                {
+                    feedbackManager.TriggerRespectToast(localReputationDelta != 0 ? localReputationDelta : -5);
+                }
+            }
+
+            if (marketplaceManager != null)
+            {
+                marketplaceManager.OnNegotiationFinished(brainResult.isAccepted);
+            }
+        }
+
+        EnableConversationUI();
+    }
+
+    private IEnumerator ApplyLocalLlmDialogueWhenReady(int dialogueTurnId, string playerText, NegotiationInput input, LocalTradeState trade, RuleBasedNPCBrainResult brainResult, string fallbackReplyText)
+    {
+        Task<LocalLLMDialogueGenerator.GenerationResult> task = localLlmDialogueGenerator.BeginGenerate(dialogueTurnId, playerText, input, trade, brainResult);
+        float startedAt = Time.unscaledTime;
+        float waitLimit = localLlmDialogueGenerator.TimeoutSeconds;
+
+        while (!task.IsCompleted && (Time.unscaledTime - startedAt) < waitLimit)
+        {
+            if (dialogueTurnId != localDialogueTurnId)
+            {
+                Debug.Log("[LLM-GEN] Not applied reason: stale turn before completion");
+                yield break;
+            }
+            yield return null;
+        }
+
+        if (!task.IsCompleted)
+        {
+            Debug.Log("[LLM-GEN] Timeout after seconds: " + (Time.unscaledTime - startedAt).ToString("0.00"));
+            Debug.Log("[LLM-GEN] Not applied reason: task still running");
+            yield break;
+        }
+
+        Debug.Log("[LLM-GEN] Task completed: true");
+
+        if (dialogueTurnId != localDialogueTurnId)
+        {
+            Debug.Log("[LLM-GEN] Not applied reason: stale turn after completion");
+            yield break;
+        }
+
+        if (task.IsFaulted)
+        {
+            Debug.Log("[LLM-GEN] Not applied reason: task faulted");
+            yield break;
+        }
+
+        if (task.Result == null)
+        {
+            Debug.Log("[LLM-GEN] Not applied reason: null result");
+            yield break;
+        }
+
+        LocalLLMDialogueGenerator.GenerationResult generation = task.Result;
+        Debug.Log("[LLM-GEN] Raw output: " + generation.rawOutput);
+        Debug.Log("[LLM-GEN] Cleaned output: " + generation.cleanedOutput);
+        Debug.Log("[LLM-GEN] Validation passed: " + generation.validationPassed);
+        if (!string.IsNullOrWhiteSpace(generation.fallbackReason))
+        {
+            if (generation.fallbackReason == "validation failed")
+            {
+                Debug.Log("[LLM-GEN] Validation failed reason: " + generation.validationFailureReason);
+            }
+            if (generation.fallbackReason == "timeout")
+            {
+                Debug.Log("[LLM-GEN] Timeout after seconds: " + generation.elapsedSeconds.ToString("0.00"));
+            }
+            Debug.Log("[LLM-GEN] Not applied reason: " + generation.fallbackReason);
+            yield break;
+        }
+
+        string generatedLine = generation.finalLine;
+        if (string.IsNullOrWhiteSpace(generatedLine) || generatedLine == fallbackReplyText)
+        {
+            Debug.Log("[LLM-GEN] Not applied reason: empty or unchanged line");
+            yield break;
+        }
+        Debug.Log("[LLM-GEN] Final line: " + generatedLine);
+
+        if (npcText != null)
+        {
+            npcText.text = generatedLine;
+        }
+
+        string speaker = trade != null && !string.IsNullOrEmpty(trade.buyerName) ? trade.buyerName : "Customer";
+        TriggerSubtitleDisplay(speaker, generatedLine);
+        Debug.Log("[LLM-GEN] Applied to subtitle: true");
+    }
+
+    private NegotiationInput BuildNegotiationInput(string playerText, LocalTradeState trade)
+    {
+        return negotiationStateManager.ClassifyInput(playerText, trade);
+    }
+
     // 🤖 NPC RESPONSE (unchanged but safer)
     void OnNPCReply(string text, string audioUrl, int reputation, int totalVarahas, bool done, TransactionSummary transaction, string action, CurrentTrade currentTrade, int reputationDelta)
     {
-        if (showDebugLogs)
+        Debug.Log("NPC Reply: " + text);
+
+        Level1GameState localGameState = Level1GameState.Instance;
+        SyncLocalTradeState(currentTrade);
+
+        CurrentTrade localCurrentTrade = localGameState.BuildCurrentTradeForHud();
+        int localReputation = localGameState.CurrentReputation;
+        int localMoney = localGameState.CurrentMoney;
+        int localReputationDelta = 0;
+        TransactionSummary localTransaction = transaction;
+
+        if (done)
         {
-            Debug.Log($"[REP HUD] {reputation} (delta: {reputationDelta})");
+            LocalTradeOutcome localOutcome = localGameState.ResolveTradeFromBackend(
+                action,
+                GetLatestResponsePrice(),
+                GetLatestResponseQuantity(),
+                GetLatestBuyerTrust(),
+                GetLatestBuyerFrustration(),
+                GetLatestOutOfWorldCount()
+            );
+
+            localReputation = localOutcome.currentReputation;
+            localMoney = localOutcome.currentMoney;
+            localReputationDelta = localOutcome.reputationDelta;
+            localTransaction = localOutcome.transaction;
         }
 
-        Debug.Log("NPC Reply: " + text);
+        if (showDebugLogs)
+        {
+            Debug.Log($"[REP HUD LOCAL] {localReputation} (delta: {localReputationDelta})");
+            if (useLocalIntentSystem)
+            {
+                Debug.Log($"[LOCAL INTENT] round={negotiationStateManager.CurrentRound}, patience={negotiationStateManager.BuyerPatience}, finished={negotiationStateManager.IsNegotiationFinished}, lastIntent={negotiationStateManager.LastIntent}");
+            }
+        }
 
         // 1. Stop thinking animations
         Animator npcAnim = null;
@@ -252,7 +650,7 @@ public class ChatManager : MonoBehaviour
             {
                 inputField.interactable = false; // Lock inputs during introduction sequence
             }
-            StartCoroutine(FirstReplyIntroRoutine(text, audioUrl, reputation, totalVarahas, done, transaction, npcAnim, currentTrade, reputationDelta));
+            StartCoroutine(FirstReplyIntroRoutine(text, audioUrl, localReputation, localMoney, done, localTransaction, npcAnim, localCurrentTrade, localReputationDelta));
             return;
         }
 
@@ -260,31 +658,31 @@ public class ChatManager : MonoBehaviour
 
         if (respectUIManager != null)
         {
-            respectUIManager.SetRespect(reputation);
+            respectUIManager.SetRespect(localReputation);
         }
 
         if (coinsEarnedText != null)
         {
-            coinsEarnedText.text = "Coins Earned: " + totalVarahas;
+            coinsEarnedText.text = "Coins Earned: " + localMoney;
         }
 
         // Update Level 1 HUD Economy metrics
         if (hudManager != null)
         {
-            hudManager.UpdateMoney(totalVarahas);
-            hudManager.UpdateRespect(reputation);
+            hudManager.UpdateMoney(localMoney);
+            hudManager.UpdateRespect(localReputation);
             TriggerSubtitleDisplay(!string.IsNullOrEmpty(api.currentBuyerName) ? api.currentBuyerName : "Customer", text);
-            if (currentTrade != null)
+            if (localCurrentTrade != null)
             {
-                hudManager.UpdateCurrentTrade(currentTrade);
+                hudManager.UpdateCurrentTrade(localCurrentTrade);
             }
-            if (reputationDelta != 0)
+            if (localReputationDelta != 0)
             {
-                hudManager.ShowReputationChange(reputationDelta);
+                hudManager.ShowReputationChange(localReputationDelta);
             }
         }
 
-        bool isSuccess = (action == "ACCEPT" && transaction != null && transaction.earned > 0);
+        bool isSuccess = (action == "ACCEPT" && localTransaction != null && localTransaction.earned > 0);
 
         // 2. Trigger transaction completed feedback popups or respect warnings on done
         if (done && feedbackManager != null)
@@ -293,22 +691,21 @@ public class ChatManager : MonoBehaviour
             {
                 // Determine player archetype based on reputation score
                 string archetype = "Standard Merchant";
-                if (reputation >= 80) archetype = "Fair Trader";
-                else if (reputation <= 35) archetype = "Greedy Haggler";
+                if (localReputation >= 80) archetype = "Fair Trader";
+                else if (localReputation <= 35) archetype = "Greedy Haggler";
 
-                feedbackManager.ShowTransactionFeedback(transaction, archetype);
+                feedbackManager.ShowTransactionFeedback(localTransaction, archetype);
             }
             else
             {
-                // Walk-away/failure - trigger negative reputation toast
-                feedbackManager.TriggerRespectToast(-15);
+                feedbackManager.TriggerRespectToast(localReputationDelta != 0 ? localReputationDelta : -5);
             }
         }
 
         if (done && hudManager != null)
         {
             hudManager.HideCurrentTrade();
-            hudManager.ShowTradeComplete(transaction, isSuccess, reputationDelta);
+            hudManager.ShowTradeComplete(localTransaction, isSuccess, localReputationDelta);
         }
 
         if (audioManager != null && !string.IsNullOrEmpty(audioUrl))
@@ -324,6 +721,11 @@ public class ChatManager : MonoBehaviour
         if (done && marketplaceManager != null)
         {
             marketplaceManager.OnNegotiationFinished(isSuccess);
+        }
+
+        if (currentTrade != null)
+        {
+            negotiationStateManager.SetLastOffer(currentTrade.npc_offer);
         }
     }
 
@@ -351,13 +753,14 @@ public class ChatManager : MonoBehaviour
         if (hudManager != null)
         {
             hudManager.ShowNPCIntro(bName, bOrigin);
-            hudManager.ShowCurrentTrade(api.currentSpiceName, api.currentSpiceQuantity, bName);
-            hudManager.UpdateMoney(totalVarahas);
-            hudManager.UpdateRespect(reputation);
             if (currentTrade != null)
             {
+                hudManager.ShowCurrentTrade(currentTrade.spice, currentTrade.quantity, bName);
                 hudManager.UpdateCurrentTrade(currentTrade);
+                negotiationStateManager.ResetState(currentTrade.npc_offer);
             }
+            hudManager.UpdateMoney(totalVarahas);
+            hudManager.UpdateRespect(reputation);
             if (reputationDelta != 0)
             {
                 hudManager.ShowReputationChange(reputationDelta);
@@ -373,7 +776,14 @@ public class ChatManager : MonoBehaviour
             npcText.text = text;
         }
 
-        TriggerSubtitleDisplay(bName, text);
+        if (useLocalSessionGeneration || useLocalNpcBrain)
+        {
+            PresentNpcSubtitleAndTts(bName, text, DialogueCharacterRegistry.NormalizeCharacterId(bName));
+        }
+        else
+        {
+            TriggerSubtitleDisplay(bName, text);
+        }
 
         // 4. Trigger speech audio playback
         if (audioManager != null && !string.IsNullOrEmpty(audioUrl))
@@ -384,6 +794,150 @@ public class ChatManager : MonoBehaviour
 
         // 5. Unlock conversation inputs
         EnableConversationUI();
+    }
+
+    private bool TrySpeakNpcReply(string replyText, string characterId = "")
+    {
+        if (!enableNpcTTS)
+        {
+            Debug.Log("[TTS] Skipped: NPC TTS disabled");
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(replyText))
+        {
+            Debug.Log("[TTS] Skipped: empty NPC reply");
+            return false;
+        }
+
+        if (audioManager == null)
+        {
+            Debug.LogWarning("[TTS] Skipped: AudioManager missing");
+            return false;
+        }
+
+#if UNITY_EDITOR
+        string ttsCharacterId = !string.IsNullOrWhiteSpace(debugTtsCharacterOverride)
+            ? debugTtsCharacterOverride
+            : characterId;
+#else
+        string ttsCharacterId = characterId;
+#endif
+
+        string cleanedReplyText = SanitizeTextForTts(replyText);
+        if (string.IsNullOrWhiteSpace(cleanedReplyText))
+        {
+            cleanedReplyText = replyText;
+        }
+
+        Debug.Log("[TTS] Speaking NPC reply: " + cleanedReplyText);
+        Debug.Log("[TTS] Character: " + ttsCharacterId);
+
+        return audioManager.TrySpeakText(cleanedReplyText, ttsCharacterId);
+    }
+
+    private void PresentNpcSubtitleAndTts(string speaker, string replyText, string characterId)
+    {
+        if (!enableNpcTTS || audioManager == null)
+        {
+            TriggerSubtitleDisplay(speaker, replyText);
+            TrySpeakNpcReply(replyText, characterId);
+            return;
+        }
+
+        INpcTtsPlaybackAware playbackAwareProvider = audioManager.localNpcTtsProvider as INpcTtsPlaybackAware;
+        if (playbackAwareProvider == null)
+        {
+            TriggerSubtitleDisplay(speaker, replyText);
+            TrySpeakNpcReply(replyText, characterId);
+            return;
+        }
+
+        CleanupPendingTtsSubtitleWait();
+        pendingTtsSubtitleSpeaker = speaker;
+        pendingTtsSubtitleText = replyText;
+        subscribedTtsPlaybackProvider = playbackAwareProvider;
+        subscribedTtsPlaybackProvider.PlaybackStarted += OnNpcTtsPlaybackStarted;
+        subscribedTtsPlaybackProvider.PlaybackFailed += OnNpcTtsPlaybackFailed;
+
+        bool ttsAccepted = TrySpeakNpcReply(replyText, characterId);
+        if (!ttsAccepted)
+        {
+            CleanupPendingTtsSubtitleWait();
+            TriggerSubtitleDisplay(speaker, replyText);
+            return;
+        }
+
+        ttsSubtitleFallbackCoroutine = StartCoroutine(TtsSubtitleFallbackRoutine(5f));
+    }
+
+    private void OnNpcTtsPlaybackStarted()
+    {
+        if (string.IsNullOrWhiteSpace(pendingTtsSubtitleText))
+        {
+            CleanupPendingTtsSubtitleWait();
+            return;
+        }
+
+        TriggerSubtitleDisplay(pendingTtsSubtitleSpeaker, pendingTtsSubtitleText);
+        CleanupPendingTtsSubtitleWait();
+    }
+
+    private void OnNpcTtsPlaybackFailed(string reason)
+    {
+        Debug.LogWarning("[TTS] Failed reason: " + reason);
+
+        if (!string.IsNullOrWhiteSpace(pendingTtsSubtitleText))
+        {
+            TriggerSubtitleDisplay(pendingTtsSubtitleSpeaker, pendingTtsSubtitleText);
+        }
+
+        CleanupPendingTtsSubtitleWait();
+    }
+
+    private IEnumerator TtsSubtitleFallbackRoutine(float timeoutSeconds)
+    {
+        yield return new WaitForSeconds(timeoutSeconds);
+
+        if (!string.IsNullOrWhiteSpace(pendingTtsSubtitleText))
+        {
+            Debug.LogWarning("[TTS] Failed reason: playback start timeout");
+            TriggerSubtitleDisplay(pendingTtsSubtitleSpeaker, pendingTtsSubtitleText);
+        }
+
+        CleanupPendingTtsSubtitleWait();
+    }
+
+    private void CleanupPendingTtsSubtitleWait()
+    {
+        if (ttsSubtitleFallbackCoroutine != null)
+        {
+            StopCoroutine(ttsSubtitleFallbackCoroutine);
+            ttsSubtitleFallbackCoroutine = null;
+        }
+
+        if (subscribedTtsPlaybackProvider != null)
+        {
+            subscribedTtsPlaybackProvider.PlaybackStarted -= OnNpcTtsPlaybackStarted;
+            subscribedTtsPlaybackProvider.PlaybackFailed -= OnNpcTtsPlaybackFailed;
+            subscribedTtsPlaybackProvider = null;
+        }
+
+        pendingTtsSubtitleSpeaker = string.Empty;
+        pendingTtsSubtitleText = string.Empty;
+    }
+
+    private static string SanitizeTextForTts(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        string cleaned = Regex.Replace(text, "\\([^\\)]*\\)", string.Empty);
+        cleaned = Regex.Replace(cleaned, "\\[[^\\]]*\\]", string.Empty);
+        cleaned = Regex.Replace(cleaned, "\\s+", " ").Trim();
+        return cleaned;
     }
 
     private Coroutine subtitleHideCoroutine;
@@ -423,5 +977,107 @@ public class ChatManager : MonoBehaviour
         {
             hudManager.HideSubtitle();
         }
+    }
+
+    private void SyncLocalTradeState(CurrentTrade currentTrade)
+    {
+        if (api == null)
+        {
+            return;
+        }
+
+        MarketEventData activeEvent = api.LastStepResponse != null ? api.LastStepResponse.active_event : null;
+        if (activeEvent == null && api.LastStartResponse != null)
+        {
+            activeEvent = api.LastStartResponse.active_event;
+        }
+
+        int quantityGrams = GetLatestResponseQuantity();
+        int npcOffer = currentTrade != null ? currentTrade.npc_offer : GetLatestResponsePrice();
+
+        Level1GameState.Instance.SyncTradeFromBackend(
+            api.currentBuyerName,
+            api.currentBuyerOrigin,
+            api.currentSpiceName,
+            api.currentSpiceQuantity,
+            quantityGrams,
+            npcOffer,
+            activeEvent
+        );
+    }
+
+    private int GetLatestResponseQuantity()
+    {
+        if (api != null && api.LastStepResponse != null)
+        {
+            return api.LastStepResponse.quantity;
+        }
+
+        if (api != null && api.LastStartResponse != null)
+        {
+            return api.LastStartResponse.quantity;
+        }
+
+        return 0;
+    }
+
+    private int GetLatestResponsePrice()
+    {
+        if (api != null && api.LastStepResponse != null)
+        {
+            return api.LastStepResponse.price;
+        }
+
+        if (api != null && api.LastStartResponse != null)
+        {
+            return api.LastStartResponse.price;
+        }
+
+        return 0;
+    }
+
+    private float GetLatestBuyerTrust()
+    {
+        if (api != null && api.LastStepResponse != null)
+        {
+            return api.LastStepResponse.buyer_trust;
+        }
+
+        if (api != null && api.LastStartResponse != null)
+        {
+            return api.LastStartResponse.buyer_trust;
+        }
+
+        return 0.5f;
+    }
+
+    private float GetLatestBuyerFrustration()
+    {
+        if (api != null && api.LastStepResponse != null)
+        {
+            return api.LastStepResponse.buyer_frustration;
+        }
+
+        if (api != null && api.LastStartResponse != null)
+        {
+            return api.LastStartResponse.buyer_frustration;
+        }
+
+        return 0.1f;
+    }
+
+    private int GetLatestOutOfWorldCount()
+    {
+        if (api != null && api.LastStepResponse != null)
+        {
+            return api.LastStepResponse.out_of_world_count;
+        }
+
+        if (api != null && api.LastStartResponse != null)
+        {
+            return api.LastStartResponse.out_of_world_count;
+        }
+
+        return 0;
     }
 }
