@@ -12,6 +12,14 @@ public class MarketSpawner : MonoBehaviour
     public StallPoint[] stalls;
     public Transform[] leftExits;
     public Transform[] rightExits;
+
+    [Header("NPC Motion Variation")]
+    [SerializeField] private float minSpeedMultiplier = 0.9f;
+    [SerializeField] private float maxSpeedMultiplier = 1.1f;
+    [SerializeField] private float minWaitTime = 6f;
+    [SerializeField] private float maxWaitTime = 14f;
+    [SerializeField] private float destinationOffsetRadius = 0.35f;
+
     private int activeNPCs = 0;
 
     public int maxNPCs = 3;
@@ -69,8 +77,19 @@ public class MarketSpawner : MonoBehaviour
         activeNPCs++;
 
         bool visitsStall = Random.value < 0.7f;
+        float speedMultiplier = Random.Range(
+            Mathf.Min(minSpeedMultiplier, maxSpeedMultiplier),
+            Mathf.Max(minSpeedMultiplier, maxSpeedMultiplier)
+        );
+        float stallWaitTime = Random.Range(
+            Mathf.Min(minWaitTime, maxWaitTime),
+            Mathf.Max(minWaitTime, maxWaitTime)
+        );
 
         Vector3 firstDestination;
+        Vector3 exitDestination =
+            GetOffsetPosition(exitTarget.position);
+
         Quaternion stallRotation = Quaternion.identity;
         StallPoint chosenStall = null;
 
@@ -96,7 +115,7 @@ public class MarketSpawner : MonoBehaviour
                 chosenStall.occupied = true;
 
                 firstDestination =
-                    chosenStall.transform.position;
+                    GetOffsetPosition(chosenStall.transform.position);
 
                 stallRotation =
                     chosenStall.transform.rotation;
@@ -106,13 +125,13 @@ public class MarketSpawner : MonoBehaviour
                 visitsStall = false;
 
                 firstDestination =
-                    exitTarget.position;
+                    exitDestination;
             }
         }
         else
         {
             firstDestination =
-                exitTarget.position;
+                exitDestination;
         }
 
 
@@ -121,14 +140,29 @@ public class MarketSpawner : MonoBehaviour
         this,
         firstDestination,
         visitsStall,
-        exitTarget.position,
+        exitDestination,
         stallRotation,
-        chosenStall
+        chosenStall,
+        speedMultiplier,
+        stallWaitTime
     );
     }
 
     public void NPCRemoved()
     {
         activeNPCs--;
+    }
+
+    private Vector3 GetOffsetPosition(Vector3 basePosition)
+    {
+        Vector2 offset =
+            Random.insideUnitCircle *
+            Mathf.Max(0f, destinationOffsetRadius);
+
+        return basePosition + new Vector3(
+            offset.x,
+            0f,
+            offset.y
+        );
     }
 }

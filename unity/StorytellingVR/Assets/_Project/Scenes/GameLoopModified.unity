@@ -2267,6 +2267,11 @@ MonoBehaviour:
   - {fileID: 343507271}
   - {fileID: 688356927}
   - {fileID: 1993944329}
+  minSpeedMultiplier: 0.9
+  maxSpeedMultiplier: 1.15
+  minWaitTime: 2
+  maxWaitTime: 6
+  destinationOffsetRadius: 0.35
   maxNPCs: 5
 --- !u!1 &914711400
 GameObject:
