@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using UnityEngine.Serialization;
 
 public class NPCWalker : MonoBehaviour
 {
@@ -10,11 +11,25 @@ public class NPCWalker : MonoBehaviour
     private Quaternion stallRotation;
     private bool goingToStall = false;
     private bool waiting = false;
-    [SerializeField] private float moveSpeed = 0.85f;
-    [SerializeField] private float turnSpeed = 5f;
+    private bool isPaused = false;
+    [SerializeField] private float moveSpeed = 1.4f;
+    [FormerlySerializedAs("turnSpeed")]
+    [SerializeField] private float rotationSpeed = 5f;
+    [SerializeField] private float animatorPlaybackSpeedMultiplier = 1.75f;
+    [Header("Walking Pauses")]
+    [SerializeField] private bool enableWalkingPauses = true;
+    [SerializeField] private float minTimeBetweenPauses = 6f;
+    [SerializeField] private float maxTimeBetweenPauses = 14f;
+    [SerializeField] private float minPauseDuration = 0.5f;
+    [SerializeField] private float maxPauseDuration = 1.5f;
+    [Range(0f, 1f)]
+    [SerializeField] private float pauseChance = 0.35f;
+    [SerializeField] private float pauseProximityThreshold = 1.25f;
 
 
     private float waitTime;
+    private float speedMultiplier = 1f;
+    private float pauseTimer;
     private Animator animator;
 
     void Start()
@@ -25,7 +40,10 @@ public class NPCWalker : MonoBehaviour
         {
             animator.applyRootMotion = false;
             animator.SetFloat("Speed", 1f);
+            animator.speed = GetWalkingAnimatorSpeed();
         }
+
+        ResetPauseTimer();
     }
 
     public void Initialize(
@@ -34,7 +52,9 @@ public class NPCWalker : MonoBehaviour
     bool stopAtStall,
     Vector3 leaveDestination,
     Quaternion stallRot,
-    StallPoint stall)
+    StallPoint stall,
+    float chosenSpeedMultiplier,
+    float chosenWaitTime)
     {
         spawner = ownerSpawner;
         target = destination;
@@ -43,13 +63,13 @@ public class NPCWalker : MonoBehaviour
 
         stallRotation = stallRot;
         myStall = stall;
-        waitTime =
-    Random.Range(6f, 14f);
+        speedMultiplier = Mathf.Max(0.01f, chosenSpeedMultiplier);
+        waitTime = Mathf.Max(0f, chosenWaitTime);
     }
 
     void Update()
     {
-        if (waiting)
+        if (waiting || isPaused)
             return;
 
         Vector3 direction = target - transform.position;
@@ -106,6 +126,12 @@ public class NPCWalker : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+
+        TryStartWalkingPause(direction.magnitude);
+
+        if (isPaused)
+            return;
+
         direction.Normalize();
         Quaternion targetRotation =
             Quaternion.LookRotation(direction);
@@ -113,12 +139,12 @@ public class NPCWalker : MonoBehaviour
         transform.rotation = Quaternion.Slerp(
             transform.rotation,
             targetRotation,
-            turnSpeed * Time.deltaTime
+            rotationSpeed * Time.deltaTime
         );
 
         transform.position +=
             transform.forward *
-            moveSpeed *
+            (moveSpeed * speedMultiplier) *
             Time.deltaTime;
     }
 
@@ -131,6 +157,7 @@ public class NPCWalker : MonoBehaviour
         if (animator != null)
         {
             animator.SetFloat("Speed", 0f);
+            animator.speed = 1f;
         }
 
         yield return new WaitForSeconds(waitTime);
@@ -143,18 +170,83 @@ public class NPCWalker : MonoBehaviour
         if (animator != null)
         {
             animator.SetFloat("Speed", 1f);
+            animator.speed = GetWalkingAnimatorSpeed();
         }
 
         target = exitTarget;
 
         waiting = false;
     }
+
+    IEnumerator PauseWhileWalking(float pauseDuration)
+    {
+        isPaused = true;
+
+        if (animator != null)
+        {
+            animator.SetFloat("Speed", 0f);
+            animator.speed = 1f;
+        }
+
+        yield return new WaitForSeconds(pauseDuration);
+
+        if (animator != null && !waiting)
+        {
+            animator.SetFloat("Speed", 1f);
+            animator.speed = GetWalkingAnimatorSpeed();
+        }
+
+        isPaused = false;
+    }
+
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(
             transform.position,
             1.2f
+        );
+    }
+
+    private float GetWalkingAnimatorSpeed()
+    {
+        return Mathf.Max(
+            0.1f,
+            animatorPlaybackSpeedMultiplier * speedMultiplier
+        );
+    }
+
+    private void TryStartWalkingPause(float distanceToTarget)
+    {
+        if (!enableWalkingPauses || waiting || isPaused)
+            return;
+
+        if (distanceToTarget <= pauseProximityThreshold)
+            return;
+
+        pauseTimer -= Time.deltaTime;
+
+        if (pauseTimer > 0f)
+            return;
+
+        ResetPauseTimer();
+
+        if (Random.value > pauseChance)
+            return;
+
+        float pauseDuration = Random.Range(
+            Mathf.Min(minPauseDuration, maxPauseDuration),
+            Mathf.Max(minPauseDuration, maxPauseDuration)
+        );
+
+        StartCoroutine(PauseWhileWalking(pauseDuration));
+    }
+
+    private void ResetPauseTimer()
+    {
+        pauseTimer = Random.Range(
+            Mathf.Min(minTimeBetweenPauses, maxTimeBetweenPauses),
+            Mathf.Max(minTimeBetweenPauses, maxTimeBetweenPauses)
         );
     }
 }
