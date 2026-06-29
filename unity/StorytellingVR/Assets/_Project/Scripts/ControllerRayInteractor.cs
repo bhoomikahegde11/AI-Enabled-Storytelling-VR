@@ -13,8 +13,10 @@ public class ControllerRayInteractor : MonoBehaviour
     public float clickHapticDuration = 0.08f;
 
     private InputDevice rightHandDevice;
+    private InputDevice leftHandDevice;
     private LineRenderer lineRenderer;
     private bool wasTriggerPressed;
+    private bool wasLeftXPressed;
     private SilkTraderQuestionHitbox hoveredHitbox;
 
     private void Awake()
@@ -37,6 +39,7 @@ public class ControllerRayInteractor : MonoBehaviour
     private void Update()
     {
         EnsureRightHandDevice();
+        EnsureLeftHandDevice();
 
         Ray ray = new Ray(transform.position, transform.forward);
         bool hasHit = Physics.Raycast(ray, out RaycastHit hit, rayLength, interactionMask, QueryTriggerInteraction.Collide);
@@ -73,10 +76,23 @@ public class ControllerRayInteractor : MonoBehaviour
         if (triggerPressed && !wasTriggerPressed && hasHit)
         {
             SendHapticImpulse(clickHapticAmplitude, clickHapticDuration);
-            OpenHitTarget(hit.collider);
+            SelectQuestionTarget(hit.collider);
+        }
+
+        bool leftXPressed = false;
+        if (leftHandDevice.isValid)
+        {
+            leftHandDevice.TryGetFeatureValue(CommonUsages.primaryButton, out leftXPressed);
+        }
+
+        if (leftXPressed && !wasLeftXPressed && hasHit)
+        {
+            SendHapticImpulse(clickHapticAmplitude, clickHapticDuration);
+            OpenNpcTarget(hit.collider);
         }
 
         wasTriggerPressed = triggerPressed;
+        wasLeftXPressed = leftXPressed;
     }
 
     private void EnsureRightHandDevice()
@@ -87,15 +103,25 @@ public class ControllerRayInteractor : MonoBehaviour
         }
     }
 
-    private static void OpenHitTarget(Collider hitCollider)
+    private void EnsureLeftHandDevice()
+    {
+        if (!leftHandDevice.isValid)
+        {
+            leftHandDevice = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
+        }
+    }
+
+    private static void SelectQuestionTarget(Collider hitCollider)
     {
         SilkTraderQuestionHitbox questionHitbox = hitCollider.GetComponentInParent<SilkTraderQuestionHitbox>();
         if (questionHitbox != null)
         {
             questionHitbox.SelectQuestion();
-            return;
         }
+    }
 
+    private static void OpenNpcTarget(Collider hitCollider)
+    {
         NPCInteractionVR vrInteraction = hitCollider.GetComponentInParent<NPCInteractionVR>();
         if (vrInteraction != null)
         {

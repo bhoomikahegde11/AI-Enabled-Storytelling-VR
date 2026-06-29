@@ -5,10 +5,14 @@ using UnityEngine.UI;
 
 public class SilkTraderDialogueManager : MonoBehaviour
 {
+    private const string TextBackgroundName = "DialogueTextBackground";
+
     public TMP_Text responseText;
     public GameObject dialoguePanel;
     public GameObject interactionHint;
     public Button questionButtonTemplate;
+    public Color textBackgroundColor = new Color(0f, 0f, 0f, 0.78f);
+    public Vector2 textBackgroundPadding = new Vector2(48f, 36f);
 
     [TextArea(2, 4)]
     public string welcomeText = "Welcome traveller.\nWhat would you like to know?";
@@ -47,6 +51,7 @@ public class SilkTraderDialogueManager : MonoBehaviour
     public void PrepareDialogue()
     {
         ResolveReferences();
+        EnsureTextBackground();
         BuildQuestionButtons();
         BuildQuestionHitboxes();
         ShowQuestionButtons(true);
@@ -472,6 +477,59 @@ public class SilkTraderDialogueManager : MonoBehaviour
         {
             questionButtonTemplate = FindChildComponent<Button>(searchRoot, "Question1");
         }
+    }
+
+    private void EnsureTextBackground()
+    {
+        if (responseText == null)
+        {
+            return;
+        }
+
+        RectTransform textRect = responseText.rectTransform;
+        Transform parent = textRect.parent;
+        if (parent == null)
+        {
+            return;
+        }
+
+        Transform backgroundTransform = parent.Find(TextBackgroundName);
+        Image backgroundImage;
+
+        if (backgroundTransform == null)
+        {
+            GameObject backgroundObject = new GameObject(TextBackgroundName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            backgroundObject.transform.SetParent(parent, false);
+            backgroundObject.layer = responseText.gameObject.layer;
+            backgroundTransform = backgroundObject.transform;
+            backgroundImage = backgroundObject.GetComponent<Image>();
+        }
+        else
+        {
+            backgroundImage = backgroundTransform.GetComponent<Image>();
+            if (backgroundImage == null)
+            {
+                backgroundImage = backgroundTransform.gameObject.AddComponent<Image>();
+            }
+        }
+
+        RectTransform backgroundRect = (RectTransform)backgroundTransform;
+        backgroundRect.anchorMin = textRect.anchorMin;
+        backgroundRect.anchorMax = textRect.anchorMax;
+        backgroundRect.pivot = textRect.pivot;
+        backgroundRect.anchoredPosition = textRect.anchoredPosition;
+        backgroundRect.sizeDelta = textRect.sizeDelta + textBackgroundPadding;
+        backgroundRect.localRotation = textRect.localRotation;
+        backgroundRect.localScale = textRect.localScale;
+
+        backgroundImage.color = textBackgroundColor;
+        backgroundImage.raycastTarget = false;
+
+        int textIndex = textRect.GetSiblingIndex();
+        int backgroundIndex = backgroundRect.GetSiblingIndex();
+        int targetBackgroundIndex = backgroundIndex < textIndex ? textIndex - 1 : textIndex;
+        backgroundRect.SetSiblingIndex(Mathf.Max(0, targetBackgroundIndex));
+        textRect.SetSiblingIndex(backgroundRect.GetSiblingIndex() + 1);
     }
 
     private void LayoutQuestionButtons(Transform parent)
