@@ -1,22 +1,41 @@
 using UnityEngine;
+using UnityEngine.XR;
 
 public class SceneSkipTester : MonoBehaviour
 {
+    private bool bWasPressed;
+
     void Update()
     {
-        // Press N for Next Scene
         if (Input.GetKeyDown(KeyCode.N))
         {
-            Debug.Log("DEV SKIP: Loading next scene");
+            SkipScene();
+        }
 
-            if (GameManager.Instance != null)
+        InputDevice rightHand = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
+
+        if (rightHand.TryGetFeatureValue(CommonUsages.secondaryButton, out bool bPressed))
+        {
+            if (bPressed && !bWasPressed)
             {
-                GameManager.Instance.LoadNextScene();
+                SkipScene();
             }
-            else
-            {
-                Debug.LogError("No GameManager found");
-            }
+
+            bWasPressed = bPressed;
+        }
+    }
+
+    private void SkipScene()
+    {
+        Debug.Log("DEV SKIP: Loading next scene");
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.LoadNextScene();
+        }
+        else
+        {
+            Debug.LogError("No GameManager found");
         }
     }
 }

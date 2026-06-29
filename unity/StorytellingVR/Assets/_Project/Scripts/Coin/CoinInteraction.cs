@@ -59,10 +59,11 @@ public class CoinInteraction : MonoBehaviour
 
     void Update()
     {
-        // right trigger
         if (
             OVRInput.GetDown(
-                OVRInput.Button.One)
+                OVRInput.Button.PrimaryIndexTrigger,
+                OVRInput.Controller.RTouch
+            )
         )
         {
             if (!taken)
@@ -208,8 +209,8 @@ public class CoinInteraction : MonoBehaviour
 
 
         isInspecting = true;
-        instructionPrompt.ShowJoystick(
-            "Use joystick to rotate"
+        instructionPrompt.ShowWristRotate(
+            "Hold right grip and rotate your wrist to inspect"
         );
 
         if (sceneManager != null)

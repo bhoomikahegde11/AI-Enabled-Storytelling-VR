@@ -1,42 +1,59 @@
 using UnityEngine;
-
+using System.Collections;
 public class ScooperFill : MonoBehaviour
 {
-    public GameObject cardamomVisual;
+    public SpiceVisualSet[] spiceVisuals;
 
     private bool insideSack = false;
     private bool filled = false;
-
+    public SpiceType currentSpice = SpiceType.None;
+    private SpiceZone currentZone;
+    public static ScooperFill Instance;
+    void Awake()
+    {
+        Instance = this;
+    }
     void Start()
     {
-        cardamomVisual.SetActive(false);
+        ShowSpiceVisual(SpiceType.None);
     }
 
     void Update()
     {
-        // If holding trigger and inside sack
-        if (!filled &&
-            insideSack &&
-            OVRInput.Get(OVRInput.RawButton.RIndexTrigger))
+        if (!filled && insideSack && currentZone != null && OVRInput.Get(OVRInput.RawButton.RIndexTrigger))
         {
+            currentSpice = currentZone.spiceType;
+
             FillScooper();
         }
     }
 
     void FillScooper()
     {
+        if (filled) return;
+
         filled = true;
 
-        cardamomVisual.SetActive(true);
+        ShowSpiceVisual(currentSpice);
 
-        Debug.Log("Filled!");
+        if (SpiceTutorialManager.Instance != null)
+            SpiceTutorialManager.Instance.NotifyScooperFilled(currentSpice);
+
+
+        OVRInput.SetControllerVibration(
+        0.8f,
+        0.8f,
+        OVRInput.Controller.RTouch
+    );
+        StartCoroutine(StopHaptics());
+
     }
 
     public void ResetScooper()
     {
         filled = false;
 
-        cardamomVisual.SetActive(false);
+        ShowSpiceVisual(SpiceType.None);
 
         Debug.Log("Reset");
     }
@@ -45,9 +62,15 @@ public class ScooperFill : MonoBehaviour
     {
         Debug.Log("Entered " + other.name);
 
-        if (other.CompareTag("CardamomZone"))
+        SpiceZone zone = other.GetComponent<SpiceZone>();
+
+        if (zone != null)
         {
             insideSack = true;
+            currentZone = zone;
+
+            if (SpiceTutorialManager.Instance != null)
+                SpiceTutorialManager.Instance.NotifyScooperEnteredSack(zone.spiceType);
         }
     }
 
@@ -55,9 +78,43 @@ public class ScooperFill : MonoBehaviour
     {
         Debug.Log("Exited " + other.name);
 
-        if (other.CompareTag("CardamomZone"))
+        SpiceZone zone = other.GetComponent<SpiceZone>();
+
+        if (zone != null)
         {
             insideSack = false;
+            currentZone = null;
+        }
+    }
+    IEnumerator StopHaptics()
+    {
+        yield return new WaitForSeconds(0.15f);
+
+        OVRInput.SetControllerVibration(
+            0,
+            0,
+            OVRInput.Controller.RTouch
+        );
+    }
+    public bool IsFilled()
+    {
+        return filled;
+    }
+    public void EmptyScooper()
+    {
+        filled = false;
+
+        currentSpice = SpiceType.None;
+
+        ShowSpiceVisual(currentSpice);
+
+        Debug.Log("Scooper Emptied");
+    }
+    void ShowSpiceVisual(SpiceType spice)
+    {
+        foreach (SpiceVisualSet item in spiceVisuals)
+        {
+            item.visual.SetActive(item.spiceType == spice);
         }
     }
 }
