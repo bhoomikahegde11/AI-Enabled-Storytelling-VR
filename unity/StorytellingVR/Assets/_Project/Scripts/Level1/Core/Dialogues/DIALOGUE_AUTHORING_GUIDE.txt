@@ -2,7 +2,7 @@
 LEVEL 1 DIALOGUE AUTHORING GUIDE
 ==================================================
 
-This is the standalone VR dialogue system.
+This is the standalone VR dialogue system for Level 1.
 
 Architecture:
 
@@ -32,8 +32,44 @@ Never change:
 - counters
 - reputation values
 - economy
+- negotiation decisions
 
 inside dialogue files.
+
+==================================================
+CURRENT REGISTERED NPCS
+==================================================
+
+The current registered dialogue characters are:
+
+- Abdul Rahman: abdul_rahman
+- Francisco de Almeida: francisco_de_almeida
+- Lakshmi Amma: lakshmi_amma
+- Chinappa Naik: chinappa_naik
+- Siddharth Chetti: siddharth_chetti
+- Father Penteado: father_penteado
+
+These are registered in DialogueCharacterRegistry.cs.
+
+==================================================
+CURRENT STRUCTURE
+==================================================
+
+The current dialogue system uses:
+
+- 23 scenario keys
+- one character file per NPC
+- one CharacterDialogueSet per NPC
+
+Every current NPC has all 23 scenarios.
+
+Very important:
+- Every scenario must keep at least one unbucketed fallback line.
+- Bucketed lines are optional dynamic flavor layers, not replacements for fallback lines.
+
+That means:
+- Unbucketed lines guarantee the NPC can always answer.
+- Bucketed lines add mood/personality flavor when runtime buckets match.
 
 ==================================================
 FOLDER STRUCTURE
@@ -59,162 +95,47 @@ DialogueCharacterRegistry.cs
 Characters/
 - each NPC gets one file
 
-Examples:
-Characters/AbdulRahmanDialogue.cs
-Characters/FranciscoDialogue.cs
-Characters/LakshmiAmmaDialogue.cs
+Current character files:
+- Characters/AbdulRahmanDialogue.cs
+- Characters/FranciscoDialogue.cs
+- Characters/LakshmiAmmaDialogue.cs
+- Characters/ChinappaNaikDialogue.cs
+- Characters/SiddharthChettiDialogue.cs
+- Characters/FatherPenteadoDialogue.cs
 
 ==================================================
-ADDING MORE LINES TO A CHARACTER
+SCENARIO KEYS
 ==================================================
 
-The current character files use `new DialogueLine(...)` entries inside the
-character's `Create()` method. Add more lines by appending new templates to the
-same scenario or by adding another `DialogueLine` for that scenario.
+The current 23 scenario keys are:
 
-Example:
+CustomerGreeting
+RepeatCustomerGreeting
+AskWhatBuyerWants
+AskBuyerBudget
+AskQuantity
+SellerPriceTooHigh
+SellerPriceSlightlyHigh
+SellerPriceAccepted
+SellerPriceBelowExpected
+BuyerCounterFirst
+BuyerCounterMiddle
+BuyerCounterFinal
+BuyerHoldsFirm
+PlayerAcceptedDeal
+PlayerRejectedBuyerOffer
+HistoryQuestion
+SocialGreeting
+OffTopic
+UnclearSpeech
+TransactionSuccess
+TransactionFailure
+TimePressure
+Unknown
 
-Find:
-
-new DialogueLine(DialogueScenario.SellerPriceTooHigh, new[]
-{
-    "Your line here"
-}, "character_id")
-
-Add more:
-
-new DialogueLine(DialogueScenario.SellerPriceTooHigh, new[]
-{
-    "{offeredPrice} {currency} is too much, merchant.",
-    "For {spiceName}, I can only offer {counterPrice} {currency}.",
-    "Meet me closer to {counterPrice} {currency} and we have a deal."
-}, "character_id")
-
-The system randomly chooses matching lines.
-
-You can also add a second `DialogueLine` for the same scenario if you want
-different bucket-specific behavior.
-
-==================================================
-ADDING CONDITION-SPECIFIC DIALOGUE
-==================================================
-
-Dialogue can depend on:
-
-Player reputation:
-Low
-Neutral
-High
-
-NPC patience:
-Low
-Medium
-High
-
-NPC desperation:
-Low
-Medium
-High
-
-Negotiation round:
-First
-Middle
-Final
-
-NPC personality:
-Friendly
-Normal
-Strict
-Impatient
-
-Examples:
-
-High reputation:
-
-new DialogueLine(
-    DialogueScenario.BuyerCounterMiddle,
-    new[]
-    {
-        "You have always traded fairly. I can offer {counterPrice} {currency}."
-    },
-    "character_id",
-    reputationBucket: PlayerReputationBucket.High)
-
-Low patience:
-
-new DialogueLine(
-    DialogueScenario.BuyerHoldsFirm,
-    new[]
-    {
-        "Enough bargaining. {counterPrice} {currency} is my final price."
-    },
-    "character_id",
-    patienceBucket: NpcPatienceBucket.Low)
-
-You may combine multiple buckets in a single line if you want highly specific
-matches. The provider checks more specific character matches before broader
-fallbacks.
-
-==================================================
-ADDING A NEW CHARACTER
-==================================================
-
-Step 1:
-Create:
-
-Characters/NewCharacterDialogue.cs
-
-Template:
-
-public static class NewCharacterDialogue
-{
-    public static CharacterDialogueSet Create()
-    {
-        return new CharacterDialogueSet(
-            "new_character_id",
-            "Character Display Name",
-            NpcPersonalityBucket.Friendly,
-            new List<DialogueLine>
-            {
-                new DialogueLine(DialogueScenario.CustomerGreeting, new[]
-                {
-                    "Greeting line."
-                }, "new_character_id"),
-
-                new DialogueLine(DialogueScenario.SellerPriceTooHigh, new[]
-                {
-                    "{offeredPrice} {currency} is high. I offer {counterPrice}."
-                }, "new_character_id"),
-
-                new DialogueLine(DialogueScenario.Unknown, new[]
-                {
-                    "{ruleReply}"
-                }, "new_character_id")
-            });
-    }
-}
-
-Step 2:
-Register in:
-
-DialogueCharacterRegistry.cs
-
-Add the new profile and register the new set.
-
-Example:
-
-CharacterDialogueSet newCharacter = NewCharacterDialogue.Create();
-
-supportedProfiles.Add(new DialogueCharacterProfile(
-    "new_character_id",
-    "Character Display Name",
-    "Character Origin",
-    "Friendly"));
-
-characterSets.Add(newCharacter.characterId, newCharacter);
-
-Step 3:
-Customer generator automatically includes registered dialogue characters.
+Do not rename these keys.
+Do not remove these keys.
+Do not invent new keys unless the code is updated to support them.
 
 ==================================================
 SCENARIO MEANINGS
@@ -227,26 +148,16 @@ RepeatCustomerGreeting:
 Returning customer.
 
 AskWhatBuyerWants:
-Player asks what spice or quantity buyer wants.
+Player asks what the buyer wants.
 
 AskBuyerBudget:
-Player asks buyer price.
+Player asks what price the buyer can offer.
 
 AskQuantity:
-Player asks quantity.
+Player asks what quantity the buyer wants.
 
 SellerPriceTooHigh:
 Player is seller and asks too much money.
-
-Example:
-Player: "I sell for 100"
-Buyer wanted around 70.
-
-Correct:
-"100 is expensive. I offer 70."
-
-Wrong:
-"100 is too low."
 
 SellerPriceSlightlyHigh:
 Player price is high but close.
@@ -279,13 +190,13 @@ HistoryQuestion:
 Historical or cultural questions.
 
 SocialGreeting:
-Hello or who-are-you talk.
+Hello or social talk.
 
 OffTopic:
 Anything unrelated.
 
 UnclearSpeech:
-STT failed or unclear input.
+STT failed or player meaning was unclear.
 
 TransactionSuccess:
 Successful ending.
@@ -294,26 +205,103 @@ TransactionFailure:
 Failed negotiation.
 
 TimePressure:
-Low time or patience.
+Low time or low patience.
 
 Unknown:
 Fallback.
 
 ==================================================
+ASKQUANTITY WARNING
+==================================================
+
+AskQuantity means:
+The player asked "what quantity?"
+
+The NPC must answer the quantity they want to buy.
+
+Correct:
+"I need {quantityLabel} of {spiceName}."
+
+Also correct:
+"For my household, {quantityLabel} of {spiceName} will do."
+"My order is {quantityLabel} of {spiceName}."
+
+Wrong:
+"How much {spiceName} is there?"
+"Tell me the quantity first."
+"How much are you selling?"
+
+If you are editing AskQuantity lines, always make the NPC answer with:
+- {quantityLabel}
+- {spiceName}
+
+==================================================
+BUCKET STRATEGY
+==================================================
+
+Bucketed lines are optional dynamic flavor layers.
+
+Current safe bucket strategy:
+
+- desperationBucket should stay NpcDesperationBucket.Medium for now
+- runtime desperation currently stays Medium
+- Friendly NPCs can use patience High, Medium, or Low
+- Strict NPCs should use patience Medium or Low only
+- Normal NPCs should use patience Medium or Low only
+- TimePressure bucketed lines should only use Low patience
+- Use PlayerReputationBucket.Neutral unless you are intentionally writing reputation-specific lines
+
+Current practical guidance:
+
+Friendly NPCs:
+- Abdul Rahman
+- Lakshmi Amma
+- Siddharth Chetti
+
+Strict NPCs:
+- Francisco de Almeida
+- Chinappa Naik
+
+Normal NPCs:
+- Father Penteado
+
+Avoid writing bucketed lines that current runtime cannot reach.
+
+==================================================
+HOW MATCHING WORKS IN PRACTICE
+==================================================
+
+Use unbucketed lines as the guaranteed fallback.
+
+Then add bucketed lines only when you want extra flavor for:
+- patience
+- reputation
+- round
+- personality
+
+Safe rule:
+Write the fallback line first.
+Then optionally add bucketed lines for the same scenario.
+
+Do not rely on bucketed lines alone.
+
+==================================================
 PLACEHOLDERS
 ==================================================
 
-{buyerName}
-NPC name
+Currently safe placeholders used by the Level 1 character files:
 
-{characterName}
-Dialogue character name
+{quantityLabel}
+Amount being traded
 
 {spiceName}
 Current spice
 
-{quantityLabel}
-Amount being traded
+{currentBuyerOffer}
+Current buyer offer
+
+{currency}
+Usually Varahas
 
 {offeredPrice}
 Seller or player price
@@ -324,83 +312,121 @@ Buyer counter
 {finalPrice}
 Deal price
 
-{currentBuyerOffer}
-Current buyer offer
-
-{minimumPrice}
-Lowest acceptable value
-
-{currency}
-Usually Varahas
-
-{round}
-Negotiation round
-
-{reputation}
-Player reputation value used for bucketing
-
-{patience}
-NPC patience value used for bucketing
-
-{desperation}
-NPC desperation value used for bucketing
-
 {ruleReply}
 Safe fallback from RuleBasedNPCBrain
 
-Always prefer placeholders over hardcoded numbers.
+Important:
+Do not invent new placeholders unless the runtime is updated to fill them.
+
+Even if the broader system once mentioned more placeholders, treat the list above
+as the safe working set for current character dialogue writing.
 
 ==================================================
-CHARACTER PERSONALITY GUIDE
+AUDIO PLACEHOLDER WARNING
+==================================================
+
+Human recorded audio cannot naturally speak dynamic placeholders unless handled separately.
+
+Before sending dialogue lines for recording, decide which approach the project is using:
+
+- placeholders are shown in UI only
+- Android TTS speaks dynamic values
+- modular recorded clips are used
+
+Important:
+Do not hardcode prices or quantities just to make recording easier.
+
+Keep the authored text placeholder-safe first.
+Recording strategy should be solved at the audio pipeline level, not by breaking dialogue logic.
+
+==================================================
+CURRENT CHARACTER PERSONALITY GUIDE
 ==================================================
 
 Abdul Rahman:
-Friendly Arab trader
-Patient
-Respectful
-Uses:
+Arab caravan trader.
+Warm, diplomatic, slightly poetic.
+References:
 - caravans
+- long journeys
 - trade routes
-- fairness
+- trust
+- reputation
 
 Francisco de Almeida:
-Portuguese merchant
-Direct
-Profit focused
-Uses:
+Portuguese trade agent.
+Formal, sharp, profit-focused.
+References:
 - ships
 - ports
+- contracts
 - cargo
+- voyages
 
 Lakshmi Amma:
-Local buyer
-Warm
-Practical
-Careful with money
-Uses:
+Local household or provision buyer.
+Warm elder personality.
+Witty, practical, caring.
+References:
+- family
+- kitchen
 - household
-- cooking
-- festivals
+- temple feasts
+- community feasts
+- daily market life
+
+Chinappa Naik:
+Vijayanagara wholesale or official buyer.
+Strict, authoritative, orderly.
+References:
+- warehouses
+- large orders
+- royal city trade
+- market discipline
+- accounts
+
+Siddharth Chetti:
+Local retail shopkeeper.
+Friendly, clever, lively businessman.
+References:
+- customers
+- shop
+- resale
+- bazaar crowd
+- shelves
+- jars
+
+Father Penteado:
+Jesuit missionary, scholar, and traveller.
+Calm, observant, respectful.
+References:
+- travel
+- learning
+- cultures
+- hospitality
+- roads
+- ports
+
+Avoid:
+- preachy lines
+- sermon-like tone
 
 ==================================================
-STYLE RULES
+SAFE EDITING RULES
 ==================================================
 
-VR dialogue should be:
+When editing dialogue files:
 
-GOOD:
+- Do not change scenario keys
+- Do not change bucket enum names
+- Do not invent placeholders
+- Do not change prices or decisions in dialogue files
+- Prefer rewriting text only
+- Keep voice lines short
 - 1 sentence preferred
-- max 2 sentences
-- natural speech
-- historically flavored
-- easy to understand
-
-BAD:
-- long paragraphs
-- modern slang
-- changing prices manually
-- inventing numbers
-- changing decisions
+- maximum 2 sentences
+- no modern slang
+- no very long speeches
 
 Good:
 "That is costly, merchant. I can offer {counterPrice} {currency}."
@@ -410,6 +436,122 @@ Bad:
 
 Reason:
 Always use placeholders because the rule engine controls values.
+
+==================================================
+ADDING MORE LINES TO A CHARACTER
+==================================================
+
+The current character files use new DialogueLine(...) entries inside the
+character Create() method.
+
+You can extend a character in two safe ways:
+
+1. Add more templates inside an existing DialogueLine
+2. Add another DialogueLine for the same scenario with optional bucket filters
+
+Example fallback line:
+
+new DialogueLine(DialogueScenario.SellerPriceTooHigh, new[]
+{
+    "{offeredPrice} {currency} is too much, merchant.",
+    "For {spiceName}, I can only offer {counterPrice} {currency}.",
+    "Meet me closer to {counterPrice} {currency} and we have a deal."
+}, "character_id")
+
+Example bucketed flavor line:
+
+new DialogueLine(
+    DialogueScenario.BuyerHoldsFirm,
+    new[]
+    {
+        "Enough delay. {currentBuyerOffer} {currency} is where I stand."
+    },
+    "character_id",
+    PlayerReputationBucket.Neutral,
+    NpcPatienceBucket.Low,
+    NpcDesperationBucket.Medium,
+    RoundBucket.Final,
+    NpcPersonalityBucket.Strict)
+
+==================================================
+ADDING A NEW CHARACTER
+==================================================
+
+Step 1:
+Create a new file in Characters/.
+
+Step 2:
+Return a CharacterDialogueSet with:
+- character id
+- display name
+- personality bucket
+- full list of DialogueLine entries
+
+Step 3:
+Register it in DialogueCharacterRegistry.cs.
+
+Step 4:
+Ensure the character has all 23 scenarios.
+
+Step 5:
+Ensure every scenario has at least one unbucketed fallback line.
+
+Step 6:
+If needed, add the character to any offline customer selection pools that rely on the registry.
+
+==================================================
+TESTING CHECKLIST
+==================================================
+
+Before considering dialogue changes done:
+
+- Open Unity and check there are no compile errors
+- Ask "how much" and confirm it maps to AskBuyerBudget
+- Ask "what quantity" and confirm it maps to AskQuantity
+- Confirm the NPC answers quantity, not asks for quantity
+- Say "fifty" or "twenty eight" and confirm normalization turns them into numbers and the system reads them as PRICE
+- Check Console for DialogueTable scenario logs and final reply logs
+- Test at least one Friendly NPC
+- Test at least one Strict NPC
+- Test at least one Normal NPC
+
+Good practical test set:
+- Abdul Rahman or Lakshmi Amma or Siddharth Chetti
+- Francisco de Almeida or Chinappa Naik
+- Father Penteado
+
+==================================================
+GIT NOTE
+==================================================
+
+Before commit:
+
+- stage the dialogue files you changed
+- stage their .meta files if new files were created
+
+Avoid accidentally staging unrelated changes, especially:
+
+- unrelated deleted audio .meta files
+- unrelated ground texture .meta files
+
+If you are staging only dialogue work, double-check git status before commit.
+
+==================================================
+PROMPTING NOTE FOR FUTURE AI ASSISTED WRITING
+==================================================
+
+This guide is written so a teammate can paste it into ChatGPT or another coding
+assistant and safely request dialogue edits.
+
+When prompting an AI helper:
+
+- say which files may be changed
+- say that only dialogue text should change unless explicitly requested
+- mention the 23 scenario keys
+- mention the bucket rules
+- mention the AskQuantity warning
+- mention the placeholder list
+- mention the character personality target
 
 ==================================================
 FINAL RULE

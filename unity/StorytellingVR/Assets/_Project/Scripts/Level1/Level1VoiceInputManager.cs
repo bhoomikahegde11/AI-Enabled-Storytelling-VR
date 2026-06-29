@@ -31,6 +31,20 @@ public class Level1VoiceInputManager : MonoBehaviour
         LoadConfig();
     }
 
+    #if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (!debugTestNormalize)
+        {
+            return;
+        }
+
+        debugTestNormalize = false;
+        string normalized = InputNormalizer.Normalize(debugRawInput, false);
+        Debug.Log("RAW:\n" + (debugRawInput ?? string.Empty) + "\n\nNORMALIZED:\n" + normalized);
+    }
+    #endif
+
     private void LoadConfig()
     {
         string path = System.IO.Path.Combine(Application.persistentDataPath, "backend_config.json");
@@ -62,6 +76,12 @@ public class Level1VoiceInputManager : MonoBehaviour
     [Tooltip("Sample rate to record audio at (optimal for Whisper: 16000).")]
     public int sampleRate = 16000;
     public bool debugKeepLastRecording = true;
+
+    #if UNITY_EDITOR
+    [Header("Editor Debug")]
+    [SerializeField] private string debugRawInput;
+    [SerializeField] private bool debugTestNormalize;
+    #endif
 
     [Header("System References")]
     [Tooltip("Reference to the ChatManager script.")]
