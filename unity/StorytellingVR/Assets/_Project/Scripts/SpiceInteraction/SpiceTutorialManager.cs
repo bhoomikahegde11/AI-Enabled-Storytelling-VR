@@ -17,7 +17,6 @@ public class SpiceTutorialManager : MonoBehaviour
 
     [Header("Dialogue Audio")]
     public AudioClip customerRequestClip;
-    public AudioClip narratorIntroClip;
     public AudioClip narratorScooperAppearedClip;
     public AudioClip narratorScoopedClip;
     public AudioClip narratorWrongSpiceClip;
@@ -34,11 +33,20 @@ public class SpiceTutorialManager : MonoBehaviour
     public string customerName = "Customer";
     public SpiceType requestedSpice = SpiceType.Cardamom;
 
+    [Header("Timing")]
+    public float subtitleSecondsPerLine = 3.25f;
+    public float subtitlePostHoldSeconds = 0.35f;
+    public float timedFallbackLineSeconds = 2.0f;
+    public float completionPromptHoldSeconds = 1.25f;
+    public float wrongActionReminderCooldown = 1.5f;
+
     private Coroutine dialogueCoroutine;
     private bool tutorialStarted = false;
     private bool scooperAppeared = false;
     private bool scooperFilled = false;
     private bool bagFilled = false;
+    private float nextWrongSpiceReminderTime;
+    private float nextWrongBagReminderTime;
 
     private bool IsTutorialActive
     {
@@ -87,13 +95,7 @@ public class SpiceTutorialManager : MonoBehaviour
             "Could you fill one bag of " + GetRequestedSpiceName() + " for me?"
         ));
 
-        yield return StartCoroutine(ShowDialogueSequence(
-            "Narrator:",
-            Color.yellow,
-            narratorAudioSource,
-            narratorIntroClip,
-            "Let us learn how spices are packed in the markets of Vijayanagara."
-        ));
+        
     }
 
     public void NotifyCustomerHandedBag()
@@ -117,7 +119,7 @@ public class SpiceTutorialManager : MonoBehaviour
             Color.yellow,
             narratorAudioSource,
             narratorScooperAppearedClip,
-            "Good. Move the scooper into the highlighted sack."
+            "Good. Move the scooper into the sack of the requested spice."
         ));
     }
 
@@ -163,6 +165,10 @@ public class SpiceTutorialManager : MonoBehaviour
         if (!IsTutorialActive)
             return;
 
+        if (Time.time < nextWrongSpiceReminderTime)
+            return;
+
+        nextWrongSpiceReminderTime = Time.time + wrongActionReminderCooldown;
         SetPrompt("Collect " + GetRequestedSpiceName() + ".");
 
         StartDialogueSequence(ShowDialogueSequence(
@@ -170,7 +176,7 @@ public class SpiceTutorialManager : MonoBehaviour
             Color.yellow,
             narratorAudioSource,
             narratorWrongSpiceClip,
-            "That is not the spice the customer requested."
+            "That is not the spice the customer requested. Try Again."
         ));
     }
 
@@ -179,6 +185,10 @@ public class SpiceTutorialManager : MonoBehaviour
         if (!IsTutorialActive)
             return;
 
+        if (Time.time < nextWrongBagReminderTime)
+            return;
+
+        nextWrongBagReminderTime = Time.time + wrongActionReminderCooldown;
         scooperFilled = false;
         SetPrompt("Collect " + GetRequestedSpiceName() + ".");
 
@@ -197,8 +207,8 @@ public class SpiceTutorialManager : MonoBehaviour
             return;
 
         bagFilled = true;
-        HidePrompt();
-
+        EnsureCanRunCoroutines();
+        StartCoroutine(HidePromptAfterDelay(completionPromptHoldSeconds));
         StartDialogueSequence(CompletionSequence());
     }
 
@@ -233,7 +243,9 @@ public class SpiceTutorialManager : MonoBehaviour
             speakerNameText.text = speaker;
         }
 
-        if (audioClip != null && audioSource != null)
+        bool usingAudio = audioClip != null && audioSource != null;
+
+        if (usingAudio)
         {
             audioSource.clip = audioClip;
             audioSource.Play();
@@ -244,8 +256,10 @@ public class SpiceTutorialManager : MonoBehaviour
             hudManager.ShowSubtitle(speaker, lines.Length > 0 ? lines[0] : "");
         }
 
-        float clipLength = audioClip != null ? audioClip.length : 5f;
+        float clipLength = usingAudio ? audioClip.length : subtitleSecondsPerLine;
         float timePerLine = lines.Length > 0 ? clipLength / lines.Length : clipLength;
+        if (!usingAudio)
+            timePerLine = Mathf.Max(timePerLine, subtitleSecondsPerLine);
 
         foreach (string line in lines)
         {
@@ -267,6 +281,11 @@ public class SpiceTutorialManager : MonoBehaviour
             yield return null;
         }
 
+        if (!usingAudio && subtitlePostHoldSeconds > 0f)
+        {
+            yield return new WaitForSeconds(subtitlePostHoldSeconds);
+        }
+
         if (hudManager != null)
         {
             hudManager.HideSubtitle();
@@ -286,7 +305,9 @@ public class SpiceTutorialManager : MonoBehaviour
             speakerNameText.text = speaker;
         }
 
-        if (audioClip != null && audioSource != null)
+        bool usingAudio = audioClip != null && audioSource != null;
+
+        if (usingAudio)
         {
             audioSource.clip = audioClip;
             audioSource.Play();
@@ -299,13 +320,13 @@ public class SpiceTutorialManager : MonoBehaviour
 
         for (int i = 0; i < lines.Length; i++)
         {
-            if (audioSource != null)
+            if (usingAudio)
             {
                 yield return new WaitUntil(() => audioSource.time >= startTimes[i]);
             }
             else
             {
-                yield return new WaitForSeconds(2.0f);
+                yield return new WaitForSeconds(timedFallbackLineSeconds);
             }
 
             if (dialogueText != null)
@@ -318,6 +339,11 @@ public class SpiceTutorialManager : MonoBehaviour
         while (audioSource != null && audioSource.isPlaying)
         {
             yield return null;
+        }
+
+        if (!usingAudio && subtitlePostHoldSeconds > 0f)
+        {
+            yield return new WaitForSeconds(subtitlePostHoldSeconds);
         }
 
         if (hudManager != null)
@@ -398,7 +424,27 @@ public class SpiceTutorialManager : MonoBehaviour
             promptText.text = "";
     }
 
+    IEnumerator HidePromptAfterDelay(float delay)
+    {
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        HidePrompt();
+    }
+
     void StartDialogueSequence(IEnumerator sequence)
+    {
+        EnsureCanRunCoroutines();
+
+        if (dialogueCoroutine != null)
+        {
+            StopCoroutine(dialogueCoroutine);
+        }
+
+        dialogueCoroutine = StartCoroutine(RunDialogueSequence(sequence));
+    }
+
+    void EnsureCanRunCoroutines()
     {
         if (!gameObject.activeSelf)
         {
@@ -409,13 +455,6 @@ public class SpiceTutorialManager : MonoBehaviour
         {
             enabled = true;
         }
-
-        if (dialogueCoroutine != null)
-        {
-            StopCoroutine(dialogueCoroutine);
-        }
-
-        dialogueCoroutine = StartCoroutine(RunDialogueSequence(sequence));
     }
 
     IEnumerator RunDialogueSequence(IEnumerator sequence)

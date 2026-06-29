@@ -8,8 +8,9 @@ public class PlayerStallSpiceGuide : MonoBehaviour
 
     [Header("Collider Alignment")]
     public bool alignCollidersOnStart = true;
-    public Vector3 colliderPadding = new Vector3(0.08f, 0.08f, 0.08f);
-    public float minimumColliderSize = 0.12f;
+    public Vector3 colliderPadding = new Vector3(0.03f, 0.04f, 0.03f);
+    public Vector3 colliderScale = new Vector3(0.85f, 1.1f, 0.85f);
+    public float minimumColliderSize = 0.09f;
 
     [Header("Selected Spice Glow")]
     public bool glowRequestedSpice = true;
@@ -136,12 +137,13 @@ public class PlayerStallSpiceGuide : MonoBehaviour
             }
         }
 
-        Vector3 size = max - min + colliderPadding;
+        Vector3 centerPoint = (min + max) * 0.5f;
+        Vector3 size = Vector3.Scale(max - min + colliderPadding, colliderScale);
         size.x = Mathf.Max(size.x, minimumColliderSize);
         size.y = Mathf.Max(size.y, minimumColliderSize);
         size.z = Mathf.Max(size.z, minimumColliderSize);
 
-        boxCollider.center = (min + max) * 0.5f;
+        boxCollider.center = centerPoint;
         boxCollider.size = size;
     }
 

@@ -7090,6 +7090,8 @@ MonoBehaviour:
   subtitleCanvas: {fileID: 1224839054}
   handBag: {fileID: 544859970}
   bagFillPosition: {fileID: 1945395395}
+  initialOrderDelay: 2
+  bagMoveDuration: 1.2
   spiceVisuals:
   - spiceType: 1
     visual: {fileID: 97223453}
@@ -7262,7 +7264,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1224839054}
   m_LocalRotation: {x: 0.04806527, y: 0, z: 0, w: 0.99884427}
-  m_LocalPosition: {x: 0, y: 0, z: 4.574}
+  m_LocalPosition: {x: 0, y: 0, z: 7.2}
   m_LocalScale: {x: 0.0013300001, y: 0.0013300002, z: 0.0013300002}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -7346,7 +7348,6 @@ MonoBehaviour:
   narratorAudioSource: {fileID: 0}
   customerAudioSource: {fileID: 0}
   customerRequestClip: {fileID: 0}
-  narratorIntroClip: {fileID: 0}
   narratorScooperAppearedClip: {fileID: 0}
   narratorScoopedClip: {fileID: 0}
   narratorWrongSpiceClip: {fileID: 0}
@@ -7358,6 +7359,11 @@ MonoBehaviour:
   instructionPromptManager: {fileID: 0}
   customerName: Customer
   requestedSpice: 1
+  subtitleSecondsPerLine: 3.25
+  subtitlePostHoldSeconds: 0.35
+  timedFallbackLineSeconds: 2
+  completionPromptHoldSeconds: 1.25
+  wrongActionReminderCooldown: 1.5
 --- !u!114 &1224839062
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7558,6 +7564,7 @@ MonoBehaviour:
     visual: {fileID: 2147060790}
   - spiceType: 3
     visual: {fileID: 2063880235}
+  wrongSpiceClearDelay: 0.7
   currentSpice: 1
 --- !u!54 &1236844439
 Rigidbody:
@@ -8165,8 +8172,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStallSpiceGuide
   playerStallRoot: {fileID: 1198942227}
   alignCollidersOnStart: 1
-  colliderPadding: {x: 0.08, y: 0.08, z: 0.08}
-  minimumColliderSize: 0.12
+  colliderPadding: {x: 0.03, y: 0.04, z: 0.03}
+  colliderScale: {x: 0.85, y: 1.1, z: 0.85}
+  minimumColliderSize: 0.09
   glowRequestedSpice: 1
   glowColor: {r: 1, g: 0.82, b: 0.24, a: 1}
   glowIntensity: 1.8
@@ -8252,7 +8260,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!23 &1381158104
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -11693,7 +11701,7 @@ Transform:
   m_GameObject: {fileID: 1945395394}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 30.892, y: -0.214, z: 5.187}
+  m_LocalPosition: {x: 30.892, y: -0.214, z: 5.547}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -12870,7 +12878,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2145634453}
   m_LocalRotation: {x: -0, y: 0.0000000018626449, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -7.4}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []
@@ -12878,8 +12886,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0, y: -97.2}
-  m_SizeDelta: {x: 500, y: 50}
+  m_AnchoredPosition: {x: -75, y: -110}
+  m_SizeDelta: {x: 600, y: 75}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2145634455
 MonoBehaviour:
@@ -12919,7 +12927,7 @@ MonoBehaviour:
   m_text: Can you give me one veesai cardamom?
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: 79459efec17a4d00a321bdcc27bbc385, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -13176,8 +13184,8 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3000000001}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -40}
-  m_LocalScale: {x: 1.25, y: 1.25, z: 1.25}
+  m_LocalPosition: {x: 0, y: 0, z: -35}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 3000000006}
@@ -13185,8 +13193,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 230}
-  m_SizeDelta: {x: 900, y: 110}
+  m_AnchoredPosition: {x: 0, y: 118}
+  m_SizeDelta: {x: 1000, y: 220}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3000000003
 CanvasRenderer:
@@ -13209,7 +13217,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 0.72}
+  m_Color: {r: 0, g: 0, b: 0, a: 0}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -13258,10 +13266,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 3000000002}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -80, y: -20}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 28, y: -35}
+  m_SizeDelta: {x: 760, y: 72}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3000000007
 CanvasRenderer:
@@ -13294,7 +13302,7 @@ MonoBehaviour:
   m_text: Hold Right Trigger to pick up the scooper.
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: 79459efec17a4d00a321bdcc27bbc385, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -13318,12 +13326,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 34
-  m_fontSizeBase: 34
-  m_fontWeight: 700
-  m_enableAutoSizing: 1
-  m_fontSizeMin: 20
-  m_fontSizeMax: 36
+  m_fontSize: 36
+  m_fontSizeBase: 36
+  m_fontWeight: 400
+  m_enableAutoSizing: 0
+  m_fontSizeMin: 18
+  m_fontSizeMax: 72
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
