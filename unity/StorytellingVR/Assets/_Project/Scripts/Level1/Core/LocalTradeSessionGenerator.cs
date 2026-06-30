@@ -25,7 +25,7 @@ public class LocalTradeSessionGenerator
     private static readonly string[] SpiceKeys = { "pepper", "clove", "cinnamon", "cardamom" };
     private readonly DialogueCharacterRegistry dialogueCharacterRegistry = new DialogueCharacterRegistry();
 
-    public LocalGeneratedTradeSession Generate(MarketManager marketManager, LocalProfileData profile, MarketEventData activeEvent)
+    public LocalGeneratedTradeSession Generate(MarketManager marketManager, LocalProfileData profile, MarketEventData activeEvent, string forcedCharacterId = "")
     {
         string spiceKey = PickAvailableSpice(profile);
         marketManager.TryGetSpice(spiceKey, out SpiceData spiceData);
@@ -34,7 +34,9 @@ public class LocalTradeSessionGenerator
         int quantity = PickQuantity(stock);
         int marketValue = marketManager.CalculateMarketValue(spiceKey, quantity, activeEvent);
 
-        DialogueCharacterProfile selectedCharacter = dialogueCharacterRegistry.GetRandomRegisteredCharacter();
+        DialogueCharacterProfile selectedCharacter = !string.IsNullOrWhiteSpace(forcedCharacterId)
+            ? dialogueCharacterRegistry.GetRegisteredCharacterOrRandom(forcedCharacterId)
+            : dialogueCharacterRegistry.GetRandomRegisteredCharacter();
         if (selectedCharacter == null || !dialogueCharacterRegistry.IsRegisteredCharacterId(selectedCharacter.characterId))
         {
             selectedCharacter = dialogueCharacterRegistry.GetRegisteredCharacterOrRandom(string.Empty);
