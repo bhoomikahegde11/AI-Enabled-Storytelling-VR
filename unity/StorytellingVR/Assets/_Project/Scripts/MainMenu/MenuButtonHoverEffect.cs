@@ -3,14 +3,25 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class MenuButtonHoverEffect : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+[RequireComponent(typeof(RectTransform))]
+public class MenuButtonHoverEffect : MonoBehaviour,
+    IPointerEnterHandler,
+    IPointerExitHandler,
+    IPointerClickHandler
 {
+    [Header("Visual Target")]
     [SerializeField] private Image targetImage;
+
+    [Header("Colors")]
     [SerializeField] private Color normalColor = Color.white;
-    [SerializeField] private Color hoverColor = new Color(1.15f, 1.15f, 1.15f, 1f);
+    [SerializeField] private Color hoverColor = new Color(1f, 0.92f, 0.65f, 1f);
+
+    [Header("Scale")]
     [SerializeField] private float hoverScale = 1.05f;
     [SerializeField] private float clickScale = 0.95f;
     [SerializeField] private float animationSpeed = 10f;
+
+    [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip hoverSfx;
     [SerializeField] private AudioClip clickSfx;
@@ -24,32 +35,34 @@ public class MenuButtonHoverEffect : MonoBehaviour, IPointerEnterHandler, IPoint
     private void Awake()
     {
         if (targetImage == null)
-        {
             targetImage = GetComponent<Image>();
-        }
 
         if (audioSource == null)
-        {
             audioSource = GetComponent<AudioSource>();
-        }
 
         originalScale = transform.localScale;
         targetScale = originalScale;
         targetColor = normalColor;
 
         if (targetImage != null)
-        {
             targetImage.color = normalColor;
-        }
     }
 
     private void Update()
     {
-        transform.localScale = Vector3.Lerp(transform.localScale, targetScale, animationSpeed * Time.unscaledDeltaTime);
+        transform.localScale = Vector3.Lerp(
+            transform.localScale,
+            targetScale,
+            animationSpeed * Time.unscaledDeltaTime
+        );
 
         if (targetImage != null)
         {
-            targetImage.color = Color.Lerp(targetImage.color, targetColor, animationSpeed * Time.unscaledDeltaTime);
+            targetImage.color = Color.Lerp(
+                targetImage.color,
+                targetColor,
+                animationSpeed * Time.unscaledDeltaTime
+            );
         }
     }
 
@@ -59,10 +72,7 @@ public class MenuButtonHoverEffect : MonoBehaviour, IPointerEnterHandler, IPoint
         targetScale = originalScale * hoverScale;
         targetColor = hoverColor;
 
-        if (audioSource != null && hoverSfx != null)
-        {
-            audioSource.PlayOneShot(hoverSfx);
-        }
+        PlaySfx(hoverSfx);
     }
 
     public void OnPointerExit(PointerEventData eventData)
@@ -74,15 +84,10 @@ public class MenuButtonHoverEffect : MonoBehaviour, IPointerEnterHandler, IPoint
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (audioSource != null && clickSfx != null)
-        {
-            audioSource.PlayOneShot(clickSfx);
-        }
+        PlaySfx(clickSfx);
 
         if (clickRoutine != null)
-        {
             StopCoroutine(clickRoutine);
-        }
 
         clickRoutine = StartCoroutine(PlayClickEffect());
     }
@@ -90,8 +95,19 @@ public class MenuButtonHoverEffect : MonoBehaviour, IPointerEnterHandler, IPoint
     private IEnumerator PlayClickEffect()
     {
         targetScale = originalScale * clickScale;
+
         yield return new WaitForSecondsRealtime(0.08f);
-        targetScale = isHovered ? originalScale * hoverScale : originalScale;
+
+        targetScale = isHovered
+            ? originalScale * hoverScale
+            : originalScale;
+
         clickRoutine = null;
+    }
+
+    private void PlaySfx(AudioClip clip)
+    {
+        if (audioSource != null && clip != null)
+            audioSource.PlayOneShot(clip);
     }
 }
