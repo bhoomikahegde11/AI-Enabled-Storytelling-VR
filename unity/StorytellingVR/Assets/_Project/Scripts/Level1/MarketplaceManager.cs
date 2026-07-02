@@ -358,13 +358,14 @@ public class MarketplaceManager : MonoBehaviour
             chatManager.ResetConversationUI("Waiting for next customer...");
         }
 
+        float nextCustomerGap = GetRespectBasedCustomerGap();
         if (showDebugLogs)
         {
-            Debug.Log($"[MarketplaceManager] NPC reached ExitPoint. Waiting {resetDelay} seconds before resetting.");
+            Debug.Log($"[MarketplaceManager] NPC reached ExitPoint. Waiting {nextCustomerGap:0.0} seconds before resetting.");
         }
 
-        // 5. Wait for the reset delay (e.g. 3 seconds)
-        yield return new WaitForSeconds(resetDelay);
+        // 5. Wait for a respect-based delay before spawning next customer
+        yield return new WaitForSeconds(nextCustomerGap);
 
         // 6. Hide conversation canvas during teleportation step
         if (conversationUI != null)
@@ -434,5 +435,41 @@ public class MarketplaceManager : MonoBehaviour
             animator.SetBool("isThinking", false);
             animator.SetBool("isTalking", false);
         }
+    }
+
+    private float GetRespectBasedCustomerGap()
+    {
+        if (Level1GameState.Instance == null)
+        {
+            Debug.LogWarning("[MARKET LOOP] Level1GameState missing. Falling back to resetDelay.");
+            return resetDelay;
+        }
+
+        float reputation = Level1GameState.Instance.CurrentReputation;
+
+        float minGap;
+        float maxGap;
+
+        if (reputation < 35f)
+        {
+            minGap = 18f;
+            maxGap = 25f;
+        }
+        else if (reputation < 70f)
+        {
+            minGap = 10f;
+            maxGap = 16f;
+        }
+        else
+        {
+            minGap = 4f;
+            maxGap = 8f;
+        }
+
+        float selectedGap = Random.Range(minGap, maxGap);
+
+        Debug.Log($"[MARKET LOOP] Reputation={reputation:0.0}, selected next customer gap={selectedGap:0.0}s");
+
+        return selectedGap;
     }
 }
