@@ -1,16 +1,13 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using UnityEngine.XR;
 
 public class StallEntryTrigger : MonoBehaviour
 {
     [Header("UI")]
     public GameObject promptCanvas;
 
-    [Header("Scene")]
-    public string nextSceneName = "TutorialScene";
-
     private bool playerInside = false;
-    private bool isLoading = false;
+    private bool buttonHeld = false;
 
     private void Start()
     {
@@ -20,40 +17,66 @@ public class StallEntryTrigger : MonoBehaviour
 
     private void Update()
     {
-        if (!playerInside || isLoading)
+        if (!playerInside)
             return;
 
-        // X button on left Meta/Oculus controller
-        if (OVRInput.GetDown(OVRInput.Button.Three))
+        InputDevice leftHand = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
+
+        bool xPressed = false;
+
+        leftHand.TryGetFeatureValue(
+            CommonUsages.secondaryButton,
+            out xPressed
+        );
+
+        if (xPressed && !buttonHeld)
         {
-            isLoading = true;
+            buttonHeld = true;
 
             if (promptCanvas != null)
                 promptCanvas.SetActive(false);
 
-            SceneManager.LoadScene(nextSceneName);
+            Debug.Log("[STALL ENTRY] Entering stall through GameManager");
+
+            GameManager.Instance.LoadNextScene();
+        }
+
+        if (!xPressed)
+        {
+            buttonHeld = false;
         }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (!other.CompareTag("Player"))
+        if (!IsPlayer(other))
             return;
 
         playerInside = true;
 
         if (promptCanvas != null)
             promptCanvas.SetActive(true);
+
+        Debug.Log("[STALL ENTRY] Player near stall");
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (!other.CompareTag("Player"))
+        if (!IsPlayer(other))
             return;
 
         playerInside = false;
 
         if (promptCanvas != null)
             promptCanvas.SetActive(false);
+
+        Debug.Log("[STALL ENTRY] Player left stall");
+    }
+
+    private bool IsPlayer(Collider other)
+    {
+        return other.CompareTag("Player")
+            || other.transform.root.CompareTag("Player")
+            || other.GetComponentInParent<CharacterController>() != null;
     }
 }
