@@ -36,11 +36,14 @@ public class LocalProfileData
 
 public class LocalSaveManager
 {
+    public const string ProfileFileName = "level1_player_profile.json";
+
     private readonly string savePath;
+    public string SavePath => savePath;
 
     public LocalSaveManager()
     {
-        savePath = Path.Combine(Application.persistentDataPath, "level1_player_profile.json");
+        savePath = GetActiveSavePath();
     }
 
     public LocalProfileData LoadProfile(MarketManager marketManager)
@@ -72,13 +75,77 @@ public class LocalSaveManager
     {
         try
         {
-            Directory.CreateDirectory(Application.persistentDataPath);
+            Directory.CreateDirectory(GetActiveSaveDirectory());
             string json = JsonUtility.ToJson(profile, true);
             File.WriteAllText(savePath, json);
         }
         catch (Exception ex)
         {
             Debug.LogError("[LocalSaveManager] Failed to save profile: " + ex.Message);
+        }
+    }
+
+    public bool DeleteProfile()
+    {
+        return DeleteProfileAtPath(savePath);
+    }
+
+    public static string GetActiveSavePath()
+    {
+        return Path.Combine(GetActiveSaveDirectory(), ProfileFileName);
+    }
+
+    public static string GetActiveSaveDirectory()
+    {
+        #if UNITY_EDITOR
+        return Path.Combine(Application.dataPath, "_Project", "SaveStates", "Level1");
+        #else
+        return Application.persistentDataPath;
+        #endif
+    }
+
+    public static string GetEditorTestStatesDirectory()
+    {
+        #if UNITY_EDITOR
+        return Path.Combine(GetActiveSaveDirectory(), "TestStates");
+        #else
+        return string.Empty;
+        #endif
+    }
+
+    public static void EnsureActiveSaveDirectoryExists()
+    {
+        Directory.CreateDirectory(GetActiveSaveDirectory());
+    }
+
+    public static void EnsureEditorTestStatesDirectoryExists()
+    {
+        #if UNITY_EDITOR
+        Directory.CreateDirectory(GetEditorTestStatesDirectory());
+        #endif
+    }
+
+    public static bool DeleteActiveProfile()
+    {
+        return DeleteProfileAtPath(GetActiveSavePath());
+    }
+
+    private static bool DeleteProfileAtPath(string path)
+    {
+        try
+        {
+            if (!File.Exists(path))
+            {
+                return false;
+            }
+
+            File.Delete(path);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("[LocalSaveManager] Failed to delete profile: " + ex.Message);
+            return false;
         }
     }
 

@@ -64,6 +64,7 @@ public class ChatManager : MonoBehaviour
     private string pendingTtsSubtitleSpeaker = string.Empty;
     private string pendingTtsSubtitleText = string.Empty;
     private INpcTtsPlaybackAware subscribedTtsPlaybackProvider;
+    private bool sessionOutcomeResolved;
 
     // 🔥 Prevent STT spam / multiple requests
     private bool isProcessing = false;
@@ -110,6 +111,7 @@ public class ChatManager : MonoBehaviour
         isProcessing = false; // Reset lock for new session
         isFirstReplyOfSession = true;
         hasPlayedGreetingForCurrentCustomer = false;
+        sessionOutcomeResolved = false;
         Level1GameState.Instance.PrepareForNewCustomer();
         negotiationStateManager.ResetState(0);
         if (api != null)
@@ -124,6 +126,10 @@ public class ChatManager : MonoBehaviour
         {
             LocalGeneratedTradeSession localSession = Level1GameState.Instance.GenerateLocalSession();
             negotiationStateManager.ResetState(localSession.startingOffer, localSession.buyerPatience);
+            if (marketplaceManager != null)
+            {
+                marketplaceManager.BeginNegotiationTimer(localSession.buyerPatience);
+            }
 
             if (api != null)
             {
@@ -168,6 +174,11 @@ public class ChatManager : MonoBehaviour
             return;
         }
 
+        if (marketplaceManager != null)
+        {
+            marketplaceManager.BeginNegotiationTimer(5);
+        }
+
         StartCoroutine(api.StartSession(OnNPCReply));
     }
 
@@ -185,6 +196,7 @@ public class ChatManager : MonoBehaviour
         if (hudManager != null)
         {
             hudManager.HideCurrentTrade();
+            hudManager.HidePlayerInputPanel();
         }
 
         if (inputField != null)
@@ -211,6 +223,21 @@ public class ChatManager : MonoBehaviour
 
     public void EnableConversationUI()
     {
+        if (sessionOutcomeResolved)
+        {
+            return;
+        }
+
+        if (marketplaceManager != null)
+        {
+            marketplaceManager.StartPlayerIdleWindow();
+        }
+
+        if (hudManager != null)
+        {
+            hudManager.ShowPlayerInputPanel();
+        }
+
         if (inputField != null)
         {
             inputField.interactable = true;
@@ -221,13 +248,21 @@ public class ChatManager : MonoBehaviour
     // 📝 TEXT INPUT (unchanged behavior)
     public void OnSend()
     {
-        if (isProcessing) return;
+        if (isProcessing || sessionOutcomeResolved) return;
 
         string playerText = inputField.text;
 
         if (string.IsNullOrEmpty(playerText)) return;
 
         isProcessing = true;
+        if (marketplaceManager != null)
+        {
+            marketplaceManager.MarkMeaningfulPlayerInput();
+        }
+        if (hudManager != null)
+        {
+            hudManager.HidePlayerInputPanel();
+        }
 
         StartCoroutine(SendMessageRoutine(playerText));
 
@@ -236,7 +271,7 @@ public class ChatManager : MonoBehaviour
 
     public void SubmitOfflineText(string text)
     {
-        if (!useOfflineTypedInputFallback || string.IsNullOrWhiteSpace(text) || isProcessing)
+        if (!useOfflineTypedInputFallback || string.IsNullOrWhiteSpace(text) || isProcessing || sessionOutcomeResolved)
         {
             return;
         }
@@ -250,9 +285,9 @@ public class ChatManager : MonoBehaviour
     }
 
     // 🎤 VOICE INPUT (fixed + throttled)
-    public void OnVoiceInput(string spokenText)
+public void OnVoiceInput(string spokenText)
 {
-    if (isProcessing) return;
+    if (isProcessing || sessionOutcomeResolved) return;
 
     isProcessing = true;
 
@@ -261,15 +296,31 @@ public class ChatManager : MonoBehaviour
         isProcessing = false;
         return;
     }
-    if (spokenText == lastProcessedText) return;
+    if (spokenText == lastProcessedText)
+    {
+        isProcessing = false;
+        return;
+    }
 
         // 🔥 Cooldown check (3 seconds)
-        if (Time.time - lastProcessedTime < 3f) return;
+        if (Time.time - lastProcessedTime < 3f)
+        {
+            isProcessing = false;
+            return;
+        }
 
         Debug.Log("Voice Input: " + spokenText);
 
         lastProcessedText = spokenText;
         lastProcessedTime = Time.time;
+        if (marketplaceManager != null)
+        {
+            marketplaceManager.MarkMeaningfulPlayerInput();
+        }
+        if (hudManager != null)
+        {
+            hudManager.HidePlayerInputPanel();
+        }
 
         if (npcText != null)
             npcText.text = "You: " + spokenText;
@@ -424,6 +475,7 @@ public class ChatManager : MonoBehaviour
 
         if (brainResult.isFinished)
         {
+            sessionOutcomeResolved = true;
             string action = brainResult.resolutionAction;
             LocalTradeOutcome localOutcome = localGameState.ResolveTradeFromBackend(
                 action,
@@ -516,6 +568,12 @@ public class ChatManager : MonoBehaviour
             yield break;
         }
 
+        if (sessionOutcomeResolved)
+        {
+            Debug.Log("[LLM-GEN] Not applied reason: negotiation already resolved");
+            yield break;
+        }
+
         if (task.IsFaulted)
         {
             Debug.Log("[LLM-GEN] Not applied reason: task faulted");
@@ -572,6 +630,15 @@ public class ChatManager : MonoBehaviour
     // 🤖 NPC RESPONSE (unchanged but safer)
     void OnNPCReply(string text, string audioUrl, int reputation, int totalVarahas, bool done, TransactionSummary transaction, string action, CurrentTrade currentTrade, int reputationDelta)
     {
+        if (sessionOutcomeResolved)
+        {
+            if (showDebugLogs)
+            {
+                Debug.Log("[NPC REPLY] Ignoring late reply because the negotiation has already been resolved.");
+            }
+            return;
+        }
+
         Debug.Log("NPC Reply: " + text);
 
         Level1GameState localGameState = Level1GameState.Instance;
@@ -585,6 +652,7 @@ public class ChatManager : MonoBehaviour
 
         if (done)
         {
+            sessionOutcomeResolved = true;
             LocalTradeOutcome localOutcome = localGameState.ResolveTradeFromBackend(
                 action,
                 GetLatestResponsePrice(),
@@ -1079,5 +1147,141 @@ public class ChatManager : MonoBehaviour
         }
 
         return 0;
+    }
+
+    public bool TryHandleNegotiationTimeout(string finalLine = "")
+    {
+        if (sessionOutcomeResolved)
+        {
+            return false;
+        }
+
+        sessionOutcomeResolved = true;
+        isProcessing = false;
+
+        if (inputField != null)
+        {
+            inputField.text = string.Empty;
+            inputField.interactable = false;
+        }
+        if (hudManager != null)
+        {
+            hudManager.HidePlayerInputPanel();
+        }
+
+        ClearSubtitle();
+        CleanupPendingTtsSubtitleWait();
+
+        Animator npcAnim = null;
+        if (marketplaceManager != null && marketplaceManager.buyerNPC != null)
+        {
+            npcAnim = marketplaceManager.buyerNPC.GetComponent<Animator>();
+            if (npcAnim == null)
+            {
+                npcAnim = marketplaceManager.buyerNPC.GetComponentInChildren<Animator>();
+            }
+        }
+
+        if (feedbackManager != null)
+        {
+            feedbackManager.StopNPCThinking(npcAnim);
+        }
+
+        Level1GameState localGameState = Level1GameState.Instance;
+        LocalTradeState trade = localGameState.ActiveTrade;
+        if (trade == null)
+        {
+            if (showDebugLogs)
+            {
+                Debug.LogWarning("[TIMEOUT] Negotiation silence timeout expired, but there was no active trade to resolve.");
+            }
+
+            if (marketplaceManager != null)
+            {
+                marketplaceManager.OnNegotiationFinished(false);
+            }
+            return false;
+        }
+
+        float frustration = Mathf.Max(trade.buyerFrustration, 0.8f);
+        LocalTradeOutcome localOutcome = localGameState.ResolveTradeFromBackend(
+            "WALK_AWAY",
+            trade.npcOffer,
+            trade.quantityGrams,
+            trade.buyerTrust,
+            frustration,
+            trade.outOfWorldCount
+        );
+
+        if (showDebugLogs)
+        {
+            Debug.Log($"[TIMEOUT] Customer walked away after silence timeout. Reputation delta={localOutcome.reputationDelta}, money={localOutcome.currentMoney}");
+        }
+
+        string timeoutLine = !string.IsNullOrWhiteSpace(finalLine)
+            ? finalLine
+            : "My patience is spent. I will take my leave.";
+
+        if (npcText != null)
+        {
+            npcText.text = timeoutLine;
+        }
+
+        PlayNegotiationIdleReminder(timeoutLine);
+
+        if (respectUIManager != null)
+        {
+            respectUIManager.SetRespect(localOutcome.currentReputation);
+        }
+
+        if (coinsEarnedText != null)
+        {
+            coinsEarnedText.text = "Coins Earned: " + localOutcome.currentMoney;
+        }
+
+        if (hudManager != null)
+        {
+            hudManager.UpdateMoney(localOutcome.currentMoney);
+            hudManager.UpdateRespect(localOutcome.currentReputation);
+            hudManager.HideCurrentTrade();
+            if (localOutcome.reputationDelta != 0)
+            {
+                hudManager.ShowReputationChange(localOutcome.reputationDelta);
+            }
+            hudManager.ShowTradeComplete(localOutcome.transaction, false, localOutcome.reputationDelta);
+        }
+
+        if (feedbackManager != null)
+        {
+            feedbackManager.TriggerRespectToast(localOutcome.reputationDelta != 0 ? localOutcome.reputationDelta : -5);
+        }
+
+        if (marketplaceManager != null)
+        {
+            marketplaceManager.OnNegotiationFinished(false);
+        }
+
+        return true;
+    }
+
+    public void PlayNegotiationIdleReminder(string reminderLine)
+    {
+        if (string.IsNullOrWhiteSpace(reminderLine))
+        {
+            return;
+        }
+
+        LocalTradeState trade = Level1GameState.Instance != null ? Level1GameState.Instance.ActiveTrade : null;
+        string buyerName = trade != null && !string.IsNullOrWhiteSpace(trade.buyerName)
+            ? trade.buyerName
+            : (!string.IsNullOrWhiteSpace(api != null ? api.currentBuyerName : string.Empty) ? api.currentBuyerName : "Customer");
+        string characterId = DialogueCharacterRegistry.NormalizeCharacterId(buyerName);
+
+        if (npcText != null)
+        {
+            npcText.text = reminderLine;
+        }
+
+        PresentNpcSubtitleAndTts(buyerName, reminderLine, characterId);
     }
 }

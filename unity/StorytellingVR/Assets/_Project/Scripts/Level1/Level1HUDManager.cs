@@ -19,9 +19,11 @@ public class Level1HUDManager : MonoBehaviour
     [SerializeField] private CanvasGroup inputCanvasGroup;
     [SerializeField] private RectTransform inputBoxTransform;
     [SerializeField] private UnityEngine.UI.Image inputGlowImage;
+    [SerializeField] private float inputPanelFadeDuration = 0.2f;
 
     private Coroutine inputAnimationCoroutine;
     private Coroutine inputIdleCoroutine;
+    private Coroutine inputVisibilityCoroutine;
 
     [Header("Player References")]
     public TMP_InputField playerInput;
@@ -77,6 +79,8 @@ public class Level1HUDManager : MonoBehaviour
     public TMP_Text tradeBuyerText;
     [SerializeField] private TMP_Text tradeNPCOfferText;
     [SerializeField] private TMP_Text tradeMarketValueText;
+    [Header("Marketplace Timer References")]
+    [SerializeField] private TMP_Text nextCustomerCountdownText;
 
     private Coroutine introFadeCoroutine;
     private Coroutine tradeCompleteCoroutine;
@@ -85,6 +89,10 @@ public class Level1HUDManager : MonoBehaviour
 
     // Cached original divider width for animation
     private float originalDividerWidth;
+    private Vector3 ledgerOriginalScale = Vector3.one;
+    private Vector3 ledgerRewardOriginalScale = Vector3.one;
+    [SerializeField] private float tradeCompleteIntroScaleMultiplier = 0.85f;
+    private bool hasWarnedMissingNextCustomerCountdownText;
 
     private void Start()
     {
@@ -99,6 +107,14 @@ public class Level1HUDManager : MonoBehaviour
         {
             originalDividerWidth = dividerLine.sizeDelta.x;
         }
+        if (ledgerTransform != null)
+        {
+            ledgerOriginalScale = ledgerTransform.localScale;
+        }
+        if (ledgerRewardText != null)
+        {
+            ledgerRewardOriginalScale = ledgerRewardText.transform.localScale;
+        }
 
         // Ensure canvas group starts invisible
         if (dialogueCanvasGroup != null)
@@ -109,6 +125,8 @@ public class Level1HUDManager : MonoBehaviour
         ledgerOpen = false;
         SetLedgerWaitingState();
         StartInputIdleAnimation();
+        HidePlayerInputPanelImmediate();
+        HideNextCustomerCountdown();
 
         // Initialize Merchant Honour UI
         if (reputationSlider != null)
@@ -299,6 +317,70 @@ public class Level1HUDManager : MonoBehaviour
         {
             UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
         }
+    }
+
+    public void ShowPlayerInputPanel()
+    {
+        FadePlayerInputPanel(true);
+    }
+
+    public void HidePlayerInputPanel()
+    {
+        FadePlayerInputPanel(false);
+    }
+
+    private void HidePlayerInputPanelImmediate()
+    {
+        if (inputVisibilityCoroutine != null)
+        {
+            StopCoroutine(inputVisibilityCoroutine);
+            inputVisibilityCoroutine = null;
+        }
+
+        if (inputCanvasGroup != null)
+        {
+            inputCanvasGroup.alpha = 0f;
+            inputCanvasGroup.interactable = false;
+            inputCanvasGroup.blocksRaycasts = false;
+        }
+    }
+
+    private void FadePlayerInputPanel(bool visible)
+    {
+        if (inputVisibilityCoroutine != null)
+        {
+            StopCoroutine(inputVisibilityCoroutine);
+        }
+
+        inputVisibilityCoroutine = StartCoroutine(FadePlayerInputPanelRoutine(visible));
+    }
+
+    private IEnumerator FadePlayerInputPanelRoutine(bool visible)
+    {
+        if (inputCanvasGroup == null)
+        {
+            yield break;
+        }
+
+        float startAlpha = inputCanvasGroup.alpha;
+        float targetAlpha = visible ? 1f : 0f;
+        float elapsed = 0f;
+
+        inputCanvasGroup.interactable = false;
+        inputCanvasGroup.blocksRaycasts = false;
+
+        while (elapsed < inputPanelFadeDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = inputPanelFadeDuration > 0f ? Mathf.Clamp01(elapsed / inputPanelFadeDuration) : 1f;
+            inputCanvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, t);
+            yield return null;
+        }
+
+        inputCanvasGroup.alpha = targetAlpha;
+        inputCanvasGroup.interactable = visible;
+        inputCanvasGroup.blocksRaycasts = visible;
+        inputVisibilityCoroutine = null;
     }
 
     public void EnablePlayerTyping()
@@ -901,6 +983,13 @@ public class Level1HUDManager : MonoBehaviour
         string quantity = transaction != null ? transaction.quantity : "0";
         string buyer = transaction != null ? (!string.IsNullOrEmpty(transaction.buyer_name) ? transaction.buyer_name : "Customer") : "Customer";
         int earned = transaction != null ? transaction.earned : 0;
+        Vector3 baseLedgerScale = ledgerTransform != null ? ledgerTransform.localScale : ledgerOriginalScale;
+        if (baseLedgerScale == Vector3.zero)
+        {
+            baseLedgerScale = ledgerOriginalScale == Vector3.zero ? Vector3.one : ledgerOriginalScale;
+        }
+
+        Vector3 introLedgerScale = baseLedgerScale * tradeCompleteIntroScaleMultiplier;
 
         if (ledgerTitleText != null) ledgerTitleText.text = "HAMPI MARKET LEDGER";
         if (ledgerResultText != null) ledgerResultText.text = isSuccess ? "TRADE COMPLETE" : "NO DEAL";
@@ -938,8 +1027,8 @@ public class Level1HUDManager : MonoBehaviour
 
         // Set initial scale and alpha
         if (ledgerCanvasGroup != null) ledgerCanvasGroup.alpha = 0f;
-        if (ledgerTransform != null) ledgerTransform.localScale = new Vector3(0.85f, 0.85f, 1f);
-        if (ledgerRewardText != null) ledgerRewardText.transform.localScale = Vector3.one;
+        if (ledgerTransform != null) ledgerTransform.localScale = introLedgerScale;
+        if (ledgerRewardText != null) ledgerRewardText.transform.localScale = ledgerRewardOriginalScale;
 
         // 1. Play Show Animation
         float elapsed = 0f;
@@ -951,12 +1040,12 @@ public class Level1HUDManager : MonoBehaviour
             float eased = Mathf.SmoothStep(0f, 1f, t);
 
             if (ledgerCanvasGroup != null) ledgerCanvasGroup.alpha = eased;
-            if (ledgerTransform != null) ledgerTransform.localScale = Vector3.Lerp(new Vector3(0.85f, 0.85f, 1f), Vector3.one, eased);
+            if (ledgerTransform != null) ledgerTransform.localScale = Vector3.Lerp(introLedgerScale, baseLedgerScale, eased);
             yield return null;
         }
 
         if (ledgerCanvasGroup != null) ledgerCanvasGroup.alpha = 1f;
-        if (ledgerTransform != null) ledgerTransform.localScale = Vector3.one;
+        if (ledgerTransform != null) ledgerTransform.localScale = baseLedgerScale;
 
         // 2. Play Reward Text Animation (for successful trades)
         if (isSuccess && ledgerRewardText != null)
@@ -977,10 +1066,10 @@ public class Level1HUDManager : MonoBehaviour
                 {
                     scaleVal = Mathf.Lerp(1.15f, 1.0f, (t - 0.5f) * 2f);
                 }
-                rewardTransform.localScale = new Vector3(scaleVal, scaleVal, 1f);
+                rewardTransform.localScale = ledgerRewardOriginalScale * scaleVal;
                 yield return null;
             }
-            rewardTransform.localScale = Vector3.one;
+            rewardTransform.localScale = ledgerRewardOriginalScale;
         }
 
         // 3. Wait for display duration (5 seconds total display time minus animation times)
@@ -996,11 +1085,12 @@ public class Level1HUDManager : MonoBehaviour
             float t = Mathf.Clamp01(elapsed / duration);
 
             if (ledgerCanvasGroup != null) ledgerCanvasGroup.alpha = 1f - t;
-            if (ledgerTransform != null) ledgerTransform.localScale = Vector3.Lerp(Vector3.one, new Vector3(0.9f, 0.9f, 1f), t);
+            if (ledgerTransform != null) ledgerTransform.localScale = Vector3.Lerp(baseLedgerScale, introLedgerScale, t);
             yield return null;
         }
 
         if (ledgerCanvasGroup != null) ledgerCanvasGroup.alpha = 0f;
+        if (ledgerTransform != null) ledgerTransform.localScale = baseLedgerScale;
         if (tradeCompletePanel != null) tradeCompletePanel.SetActive(false);
     }
 
@@ -1060,5 +1150,40 @@ public class Level1HUDManager : MonoBehaviour
         {
             voiceStatusText.text = status;
         }
+    }
+
+    public void ShowNextCustomerCountdown(int secondsRemaining)
+    {
+        if (nextCustomerCountdownText == null)
+        {
+            WarnMissingHudTextOnce(ref hasWarnedMissingNextCustomerCountdownText, "NextCustomerCountdownText");
+            return;
+        }
+
+        nextCustomerCountdownText.gameObject.SetActive(true);
+        nextCustomerCountdownText.text = $"Next customer arriving in {Mathf.Max(0, secondsRemaining)}s...";
+    }
+
+    public void HideNextCustomerCountdown()
+    {
+        if (nextCustomerCountdownText == null)
+        {
+            return;
+        }
+
+        nextCustomerCountdownText.gameObject.SetActive(false);
+    }
+
+    public bool HasNextCustomerCountdownText => nextCustomerCountdownText != null;
+
+    private void WarnMissingHudTextOnce(ref bool hasWarned, string objectName)
+    {
+        if (hasWarned)
+        {
+            return;
+        }
+
+        hasWarned = true;
+        Debug.LogWarning($"[Level1HUDManager] Missing HUD reference for {objectName}. Create and assign the TMP text to display marketplace timers.");
     }
 }

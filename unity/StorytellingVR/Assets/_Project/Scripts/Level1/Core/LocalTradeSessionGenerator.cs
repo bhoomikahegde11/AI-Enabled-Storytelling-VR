@@ -29,6 +29,7 @@ public class LocalTradeSessionGenerator
     {
         string spiceKey = PickAvailableSpice(profile);
         marketManager.TryGetSpice(spiceKey, out SpiceData spiceData);
+        int reputation = Level1GameState.ExistingInstance != null ? Level1GameState.Instance.CurrentReputation : 50;
 
         int stock = GetInventory(profile, spiceKey);
         int quantity = PickQuantity(stock);
@@ -36,7 +37,7 @@ public class LocalTradeSessionGenerator
 
         DialogueCharacterProfile selectedCharacter = !string.IsNullOrWhiteSpace(forcedCharacterId)
             ? dialogueCharacterRegistry.GetRegisteredCharacterOrRandom(forcedCharacterId)
-            : dialogueCharacterRegistry.GetRandomRegisteredCharacter();
+            : GetWeightedCharacterForReputation(reputation);
         if (selectedCharacter == null || !dialogueCharacterRegistry.IsRegisteredCharacterId(selectedCharacter.characterId))
         {
             selectedCharacter = dialogueCharacterRegistry.GetRegisteredCharacterOrRandom(string.Empty);
@@ -44,16 +45,22 @@ public class LocalTradeSessionGenerator
 
         string buyerName = selectedCharacter != null ? selectedCharacter.displayName : "Abdul Rahman";
         string buyerOrigin = selectedCharacter != null ? selectedCharacter.buyerOrigin : "Arab Caravan Trader";
-        string buyerPersonality = selectedCharacter != null ? selectedCharacter.buyerPersonality : "Friendly";
-        string wealthType = WealthTypes[Random.Range(0, WealthTypes.Length)];
+        string buyerPersonality = GetEffectivePersonalityForReputation(
+            selectedCharacter != null ? selectedCharacter.buyerPersonality : "Friendly",
+            reputation);
+        string wealthType = GetWealthTypeForReputation(reputation);
         float startMultiplier = GetStartMultiplier(buyerPersonality, wealthType);
         float maxMultiplier = GetMaxMultiplier(buyerPersonality, wealthType);
         int startingOffer = Mathf.Max(1, Mathf.RoundToInt(marketValue * startMultiplier));
         int maxAcceptablePrice = Mathf.Max(startingOffer, Mathf.RoundToInt(marketValue * maxMultiplier));
+        float trust = GetStartingTrust(buyerPersonality) + GetTrustModifierForReputation(reputation);
+        float frustration = GetStartingFrustration(buyerPersonality) + GetFrustrationModifierForReputation(reputation);
+        float desperation = GetDesperation(buyerPersonality) + GetDesperationModifierForReputation(reputation);
 
         Debug.Log("[CUSTOMER] Selected dialogue character: " + (selectedCharacter != null ? selectedCharacter.characterId : "abdul_rahman"));
         Debug.Log("[CUSTOMER] Display name: " + buyerName);
         Debug.Log("[CUSTOMER] Personality: " + buyerPersonality);
+        Debug.Log("[CUSTOMER] Reputation bias: " + reputation + ", Wealth: " + wealthType);
 
         return new LocalGeneratedTradeSession
         {
@@ -66,15 +73,211 @@ public class LocalTradeSessionGenerator
             startingOffer = startingOffer,
             maxAcceptablePrice = maxAcceptablePrice,
             buyerPatience = GetBuyerPatience(buyerPersonality),
-            buyerTrust = GetStartingTrust(buyerPersonality),
-            buyerFrustration = GetStartingFrustration(buyerPersonality),
-            buyerDesperation = GetDesperation(buyerPersonality),
+            buyerTrust = Mathf.Clamp01(trust),
+            buyerFrustration = Mathf.Clamp01(frustration),
+            buyerDesperation = Mathf.Clamp01(desperation),
             greetingText = BuildGreeting(
                 buyerName,
                 buyerPersonality,
                 marketManager.FormatTraditionalQuantity(quantity),
                 spiceData != null ? spiceData.displayName : "spice")
         };
+    }
+
+    private DialogueCharacterProfile GetWeightedCharacterForReputation(int reputation)
+    {
+        IReadOnlyList<DialogueCharacterProfile> supportedProfiles = dialogueCharacterRegistry.GetSupportedCharacterProfiles();
+        if (supportedProfiles == null || supportedProfiles.Count == 0)
+        {
+            return dialogueCharacterRegistry.GetRandomRegisteredCharacter();
+        }
+
+        float totalWeight = 0f;
+        for (int i = 0; i < supportedProfiles.Count; i++)
+        {
+            totalWeight += GetCharacterWeightForReputation(supportedProfiles[i], reputation);
+        }
+
+        if (totalWeight <= 0f)
+        {
+            return dialogueCharacterRegistry.GetRandomRegisteredCharacter();
+        }
+
+        float roll = Random.value * totalWeight;
+        for (int i = 0; i < supportedProfiles.Count; i++)
+        {
+            DialogueCharacterProfile candidate = supportedProfiles[i];
+            roll -= GetCharacterWeightForReputation(candidate, reputation);
+            if (roll <= 0f)
+            {
+                return candidate;
+            }
+        }
+
+        return supportedProfiles[supportedProfiles.Count - 1];
+    }
+
+    private static float GetCharacterWeightForReputation(DialogueCharacterProfile profile, int reputation)
+    {
+        string personality = profile != null ? profile.buyerPersonality : "Normal";
+
+        if (reputation < 35)
+        {
+            switch (personality)
+            {
+                case "Strict":
+                    return 2.4f;
+                case "Normal":
+                    return 1.4f;
+                case "Friendly":
+                    return 0.8f;
+            }
+        }
+        else if (reputation < 70)
+        {
+            switch (personality)
+            {
+                case "Strict":
+                    return 1.2f;
+                case "Normal":
+                    return 1.1f;
+                case "Friendly":
+                    return 1.2f;
+            }
+        }
+        else
+        {
+            switch (personality)
+            {
+                case "Strict":
+                    return 0.85f;
+                case "Normal":
+                    return 1.15f;
+                case "Friendly":
+                    return 2.1f;
+            }
+        }
+
+        return 1f;
+    }
+
+    private static string GetEffectivePersonalityForReputation(string basePersonality, int reputation)
+    {
+        if (reputation < 35)
+        {
+            float roll = Random.value;
+            if (roll < 0.45f)
+            {
+                return "Impatient";
+            }
+
+            if (roll < 0.8f)
+            {
+                return "Strict";
+            }
+
+            return basePersonality == "Friendly" ? "Normal" : basePersonality;
+        }
+
+        if (reputation < 70)
+        {
+            float roll = Random.value;
+            if (roll < 0.15f)
+            {
+                return "Impatient";
+            }
+
+            if (roll < 0.55f)
+            {
+                return "Strict";
+            }
+
+            return basePersonality == "Normal" ? "Friendly" : basePersonality;
+        }
+
+        float highRepRoll = Random.value;
+        if (highRepRoll < 0.15f)
+        {
+            return "Strict";
+        }
+
+        if (highRepRoll < 0.55f)
+        {
+            return "Friendly";
+        }
+
+        return "Normal";
+    }
+
+    private static string GetWealthTypeForReputation(int reputation)
+    {
+        float roll = Random.value;
+
+        if (reputation < 35)
+        {
+            if (roll < 0.45f) return "Low";
+            if (roll < 0.8f) return "Medium";
+            if (roll < 0.95f) return "High";
+            return "Very High";
+        }
+
+        if (reputation < 70)
+        {
+            if (roll < 0.2f) return "Low";
+            if (roll < 0.6f) return "Medium";
+            if (roll < 0.9f) return "High";
+            return "Very High";
+        }
+
+        if (roll < 0.1f) return "Low";
+        if (roll < 0.35f) return "Medium";
+        if (roll < 0.75f) return "High";
+        return "Very High";
+    }
+
+    private static float GetTrustModifierForReputation(int reputation)
+    {
+        if (reputation < 35)
+        {
+            return -0.08f;
+        }
+
+        if (reputation < 70)
+        {
+            return 0f;
+        }
+
+        return 0.08f;
+    }
+
+    private static float GetFrustrationModifierForReputation(int reputation)
+    {
+        if (reputation < 35)
+        {
+            return 0.08f;
+        }
+
+        if (reputation < 70)
+        {
+            return 0f;
+        }
+
+        return -0.04f;
+    }
+
+    private static float GetDesperationModifierForReputation(int reputation)
+    {
+        if (reputation < 35)
+        {
+            return 0.12f;
+        }
+
+        if (reputation < 70)
+        {
+            return 0f;
+        }
+
+        return -0.08f;
     }
 
     private static string PickAvailableSpice(LocalProfileData profile)

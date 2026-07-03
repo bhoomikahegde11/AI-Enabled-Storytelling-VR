@@ -40,6 +40,29 @@ public class MarketplaceManager : MonoBehaviour
     private Animator animator;
     private bool isTransitioning = false;
     private bool negotiationWasAccepted = false;
+    private Coroutine negotiationIdleCoroutine;
+    private Coroutine nextCustomerCountdownCoroutine;
+    private bool isAwaitingPlayerInput;
+    private float playerIdleStartedAt;
+    private int reminderStage;
+    private int firstReminderSeconds;
+    private int secondReminderSeconds;
+    private int walkAwaySeconds;
+    private static readonly string[] FirstReminderLines =
+    {
+        "Well?",
+        "Take your time, but don't keep me waiting."
+    };
+    private static readonly string[] SecondReminderLines =
+    {
+        "I don't have all day. What's your decision?",
+        "Other merchants are waiting for my business."
+    };
+    private static readonly string[] FinalReminderLines =
+    {
+        "Enough. I am leaving.",
+        "You have wasted enough of my time."
+    };
 
     private void Start()
     {
@@ -168,6 +191,8 @@ public class MarketplaceManager : MonoBehaviour
     /// </summary>
     private IEnumerator StartBargainingLifecycle()
     {
+        StopNextCustomerCountdown();
+
         if (chatManager != null)
         {
             chatManager.ClearSubtitle();
@@ -252,6 +277,7 @@ public class MarketplaceManager : MonoBehaviour
     {
         if (isTransitioning) return;
         isTransitioning = true;
+        StopNegotiationTimer();
 
         negotiationWasAccepted = wasAccepted;
         if (showDebugLogs)
@@ -365,7 +391,7 @@ public class MarketplaceManager : MonoBehaviour
         }
 
         // 5. Wait for a respect-based delay before spawning next customer
-        yield return new WaitForSeconds(nextCustomerGap);
+        yield return StartCoroutine(NextCustomerCountdownRoutine(nextCustomerGap));
 
         // 6. Hide conversation canvas during teleportation step
         if (conversationUI != null)
@@ -435,6 +461,175 @@ public class MarketplaceManager : MonoBehaviour
             animator.SetBool("isThinking", false);
             animator.SetBool("isTalking", false);
         }
+    }
+
+    public void BeginNegotiationTimer(int buyerPatience)
+    {
+        StopNegotiationTimer();
+        ConfigureNegotiationPatience(buyerPatience);
+
+        if (showDebugLogs)
+        {
+            Debug.Log($"[MARKET LOOP] Starting idle patience tracking. Patience={buyerPatience}, first={firstReminderSeconds}s, second={secondReminderSeconds}s, walkAway={walkAwaySeconds}s");
+        }
+
+        negotiationIdleCoroutine = StartCoroutine(NegotiationIdleRoutine());
+    }
+
+    public void StopNegotiationTimer()
+    {
+        if (negotiationIdleCoroutine != null)
+        {
+            StopCoroutine(negotiationIdleCoroutine);
+            negotiationIdleCoroutine = null;
+        }
+        isAwaitingPlayerInput = false;
+        reminderStage = 0;
+    }
+
+    public void StartPlayerIdleWindow()
+    {
+        if (isTransitioning)
+        {
+            return;
+        }
+
+        isAwaitingPlayerInput = true;
+        playerIdleStartedAt = Time.time;
+        reminderStage = 0;
+    }
+
+    public void MarkMeaningfulPlayerInput()
+    {
+        isAwaitingPlayerInput = false;
+        playerIdleStartedAt = Time.time;
+        reminderStage = 0;
+    }
+
+    private IEnumerator NegotiationIdleRoutine()
+    {
+        while (true)
+        {
+            if (isAwaitingPlayerInput)
+            {
+                float idleSeconds = Time.time - playerIdleStartedAt;
+
+                if (reminderStage == 0 && idleSeconds >= firstReminderSeconds)
+                {
+                    reminderStage = 1;
+                    if (chatManager != null)
+                    {
+                        chatManager.PlayNegotiationIdleReminder(FirstReminderLines[Random.Range(0, FirstReminderLines.Length)]);
+                    }
+                }
+                else if (reminderStage == 1 && idleSeconds >= secondReminderSeconds)
+                {
+                    reminderStage = 2;
+                    if (chatManager != null)
+                    {
+                        chatManager.PlayNegotiationIdleReminder(SecondReminderLines[Random.Range(0, SecondReminderLines.Length)]);
+                    }
+                }
+                else if (idleSeconds >= walkAwaySeconds)
+                {
+                    negotiationIdleCoroutine = null;
+
+                    if (showDebugLogs)
+                    {
+                        Debug.Log($"[MARKET LOOP] Player idle patience expired after {idleSeconds:0.0}s. Triggering walk-away flow.");
+                    }
+
+                    if (chatManager != null)
+                    {
+                        chatManager.TryHandleNegotiationTimeout(FinalReminderLines[Random.Range(0, FinalReminderLines.Length)]);
+                    }
+
+                    yield break;
+                }
+            }
+
+            yield return null;
+        }
+    }
+
+    private IEnumerator NextCustomerCountdownRoutine(float nextCustomerGap)
+    {
+        StopNextCustomerCountdown();
+        nextCustomerCountdownCoroutine = StartCoroutine(NextCustomerCountdownDisplayRoutine(nextCustomerGap));
+        yield return new WaitForSeconds(nextCustomerGap);
+        StopNextCustomerCountdown();
+    }
+
+    private IEnumerator NextCustomerCountdownDisplayRoutine(float nextCustomerGap)
+    {
+        float remainingSeconds = Mathf.Max(0f, nextCustomerGap);
+        int lastShownSeconds = -1;
+
+        while (remainingSeconds > 0f)
+        {
+            int secondsToShow = Mathf.CeilToInt(remainingSeconds);
+            if (secondsToShow != lastShownSeconds)
+            {
+                if (showDebugLogs)
+                {
+                    Debug.Log($"[MARKET LOOP] Next customer arriving in {secondsToShow}s");
+                }
+
+                if (chatManager != null && chatManager.hudManager != null)
+                {
+                    chatManager.hudManager.ShowNextCustomerCountdown(secondsToShow);
+                }
+
+                lastShownSeconds = secondsToShow;
+            }
+
+            remainingSeconds -= Time.deltaTime;
+            yield return null;
+        }
+
+        if (chatManager != null && chatManager.hudManager != null)
+        {
+            chatManager.hudManager.ShowNextCustomerCountdown(0);
+        }
+
+        nextCustomerCountdownCoroutine = null;
+    }
+
+    private void StopNextCustomerCountdown()
+    {
+        if (nextCustomerCountdownCoroutine != null)
+        {
+            StopCoroutine(nextCustomerCountdownCoroutine);
+            nextCustomerCountdownCoroutine = null;
+        }
+
+        if (chatManager != null && chatManager.hudManager != null)
+        {
+            chatManager.hudManager.HideNextCustomerCountdown();
+        }
+    }
+
+    private void ConfigureNegotiationPatience(int buyerPatience)
+    {
+        if (buyerPatience <= 3)
+        {
+            firstReminderSeconds = 6;
+            secondReminderSeconds = 12;
+            walkAwaySeconds = Random.Range(20, 31);
+            return;
+        }
+
+        if (buyerPatience <= 5)
+        {
+            firstReminderSeconds = 10;
+            secondReminderSeconds = 22;
+            walkAwaySeconds = Random.Range(35, 46);
+            return;
+        }
+
+        firstReminderSeconds = 15;
+        secondReminderSeconds = 35;
+        walkAwaySeconds = Random.Range(50, 61);
     }
 
     private float GetRespectBasedCustomerGap()
