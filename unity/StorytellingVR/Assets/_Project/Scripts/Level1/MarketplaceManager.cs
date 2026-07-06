@@ -417,6 +417,20 @@ public class MarketplaceManager : MonoBehaviour
 
         if (navMeshAgent == null) yield break;
 
+        bool hasLoggedInvalidNavMeshAgent = false;
+
+        if (!IsNavMeshAgentReady(navMeshAgent))
+        {
+            if (!hasLoggedInvalidNavMeshAgent)
+            {
+                Debug.LogWarning("[MarketplaceManager] Cannot move BuyerNPC because the NavMeshAgent is not active on a NavMesh.");
+                hasLoggedInvalidNavMeshAgent = true;
+            }
+
+            SetWalkingAnimation(false);
+            yield break;
+        }
+
         navMeshAgent.isStopped = false;
         navMeshAgent.SetDestination(targetPosition);
 
@@ -430,7 +444,18 @@ public class MarketplaceManager : MonoBehaviour
         {
             timeoutTimer += Time.deltaTime;
 
-            if (navMeshAgent != null && !navMeshAgent.pathPending)
+            if (!IsNavMeshAgentReady(navMeshAgent))
+            {
+                if (!hasLoggedInvalidNavMeshAgent)
+                {
+                    Debug.LogWarning("[MarketplaceManager] BuyerNPC NavMeshAgent became invalid during movement. Stopping walk routine safely.");
+                    hasLoggedInvalidNavMeshAgent = true;
+                }
+
+                break;
+            }
+
+            if (!navMeshAgent.pathPending)
             {
                 if (navMeshAgent.remainingDistance <= navMeshAgent.stoppingDistance + 0.15f)
                 {
@@ -448,6 +473,14 @@ public class MarketplaceManager : MonoBehaviour
         }
 
         SetWalkingAnimation(false);
+    }
+
+    private static bool IsNavMeshAgentReady(NavMeshAgent agent)
+    {
+        return agent != null &&
+            agent.enabled &&
+            agent.isActiveAndEnabled &&
+            agent.isOnNavMesh;
     }
 
     private void SetWalkingAnimation(bool isWalking)

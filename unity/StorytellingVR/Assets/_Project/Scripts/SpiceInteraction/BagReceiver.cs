@@ -3,8 +3,17 @@ using System.Collections;
 public class BagReceiver : MonoBehaviour
 {
     public HandBagAnimation customer;
+    public ChatManager chatManager;
 
     private bool completed = false;
+
+    private void Awake()
+    {
+        if (chatManager == null)
+        {
+            chatManager = FindFirstObjectByType<ChatManager>();
+        }
+    }
 
     private void OnTriggerEnter(Collider other)
     {
@@ -27,6 +36,15 @@ public class BagReceiver : MonoBehaviour
         Debug.Log("Scooper Instance Found");
         Debug.Log("Scooper Filled: " + scooper.IsFilled());
         Debug.Log("Current Spice: " + scooper.currentSpice);
+
+        bool tutorialModeActive = OrderManager.Instance != null && OrderManager.Instance.tutorialMode;
+        bool pendingMarketplaceFulfillment = chatManager != null && chatManager.HasPendingFulfillment;
+
+        if (!tutorialModeActive && !pendingMarketplaceFulfillment)
+        {
+            Debug.LogWarning("[BagReceiver] Ignoring bag delivery because there is no active tutorial order or accepted marketplace fulfillment.");
+            return;
+        }
 
         if (!scooper.IsFilled())
         {
@@ -67,6 +85,23 @@ public class BagReceiver : MonoBehaviour
 
         if (SpiceTutorialManager.Instance != null)
             SpiceTutorialManager.Instance.NotifyCorrectBagFilled();
+
+        if (chatManager != null)
+        {
+            if (chatManager.HasPendingFulfillment)
+            {
+                chatManager.CompleteAcceptedFulfillment();
+            }
+            else
+            {
+                Debug.LogWarning("[BagReceiver] ChatManager assigned, but there is no pending accepted fulfillment to complete.");
+            }
+        }
+
+        if (OrderManager.Instance != null)
+        {
+            OrderManager.Instance.CompleteMarketplaceFulfillment();
+        }
 
 
         StartCoroutine(StopHaptics());
