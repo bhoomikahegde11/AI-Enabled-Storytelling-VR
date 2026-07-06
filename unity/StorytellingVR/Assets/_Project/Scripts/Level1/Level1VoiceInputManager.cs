@@ -31,6 +31,20 @@ public class Level1VoiceInputManager : MonoBehaviour
         LoadConfig();
     }
 
+    #if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (!debugTestNormalize)
+        {
+            return;
+        }
+
+        debugTestNormalize = false;
+        string normalized = InputNormalizer.Normalize(debugRawInput, false);
+        Debug.Log("RAW:\n" + (debugRawInput ?? string.Empty) + "\n\nNORMALIZED:\n" + normalized);
+    }
+    #endif
+
     private void LoadConfig()
     {
         string path = System.IO.Path.Combine(Application.persistentDataPath, "backend_config.json");
@@ -63,6 +77,12 @@ public class Level1VoiceInputManager : MonoBehaviour
     public int sampleRate = 16000;
     public bool debugKeepLastRecording = true;
 
+    #if UNITY_EDITOR
+    [Header("Editor Debug")]
+    [SerializeField] private string debugRawInput;
+    [SerializeField] private bool debugTestNormalize;
+    #endif
+
     [Header("System References")]
     [Tooltip("Reference to the ChatManager script.")]
     public ChatManager chatManager;
@@ -78,6 +98,7 @@ public class Level1VoiceInputManager : MonoBehaviour
     private AudioClip recordingClip;
     private float startListeningTime;
     private bool isListening = false;
+    private bool isRequestingMicrophonePermission = false;
     private ISpeechToTextProvider speechProvider;
     private const float ExtremelyLowPeakThreshold = 0.005f;
 
@@ -96,12 +117,16 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     private string GetIdleText()
     {
-        return IsXRDeviceActive() ? "Hold A to bargain" : "Hold V to bargain";
+        return IsXRDeviceActive()
+            ? "Hold Trigger to speak\nRelease to transcribe"
+            : "Hold V to speak\nRelease to transcribe";
     }
 
     private string GetReviewText()
     {
-        return IsXRDeviceActive() ? "A Confirm | B Retry" : "Press Enter to send  |  R to reset";
+        return IsXRDeviceActive()
+            ? "Press A to send\nPress B to clear"
+            : "Press Enter to send\nPress R to clear";
     }
 
     private bool IsXRDeviceActive()
@@ -173,6 +198,11 @@ public class Level1VoiceInputManager : MonoBehaviour
         currentState = VoiceInputState.Idle;
         speechProvider = ResolveSpeechProvider();
 
+        if (speechProviderOverride == null)
+        {
+            Debug.LogWarning("[STT] Speech provider not assigned. Assign VoskSpeechProvider to Level1VoiceInputManager.");
+        }
+
         Debug.Log("[BACKEND] Using URL: " + serverUrl);
     }
 
@@ -207,6 +237,7 @@ public class Level1VoiceInputManager : MonoBehaviour
                 Debug.Log("[VOICE CONFIRM] Confirm triggered (Enter / A)");
                 if (chatManager != null)
                 {
+                    Debug.Log("[STT] Sent to ChatManager: " + (inputField != null ? inputField.text : string.Empty));
                     chatManager.OnSend();
                 }
                 currentState = VoiceInputState.Idle;
@@ -245,7 +276,14 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     public void StartListening()
     {
-        if (isListening) return;
+        if (isListening || isRequestingMicrophonePermission) return;
+
+        if (!Application.HasUserAuthorization(UserAuthorization.Microphone))
+        {
+            Debug.LogWarning("[STT-QUEST] Failure reason: Microphone permission not granted. Requesting permission.");
+            StartCoroutine(RequestMicrophonePermissionAndStartListening());
+            return;
+        }
 
         Debug.Log("[STT] Recording started");
         Debug.Log("[STT-QUEST] Recording started: true");
@@ -365,6 +403,17 @@ public class Level1VoiceInputManager : MonoBehaviour
     private IEnumerator TranscribeAudioRoutine(AudioClip clip)
     {
         speechProvider = ResolveSpeechProvider();
+        if (speechProvider == null)
+        {
+            Debug.LogError("[STT-QUEST] Failure reason: No speech provider available.");
+            currentState = VoiceInputState.Idle;
+            SetVoiceStatusText(GetIdleText());
+            if (chatManager != null && chatManager.hudManager != null)
+            {
+                chatManager.hudManager.EnablePlayerTyping();
+            }
+            yield break;
+        }
 
         Debug.Log("[STT-QUEST] Provider: " + (speechProvider != null ? speechProvider.GetType().Name : "(null)"));
         bool usingWhisperProvider = speechProvider is LocalSpeechProvider;
@@ -378,6 +427,7 @@ public class Level1VoiceInputManager : MonoBehaviour
             }
         }
 
+        Debug.Log("[STT] Transcription started");
         var task = speechProvider.Transcribe(clip);
         while (!task.IsCompleted)
         {
@@ -390,6 +440,7 @@ public class Level1VoiceInputManager : MonoBehaviour
 
         Debug.Log("[STT-QUEST] Transcription raw: " + rawTranscript);
         Debug.Log("[STT-QUEST] Transcription normalized: " + normalizedTranscript);
+        Debug.Log("[STT] Transcription result: " + transcript);
 
         if (task.IsFaulted)
         {
@@ -404,6 +455,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         if (IsValidTranscript(transcript))
         {
             Debug.Log("[VOICE CONFIRM] Awaiting player approval");
+            Debug.Log("[STT] Transcript ready for confirm: " + transcript);
 
             if (inputField != null)
             {
@@ -428,6 +480,34 @@ public class Level1VoiceInputManager : MonoBehaviour
         {
             chatManager.hudManager.EnablePlayerTyping();
         }
+    }
+
+    private IEnumerator RequestMicrophonePermissionAndStartListening()
+    {
+        isRequestingMicrophonePermission = true;
+        SetVoiceStatusText("Microphone permission required");
+        Debug.Log("[STT-QUEST] Microphone permission: false");
+
+        AsyncOperation permissionRequest = Application.RequestUserAuthorization(UserAuthorization.Microphone);
+        while (!permissionRequest.isDone)
+        {
+            yield return null;
+        }
+
+        isRequestingMicrophonePermission = false;
+
+        bool hasPermission = Application.HasUserAuthorization(UserAuthorization.Microphone);
+        Debug.Log("[STT-QUEST] Microphone permission: " + hasPermission);
+
+        if (!hasPermission)
+        {
+            Debug.LogWarning("[STT-QUEST] Failure reason: Microphone permission denied.");
+            SetVoiceStatusText("Microphone permission denied");
+            yield break;
+        }
+
+        SetVoiceStatusText(GetIdleText());
+        StartListening();
     }
 
     private void LogMicrophoneDiagnostics()
@@ -577,6 +657,10 @@ public class Level1VoiceInputManager : MonoBehaviour
             }
 
             Debug.LogWarning("[STT] Assigned speechProviderOverride does not implement ISpeechToTextProvider. Falling back to existing selection.");
+        }
+        else
+        {
+            Debug.LogWarning("[STT] Speech provider not assigned. Assign VoskSpeechProvider to Level1VoiceInputManager.");
         }
 
         return useLocalSpeech ? new LocalSpeechProvider() : new BackendSpeechProvider(serverUrl);

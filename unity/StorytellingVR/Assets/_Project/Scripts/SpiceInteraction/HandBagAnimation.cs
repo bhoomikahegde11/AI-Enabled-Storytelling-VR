@@ -12,6 +12,10 @@ public class HandBagAnimation : MonoBehaviour
 
     public Transform bagFillPosition;
 
+    [Header("Tutorial Timing")]
+    public float initialOrderDelay = 2f;
+    public float bagMoveDuration = 1.2f;
+
     private Vector3 originalBagPos;
     private Quaternion originalBagRot;
     public SpiceVisualSet[] spiceVisuals;
@@ -74,7 +78,7 @@ public class HandBagAnimation : MonoBehaviour
 
         while (t < 1)
         {
-            t += Time.deltaTime;
+            t += Time.deltaTime / Mathf.Max(0.01f, bagMoveDuration);
 
             handBag.transform.position =
                 Vector3.Lerp(
@@ -104,7 +108,7 @@ public class HandBagAnimation : MonoBehaviour
 
         while (t < 1)
         {
-            t += Time.deltaTime;
+            t += Time.deltaTime / Mathf.Max(0.01f, bagMoveDuration);
 
             handBag.transform.position =
                 Vector3.Lerp(
@@ -122,7 +126,7 @@ public class HandBagAnimation : MonoBehaviour
     }
     IEnumerator StartOrderRoutine()
     {
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(initialOrderDelay);
 
         StartOrder();
     }

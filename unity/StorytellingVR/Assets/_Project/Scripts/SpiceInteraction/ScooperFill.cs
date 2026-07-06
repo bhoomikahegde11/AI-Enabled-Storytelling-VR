@@ -1,12 +1,15 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 public class ScooperFill : MonoBehaviour
 {
     public SpiceVisualSet[] spiceVisuals;
+    public float wrongSpiceClearDelay = 0.7f;
 
     private bool insideSack = false;
     private bool filled = false;
     public SpiceType currentSpice = SpiceType.None;
+
     private SpiceZone currentZone;
     public static ScooperFill Instance;
     void Awake()
@@ -20,11 +23,29 @@ public class ScooperFill : MonoBehaviour
 
     void Update()
     {
-        if (!filled && insideSack && currentZone != null && OVRInput.Get(OVRInput.RawButton.RIndexTrigger))
-        {
-            currentSpice = currentZone.spiceType;
+        // Not inside any sack
+        if (!insideSack)
+            return;
 
-            FillScooper();
+        // Already holding spice
+        if (filled)
+            return;
+
+        // Somehow no current zone
+        if (currentZone == null)
+            return;
+
+        // Player isn't holding the trigger
+        if (!OVRInput.Get(OVRInput.RawButton.RIndexTrigger))
+            return;
+
+        currentSpice = currentZone.spiceType;
+
+        FillScooper();
+
+        if (currentSpice != OrderManager.Instance.requestedSpice)
+        {
+            StartCoroutine(ClearWrongSpiceAfterDelay());
         }
     }
 
@@ -39,6 +60,11 @@ public class ScooperFill : MonoBehaviour
         if (SpiceTutorialManager.Instance != null)
             SpiceTutorialManager.Instance.NotifyScooperFilled(currentSpice);
 
+        if (OrderManager.Instance != null &&
+            currentSpice != OrderManager.Instance.requestedSpice)
+        {
+            StartCoroutine(ClearWrongSpiceAfterDelay());
+        }
 
         OVRInput.SetControllerVibration(
         0.8f,
@@ -60,32 +86,25 @@ public class ScooperFill : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        Debug.Log("Entered " + other.name);
-
         SpiceZone zone = other.GetComponent<SpiceZone>();
 
-        if (zone != null)
-        {
-            insideSack = true;
-            currentZone = zone;
+        if (zone == null)
+            return;
 
-            if (SpiceTutorialManager.Instance != null)
-                SpiceTutorialManager.Instance.NotifyScooperEnteredSack(zone.spiceType);
-        }
+        currentZone = zone;
+        insideSack = true;
     }
-
     private void OnTriggerExit(Collider other)
     {
-        Debug.Log("Exited " + other.name);
+        SpiceZone zone = FindSpiceZone(other);
 
-        SpiceZone zone = other.GetComponent<SpiceZone>();
-
-        if (zone != null)
+        if (zone == currentZone)
         {
-            insideSack = false;
             currentZone = null;
+            insideSack = false;
         }
     }
+
     IEnumerator StopHaptics()
     {
         yield return new WaitForSeconds(0.15f);
@@ -110,6 +129,34 @@ public class ScooperFill : MonoBehaviour
 
         Debug.Log("Scooper Emptied");
     }
+
+    IEnumerator ClearWrongSpiceAfterDelay()
+    {
+        yield return new WaitForSeconds(wrongSpiceClearDelay);
+
+        if (filled &&
+            OrderManager.Instance != null &&
+            currentSpice != OrderManager.Instance.requestedSpice)
+        {
+            EmptyScooper();
+        }
+    }
+
+    
+
+    SpiceZone FindSpiceZone(Collider other)
+    {
+        SpiceZone zone = other.GetComponent<SpiceZone>();
+        if (zone != null)
+            return zone;
+
+        zone = other.GetComponentInParent<SpiceZone>();
+        if (zone != null)
+            return zone;
+
+        return other.GetComponentInChildren<SpiceZone>();
+    }
+
     void ShowSpiceVisual(SpiceType spice)
     {
         foreach (SpiceVisualSet item in spiceVisuals)
