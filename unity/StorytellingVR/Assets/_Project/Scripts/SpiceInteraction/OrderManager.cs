@@ -74,11 +74,14 @@ public class OrderManager : MonoBehaviour
     public void CompleteMarketplaceFulfillment()
     {
         marketplaceFulfillmentActive = false;
+        Debug.Log("[OrderManager] Marketplace fulfillment completed. Awaiting next customer reset.");
     }
 
     public void CancelMarketplaceFulfillment()
     {
         marketplaceFulfillmentActive = false;
+        ResetReusableFulfillmentState();
+        Debug.Log("[OrderManager] Marketplace fulfillment state reset.");
     }
 
     private static SpiceType MapSpiceName(string spiceName)
@@ -132,6 +135,7 @@ public class OrderManager : MonoBehaviour
         if (template.bagReceiver != null)
         {
             template.bagReceiver.customer = activeCustomerHandoff;
+            template.bagReceiver.ResetBag();
         }
 
         template.SetActorVisualsVisible(false);
@@ -150,5 +154,24 @@ public class OrderManager : MonoBehaviour
         }
 
         return null;
+    }
+
+    private void ResetReusableFulfillmentState()
+    {
+        if (handBagAnimation != null)
+        {
+            handBagAnimation.ResetHandoffState();
+        }
+
+        BagReceiver bagReceiver = FindFirstObjectByType<BagReceiver>();
+        if (bagReceiver != null)
+        {
+            bagReceiver.ResetBag();
+        }
+
+        if (ScooperFill.Instance != null)
+        {
+            ScooperFill.Instance.ResetScooper();
+        }
     }
 }

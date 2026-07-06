@@ -81,6 +81,16 @@ public class ScooperFill : MonoBehaviour
     public void ResetScooper()
     {
         filled = false;
+        insideSack = false;
+        currentZone = null;
+        currentSpice = SpiceType.None;
+        overlappingZones.Clear();
+
+        if (clearZoneCoroutine != null)
+        {
+            StopCoroutine(clearZoneCoroutine);
+            clearZoneCoroutine = null;
+        }
 
         ShowSpiceVisual(SpiceType.None);
 

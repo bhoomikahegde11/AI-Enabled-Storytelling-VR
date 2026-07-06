@@ -3228,7 +3228,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8811293695563957947, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 366259246}
   m_SourcePrefab: {fileID: 100100000, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
 --- !u!82 &366259241 stripped
 AudioSource:
@@ -3245,6 +3248,33 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 8143581533455440897, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
   m_PrefabInstance: {fileID: 366259240}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &366259246
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 366259242}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea9f89ca191e6b642af7edefacad0436, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HandBagAnimation
+  bagReceiver: {fileID: 1870454936}
+  subtitleCanvas: {fileID: 1224839054}
+  handBag: {fileID: 544859970}
+  bagFillPosition: {fileID: 1945395395}
+  initialOrderDelay: 2
+  bagMoveDuration: 1.2
+  spiceVisuals:
+  - spiceType: 1
+    visual: {fileID: 97223453}
+  - spiceType: 2
+    visual: {fileID: 1066724944}
+  - spiceType: 3
+    visual: {fileID: 86173119}
+  - spiceType: 4
+    visual: {fileID: 704481292}
 --- !u!1 &374290709
 GameObject:
   m_ObjectHideFlags: 0
@@ -9817,6 +9847,14 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2082649019093156146, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2874418710791521915, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2874418710791521915, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
       propertyPath: m_Controller
       value: 
@@ -9827,6 +9865,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4109495379139106641, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
       propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4568052337994234561, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
+      propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5246715011117411771, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
@@ -10633,7 +10675,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1269786955}
   m_Layer: 0
-  m_Name: MoveableSystem
+  m_Name: MainLoopSystem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

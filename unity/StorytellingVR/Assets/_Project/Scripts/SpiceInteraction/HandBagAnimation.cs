@@ -24,6 +24,8 @@ public class HandBagAnimation : MonoBehaviour
     public SpiceVisualSet[] spiceVisuals;
     private Transform marketplaceHandoffOrigin;
     private bool useMarketplaceCustomerVisuals;
+    private Coroutine bagMoveCoroutine;
+    private Coroutine bagFillCoroutine;
 
     void Awake()
     {
@@ -49,6 +51,8 @@ public class HandBagAnimation : MonoBehaviour
 
     public void StartOrder()
     {
+        ResetHandoffState();
+
         if (bagReceiver != null)
             bagReceiver.ResetBag();
 
@@ -63,6 +67,12 @@ public class HandBagAnimation : MonoBehaviour
 
         if (!tutorialModeActive)
         {
+            if (CanPlayMarketplaceHandoffAnimation())
+            {
+                GiveHandBag();
+                return;
+            }
+
             ShowMarketplaceBagOnly();
             return;
         }
@@ -76,6 +86,12 @@ public class HandBagAnimation : MonoBehaviour
 
         SetActorVisualsVisible(true);
 
+        if (animator == null)
+        {
+            ShowMarketplaceBagOnly();
+            return;
+        }
+
         animator.speed = 1f;
         animator.SetTrigger("GiveCoin");
     }
@@ -84,11 +100,14 @@ public class HandBagAnimation : MonoBehaviour
     {
         Debug.Log("Freeze called");
 
-        animator.speed = 0f;
+        if (animator != null)
+        {
+            animator.speed = 0f;
+        }
 
         handBag.SetActive(true);
 
-        StartCoroutine(MoveBagForward());
+        StartBagMoveCoroutine(MoveBagForward());
     }
 
     IEnumerator MoveBagForward()
@@ -115,11 +134,14 @@ public class HandBagAnimation : MonoBehaviour
     public void ResumeAnimation()
     {
         SetActorVisualsVisible(true);
-        animator.speed = 1f;
+        if (animator != null)
+        {
+            animator.speed = 1f;
+        }
     }
     public void ReceiveBag()
     {
-        StartCoroutine(ReturnBag());
+        StartBagMoveCoroutine(ReturnBag());
     }
     IEnumerator ReturnBag()
     {
@@ -162,13 +184,19 @@ public class HandBagAnimation : MonoBehaviour
             subtitleCanvas.SetActive(false);
         }
 
-        StartCoroutine(FillAndReturn());
+        if (bagFillCoroutine != null)
+        {
+            StopCoroutine(bagFillCoroutine);
+        }
+
+        bagFillCoroutine = StartCoroutine(FillAndReturn());
     }
     IEnumerator FillAndReturn()
     {
         yield return new WaitForSeconds(0.5f);
 
-        StartCoroutine(ReturnBag());
+        bagFillCoroutine = null;
+        StartBagMoveCoroutine(ReturnBag());
     }
     void ShowBagSpice(SpiceType spice)
     {
@@ -253,6 +281,31 @@ public class HandBagAnimation : MonoBehaviour
         }
     }
 
+    public void ResetHandoffState()
+    {
+        if (bagMoveCoroutine != null)
+        {
+            StopCoroutine(bagMoveCoroutine);
+            bagMoveCoroutine = null;
+        }
+
+        if (bagFillCoroutine != null)
+        {
+            StopCoroutine(bagFillCoroutine);
+            bagFillCoroutine = null;
+        }
+
+        if (handBag != null)
+        {
+            handBag.transform.position = originalBagPos;
+            handBag.transform.rotation = originalBagRot;
+            handBag.SetActive(false);
+        }
+
+        ShowBagSpice(SpiceType.None);
+        ResumeAnimation();
+    }
+
     public void SetActorVisualsVisible(bool visible)
     {
         if (actorRenderers == null)
@@ -269,5 +322,40 @@ public class HandBagAnimation : MonoBehaviour
 
             renderer.enabled = visible;
         }
+    }
+
+    private bool CanPlayMarketplaceHandoffAnimation()
+    {
+        if (!useMarketplaceCustomerVisuals || animator == null || animator.runtimeAnimatorController == null)
+        {
+            return false;
+        }
+
+        foreach (AnimatorControllerParameter parameter in animator.parameters)
+        {
+            if (parameter.type == AnimatorControllerParameterType.Trigger &&
+                parameter.name == "GiveCoin")
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void StartBagMoveCoroutine(IEnumerator routine)
+    {
+        if (bagMoveCoroutine != null)
+        {
+            StopCoroutine(bagMoveCoroutine);
+        }
+
+        bagMoveCoroutine = StartCoroutine(RunBagMoveRoutine(routine));
+    }
+
+    private IEnumerator RunBagMoveRoutine(IEnumerator routine)
+    {
+        yield return StartCoroutine(routine);
+        bagMoveCoroutine = null;
     }
 }
