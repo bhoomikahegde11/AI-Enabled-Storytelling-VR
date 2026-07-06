@@ -3717,6 +3717,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Cinnamon
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 607b1c12b76a012419f6e2802a7fb171, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: -7029948723529949830, guid: 607b1c12b76a012419f6e2802a7fb171, type: 3}
@@ -6165,6 +6169,7 @@ MonoBehaviour:
   inputCanvasGroup: {fileID: 0}
   inputBoxTransform: {fileID: 0}
   inputGlowImage: {fileID: 0}
+  inputPanelFadeDuration: 0.2
   playerInput: {fileID: 0}
   voiceStatusText: {fileID: 0}
   varahaText: {fileID: 0}
@@ -6197,6 +6202,8 @@ MonoBehaviour:
   tradeBuyerText: {fileID: 0}
   tradeNPCOfferText: {fileID: 0}
   tradeMarketValueText: {fileID: 0}
+  nextCustomerCountdownText: {fileID: 0}
+  tradeCompleteIntroScaleMultiplier: 0.85
 --- !u!114 &1224839061
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9013,6 +9020,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BagReceiver
   customer: {fileID: 1198204733}
+  chatManager: {fileID: 0}
 --- !u!1 &1883738581
 GameObject:
   m_ObjectHideFlags: 0

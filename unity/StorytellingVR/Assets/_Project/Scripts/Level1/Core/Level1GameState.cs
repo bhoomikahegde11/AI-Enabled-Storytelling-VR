@@ -81,6 +81,8 @@ public class Level1GameState : MonoBehaviour
     public int CurrentReputation => playerState.CurrentReputation;
     public LocalTradeState ActiveTrade => activeTrade;
     public MarketEventData ActiveEvent => activeEvent;
+    public string ActiveSavePath => localSaveManager != null ? localSaveManager.SavePath : LocalSaveManager.GetActiveSavePath();
+    public static Level1GameState ExistingInstance => instance;
 
     private void Awake()
     {
@@ -116,6 +118,30 @@ public class Level1GameState : MonoBehaviour
         EnsureInitialized();
         activeTrade = null;
         activeEvent = null;
+    }
+
+    public void SaveProfileToDisk()
+    {
+        EnsureInitialized();
+        localSaveManager.SaveProfile(profile);
+    }
+
+    public void ReloadProfileFromDisk()
+    {
+        EnsureInitialized();
+
+        profile = localSaveManager.LoadProfile(marketManager);
+        playerState.LoadFrom(profile.global_metrics.total_varahas, profile.global_metrics.reputation);
+        activeTrade = null;
+        activeEvent = null;
+        lastDealReferencePrice = 0;
+    }
+
+    public void ResetProfileToDefaults()
+    {
+        EnsureInitialized();
+        localSaveManager.DeleteProfile();
+        ReloadProfileFromDisk();
     }
 
     public void SyncTradeFromBackend(string buyerName, string buyerOrigin, string spiceName, string quantityLabel, int quantityGrams, int npcOffer, MarketEventData backendEvent)
