@@ -177,6 +177,11 @@ public class Level1HUDManager : MonoBehaviour
 
             ToggleTradeLedger();
         }
+
+        if (Level1DebugForceAccept.IsVrTradePanelShortcutPressed())
+        {
+            ToggleTradeLedger();
+        }
     }
 
     // ─────────────────────────────────────────────
@@ -412,6 +417,15 @@ public class Level1HUDManager : MonoBehaviour
         if (currentTradePanel != null)
         {
             currentTradePanel.SetActive(ledgerOpen);
+        }
+
+        if (ledgerOpen)
+        {
+            CurrentTrade currentTrade = Level1GameState.Instance != null ? Level1GameState.Instance.BuildCurrentTradeForHud() : null;
+            if (currentTrade != null)
+            {
+                UpdateCurrentTrade(currentTrade);
+            }
         }
     }
 
@@ -1129,6 +1143,10 @@ public class Level1HUDManager : MonoBehaviour
     {
         if (trade == null) return;
 
+        LocalTradeState activeTrade = Level1GameState.Instance != null ? Level1GameState.Instance.ActiveTrade : null;
+        int buyerMaxOffer = activeTrade != null ? activeTrade.maxBuyerPrice : 0;
+        int profitIfAccepted = trade.npc_offer - trade.market_value;
+
         if (tradeSpiceText != null)
         {
             tradeSpiceText.text = trade.spice;
@@ -1136,12 +1154,15 @@ public class Level1HUDManager : MonoBehaviour
 
         if (tradeNPCOfferText != null)
         {
-            tradeNPCOfferText.text = $"NPC Offer:\n{trade.npc_offer} Varahas";
+            tradeNPCOfferText.text = buyerMaxOffer > 0
+                ? $"NPC Offer:\n{trade.npc_offer} Varahas\nBuyer Max:\n{buyerMaxOffer} Varahas"
+                : $"NPC Offer:\n{trade.npc_offer} Varahas";
         }
 
         if (tradeMarketValueText != null)
         {
-            tradeMarketValueText.text = $"Market Value:\n{trade.market_value} Varahas";
+            string profitSign = profitIfAccepted >= 0 ? "+" : "";
+            tradeMarketValueText.text = $"Market Value:\n{trade.market_value} Varahas\nProfit @ Offer:\n{profitSign}{profitIfAccepted} Varahas";
         }
     }
 

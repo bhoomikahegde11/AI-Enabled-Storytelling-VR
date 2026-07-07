@@ -32,6 +32,10 @@ public class LocalTradeState
     public int tooExpensiveCount;
     public int rejectionCount;
     public int counterCount;
+    public int actualPriceOfferCount;
+    public int softBargainCount;
+    public int hardRejectCount;
+    public int repeatedOverMaxCount;
     public int hostileCount;
     public int outOfWorldCount;
     public int noCount;

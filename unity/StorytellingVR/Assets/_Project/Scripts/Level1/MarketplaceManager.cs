@@ -67,7 +67,7 @@ public class MarketplaceManager : MonoBehaviour
 
     private void Start()
     {
-        Debug.Log("[SCENE FLOW] " + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name + " loaded");
+        Level1DebugForceAccept.LogVerbose("[SCENE FLOW] " + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name + " loaded");
         Level1GameState.Instance.EnsureInitialized();
 
         // 1. Auto-discover references if they are not manually dragged in Inspector
@@ -129,10 +129,7 @@ public class MarketplaceManager : MonoBehaviour
         if (gazeController == null)
         {
             gazeController = buyerNPC.AddComponent<NPCGazeController>();
-            if (showDebugLogs)
-            {
-                Debug.Log("[MarketplaceManager] Automatically added NPCGazeController to BuyerNPC.");
-            }
+            Level1DebugForceAccept.LogVerbose("[MarketplaceManager] Automatically added NPCGazeController to BuyerNPC.");
         }
 
         // 4. Hide Conversation UI Canvas on scene start
@@ -227,20 +224,14 @@ public class MarketplaceManager : MonoBehaviour
             yield break;
         }
 
-        if (showDebugLogs)
-        {
-            Debug.Log("[MarketplaceManager] Moving BuyerNPC from SpawnPoint -> TradePoint");
-        }
+        Level1DebugForceAccept.LogTrade("[MARKET LOOP] Customer spawned and approaching stall.");
 
         // 2. Move NPC to Trade Point and wait until reached
         yield return StartCoroutine(WalkToDestinationRoutine(tradePoint.position));
 
         // 3. NPC Arrived at Stall - Orient smoothly
         buyerNPC.transform.rotation = tradePoint.rotation;
-        if (showDebugLogs)
-        {
-            Debug.Log("[MarketplaceManager] NPC reached TradePoint. Triggering browsing behavior.");
-        }
+        Level1DebugForceAccept.LogVerbose("[MarketplaceManager] NPC reached TradePoint. Triggering browsing behavior.");
 
         // Cache animator
         if (animator == null)
@@ -296,10 +287,7 @@ public class MarketplaceManager : MonoBehaviour
         StopNegotiationTimer();
 
         negotiationWasAccepted = wasAccepted;
-        if (showDebugLogs)
-        {
-            Debug.Log($"[MarketplaceManager] Negotiation concluded. Accepted: {wasAccepted}. Playing farewell and outcome animation.");
-        }
+        Level1DebugForceAccept.LogTrade($"[MARKET LOOP] Customer leaving stall. Accepted={wasAccepted}");
         StartCoroutine(ExitLifecycleRoutine());
     }
 
@@ -357,18 +345,12 @@ public class MarketplaceManager : MonoBehaviour
                 if (negotiationWasAccepted)
                 {
                     animator.SetTrigger("happy");
-                    if (showDebugLogs)
-                    {
-                        Debug.Log("[ANIM] Triggered Agree (happy) animation after speech complete");
-                    }
+                    Level1DebugForceAccept.LogVerbose("[ANIM] Triggered Agree (happy) animation after speech complete");
                 }
                 else
                 {
                     animator.SetTrigger("reject");
-                    if (showDebugLogs)
-                    {
-                        Debug.Log("[ANIM] Triggered Reject (reject) animation after speech complete");
-                    }
+                    Level1DebugForceAccept.LogVerbose("[ANIM] Triggered Reject (reject) animation after speech complete");
                 }
             }
         }
@@ -401,10 +383,7 @@ public class MarketplaceManager : MonoBehaviour
         }
 
         float nextCustomerGap = GetRespectBasedCustomerGap();
-        if (showDebugLogs)
-        {
-            Debug.Log($"[MarketplaceManager] NPC reached ExitPoint. Waiting {nextCustomerGap:0.0} seconds before resetting.");
-        }
+        Level1DebugForceAccept.LogTrade($"[MARKET LOOP] Customer left. Next customer gap chosen: {nextCustomerGap:0.0}s");
 
         // 5. Wait for a respect-based delay before spawning next customer
         if (!Level1GameState.Instance.MarketDayEnded)
@@ -428,9 +407,9 @@ public class MarketplaceManager : MonoBehaviour
         {
             StartCoroutine(StartBargainingLifecycle());
         }
-        else if (showDebugLogs)
+        else
         {
-            Debug.Log("[MARKET LOOP] Market day ended. No new negotiable customers will start.");
+            Level1DebugForceAccept.LogTrade("[MARKET LOOP] Market day ended. No new negotiable customers will start.");
         }
     }
 
@@ -527,10 +506,7 @@ public class MarketplaceManager : MonoBehaviour
         StopNegotiationTimer();
         ConfigureNegotiationPatience(buyerPatience);
 
-        if (showDebugLogs)
-        {
-            Debug.Log($"[MARKET LOOP] Starting idle patience tracking. Patience={buyerPatience}, first={firstReminderSeconds}s, second={secondReminderSeconds}s, walkAway={walkAwaySeconds}s");
-        }
+        Level1DebugForceAccept.LogVerbose($"[MARKET LOOP] Starting idle patience tracking. Patience={buyerPatience}, first={firstReminderSeconds}s, second={secondReminderSeconds}s, walkAway={walkAwaySeconds}s");
 
         negotiationIdleCoroutine = StartCoroutine(NegotiationIdleRoutine());
     }
@@ -593,10 +569,7 @@ public class MarketplaceManager : MonoBehaviour
                 {
                     negotiationIdleCoroutine = null;
 
-                    if (showDebugLogs)
-                    {
-                        Debug.Log($"[MARKET LOOP] Player idle patience expired after {idleSeconds:0.0}s. Triggering walk-away flow.");
-                    }
+                    Level1DebugForceAccept.LogTrade($"[MARKET LOOP] Player idle patience expired after {idleSeconds:0.0}s. Triggering walk-away flow.");
 
                     if (chatManager != null)
                     {
@@ -646,11 +619,6 @@ public class MarketplaceManager : MonoBehaviour
             int secondsToShow = Mathf.CeilToInt(remainingSeconds);
             if (secondsToShow != lastShownSeconds)
             {
-                if (showDebugLogs)
-                {
-                    Debug.Log($"[MARKET LOOP] Next customer arriving in {secondsToShow}s");
-                }
-
                 if (chatManager != null && chatManager.hudManager != null)
                 {
                     chatManager.hudManager.ShowNextCustomerCountdown(secondsToShow);
@@ -697,10 +665,7 @@ public class MarketplaceManager : MonoBehaviour
             yield break;
         }
 
-        if (showDebugLogs)
-        {
-            Debug.Log("[MARKET LOOP] Market day active. Starting negotiable customer lifecycle.");
-        }
+        Level1DebugForceAccept.LogTrade("[MARKET LOOP] Market day active. Starting negotiable customer lifecycle.");
 
         StartCoroutine(StartBargainingLifecycle());
     }
@@ -709,23 +674,23 @@ public class MarketplaceManager : MonoBehaviour
     {
         if (buyerPatience <= 3)
         {
-            firstReminderSeconds = 6;
-            secondReminderSeconds = 12;
-            walkAwaySeconds = Random.Range(20, 31);
+            firstReminderSeconds = 10;
+            secondReminderSeconds = 20;
+            walkAwaySeconds = Random.Range(30, 37);
             return;
         }
 
         if (buyerPatience <= 5)
         {
             firstReminderSeconds = 10;
-            secondReminderSeconds = 22;
-            walkAwaySeconds = Random.Range(35, 46);
+            secondReminderSeconds = 24;
+            walkAwaySeconds = Random.Range(38, 46);
             return;
         }
 
-        firstReminderSeconds = 15;
-        secondReminderSeconds = 35;
-        walkAwaySeconds = Random.Range(50, 61);
+        firstReminderSeconds = 10;
+        secondReminderSeconds = 30;
+        walkAwaySeconds = Random.Range(48, 58);
     }
 
     private float GetRespectBasedCustomerGap()
@@ -741,25 +706,25 @@ public class MarketplaceManager : MonoBehaviour
         float minGap;
         float maxGap;
 
-        if (reputation < 35f)
+        if (reputation < 40f)
         {
-            minGap = 18f;
-            maxGap = 25f;
+            minGap = 15f;
+            maxGap = 15f;
         }
         else if (reputation < 70f)
         {
             minGap = 10f;
-            maxGap = 16f;
+            maxGap = 10f;
         }
         else
         {
-            minGap = 4f;
-            maxGap = 8f;
+            minGap = 5f;
+            maxGap = 5f;
         }
 
         float selectedGap = Random.Range(minGap, maxGap);
 
-        Debug.Log($"[MARKET LOOP] Reputation={reputation:0.0}, selected next customer gap={selectedGap:0.0}s");
+        Level1DebugForceAccept.LogTrade($"[MARKET LOOP] Respect={reputation:0.0}, selected next customer gap={selectedGap:0.0}s");
 
         return selectedGap;
     }

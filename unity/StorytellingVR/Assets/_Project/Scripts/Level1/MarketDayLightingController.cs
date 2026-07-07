@@ -12,7 +12,7 @@ public class MarketDayLightingController : MonoBehaviour
     [SerializeField] private Color nightLightColor = new Color(1f, 0.62f, 0.34f, 1f);
     [SerializeField] private float dayLightIntensity = 1f;
     [SerializeField] private float nightLightIntensity = 0.45f;
-    [SerializeField] private Vector3 dayRotation = new Vector3(50f, -30f, 0f);
+    [SerializeField] private Vector3 dayRotation = new Vector3(45f, 90f, 0f);
     [SerializeField] private Vector3 nightRotation = new Vector3(18f, -95f, 0f);
 
     [Header("Ambient Lighting (Day to Evening)")]

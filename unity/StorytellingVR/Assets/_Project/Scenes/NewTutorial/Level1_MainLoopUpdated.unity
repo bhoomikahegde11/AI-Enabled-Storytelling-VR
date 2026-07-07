@@ -1814,13 +1814,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 211828322}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
-  m_LocalPosition: {x: -3.69088, y: 16.22, z: 7.37412}
+  m_LocalRotation: {x: 0.27059805, y: 0.6532815, z: -0.27059805, w: 0.6532815}
+  m_LocalPosition: {x: -3.69088, y: 21.81, z: 18.58}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1610630283}
-  m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+  m_LocalEulerAnglesHint: {x: 45, y: 90, z: 0}
 --- !u!114 &211828325
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9632,7 +9632,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 77.5, y: 292.9}
+  m_AnchoredPosition: {x: 558.18, y: 267.5}
   m_SizeDelta: {x: 1029.7, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1185333993
@@ -18053,10 +18053,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 73e6157f4cb5478b901ca6d125d1d2fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Level1DebugForceAccept
-  debugModeEnabled: 0
-  bypassScoopFulfillmentForTesting: 0
+  debugModeEnabled: 1
+  bypassScoopFulfillmentForTesting: 1
+  enableKeyboardDebugShortcuts: 0
+  enableKeyboardVoiceShortcut: 0
+  enableKeyboardResetShortcut: 0
+  enableVrTradePanelShortcut: 1
+  enableVerboseLogs: 0
+  enableTradeLogs: 1
+  enableVoiceLogs: 0
+  enableParserLogs: 1
   chatManager: {fileID: 1028356661}
   debugButton: 1
+  vrTradePanelButton: 0
 --- !u!1 &3000000001
 GameObject:
   m_ObjectHideFlags: 0

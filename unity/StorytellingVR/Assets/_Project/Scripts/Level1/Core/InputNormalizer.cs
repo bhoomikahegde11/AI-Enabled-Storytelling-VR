@@ -9,6 +9,7 @@ public static class InputNormalizer
         "varaha", "varahas", "price", "prices", "offer", "offers", "pay", "paying", "sell", "selling", "buy", "buying",
         "cost", "costs", "palam", "palams", "seer", "seers", "veesai", "viss", "manangu", "maund", "maunds", "bahar", "bahars",
         "candy", "candies", "kg", "kgs", "kilogram", "kilograms", "g", "gm", "gram", "grams", "quantity", "amount", "weight",
+        "bag", "bags",
         "pepper", "cardamom", "cinnamon", "clove", "turmeric", "deal", "agree", "accept", "take", "give", "want", "budget"
     };
     private static readonly string[] NumberWords =
@@ -60,8 +61,6 @@ public static class InputNormalizer
             .Replace("for bahars", "four bahars")
             .Replace("for candy", "four candy")
             .Replace("for candies", "four candies")
-            .Replace("for varaha", "four varaha")
-            .Replace("for varahas", "four varahas")
             .Replace("what is your offer", "your offer")
             .Replace("how much will you pay", "your offer")
             .Replace("what will you pay", "your offer")
@@ -128,17 +127,6 @@ public static class InputNormalizer
             .Replace("okay then", "okay")
             .Replace("all right", "okay");
 
-        if (awaitingPrice)
-        {
-            text = text
-                .Replace(" seventeen ", " 70 ")
-                .Replace(" seven ", " 70 ")
-                .Replace(" eighteen ", " 80 ")
-                .Replace(" eight ", " 80 ")
-                .Replace(" nineteen ", " 90 ")
-                .Replace(" nine ", " 90 ");
-        }
-
         StringBuilder cleaned = new StringBuilder(text.Length);
         foreach (char c in text)
         {
@@ -177,6 +165,11 @@ public static class InputNormalizer
         {
             string rawWord = words[i];
             string word = NormalizeWord(rawWord);
+            if (word == "for" && IsSafeForToFour(words, i, awaitingPrice))
+            {
+                word = "four";
+            }
+
             if (TryNormalizeDigitBridge(words, ref i, awaitingPrice, out string bridgedNumber))
             {
                 AppendToken(normalized, bridgedNumber);
@@ -193,6 +186,74 @@ public static class InputNormalizer
         }
 
         return normalized.ToString();
+    }
+
+    private static bool IsSafeForToFour(string[] words, int index, bool awaitingPrice)
+    {
+        string previous = index > 0 ? NormalizeWord(words[index - 1]) : string.Empty;
+        string next = index + 1 < words.Length ? NormalizeWord(words[index + 1]) : string.Empty;
+        string nextNext = index + 2 < words.Length ? NormalizeWord(words[index + 2]) : string.Empty;
+
+        if (LooksLikeSpokenNumberStart(next) || LooksLikeSpokenNumberStart(nextNext))
+        {
+            return false;
+        }
+
+        bool priceContext =
+            awaitingPrice ||
+            previous == "pay" ||
+            previous == "offer" ||
+            previous == "price" ||
+            previous == "make" ||
+            previous == "okay" ||
+            previous == "ok" ||
+            previous == "yes" ||
+            previous == "fine" ||
+            previous == "deal" ||
+            previous == "at" ||
+            next == "varaha" ||
+            next == "varahas" ||
+            next == "price" ||
+            next == "offer";
+
+        bool quantityContext =
+            next == "bag" ||
+            next == "bags" ||
+            next == "palam" ||
+            next == "palams" ||
+            next == "seer" ||
+            next == "seers" ||
+            next == "veesai" ||
+            next == "viss" ||
+            next == "kg" ||
+            next == "kgs" ||
+            next == "gram" ||
+            next == "grams";
+
+        return priceContext || quantityContext;
+    }
+
+    private static bool LooksLikeSpokenNumberStart(string word)
+    {
+        if (string.IsNullOrWhiteSpace(word))
+        {
+            return false;
+        }
+
+        if (Contains(NumberWords, word))
+        {
+            return true;
+        }
+
+        for (int i = 0; i < word.Length; i++)
+        {
+            if (!char.IsDigit(word[i]))
+            {
+                return false;
+            }
+        }
+
+        return word.Length > 0;
     }
 
     public static string[] Tokenize(string input)
@@ -246,7 +307,7 @@ public static class InputNormalizer
             return false;
         }
 
-        int maxLookAhead = Mathf.Min(words.Length - 1, index + 3);
+        int maxLookAhead = Mathf.Min(words.Length - 1, index + 4);
         int bestConsumed = 0;
         string bestNumber = null;
         for (int end = maxLookAhead; end >= index; end--)
@@ -256,13 +317,28 @@ public static class InputNormalizer
                 continue;
             }
 
-            if (!awaitingPrice && !IsNearContext(words, index, end) && words.Length > (end - index + 1))
+            bool hasNearbyTradeContext = IsNearContext(words, index, end);
+            bool isHundredShorthand = IsHundredShorthandSequence(words, index, end);
+
+            if (isHundredShorthand && !awaitingPrice && !hasNearbyTradeContext)
+            {
+                Debug.Log("[INPUT-NORMALIZER][NUMBER] Rejected shorthand number without price context: " +
+                          JoinTokens(words, index, end));
+                continue;
+            }
+
+            if (!awaitingPrice && !hasNearbyTradeContext && words.Length > (end - index + 1))
             {
                 continue;
             }
 
             bestConsumed = end - index + 1;
             bestNumber = ParseNumberSequence(words, index, end);
+            Debug.Log("[INPUT-NORMALIZER][NUMBER] Parsed sequence '" + JoinTokens(words, index, end) +
+                      "' -> " + bestNumber +
+                      " | awaitingPrice=" + awaitingPrice +
+                      " | nearbyTradeContext=" + hasNearbyTradeContext +
+                      " | shorthand=" + isHundredShorthand);
             break;
         }
 
@@ -273,6 +349,53 @@ public static class InputNormalizer
 
         normalizedNumber = bestNumber;
         index += bestConsumed - 1;
+        return true;
+    }
+
+    private static bool IsHundredShorthandSequence(string[] words, int start, int end)
+    {
+        if (start >= end || ContainsWord(words, start, end, "hundred"))
+        {
+            return false;
+        }
+
+        string first = NormalizeWord(words[start]);
+        if (ParseDigitWord(first) <= 0)
+        {
+            return false;
+        }
+
+        int nextIndex = start + 1;
+        while (nextIndex <= end && NormalizeWord(words[nextIndex]) == "and")
+        {
+            nextIndex++;
+        }
+
+        if (nextIndex > end)
+        {
+            return false;
+        }
+
+        int secondValue = ParseNumberToken(NormalizeWord(words[nextIndex]));
+        if (secondValue < 10 || secondValue >= 100)
+        {
+            return false;
+        }
+
+        for (int i = nextIndex + 1; i <= end; i++)
+        {
+            string word = NormalizeWord(words[i]);
+            if (word == "and")
+            {
+                continue;
+            }
+
+            if (ParseDigitWord(word) < 0)
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -495,6 +618,35 @@ public static class InputNormalizer
         builder.Append(token);
     }
 
+    private static bool ContainsWord(string[] words, int start, int end, string target)
+    {
+        for (int i = start; i <= end; i++)
+        {
+            if (NormalizeWord(words[i]) == target)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string JoinTokens(string[] words, int start, int end)
+    {
+        StringBuilder builder = new StringBuilder();
+        for (int i = start; i <= end; i++)
+        {
+            if (builder.Length > 0)
+            {
+                builder.Append(' ');
+            }
+
+            builder.Append(NormalizeWord(words[i]));
+        }
+
+        return builder.ToString();
+    }
+
     private static bool Contains(string[] values, string candidate)
     {
         foreach (string value in values)
@@ -514,12 +666,18 @@ public static class InputNormalizer
     Normalize("one hundred") => "100"
     Normalize("one hundred and ten") => "110"
     Normalize("hundred and ten") => "110"
-    Normalize("one ten") => "110"
+    Normalize("one ten") => "110" (price/offer context only)
+    Normalize("one fifty") => "150" (price/offer context only)
+    Normalize("one hundred fifty") => "150"
+    Normalize("one hundred and fifty") => "150"
+    Normalize("hundred and fifty") => "150"
+    Normalize("nine hundred and ninety nine varahas") => "999 varahas"
     Normalize("ninety eight") => "98"
     Normalize("twenty five") => "25"
     Normalize("five hundred varahas") => "500 varahas"
     Normalize("i will give it for five hundred") => "i give it for 500"
     Normalize("i offer ninety eight") => "i offer 98"
+    Normalize("i'll pay one fifty") => "i ll pay 150"
     Normalize("deal for one hundred and twenty") => "deal for 120"
     Normalize("are eager for five hundred") => "i give 500"
     */
