@@ -962,8 +962,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.012731102, y: 0}
   m_AnchorMax: {x: 1, y: 0.97817606}
-  m_AnchoredPosition: {x: 116.599976, y: 32.30001}
-  m_SizeDelta: {x: -233.2, y: 64.599976}
+  m_AnchoredPosition: {x: 247.49997, y: 32.30001}
+  m_SizeDelta: {x: -495.00006, y: 64.599976}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!225 &122591758
 CanvasGroup:
@@ -1334,6 +1334,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 180008335}
+  - component: {fileID: 180008336}
   m_Layer: 0
   m_Name: GAME_SYSTEM
   m_TagString: Untagged
@@ -1361,6 +1362,20 @@ Transform:
   - {fileID: 2300400002}
   m_Father: {fileID: 1269786955}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &180008336
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 180008334}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2130427f8b4cf2944ac43d4ababbe303, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Level1GameState
+  debugForceCharacterId: 
+  marketDayDurationSeconds: 30
 --- !u!1 &185621568
 GameObject:
   m_ObjectHideFlags: 0
@@ -3183,7 +3198,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8143581533455440897, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -1.6539501
+      value: -0.5
       objectReference: {fileID: 0}
     - target: {fileID: 8143581533455440897, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
       propertyPath: m_LocalRotation.w
@@ -9429,7 +9444,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 25.19}
+  m_AnchoredPosition: {x: 0, y: 141.68}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1001 &1173886058
@@ -9617,7 +9632,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 77.5, y: 190.5}
+  m_AnchoredPosition: {x: 77.5, y: 292.9}
   m_SizeDelta: {x: 1029.7, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1185333993
@@ -13264,7 +13279,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 438.6, y: 124.5}
+  m_AnchoredPosition: {x: 368.51, y: 124.5}
   m_SizeDelta: {x: 350, y: 459}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1584703339
@@ -13531,6 +13546,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1610630283}
+  - component: {fileID: 1610630284}
   m_Layer: 0
   m_Name: ENVIROMENT
   m_TagString: Untagged
@@ -13564,6 +13580,30 @@ Transform:
   - {fileID: 789747609}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1610630284
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1610630282}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d2b8bfed8ca4b249a95d5db69f96e21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MarketDayLightingController
+  dayLightColor: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
+  nightLightColor: {r: 1, g: 0.62, b: 0.34, a: 1}
+  dayLightIntensity: 1
+  nightLightIntensity: 0.45
+  dayRotation: {x: 50, y: -30, z: 0}
+  nightRotation: {x: 18, y: -95, z: 0}
+  dayAmbientColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
+  nightAmbientColor: {r: 0.42, g: 0.24, b: 0.16, a: 1}
+  dayAmbientIntensity: 1
+  nightAmbientIntensity: 0.55
+  dayBackgroundTint: {r: 1, g: 1, b: 1, a: 1}
+  eveningBackgroundTint: {r: 1, g: 0.78, b: 0.6, a: 1}
 --- !u!1001 &1640086614
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15240,7 +15280,7 @@ Transform:
   m_GameObject: {fileID: 1811406953}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.562, y: -2.941, z: -1.662}
+  m_LocalPosition: {x: -0.562, y: -2.941, z: -0.83}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -18013,7 +18053,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 73e6157f4cb5478b901ca6d125d1d2fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Level1DebugForceAccept
-  debugModeEnabled: 1
+  debugModeEnabled: 0
+  bypassScoopFulfillmentForTesting: 0
   chatManager: {fileID: 1028356661}
   debugButton: 1
 --- !u!1 &3000000001

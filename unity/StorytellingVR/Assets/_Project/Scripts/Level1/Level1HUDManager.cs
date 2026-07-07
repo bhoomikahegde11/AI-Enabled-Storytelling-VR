@@ -93,6 +93,10 @@ public class Level1HUDManager : MonoBehaviour
     private Vector3 ledgerRewardOriginalScale = Vector3.one;
     [SerializeField] private float tradeCompleteIntroScaleMultiplier = 0.85f;
     private bool hasWarnedMissingNextCustomerCountdownText;
+    private bool showNextCustomerCountdownOverride;
+    private bool marketDayTimerActive;
+    private bool marketDayEndedMessageActive;
+    private int marketDayTimerSecondsRemaining = -1;
 
     private void Start()
     {
@@ -127,6 +131,8 @@ public class Level1HUDManager : MonoBehaviour
         StartInputIdleAnimation();
         HidePlayerInputPanelImmediate();
         HideNextCustomerCountdown();
+        SubscribeToMarketDayEvents();
+        RefreshMarketDayTimerFromState();
 
         // Initialize Merchant Honour UI
         if (reputationSlider != null)
@@ -154,6 +160,11 @@ public class Level1HUDManager : MonoBehaviour
             c.a = 0f;
             reputationDeltaText.color = c;
         }
+    }
+
+    private void OnDestroy()
+    {
+        UnsubscribeFromMarketDayEvents();
     }
 
     private void Update()
@@ -1160,6 +1171,12 @@ public class Level1HUDManager : MonoBehaviour
             return;
         }
 
+        if (marketDayEndedMessageActive)
+        {
+            return;
+        }
+
+        showNextCustomerCountdownOverride = true;
         nextCustomerCountdownText.gameObject.SetActive(true);
         nextCustomerCountdownText.text = $"Next customer arriving in {Mathf.Max(0, secondsRemaining)}s...";
     }
@@ -1171,10 +1188,126 @@ public class Level1HUDManager : MonoBehaviour
             return;
         }
 
-        nextCustomerCountdownText.gameObject.SetActive(false);
+        showNextCustomerCountdownOverride = false;
+        RefreshMarketDayTimerDisplay();
     }
 
     public bool HasNextCustomerCountdownText => nextCustomerCountdownText != null;
+
+    private void SubscribeToMarketDayEvents()
+    {
+        Level1GameState gameState = Level1GameState.Instance;
+
+        gameState.MarketDayStartedEvent -= HandleMarketDayStarted;
+        gameState.MarketDayTickEvent -= HandleMarketDayTick;
+        gameState.MarketDayEndedEvent -= HandleMarketDayEnded;
+        gameState.MarketDayStartedEvent += HandleMarketDayStarted;
+        gameState.MarketDayTickEvent += HandleMarketDayTick;
+        gameState.MarketDayEndedEvent += HandleMarketDayEnded;
+    }
+
+    private void UnsubscribeFromMarketDayEvents()
+    {
+        Level1GameState gameState = Level1GameState.ExistingInstance;
+        if (gameState == null)
+        {
+            return;
+        }
+
+        gameState.MarketDayStartedEvent -= HandleMarketDayStarted;
+        gameState.MarketDayTickEvent -= HandleMarketDayTick;
+        gameState.MarketDayEndedEvent -= HandleMarketDayEnded;
+    }
+
+    private void RefreshMarketDayTimerFromState()
+    {
+        Level1GameState gameState = Level1GameState.ExistingInstance;
+        if (gameState == null)
+        {
+            return;
+        }
+
+        if (gameState.MarketDayStarted && !gameState.MarketDayEnded)
+        {
+            marketDayTimerActive = true;
+            marketDayEndedMessageActive = false;
+            marketDayTimerSecondsRemaining = Mathf.CeilToInt(gameState.MarketDayRemainingSeconds);
+        }
+        else if (gameState.MarketDayEnded)
+        {
+            marketDayTimerActive = false;
+            marketDayEndedMessageActive = true;
+            showNextCustomerCountdownOverride = false;
+            marketDayTimerSecondsRemaining = 0;
+        }
+
+        RefreshMarketDayTimerDisplay();
+    }
+
+    private void HandleMarketDayStarted()
+    {
+        marketDayTimerActive = true;
+        marketDayEndedMessageActive = false;
+        Level1GameState gameState = Level1GameState.ExistingInstance;
+        marketDayTimerSecondsRemaining = gameState != null
+            ? Mathf.CeilToInt(gameState.MarketDayRemainingSeconds)
+            : 720;
+        RefreshMarketDayTimerDisplay();
+    }
+
+    private void HandleMarketDayTick(float remainingSeconds)
+    {
+        marketDayTimerActive = true;
+        marketDayTimerSecondsRemaining = Mathf.CeilToInt(remainingSeconds);
+        RefreshMarketDayTimerDisplay();
+    }
+
+    private void HandleMarketDayEnded()
+    {
+        marketDayTimerActive = false;
+        marketDayEndedMessageActive = true;
+        showNextCustomerCountdownOverride = false;
+        marketDayTimerSecondsRemaining = 0;
+        RefreshMarketDayTimerDisplay();
+    }
+
+    private void RefreshMarketDayTimerDisplay()
+    {
+        if (nextCustomerCountdownText == null)
+        {
+            return;
+        }
+
+        if (marketDayEndedMessageActive)
+        {
+            nextCustomerCountdownText.gameObject.SetActive(true);
+            nextCustomerCountdownText.text = "No more customers. The market day has ended.";
+            return;
+        }
+
+        if (showNextCustomerCountdownOverride)
+        {
+            nextCustomerCountdownText.gameObject.SetActive(true);
+            return;
+        }
+
+        if (marketDayTimerActive)
+        {
+            nextCustomerCountdownText.gameObject.SetActive(true);
+            nextCustomerCountdownText.text = $"Market Day: {FormatClock(marketDayTimerSecondsRemaining)}";
+            return;
+        }
+
+        nextCustomerCountdownText.gameObject.SetActive(false);
+    }
+
+    private static string FormatClock(int totalSeconds)
+    {
+        int safeSeconds = Mathf.Max(0, totalSeconds);
+        int minutes = safeSeconds / 60;
+        int seconds = safeSeconds % 60;
+        return $"{minutes:00}:{seconds:00}";
+    }
 
     private void WarnMissingHudTextOnce(ref bool hasWarned, string objectName)
     {

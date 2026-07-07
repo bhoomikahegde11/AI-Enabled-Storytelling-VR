@@ -42,6 +42,7 @@ public class MarketplaceManager : MonoBehaviour
     private bool negotiationWasAccepted = false;
     private Coroutine negotiationIdleCoroutine;
     private Coroutine nextCustomerCountdownCoroutine;
+    private Coroutine marketDayStartupCoroutine;
     private bool isAwaitingPlayerInput;
     private float playerIdleStartedAt;
     private int reminderStage;
@@ -154,7 +155,8 @@ public class MarketplaceManager : MonoBehaviour
 
         // 6. Reset NPC position and begin lifecycle loop
         ResetNPCToSpawnPoint();
-        StartCoroutine(StartBargainingLifecycle());
+        Level1GameState.Instance.StartMarketDay();
+        marketDayStartupCoroutine = StartCoroutine(WaitForMarketDayThenStartLifecycle());
     }
 
     /// <summary>
@@ -191,6 +193,11 @@ public class MarketplaceManager : MonoBehaviour
     /// </summary>
     private IEnumerator StartBargainingLifecycle()
     {
+        if (!Level1GameState.Instance.MarketDayStarted || Level1GameState.Instance.MarketDayEnded)
+        {
+            yield break;
+        }
+
         StopNextCustomerCountdown();
 
         if (chatManager != null)
@@ -210,6 +217,15 @@ public class MarketplaceManager : MonoBehaviour
         }
 
         yield return new WaitForSeconds(1.0f); // Load buffer
+
+        if (Level1GameState.Instance.MarketDayEnded)
+        {
+            if (conversationUI != null && !Level1GameState.Instance.MarketDayEnded)
+            {
+                conversationUI.SetActive(false);
+            }
+            yield break;
+        }
 
         if (showDebugLogs)
         {
@@ -391,10 +407,13 @@ public class MarketplaceManager : MonoBehaviour
         }
 
         // 5. Wait for a respect-based delay before spawning next customer
-        yield return StartCoroutine(NextCustomerCountdownRoutine(nextCustomerGap));
+        if (!Level1GameState.Instance.MarketDayEnded)
+        {
+            yield return StartCoroutine(NextCustomerCountdownRoutine(nextCustomerGap));
+        }
 
         // 6. Hide conversation canvas during teleportation step
-        if (conversationUI != null)
+        if (conversationUI != null && !Level1GameState.Instance.MarketDayEnded)
         {
             conversationUI.SetActive(false);
         }
@@ -405,7 +424,14 @@ public class MarketplaceManager : MonoBehaviour
         isTransitioning = false;
 
         // 8. Repeat lifecycle loop
-        StartCoroutine(StartBargainingLifecycle());
+        if (!Level1GameState.Instance.MarketDayEnded)
+        {
+            StartCoroutine(StartBargainingLifecycle());
+        }
+        else if (showDebugLogs)
+        {
+            Debug.Log("[MARKET LOOP] Market day ended. No new negotiable customers will start.");
+        }
     }
 
     /// <summary>
@@ -589,7 +615,18 @@ public class MarketplaceManager : MonoBehaviour
     {
         StopNextCustomerCountdown();
         nextCustomerCountdownCoroutine = StartCoroutine(NextCustomerCountdownDisplayRoutine(nextCustomerGap));
-        yield return new WaitForSeconds(nextCustomerGap);
+        float elapsed = 0f;
+        while (elapsed < nextCustomerGap)
+        {
+            if (Level1GameState.Instance.MarketDayEnded)
+            {
+                StopNextCustomerCountdown();
+                yield break;
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
         StopNextCustomerCountdown();
     }
 
@@ -600,6 +637,12 @@ public class MarketplaceManager : MonoBehaviour
 
         while (remainingSeconds > 0f)
         {
+            if (Level1GameState.Instance.MarketDayEnded)
+            {
+                nextCustomerCountdownCoroutine = null;
+                yield break;
+            }
+
             int secondsToShow = Mathf.CeilToInt(remainingSeconds);
             if (secondsToShow != lastShownSeconds)
             {
@@ -640,6 +683,26 @@ public class MarketplaceManager : MonoBehaviour
         {
             chatManager.hudManager.HideNextCustomerCountdown();
         }
+    }
+
+    private IEnumerator WaitForMarketDayThenStartLifecycle()
+    {
+        while (!Level1GameState.Instance.MarketDayStarted && !Level1GameState.Instance.MarketDayEnded)
+        {
+            yield return null;
+        }
+
+        if (Level1GameState.Instance.MarketDayEnded)
+        {
+            yield break;
+        }
+
+        if (showDebugLogs)
+        {
+            Debug.Log("[MARKET LOOP] Market day active. Starting negotiable customer lifecycle.");
+        }
+
+        StartCoroutine(StartBargainingLifecycle());
     }
 
     private void ConfigureNegotiationPatience(int buyerPatience)

@@ -3,6 +3,8 @@ using UnityEngine;
 // TEMP DEBUG: Inspector-toggle Quest debug accept button for marketplace fulfillment testing.
 public class Level1DebugForceAccept : MonoBehaviour
 {
+    public static Level1DebugForceAccept Instance { get; private set; }
+
     public enum DebugButtonOption
     {
         SecondaryButtonY = 0,
@@ -12,6 +14,7 @@ public class Level1DebugForceAccept : MonoBehaviour
 
     [Header("TEMP DEBUG")]
     public bool debugModeEnabled = false;
+    public bool bypassScoopFulfillmentForTesting = false;
     public ChatManager chatManager;
     public DebugButtonOption debugButton = DebugButtonOption.SecondaryButtonX;
 
@@ -20,10 +23,20 @@ public class Level1DebugForceAccept : MonoBehaviour
 
     private void Awake()
     {
+        Instance = this;
+
         // TEMP DEBUG: Auto-find ChatManager if the scene ref is missing.
         if (chatManager == null)
         {
             chatManager = FindFirstObjectByType<ChatManager>();
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
         }
     }
 
@@ -84,5 +97,10 @@ public class Level1DebugForceAccept : MonoBehaviour
             DebugButtonOption.Start => OVRInput.GetDown(OVRInput.Button.Start),
             _ => false
         };
+    }
+
+    public static bool ShouldBypassScoopFulfillment()
+    {
+        return Instance != null && Instance.bypassScoopFulfillmentForTesting;
     }
 }

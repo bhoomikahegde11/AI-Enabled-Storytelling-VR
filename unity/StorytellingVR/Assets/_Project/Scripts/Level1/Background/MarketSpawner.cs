@@ -26,7 +26,12 @@ public class MarketSpawner : MonoBehaviour
 
     IEnumerator SpawnLoop()
     {
-        while (true)
+        while (!Level1GameState.Instance.MarketDayStarted && !Level1GameState.Instance.MarketDayEnded)
+        {
+            yield return null;
+        }
+
+        while (!Level1GameState.Instance.MarketDayEnded)
         {
             if (activeNPCs < maxNPCs)
             {
@@ -37,6 +42,8 @@ public class MarketSpawner : MonoBehaviour
                 Random.Range(6f, 12f)
             );
         }
+
+        Debug.Log("[MARKET SPAWNER] Market day ended. Background spawning stopped.");
     }
 
     void SpawnNPC()

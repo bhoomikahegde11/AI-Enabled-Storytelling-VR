@@ -1259,6 +1259,12 @@ public void OnVoiceInput(string spokenText)
         {
             Debug.LogWarning("[FULFILLMENT] Pending accepted trade created, but OrderManager was not found.");
         }
+
+        if (Level1DebugForceAccept.ShouldBypassScoopFulfillment())
+        {
+            Debug.Log("[TEMP DEBUG] bypassScoopFulfillmentForTesting is enabled. Completing accepted fulfillment without scooping.");
+            CompleteAcceptedFulfillment();
+        }
     }
 
     public bool TryHandleNegotiationTimeout(string finalLine = "")
