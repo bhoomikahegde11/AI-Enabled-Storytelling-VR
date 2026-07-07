@@ -2898,7 +2898,6 @@ Transform:
   - {fileID: 1688391583}
   - {fileID: 1798995353}
   - {fileID: 150374338}
-  - {fileID: 751683448}
   - {fileID: 667100200}
   - {fileID: 305081020}
   m_Father: {fileID: 1198942227}
@@ -3227,8 +3226,8 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 140073567}
   m_LocalRotation: {x: -0, y: 0.33397025, z: -0, w: 0.9425836}
-  m_LocalPosition: {x: 0, y: 0, z: 13.1}
-  m_LocalScale: {x: 0.0071142768, y: 0.0010556561, z: 0.0010556561}
+  m_LocalPosition: {x: 0, y: 0, z: 8.406897}
+  m_LocalScale: {x: 0.02285484, y: 0.0033913285, z: 0.0033913283}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2110206689}
@@ -3238,11 +3237,11 @@ RectTransform:
   - {fileID: 668068415}
   - {fileID: 156964897}
   - {fileID: 1423544396}
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1782827222}
   m_LocalEulerAnglesHint: {x: 0, y: 39.02, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: -4.62, y: 0.177}
+  m_AnchoredPosition: {x: -103.86891, y: -2.997292}
   m_SizeDelta: {x: 228, y: 995}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &140073572
@@ -11740,8 +11739,9 @@ GameObject:
   - component: {fileID: 604587416}
   - component: {fileID: 604587415}
   - component: {fileID: 604587414}
+  - component: {fileID: 604587417}
   m_Layer: 0
-  m_Name: TriggerCube
+  m_Name: NPC_InteractionTrigger
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11755,12 +11755,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 604587411}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -111.450485, y: -6.521439, z: 5.9654546}
+  m_LocalScale: {x: 3.212532, y: 3.2125313, z: 3.212532}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1094042834}
+  m_Father: {fileID: 1782827222}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!65 &604587414
 BoxCollider:
@@ -11840,6 +11840,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 604587411}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &604587417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 604587411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7521bccb4fe6774494da7aed990309a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NPCInteraction
+  dialogue: {fileID: 11400000, guid: 304066c3b2b1d2445b4bc3d8cda25d18, type: 2}
+  prompt: {fileID: 93759626}
 --- !u!1 &605785208
 GameObject:
   m_ObjectHideFlags: 0
@@ -13923,7 +13937,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 124408304}
+    m_TransformParent: {fileID: 1782827222}
     m_Modifications:
     - target: {fileID: 2082649019093156146, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
       propertyPath: m_Enabled
@@ -13935,15 +13949,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8143581533455440897, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
       propertyPath: m_LocalScale.x
-      value: 3.321274
+      value: 3.3212738
       objectReference: {fileID: 0}
     - target: {fileID: 8143581533455440897, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
       propertyPath: m_LocalScale.y
-      value: 3.321274
+      value: 3.3212743
       objectReference: {fileID: 0}
     - target: {fileID: 8143581533455440897, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
       propertyPath: m_LocalScale.z
-      value: 3.3212743
+      value: 3.3212748
       objectReference: {fileID: 0}
     - target: {fileID: 8143581533455440897, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
       propertyPath: m_LocalPosition.x
@@ -13996,35 +14010,13 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 8811293695563957947, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 751683450}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
 --- !u!4 &751683448 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8143581533455440897, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
   m_PrefabInstance: {fileID: 751683447}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &751683449 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8811293695563957947, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
-  m_PrefabInstance: {fileID: 751683447}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &751683450
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 751683449}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a7521bccb4fe6774494da7aed990309a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NPCInteraction
-  dialogue: {fileID: 11400000, guid: 304066c3b2b1d2445b4bc3d8cda25d18, type: 2}
-  prompt: {fileID: 0}
 --- !u!1 &753067324
 GameObject:
   m_ObjectHideFlags: 0
@@ -20082,7 +20074,6 @@ Transform:
   m_Children:
   - {fileID: 1818574922}
   - {fileID: 227245685}
-  - {fileID: 604587412}
   m_Father: {fileID: 1309237752}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1094229126
@@ -31816,6 +31807,40 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1779790202}
   m_Mesh: {fileID: -7415634353411098943, guid: 9961594622026314e902f484642e7456, type: 3}
+--- !u!1 &1782827221
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1782827222}
+  m_Layer: 0
+  m_Name: Local_NPC_Narasappa
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1782827222
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1782827221}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 27.712418, y: 1.11, z: 10.483093}
+  m_LocalScale: {x: 0.311281, y: 0.311281, z: 0.311281}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 604587412}
+  - {fileID: 751683448}
+  - {fileID: 140073571}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1787740546
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -38913,6 +38938,6 @@ SceneRoots:
   - {fileID: 991342856}
   - {fileID: 64777834}
   - {fileID: 1606039915}
+  - {fileID: 1782827222}
   - {fileID: 1309237752}
   - {fileID: 23441722}
-  - {fileID: 140073571}
