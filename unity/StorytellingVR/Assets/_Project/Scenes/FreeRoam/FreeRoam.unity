@@ -445,6 +445,7 @@ GameObject:
   - component: {fileID: 23441725}
   - component: {fileID: 23441724}
   - component: {fileID: 23441723}
+  - component: {fileID: 23441727}
   m_Layer: 0
   m_Name: FreeRoamObjects
   m_TagString: Untagged
@@ -525,6 +526,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 92a80cdf2ab87cb4fbc760bb3cf74575, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FreeRoamIntroFlow
+--- !u!114 &23441727
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 23441721}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e9f34037cfe38d4194eff64ef0d27ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NPCQuestionUIManager
+  canvas: {fileID: 140073567}
+  buttons:
+  - {fileID: 231755583}
+  - {fileID: 1232580327}
+  - {fileID: 668068416}
+  - {fileID: 156964898}
+  buttonTexts:
+  - {fileID: 1341436960}
+  - {fileID: 1926149077}
+  - {fileID: 744546640}
+  - {fileID: 850253519}
 --- !u!1 &31644691
 GameObject:
   m_ObjectHideFlags: 0
@@ -13972,13 +13996,35 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8811293695563957947, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 751683450}
   m_SourcePrefab: {fileID: 100100000, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
 --- !u!4 &751683448 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8143581533455440897, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
   m_PrefabInstance: {fileID: 751683447}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &751683449 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8811293695563957947, guid: 33bb3c9c6dd91c046b146dd511cb522e, type: 3}
+  m_PrefabInstance: {fileID: 751683447}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &751683450
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 751683449}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7521bccb4fe6774494da7aed990309a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NPCInteraction
+  dialogue: {fileID: 11400000, guid: 304066c3b2b1d2445b4bc3d8cda25d18, type: 2}
+  prompt: {fileID: 0}
 --- !u!1 &753067324
 GameObject:
   m_ObjectHideFlags: 0
