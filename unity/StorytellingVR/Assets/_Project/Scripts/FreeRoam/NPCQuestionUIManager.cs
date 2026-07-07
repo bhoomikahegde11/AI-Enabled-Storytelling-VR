@@ -6,17 +6,18 @@ public class NPCQuestionUIManager : MonoBehaviour
 {
     public static NPCQuestionUIManager Instance;
 
-    [Header("UI")]
-    public GameObject canvas;
+    [Header("Question Canvas")]
+    public GameObject questionCanvas;
 
     [Header("Question Buttons")]
-    public Button[] buttons;
-    public TMP_Text[] buttonTexts;
+    public Button[] questionButtons;
+    public TMP_Text[] questionButtonTexts;
+
+    [Header("Controller Rays")]
+    public GameObject leftRay;
+    public GameObject rightRay;
 
     private NPCDialogueData currentDialogue;
-    private bool isOpen = false;
-
-    public bool IsOpen => isOpen;
 
     private void Awake()
     {
@@ -25,37 +26,50 @@ public class NPCQuestionUIManager : MonoBehaviour
 
     private void Start()
     {
-        if (canvas != null)
-            canvas.SetActive(false);
+        if (questionCanvas != null)
+            questionCanvas.SetActive(false);
+
+        SetRays(false);
     }
 
-    public void Open(NPCDialogueData data)
+    public void Open(NPCDialogueData dialogue)
     {
-        currentDialogue = data;
-        isOpen = true;
+        currentDialogue = dialogue;
 
-        canvas.SetActive(true);
+        questionCanvas.SetActive(true);
+        SetRays(true);
 
-        for (int i = 0; i < buttons.Length; i++)
+        for (int i = 0; i < questionButtons.Length; i++)
         {
             int index = i;
 
-            if (i < data.questions.Length)
+            if (i < dialogue.questions.Length)
             {
-                buttons[i].gameObject.SetActive(true);
-                buttonTexts[i].text = data.questions[i].question;
+                questionButtons[i].gameObject.SetActive(true);
+                questionButtonTexts[i].text = dialogue.questions[i].question;
 
-                buttons[i].onClick.RemoveAllListeners();
-                buttons[i].onClick.AddListener(() =>
-                {
-                    AskQuestion(index);
-                });
+                questionButtons[i].onClick.RemoveAllListeners();
+                questionButtons[i].onClick.AddListener(() => AskQuestion(index));
             }
             else
             {
-                buttons[i].gameObject.SetActive(false);
+                questionButtons[i].gameObject.SetActive(false);
             }
         }
+
+        Debug.Log("[QUESTION UI] Opened");
+    }
+
+    public void Close()
+    {
+        currentDialogue = null;
+
+        if (questionCanvas != null)
+            questionCanvas.SetActive(false);
+
+        SetRays(false);
+
+        Debug.Log("[QUESTION UI] Closed");
     }
 
     private void AskQuestion(int index)
@@ -70,12 +84,12 @@ public class NPCQuestionUIManager : MonoBehaviour
         );
     }
 
-    public void Close()
+    private void SetRays(bool active)
     {
-        isOpen = false;
-        currentDialogue = null;
+        if (leftRay != null)
+            leftRay.SetActive(active);
 
-        if (canvas != null)
-            canvas.SetActive(false);
+        if (rightRay != null)
+            rightRay.SetActive(active);
     }
 }
