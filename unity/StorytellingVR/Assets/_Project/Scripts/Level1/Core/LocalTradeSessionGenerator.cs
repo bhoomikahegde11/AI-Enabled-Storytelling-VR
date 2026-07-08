@@ -57,10 +57,13 @@ public class LocalTradeSessionGenerator
         float frustration = GetStartingFrustration(buyerPersonality) + GetFrustrationModifierForReputation(reputation);
         float desperation = GetDesperation(buyerPersonality) + GetDesperationModifierForReputation(reputation);
 
-        Debug.Log("[CUSTOMER] Selected dialogue character: " + (selectedCharacter != null ? selectedCharacter.characterId : "abdul_rahman"));
-        Debug.Log("[CUSTOMER] Display name: " + buyerName);
-        Debug.Log("[CUSTOMER] Personality: " + buyerPersonality);
-        Debug.Log("[CUSTOMER] Reputation bias: " + reputation + ", Wealth: " + wealthType);
+        Level1DebugForceAccept.LogTrade("[CUSTOMER] character=" + (selectedCharacter != null ? selectedCharacter.characterId : "abdul_rahman") +
+                                        " | buyer=" + buyerName +
+                                        " | personality=" + buyerPersonality +
+                                        " | wealth=" + wealthType +
+                                        " | marketValue=" + marketValue +
+                                        " | startingOffer=" + startingOffer +
+                                        " | buyerMaxOffer=" + maxAcceptablePrice);
 
         return new LocalGeneratedTradeSession
         {
@@ -333,66 +336,56 @@ public class LocalTradeSessionGenerator
 
     private static float GetStartMultiplier(string buyerPersonality, string wealthType)
     {
-        float wealthBias = 1f;
-        switch (wealthType)
+        Vector2 range = wealthType switch
         {
-            case "Low":
-                wealthBias = 0.92f;
-                break;
-            case "Medium":
-                wealthBias = 1f;
-                break;
-            case "High":
-                wealthBias = 1.08f;
-                break;
-            case "Very High":
-                wealthBias = 1.15f;
-                break;
-        }
+            "Low" => new Vector2(0.85f, 0.93f),
+            "Medium" => new Vector2(0.92f, 1.0f),
+            "High" => new Vector2(0.98f, 1.06f),
+            "Very High" => new Vector2(1.02f, 1.1f),
+            _ => new Vector2(0.92f, 1.0f)
+        };
 
         switch (buyerPersonality)
         {
             case "Friendly":
-                return 0.86f * wealthBias;
+                range += new Vector2(0.03f, 0.05f);
+                break;
             case "Strict":
-                return 0.72f * wealthBias;
+                range += new Vector2(-0.02f, -0.01f);
+                break;
             case "Impatient":
-                return 0.78f * wealthBias;
-            default:
-                return 0.8f * wealthBias;
+                range += new Vector2(0f, 0.02f);
+                break;
         }
+
+        return Random.Range(range.x, range.y);
     }
 
     private static float GetMaxMultiplier(string buyerPersonality, string wealthType)
     {
-        float wealthBias = 1f;
-        switch (wealthType)
+        Vector2 range = wealthType switch
         {
-            case "Low":
-                wealthBias = 0.95f;
-                break;
-            case "Medium":
-                wealthBias = 1.08f;
-                break;
-            case "High":
-                wealthBias = 1.18f;
-                break;
-            case "Very High":
-                wealthBias = 1.28f;
-                break;
-        }
+            "Low" => new Vector2(1.1f, 1.2f),
+            "Medium" => new Vector2(1.2f, 1.3f),
+            "High" => new Vector2(1.3f, 1.42f),
+            "Very High" => new Vector2(1.4f, 1.55f),
+            _ => new Vector2(1.2f, 1.3f)
+        };
 
         switch (buyerPersonality)
         {
             case "Friendly":
-                return 1.12f * wealthBias;
+                range += new Vector2(0.04f, 0.08f);
+                break;
             case "Strict":
-                return 1.0f * wealthBias;
+                range += new Vector2(-0.03f, -0.01f);
+                break;
             case "Impatient":
-                return 1.04f * wealthBias;
-            default:
-                return 1.08f * wealthBias;
+                range += new Vector2(0f, 0.03f);
+                break;
         }
+
+        return Random.Range(range.x, range.y);
     }
 
     private static int GetBuyerPatience(string buyerPersonality)

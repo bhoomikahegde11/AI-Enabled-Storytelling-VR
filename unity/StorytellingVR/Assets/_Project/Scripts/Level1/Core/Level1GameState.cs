@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 public class LocalTradeState
@@ -31,6 +32,10 @@ public class LocalTradeState
     public int tooExpensiveCount;
     public int rejectionCount;
     public int counterCount;
+    public int actualPriceOfferCount;
+    public int softBargainCount;
+    public int hardRejectCount;
+    public int repeatedOverMaxCount;
     public int hostileCount;
     public int outOfWorldCount;
     public int noCount;
@@ -46,11 +51,16 @@ public class LocalTradeState
 public class Level1GameState : MonoBehaviour
 {
     private static Level1GameState instance;
+    private const float DefaultMarketDayDurationSeconds = 720f;
+    private const float MinimumMarketDayDurationSeconds = 30f;
 
     #if UNITY_EDITOR
     [Header("Editor Debug")]
     [SerializeField] private string debugForceCharacterId = "";
     #endif
+
+    [Header("Market Day")]
+    [SerializeField] private float marketDayDurationSeconds = DefaultMarketDayDurationSeconds;
 
     public static Level1GameState Instance
     {
@@ -76,6 +86,10 @@ public class Level1GameState : MonoBehaviour
     private LocalTradeState activeTrade;
     private int lastDealReferencePrice;
     private bool initialized;
+    private Coroutine marketDayTimerCoroutine;
+    private float marketDayStartedAt = -1f;
+    private float marketDayRemainingSeconds = DefaultMarketDayDurationSeconds;
+    private int lastLoggedRemainingWholeSecond = -1;
 
     public int CurrentMoney => playerState.CurrentVarahas;
     public int CurrentReputation => playerState.CurrentReputation;
@@ -83,6 +97,14 @@ public class Level1GameState : MonoBehaviour
     public MarketEventData ActiveEvent => activeEvent;
     public string ActiveSavePath => localSaveManager != null ? localSaveManager.SavePath : LocalSaveManager.GetActiveSavePath();
     public static Level1GameState ExistingInstance => instance;
+    public bool MarketDayStarted { get; private set; }
+    public bool MarketDayEnded { get; private set; }
+    public float MarketDayDurationSeconds => Mathf.Max(MinimumMarketDayDurationSeconds, marketDayDurationSeconds);
+    public float MarketDayRemainingSeconds => marketDayRemainingSeconds;
+    public float MarketDayNormalizedProgress => Mathf.Clamp01(1f - (marketDayRemainingSeconds / MarketDayDurationSeconds));
+    public event Action MarketDayStartedEvent;
+    public event Action MarketDayEndedEvent;
+    public event Action<float> MarketDayTickEvent;
 
     private void Awake()
     {
@@ -94,7 +116,13 @@ public class Level1GameState : MonoBehaviour
 
         instance = this;
         DontDestroyOnLoad(gameObject);
+        ValidateMarketDayDuration();
         EnsureInitialized();
+    }
+
+    private void OnValidate()
+    {
+        ValidateMarketDayDuration();
     }
 
     public void EnsureInitialized()
@@ -111,6 +139,102 @@ public class Level1GameState : MonoBehaviour
         profile = localSaveManager.LoadProfile(marketManager);
         playerState.LoadFrom(profile.global_metrics.total_varahas, profile.global_metrics.reputation);
         initialized = true;
+    }
+
+    public void StartMarketDay()
+    {
+        EnsureInitialized();
+
+        if (MarketDayStarted && !MarketDayEnded)
+        {
+            return;
+        }
+
+        MarketDayStarted = true;
+        MarketDayEnded = false;
+        marketDayStartedAt = Time.time;
+        marketDayRemainingSeconds = MarketDayDurationSeconds;
+        lastLoggedRemainingWholeSecond = -1;
+
+        if (marketDayTimerCoroutine != null)
+        {
+            StopCoroutine(marketDayTimerCoroutine);
+        }
+
+        Debug.Log($"[MARKET DAY] Market day started. Duration={FormatMarketDayTime(Mathf.CeilToInt(MarketDayDurationSeconds))} ({Mathf.CeilToInt(MarketDayDurationSeconds)}s)");
+        MarketDayStartedEvent?.Invoke();
+        MarketDayTickEvent?.Invoke(marketDayRemainingSeconds);
+        marketDayTimerCoroutine = StartCoroutine(MarketDayTimerRoutine());
+    }
+
+    public void EndMarketDay()
+    {
+        if (!MarketDayStarted || MarketDayEnded)
+        {
+            return;
+        }
+
+        MarketDayEnded = true;
+        marketDayRemainingSeconds = 0f;
+
+        if (marketDayTimerCoroutine != null)
+        {
+            StopCoroutine(marketDayTimerCoroutine);
+            marketDayTimerCoroutine = null;
+        }
+
+        Debug.Log("[MARKET DAY] Market day ended.");
+        MarketDayTickEvent?.Invoke(marketDayRemainingSeconds);
+        MarketDayEndedEvent?.Invoke();
+    }
+
+    private IEnumerator MarketDayTimerRoutine()
+    {
+        while (!MarketDayEnded)
+        {
+            float elapsed = Mathf.Max(0f, Time.time - marketDayStartedAt);
+            float remaining = Mathf.Clamp(MarketDayDurationSeconds - elapsed, 0f, MarketDayDurationSeconds);
+            marketDayRemainingSeconds = remaining;
+
+            int remainingWholeSeconds = Mathf.CeilToInt(remaining);
+            if (remainingWholeSeconds != lastLoggedRemainingWholeSecond)
+            {
+                lastLoggedRemainingWholeSecond = remainingWholeSeconds;
+                MarketDayTickEvent?.Invoke(marketDayRemainingSeconds);
+
+                if ((remainingWholeSeconds > 0 && remainingWholeSeconds % 60 == 0) || remainingWholeSeconds <= 10)
+                {
+                    Debug.Log($"[MARKET DAY] Remaining time: {FormatMarketDayTime(remainingWholeSeconds)}");
+                }
+            }
+
+            if (remaining <= 0f)
+            {
+                break;
+            }
+
+            yield return null;
+        }
+
+        EndMarketDay();
+    }
+
+    private void ValidateMarketDayDuration()
+    {
+        marketDayDurationSeconds = Mathf.Max(MinimumMarketDayDurationSeconds, marketDayDurationSeconds);
+
+        if (!MarketDayStarted || MarketDayEnded)
+        {
+            marketDayRemainingSeconds = MarketDayDurationSeconds;
+        }
+    }
+
+    private static string FormatMarketDayTime(int totalSeconds)
+    {
+        int safeSeconds = Mathf.Max(0, totalSeconds);
+        int minutes = safeSeconds / 60;
+        int seconds = safeSeconds % 60;
+        return $"{minutes:00}:{seconds:00}";
     }
 
     public void PrepareForNewCustomer()
