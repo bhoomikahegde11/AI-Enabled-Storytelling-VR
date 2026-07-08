@@ -11,8 +11,6 @@ public class MainMenuVRLaserPointer : MonoBehaviour
         Right
     }
 
-    private static bool collidersInitialized;
-
     [Header("Controller")]
     [SerializeField] private ControllerHand controllerHand = ControllerHand.Right;
     [SerializeField] private float triggerThreshold = 0.75f;
@@ -40,7 +38,7 @@ public class MainMenuVRLaserPointer : MonoBehaviour
     {
         eventSystem = EventSystem.current;
         EnsureLineRenderer();
-        EnsureButtonColliders();
+        SyncSelectableColliders();
 
         Debug.Log($"{nameof(MainMenuVRLaserPointer)} initialized on '{gameObject.name}' for {controllerHand} controller.");
     }
@@ -53,7 +51,7 @@ public class MainMenuVRLaserPointer : MonoBehaviour
 
     private void Update()
     {
-        EnsureButtonColliders();
+        SyncSelectableColliders();
 
         if (!IsControllerConnected())
         {
@@ -99,11 +97,8 @@ public class MainMenuVRLaserPointer : MonoBehaviour
         lineRenderer.enabled = false;
     }
 
-    private void EnsureButtonColliders()
+    private void SyncSelectableColliders()
     {
-        if (collidersInitialized)
-            return;
-
         Canvas[] canvases = Resources.FindObjectsOfTypeAll<Canvas>();
         if (canvases == null || canvases.Length == 0)
         {
@@ -142,6 +137,7 @@ public class MainMenuVRLaserPointer : MonoBehaviour
                 boxCollider.center = new Vector3(rect.center.x, rect.center.y, 0f);
                 boxCollider.size = new Vector3(Mathf.Abs(rect.width), Mathf.Abs(rect.height), 0.02f);
                 boxCollider.isTrigger = true;
+                boxCollider.enabled = IsSelectableRaycastable(selectable);
                 foundAnySelectable = true;
             }
         }
@@ -151,8 +147,6 @@ public class MainMenuVRLaserPointer : MonoBehaviour
             Debug.LogWarning($"{nameof(MainMenuVRLaserPointer)} found canvases but no selectable menu controls to prepare.");
             return;
         }
-
-        collidersInitialized = true;
     }
 
     private Selectable FindSelectableHit(Vector3 origin, Vector3 direction, out RaycastHit closestHit)
@@ -167,8 +161,18 @@ public class MainMenuVRLaserPointer : MonoBehaviour
 
         foreach (RaycastHit hit in hits)
         {
+            TMP_InputField inputField = hit.collider.GetComponentInParent<TMP_InputField>();
+            if (inputField == null || !IsSelectableRaycastable(inputField))
+                continue;
+
+            closestHit = hit;
+            return inputField;
+        }
+
+        foreach (RaycastHit hit in hits)
+        {
             Selectable selectable = hit.collider.GetComponentInParent<Selectable>();
-            if (selectable == null || !selectable.isActiveAndEnabled || !selectable.interactable)
+            if (selectable == null || !IsSelectableRaycastable(selectable))
                 continue;
 
             closestHit = hit;
@@ -205,7 +209,7 @@ public class MainMenuVRLaserPointer : MonoBehaviour
         if (isTriggerPressed && !wasTriggerPressed && hoverTarget != null)
         {
             PointerEventData eventData = CreatePointerEventData();
-            Debug.Log($"{nameof(MainMenuVRLaserPointer)} clicked '{hoverTarget.name}' with {controllerHand} controller.");
+            LogClickTarget(hoverTarget.name);
 
             TMP_InputField inputField = hoverTarget.GetComponent<TMP_InputField>();
             if (inputField != null)
@@ -263,5 +267,50 @@ public class MainMenuVRLaserPointer : MonoBehaviour
 
         ExecuteEvents.ExecuteHierarchy(currentHoverObject, CreatePointerEventData(), ExecuteEvents.pointerExitHandler);
         currentHoverObject = null;
+    }
+
+    private static bool IsSelectableRaycastable(Selectable selectable)
+    {
+        if (selectable == null)
+            return false;
+
+        if (!selectable.gameObject.activeInHierarchy || !selectable.isActiveAndEnabled || !selectable.IsInteractable())
+            return false;
+
+        if (selectable.targetGraphic != null)
+        {
+            if (!selectable.targetGraphic.raycastTarget || !selectable.targetGraphic.isActiveAndEnabled)
+                return false;
+
+            CanvasRenderer canvasRenderer = selectable.targetGraphic.canvasRenderer;
+            if (canvasRenderer != null && canvasRenderer.cull)
+                return false;
+        }
+
+        Canvas[] parentCanvases = selectable.GetComponentsInParent<Canvas>(true);
+        foreach (Canvas parentCanvas in parentCanvases)
+        {
+            if (parentCanvas == null || !parentCanvas.enabled || !parentCanvas.gameObject.activeInHierarchy)
+                return false;
+        }
+
+        CanvasGroup[] canvasGroups = selectable.GetComponentsInParent<CanvasGroup>(true);
+        foreach (CanvasGroup canvasGroup in canvasGroups)
+        {
+            if (canvasGroup == null || !canvasGroup.enabled)
+                continue;
+
+            if (!canvasGroup.interactable || !canvasGroup.blocksRaycasts || canvasGroup.alpha <= 0.001f)
+                return false;
+        }
+
+        return true;
+    }
+
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+    private void LogClickTarget(string targetName)
+    {
+        Debug.Log($"{nameof(MainMenuVRLaserPointer)} clicked '{targetName}' with {controllerHand} controller.");
     }
 }
