@@ -101,20 +101,20 @@ public class DialogueTableResponseProvider
             string matchLevel;
             string template = FindTemplate(context, characterSet, out matchLevel);
 
-            Debug.Log("[DIALOGUE-TABLE] Character: " + (characterSet != null ? characterSet.displayName : "Generic"));
-            Debug.Log("[DIALOGUE-TABLE] Scenario: " + context.scenario);
-            Debug.Log("[DIALOGUE-TABLE] Reputation: " + context.reputationBucket);
-            Debug.Log("[DIALOGUE-TABLE] Patience: " + context.patienceBucket);
-            Debug.Log("[DIALOGUE-TABLE] Desperation: " + context.desperationBucket);
-            Debug.Log("[DIALOGUE-TABLE] RoundBucket: " + context.roundBucket);
-            Debug.Log("[DIALOGUE-TABLE] Match level: " + matchLevel);
+            Level1DebugForceAccept.LogVerbose("[DIALOGUE-TABLE] Character: " + (characterSet != null ? characterSet.displayName : "Generic"));
+            Level1DebugForceAccept.LogVerbose("[DIALOGUE-TABLE] Scenario: " + context.scenario);
+            Level1DebugForceAccept.LogVerbose("[DIALOGUE-TABLE] Reputation: " + context.reputationBucket);
+            Level1DebugForceAccept.LogVerbose("[DIALOGUE-TABLE] Patience: " + context.patienceBucket);
+            Level1DebugForceAccept.LogVerbose("[DIALOGUE-TABLE] Desperation: " + context.desperationBucket);
+            Level1DebugForceAccept.LogVerbose("[DIALOGUE-TABLE] RoundBucket: " + context.roundBucket);
+            Level1DebugForceAccept.LogVerbose("[DIALOGUE-TABLE] Match level: " + matchLevel);
 
             if (string.IsNullOrWhiteSpace(template))
             {
                 return fallbackReply;
             }
 
-            Debug.Log("[DIALOGUE-TABLE] Template selected: " + template);
+            Level1DebugForceAccept.LogVerbose("[DIALOGUE-TABLE] Template selected: " + template);
 
             string finalReply = ReplacePlaceholders(template, context);
             if (string.IsNullOrWhiteSpace(finalReply))
@@ -122,12 +122,15 @@ public class DialogueTableResponseProvider
                 return fallbackReply;
             }
 
-            Debug.Log("[DIALOGUE-TABLE] Final reply: " + finalReply);
+            Level1DebugForceAccept.LogVerbose("[DIALOGUE-TABLE] Final reply: " + finalReply);
             return finalReply;
         }
         catch (Exception ex)
         {
-            Debug.LogWarning("[DIALOGUE-TABLE] Provider failed, using rule reply. Reason: " + ex.Message);
+            if (Level1DebugForceAccept.VerboseLogsEnabled())
+            {
+                Debug.LogWarning("[DIALOGUE-TABLE] Provider failed, using rule reply. Reason: " + ex.Message);
+            }
             return fallbackReply;
         }
     }
@@ -346,7 +349,14 @@ public class DialogueTableResponseProvider
         {
             if (offeredPrice > trade.maxBuyerPrice)
             {
-                return DialogueScenario.SellerPriceTooHigh;
+                if (offerMovedUp)
+                {
+                    return ToCounterScenario(roundCount);
+                }
+
+                return offeredPrice - trade.maxBuyerPrice <= Mathf.Max(6, trade.minIncrement * 3)
+                    ? DialogueScenario.SellerPriceSlightlyHigh
+                    : DialogueScenario.SellerPriceTooHigh;
             }
 
             if (offeredPrice > trade.npcOffer)
@@ -396,7 +406,7 @@ public class DialogueTableResponseProvider
             return DialogueScenario.BuyerCounterFirst;
         }
 
-        if (roundCount >= 4)
+        if (roundCount >= 5)
         {
             return DialogueScenario.BuyerCounterFinal;
         }
@@ -456,7 +466,7 @@ public class DialogueTableResponseProvider
             return RoundBucket.First;
         }
 
-        if (roundCount >= 4)
+        if (roundCount >= 5)
         {
             return RoundBucket.Final;
         }

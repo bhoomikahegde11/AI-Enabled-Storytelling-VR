@@ -40,10 +40,34 @@ public class MarketplaceManager : MonoBehaviour
     private Animator animator;
     private bool isTransitioning = false;
     private bool negotiationWasAccepted = false;
+    private Coroutine negotiationIdleCoroutine;
+    private Coroutine nextCustomerCountdownCoroutine;
+    private Coroutine marketDayStartupCoroutine;
+    private bool isAwaitingPlayerInput;
+    private float playerIdleStartedAt;
+    private int reminderStage;
+    private int firstReminderSeconds;
+    private int secondReminderSeconds;
+    private int walkAwaySeconds;
+    private static readonly string[] FirstReminderLines =
+    {
+        "Well?",
+        "Take your time, but don't keep me waiting."
+    };
+    private static readonly string[] SecondReminderLines =
+    {
+        "I don't have all day. What's your decision?",
+        "Other merchants are waiting for my business."
+    };
+    private static readonly string[] FinalReminderLines =
+    {
+        "Enough. I am leaving.",
+        "You have wasted enough of my time."
+    };
 
     private void Start()
     {
-        Debug.Log("[SCENE FLOW] " + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name + " loaded");
+        Level1DebugForceAccept.LogVerbose("[SCENE FLOW] " + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name + " loaded");
         Level1GameState.Instance.EnsureInitialized();
 
         // 1. Auto-discover references if they are not manually dragged in Inspector
@@ -105,10 +129,7 @@ public class MarketplaceManager : MonoBehaviour
         if (gazeController == null)
         {
             gazeController = buyerNPC.AddComponent<NPCGazeController>();
-            if (showDebugLogs)
-            {
-                Debug.Log("[MarketplaceManager] Automatically added NPCGazeController to BuyerNPC.");
-            }
+            Level1DebugForceAccept.LogVerbose("[MarketplaceManager] Automatically added NPCGazeController to BuyerNPC.");
         }
 
         // 4. Hide Conversation UI Canvas on scene start
@@ -131,7 +152,8 @@ public class MarketplaceManager : MonoBehaviour
 
         // 6. Reset NPC position and begin lifecycle loop
         ResetNPCToSpawnPoint();
-        StartCoroutine(StartBargainingLifecycle());
+        Level1GameState.Instance.StartMarketDay();
+        marketDayStartupCoroutine = StartCoroutine(WaitForMarketDayThenStartLifecycle());
     }
 
     /// <summary>
@@ -168,6 +190,13 @@ public class MarketplaceManager : MonoBehaviour
     /// </summary>
     private IEnumerator StartBargainingLifecycle()
     {
+        if (!Level1GameState.Instance.MarketDayStarted || Level1GameState.Instance.MarketDayEnded)
+        {
+            yield break;
+        }
+
+        StopNextCustomerCountdown();
+
         if (chatManager != null)
         {
             chatManager.ClearSubtitle();
@@ -186,20 +215,23 @@ public class MarketplaceManager : MonoBehaviour
 
         yield return new WaitForSeconds(1.0f); // Load buffer
 
-        if (showDebugLogs)
+        if (Level1GameState.Instance.MarketDayEnded)
         {
-            Debug.Log("[MarketplaceManager] Moving BuyerNPC from SpawnPoint -> TradePoint");
+            if (conversationUI != null && !Level1GameState.Instance.MarketDayEnded)
+            {
+                conversationUI.SetActive(false);
+            }
+            yield break;
         }
+
+        Level1DebugForceAccept.LogTrade("[MARKET LOOP] Customer spawned and approaching stall.");
 
         // 2. Move NPC to Trade Point and wait until reached
         yield return StartCoroutine(WalkToDestinationRoutine(tradePoint.position));
 
         // 3. NPC Arrived at Stall - Orient smoothly
         buyerNPC.transform.rotation = tradePoint.rotation;
-        if (showDebugLogs)
-        {
-            Debug.Log("[MarketplaceManager] NPC reached TradePoint. Triggering browsing behavior.");
-        }
+        Level1DebugForceAccept.LogVerbose("[MarketplaceManager] NPC reached TradePoint. Triggering browsing behavior.");
 
         // Cache animator
         if (animator == null)
@@ -252,12 +284,10 @@ public class MarketplaceManager : MonoBehaviour
     {
         if (isTransitioning) return;
         isTransitioning = true;
+        StopNegotiationTimer();
 
         negotiationWasAccepted = wasAccepted;
-        if (showDebugLogs)
-        {
-            Debug.Log($"[MarketplaceManager] Negotiation concluded. Accepted: {wasAccepted}. Playing farewell and outcome animation.");
-        }
+        Level1DebugForceAccept.LogTrade($"[MARKET LOOP] Customer leaving stall. Accepted={wasAccepted}");
         StartCoroutine(ExitLifecycleRoutine());
     }
 
@@ -315,18 +345,12 @@ public class MarketplaceManager : MonoBehaviour
                 if (negotiationWasAccepted)
                 {
                     animator.SetTrigger("happy");
-                    if (showDebugLogs)
-                    {
-                        Debug.Log("[ANIM] Triggered Agree (happy) animation after speech complete");
-                    }
+                    Level1DebugForceAccept.LogVerbose("[ANIM] Triggered Agree (happy) animation after speech complete");
                 }
                 else
                 {
                     animator.SetTrigger("reject");
-                    if (showDebugLogs)
-                    {
-                        Debug.Log("[ANIM] Triggered Reject (reject) animation after speech complete");
-                    }
+                    Level1DebugForceAccept.LogVerbose("[ANIM] Triggered Reject (reject) animation after speech complete");
                 }
             }
         }
@@ -358,16 +382,17 @@ public class MarketplaceManager : MonoBehaviour
             chatManager.ResetConversationUI("Waiting for next customer...");
         }
 
-        if (showDebugLogs)
+        float nextCustomerGap = GetRespectBasedCustomerGap();
+        Level1DebugForceAccept.LogTrade($"[MARKET LOOP] Customer left. Next customer gap chosen: {nextCustomerGap:0.0}s");
+
+        // 5. Wait for a respect-based delay before spawning next customer
+        if (!Level1GameState.Instance.MarketDayEnded)
         {
-            Debug.Log($"[MarketplaceManager] NPC reached ExitPoint. Waiting {resetDelay} seconds before resetting.");
+            yield return StartCoroutine(NextCustomerCountdownRoutine(nextCustomerGap));
         }
 
-        // 5. Wait for the reset delay (e.g. 3 seconds)
-        yield return new WaitForSeconds(resetDelay);
-
         // 6. Hide conversation canvas during teleportation step
-        if (conversationUI != null)
+        if (conversationUI != null && !Level1GameState.Instance.MarketDayEnded)
         {
             conversationUI.SetActive(false);
         }
@@ -378,7 +403,14 @@ public class MarketplaceManager : MonoBehaviour
         isTransitioning = false;
 
         // 8. Repeat lifecycle loop
-        StartCoroutine(StartBargainingLifecycle());
+        if (!Level1GameState.Instance.MarketDayEnded)
+        {
+            StartCoroutine(StartBargainingLifecycle());
+        }
+        else
+        {
+            Level1DebugForceAccept.LogTrade("[MARKET LOOP] Market day ended. No new negotiable customers will start.");
+        }
     }
 
     /// <summary>
@@ -389,6 +421,20 @@ public class MarketplaceManager : MonoBehaviour
         yield return null; // Wait for frame
 
         if (navMeshAgent == null) yield break;
+
+        bool hasLoggedInvalidNavMeshAgent = false;
+
+        if (!IsNavMeshAgentReady(navMeshAgent))
+        {
+            if (!hasLoggedInvalidNavMeshAgent)
+            {
+                Debug.LogWarning("[MarketplaceManager] Cannot move BuyerNPC because the NavMeshAgent is not active on a NavMesh.");
+                hasLoggedInvalidNavMeshAgent = true;
+            }
+
+            SetWalkingAnimation(false);
+            yield break;
+        }
 
         navMeshAgent.isStopped = false;
         navMeshAgent.SetDestination(targetPosition);
@@ -403,7 +449,18 @@ public class MarketplaceManager : MonoBehaviour
         {
             timeoutTimer += Time.deltaTime;
 
-            if (navMeshAgent != null && !navMeshAgent.pathPending)
+            if (!IsNavMeshAgentReady(navMeshAgent))
+            {
+                if (!hasLoggedInvalidNavMeshAgent)
+                {
+                    Debug.LogWarning("[MarketplaceManager] BuyerNPC NavMeshAgent became invalid during movement. Stopping walk routine safely.");
+                    hasLoggedInvalidNavMeshAgent = true;
+                }
+
+                break;
+            }
+
+            if (!navMeshAgent.pathPending)
             {
                 if (navMeshAgent.remainingDistance <= navMeshAgent.stoppingDistance + 0.15f)
                 {
@@ -423,6 +480,14 @@ public class MarketplaceManager : MonoBehaviour
         SetWalkingAnimation(false);
     }
 
+    private static bool IsNavMeshAgentReady(NavMeshAgent agent)
+    {
+        return agent != null &&
+            agent.enabled &&
+            agent.isActiveAndEnabled &&
+            agent.isOnNavMesh;
+    }
+
     private void SetWalkingAnimation(bool isWalking)
     {
         if (animator == null) return;
@@ -434,5 +499,233 @@ public class MarketplaceManager : MonoBehaviour
             animator.SetBool("isThinking", false);
             animator.SetBool("isTalking", false);
         }
+    }
+
+    public void BeginNegotiationTimer(int buyerPatience)
+    {
+        StopNegotiationTimer();
+        ConfigureNegotiationPatience(buyerPatience);
+
+        Level1DebugForceAccept.LogVerbose($"[MARKET LOOP] Starting idle patience tracking. Patience={buyerPatience}, first={firstReminderSeconds}s, second={secondReminderSeconds}s, walkAway={walkAwaySeconds}s");
+
+        negotiationIdleCoroutine = StartCoroutine(NegotiationIdleRoutine());
+    }
+
+    public void StopNegotiationTimer()
+    {
+        if (negotiationIdleCoroutine != null)
+        {
+            StopCoroutine(negotiationIdleCoroutine);
+            negotiationIdleCoroutine = null;
+        }
+        isAwaitingPlayerInput = false;
+        reminderStage = 0;
+    }
+
+    public void StartPlayerIdleWindow()
+    {
+        if (isTransitioning)
+        {
+            return;
+        }
+
+        isAwaitingPlayerInput = true;
+        playerIdleStartedAt = Time.time;
+        reminderStage = 0;
+    }
+
+    public void MarkMeaningfulPlayerInput()
+    {
+        isAwaitingPlayerInput = false;
+        playerIdleStartedAt = Time.time;
+        reminderStage = 0;
+    }
+
+    private IEnumerator NegotiationIdleRoutine()
+    {
+        while (true)
+        {
+            if (isAwaitingPlayerInput)
+            {
+                float idleSeconds = Time.time - playerIdleStartedAt;
+
+                if (reminderStage == 0 && idleSeconds >= firstReminderSeconds)
+                {
+                    reminderStage = 1;
+                    if (chatManager != null)
+                    {
+                        chatManager.PlayNegotiationIdleReminder(FirstReminderLines[Random.Range(0, FirstReminderLines.Length)]);
+                    }
+                }
+                else if (reminderStage == 1 && idleSeconds >= secondReminderSeconds)
+                {
+                    reminderStage = 2;
+                    if (chatManager != null)
+                    {
+                        chatManager.PlayNegotiationIdleReminder(SecondReminderLines[Random.Range(0, SecondReminderLines.Length)]);
+                    }
+                }
+                else if (idleSeconds >= walkAwaySeconds)
+                {
+                    negotiationIdleCoroutine = null;
+
+                    Level1DebugForceAccept.LogTrade($"[MARKET LOOP] Player idle patience expired after {idleSeconds:0.0}s. Triggering walk-away flow.");
+
+                    if (chatManager != null)
+                    {
+                        chatManager.TryHandleNegotiationTimeout(FinalReminderLines[Random.Range(0, FinalReminderLines.Length)]);
+                    }
+
+                    yield break;
+                }
+            }
+
+            yield return null;
+        }
+    }
+
+    private IEnumerator NextCustomerCountdownRoutine(float nextCustomerGap)
+    {
+        StopNextCustomerCountdown();
+        nextCustomerCountdownCoroutine = StartCoroutine(NextCustomerCountdownDisplayRoutine(nextCustomerGap));
+        float elapsed = 0f;
+        while (elapsed < nextCustomerGap)
+        {
+            if (Level1GameState.Instance.MarketDayEnded)
+            {
+                StopNextCustomerCountdown();
+                yield break;
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        StopNextCustomerCountdown();
+    }
+
+    private IEnumerator NextCustomerCountdownDisplayRoutine(float nextCustomerGap)
+    {
+        float remainingSeconds = Mathf.Max(0f, nextCustomerGap);
+        int lastShownSeconds = -1;
+
+        while (remainingSeconds > 0f)
+        {
+            if (Level1GameState.Instance.MarketDayEnded)
+            {
+                nextCustomerCountdownCoroutine = null;
+                yield break;
+            }
+
+            int secondsToShow = Mathf.CeilToInt(remainingSeconds);
+            if (secondsToShow != lastShownSeconds)
+            {
+                if (chatManager != null && chatManager.hudManager != null)
+                {
+                    chatManager.hudManager.ShowNextCustomerCountdown(secondsToShow);
+                }
+
+                lastShownSeconds = secondsToShow;
+            }
+
+            remainingSeconds -= Time.deltaTime;
+            yield return null;
+        }
+
+        if (chatManager != null && chatManager.hudManager != null)
+        {
+            chatManager.hudManager.ShowNextCustomerCountdown(0);
+        }
+
+        nextCustomerCountdownCoroutine = null;
+    }
+
+    private void StopNextCustomerCountdown()
+    {
+        if (nextCustomerCountdownCoroutine != null)
+        {
+            StopCoroutine(nextCustomerCountdownCoroutine);
+            nextCustomerCountdownCoroutine = null;
+        }
+
+        if (chatManager != null && chatManager.hudManager != null)
+        {
+            chatManager.hudManager.HideNextCustomerCountdown();
+        }
+    }
+
+    private IEnumerator WaitForMarketDayThenStartLifecycle()
+    {
+        while (!Level1GameState.Instance.MarketDayStarted && !Level1GameState.Instance.MarketDayEnded)
+        {
+            yield return null;
+        }
+
+        if (Level1GameState.Instance.MarketDayEnded)
+        {
+            yield break;
+        }
+
+        Level1DebugForceAccept.LogTrade("[MARKET LOOP] Market day active. Starting negotiable customer lifecycle.");
+
+        StartCoroutine(StartBargainingLifecycle());
+    }
+
+    private void ConfigureNegotiationPatience(int buyerPatience)
+    {
+        if (buyerPatience <= 3)
+        {
+            firstReminderSeconds = 10;
+            secondReminderSeconds = 20;
+            walkAwaySeconds = Random.Range(30, 37);
+            return;
+        }
+
+        if (buyerPatience <= 5)
+        {
+            firstReminderSeconds = 10;
+            secondReminderSeconds = 24;
+            walkAwaySeconds = Random.Range(38, 46);
+            return;
+        }
+
+        firstReminderSeconds = 10;
+        secondReminderSeconds = 30;
+        walkAwaySeconds = Random.Range(48, 58);
+    }
+
+    private float GetRespectBasedCustomerGap()
+    {
+        if (Level1GameState.Instance == null)
+        {
+            Debug.LogWarning("[MARKET LOOP] Level1GameState missing. Falling back to resetDelay.");
+            return resetDelay;
+        }
+
+        float reputation = Level1GameState.Instance.CurrentReputation;
+
+        float minGap;
+        float maxGap;
+
+        if (reputation < 40f)
+        {
+            minGap = 15f;
+            maxGap = 15f;
+        }
+        else if (reputation < 70f)
+        {
+            minGap = 10f;
+            maxGap = 10f;
+        }
+        else
+        {
+            minGap = 5f;
+            maxGap = 5f;
+        }
+
+        float selectedGap = Random.Range(minGap, maxGap);
+
+        Level1DebugForceAccept.LogTrade($"[MARKET LOOP] Respect={reputation:0.0}, selected next customer gap={selectedGap:0.0}s");
+
+        return selectedGap;
     }
 }

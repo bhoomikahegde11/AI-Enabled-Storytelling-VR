@@ -101,6 +101,8 @@ public class Level1VoiceInputManager : MonoBehaviour
     private bool isRequestingMicrophonePermission = false;
     private ISpeechToTextProvider speechProvider;
     private const float ExtremelyLowPeakThreshold = 0.005f;
+    private bool hasLoggedKeyboardVoiceShortcutIgnored;
+    private bool hasLoggedKeyboardResetShortcutIgnored;
 
     public enum VoiceInputState
     {
@@ -172,7 +174,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         }
         currentState = VoiceInputState.Idle;
         SetVoiceStatusText(GetIdleText());
-        Debug.Log("[VOICE CONFIRM] Transcript cleared");
+        Level1DebugForceAccept.LogVoice("[VOICE CONFIRM] Transcript cleared");
     }
 
     private void Start()
@@ -203,7 +205,7 @@ public class Level1VoiceInputManager : MonoBehaviour
             Debug.LogWarning("[STT] Speech provider not assigned. Assign VoskSpeechProvider to Level1VoiceInputManager.");
         }
 
-        Debug.Log("[BACKEND] Using URL: " + serverUrl);
+        Level1DebugForceAccept.LogVerbose("[BACKEND] Using URL: " + serverUrl);
     }
 
     private void Update()
@@ -214,17 +216,45 @@ public class Level1VoiceInputManager : MonoBehaviour
             voiceStatusText = hudManager.voiceStatusText;
         }
 
-        // Hold V (keyboard) or Right Trigger (controller) to record
-        if (Input.GetKeyDown(KeyCode.V)
-            || OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger))
+        bool keyboardVoiceDown = Input.GetKeyDown(KeyCode.V);
+        bool keyboardVoiceUp = Input.GetKeyUp(KeyCode.V);
+        bool controllerVoiceDown = OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger);
+        bool controllerVoiceUp = OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger);
+        bool keyboardResetDown = Input.GetKeyDown(KeyCode.R);
+        bool controllerResetDown = OVRInput.GetDown(OVRInput.Button.Two);
+
+        bool keyboardVoiceEnabled = Level1DebugForceAccept.IsKeyboardVoiceShortcutEnabled();
+        bool keyboardResetEnabled = Level1DebugForceAccept.IsKeyboardResetShortcutEnabled();
+
+        if (keyboardVoiceDown && !keyboardVoiceEnabled && !hasLoggedKeyboardVoiceShortcutIgnored)
         {
-            Debug.Log("[STT-QUEST] Input held/down: true");
+            Level1DebugForceAccept.LogVerbose("[LEVEL1 DEBUG] Keyboard voice shortcut is disabled. Ignoring V key.");
+            hasLoggedKeyboardVoiceShortcutIgnored = true;
+        }
+        if (keyboardVoiceUp)
+        {
+            hasLoggedKeyboardVoiceShortcutIgnored = false;
+        }
+
+        if (keyboardResetDown && !keyboardResetEnabled && !hasLoggedKeyboardResetShortcutIgnored)
+        {
+            Level1DebugForceAccept.LogVerbose("[LEVEL1 DEBUG] Keyboard reset shortcut is disabled. Ignoring R key.");
+            hasLoggedKeyboardResetShortcutIgnored = true;
+        }
+        if (!Input.GetKey(KeyCode.R))
+        {
+            hasLoggedKeyboardResetShortcutIgnored = false;
+        }
+
+        // Hold V (keyboard, if enabled) or Right Trigger (controller) to record
+        if ((keyboardVoiceEnabled && keyboardVoiceDown) || controllerVoiceDown)
+        {
+            Level1DebugForceAccept.LogVoice("[STT-QUEST] Input held/down: true");
             StartListening();
         }
-        if (Input.GetKeyUp(KeyCode.V)
-            || OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger))
+        if ((keyboardVoiceEnabled && keyboardVoiceUp) || controllerVoiceUp)
         {
-            Debug.Log("[STT-QUEST] Input held/down: false");
+            Level1DebugForceAccept.LogVoice("[STT-QUEST] Input held/down: false");
             StopListening();
         }
 
@@ -234,28 +264,26 @@ public class Level1VoiceInputManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)
                 || OVRInput.GetDown(OVRInput.Button.One))
             {
-                Debug.Log("[VOICE CONFIRM] Confirm triggered (Enter / A)");
+                Level1DebugForceAccept.LogVoice("[VOICE CONFIRM] Confirm triggered (Enter / A)");
                 if (chatManager != null)
                 {
-                    Debug.Log("[STT] Sent to ChatManager: " + (inputField != null ? inputField.text : string.Empty));
+                    Level1DebugForceAccept.LogVoice("[STT] Sent to ChatManager: " + (inputField != null ? inputField.text : string.Empty));
                     chatManager.OnSend();
                 }
                 currentState = VoiceInputState.Idle;
                 SetVoiceStatusText(GetIdleText());
             }
 
-            if (Input.GetKeyDown(KeyCode.R)
-                || OVRInput.GetDown(OVRInput.Button.Two))
+            if ((keyboardResetEnabled && keyboardResetDown) || controllerResetDown)
             {
-                Debug.Log("[VOICE CONFIRM] Reset triggered (R / B)");
+                Level1DebugForceAccept.LogVoice("[VOICE CONFIRM] Reset triggered (R / B)");
                 ClearTranscript();
             }
         }
         else
         {
             // Standard R / B when not reviewing: Clear transcript
-            if (Input.GetKeyDown(KeyCode.R)
-                || OVRInput.GetDown(OVRInput.Button.Two))
+            if ((keyboardResetEnabled && keyboardResetDown) || controllerResetDown)
             {
                 ClearTranscript();
             }
@@ -285,8 +313,7 @@ public class Level1VoiceInputManager : MonoBehaviour
             return;
         }
 
-        Debug.Log("[STT] Recording started");
-        Debug.Log("[STT-QUEST] Recording started: true");
+        Level1DebugForceAccept.LogVoice("[STT] Recording started");
         isListening = true;
         currentState = VoiceInputState.Recording;
         startListeningTime = Time.time;
@@ -315,8 +342,8 @@ public class Level1VoiceInputManager : MonoBehaviour
 
         // Start Unity Microphone capture
         recordingClip = Microphone.Start(deviceName, false, maxRecordingDuration, sampleRate);
-        Debug.Log("[STT-QUEST] Microphone device: " + ResolveMicrophoneDeviceName());
-        Debug.Log("[STT-QUEST] Sample rate: " + sampleRate);
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] Microphone device: " + ResolveMicrophoneDeviceName());
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] Sample rate: " + sampleRate);
     }
 
     public void StopListening()
@@ -325,9 +352,8 @@ public class Level1VoiceInputManager : MonoBehaviour
 
         isListening = false;
         float duration = Time.time - startListeningTime;
-        Debug.Log("[STT] Recording stopped");
-        Debug.Log("[STT-QUEST] Recording stopped: true");
-        Debug.Log("[STT-QUEST] Recording duration seconds: " + duration.ToString("0.000"));
+        Level1DebugForceAccept.LogVoice("[STT] Recording stopped");
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] Recording duration seconds: " + duration.ToString("0.000"));
 
         // Trigger UI scale-down and return to idle animation
         if (chatManager != null && chatManager.hudManager != null)
@@ -415,19 +441,19 @@ public class Level1VoiceInputManager : MonoBehaviour
             yield break;
         }
 
-        Debug.Log("[STT-QUEST] Provider: " + (speechProvider != null ? speechProvider.GetType().Name : "(null)"));
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] Provider: " + (speechProvider != null ? speechProvider.GetType().Name : "(null)"));
         bool usingWhisperProvider = speechProvider is LocalSpeechProvider;
         if (usingWhisperProvider)
         {
-            Debug.Log("[STT-QUEST] Whisper model path: " + LocalSpeechProvider.WhisperModelPath);
-            Debug.Log("[STT-QUEST] Whisper model exists: " + LocalSpeechProvider.WhisperModelExists);
+            Level1DebugForceAccept.LogVoice("[STT-QUEST] Whisper model path: " + LocalSpeechProvider.WhisperModelPath);
+            Level1DebugForceAccept.LogVoice("[STT-QUEST] Whisper model exists: " + LocalSpeechProvider.WhisperModelExists);
             if (!LocalSpeechProvider.WhisperModelExists)
             {
                 Debug.LogError("[STT-QUEST] Failure reason: Whisper model missing at " + LocalSpeechProvider.WhisperModelPath);
             }
         }
 
-        Debug.Log("[STT] Transcription started");
+        Level1DebugForceAccept.LogVoice("[STT] Transcription started");
         var task = speechProvider.Transcribe(clip);
         while (!task.IsCompleted)
         {
@@ -438,9 +464,9 @@ public class Level1VoiceInputManager : MonoBehaviour
         string rawTranscript = usingWhisperProvider ? LocalSpeechProvider.LastRawTranscription : transcript;
         string normalizedTranscript = !string.IsNullOrWhiteSpace(transcript) ? InputNormalizer.Normalize(transcript, false) : string.Empty;
 
-        Debug.Log("[STT-QUEST] Transcription raw: " + rawTranscript);
-        Debug.Log("[STT-QUEST] Transcription normalized: " + normalizedTranscript);
-        Debug.Log("[STT] Transcription result: " + transcript);
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] Transcription raw: " + rawTranscript);
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] Transcription normalized: " + normalizedTranscript);
+        Level1DebugForceAccept.LogVoice("[STT] Transcription result: " + transcript);
 
         if (task.IsFaulted)
         {
@@ -454,8 +480,8 @@ public class Level1VoiceInputManager : MonoBehaviour
 
         if (IsValidTranscript(transcript))
         {
-            Debug.Log("[VOICE CONFIRM] Awaiting player approval");
-            Debug.Log("[STT] Transcript ready for confirm: " + transcript);
+            Level1DebugForceAccept.LogVoice("[VOICE CONFIRM] Awaiting player approval");
+            Level1DebugForceAccept.LogVoice("[STT] Transcript ready for confirm: " + transcript);
 
             if (inputField != null)
             {
@@ -486,7 +512,7 @@ public class Level1VoiceInputManager : MonoBehaviour
     {
         isRequestingMicrophonePermission = true;
         SetVoiceStatusText("Microphone permission required");
-        Debug.Log("[STT-QUEST] Microphone permission: false");
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] Microphone permission: false");
 
         AsyncOperation permissionRequest = Application.RequestUserAuthorization(UserAuthorization.Microphone);
         while (!permissionRequest.isDone)
@@ -497,7 +523,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         isRequestingMicrophonePermission = false;
 
         bool hasPermission = Application.HasUserAuthorization(UserAuthorization.Microphone);
-        Debug.Log("[STT-QUEST] Microphone permission: " + hasPermission);
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] Microphone permission: " + hasPermission);
 
         if (!hasPermission)
         {
@@ -513,9 +539,9 @@ public class Level1VoiceInputManager : MonoBehaviour
     private void LogMicrophoneDiagnostics()
     {
         bool hasPermission = Application.HasUserAuthorization(UserAuthorization.Microphone);
-        Debug.Log("[STT-QUEST] Microphone permission: " + hasPermission);
-        Debug.Log("[STT-QUEST] Microphone devices count: " + Microphone.devices.Length);
-        Debug.Log("[STT-QUEST] Microphone device: " + ResolveMicrophoneDeviceName());
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] Microphone permission: " + hasPermission);
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] Microphone devices count: " + Microphone.devices.Length);
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] Microphone device: " + ResolveMicrophoneDeviceName());
     }
 
     private string ResolveMicrophoneDeviceName()
@@ -554,10 +580,10 @@ public class Level1VoiceInputManager : MonoBehaviour
         float rms = samples.Length > 0 ? Mathf.Sqrt(sumSquares / samples.Length) : 0f;
         bool isSilence = peak < ExtremelyLowPeakThreshold;
 
-        Debug.Log("[STT-QUEST] Clip samples: " + clip.samples);
-        Debug.Log("[STT-QUEST] Peak amplitude: " + peak.ToString("0.000000"));
-        Debug.Log("[STT-QUEST] RMS amplitude: " + rms.ToString("0.000000"));
-        Debug.Log("[STT-QUEST] Is silence: " + isSilence);
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] Clip samples: " + clip.samples);
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] Peak amplitude: " + peak.ToString("0.000000"));
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] RMS amplitude: " + rms.ToString("0.000000"));
+        Level1DebugForceAccept.LogVoice("[STT-QUEST] Is silence: " + isSilence);
 
         if (peak < ExtremelyLowPeakThreshold)
         {
@@ -571,7 +597,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         {
             string path = Path.Combine(Application.persistentDataPath, "last_stt_recording.wav");
             File.WriteAllBytes(path, EncodeWav(clip));
-            Debug.Log("[STT-QUEST] Saved recording to: " + path);
+            Level1DebugForceAccept.LogVoice("[STT-QUEST] Saved recording to: " + path);
         }
         catch (System.Exception ex)
         {

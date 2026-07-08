@@ -61,7 +61,15 @@ public class RuleBasedNPCBrain
 
         if (trade.buyerPatience <= 0 || trade.buyerFrustration >= GetWalkAwayThreshold(personality))
         {
+            string reason = trade.buyerPatience <= 0 ? "buyer patience exhausted" : "buyer frustration threshold reached";
+            LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY", reason);
             return WalkAway(result, trade, GetWalkAwayLine(buyerName, personality), "WALK_AWAY");
+        }
+
+        if (input.needsClarification)
+        {
+            result.replyText = GetClarificationLine(input, trade, spiceDescriptor, quantity, currentOffer);
+            return SyncState(result, trade);
         }
 
         switch (input.intent)
@@ -115,23 +123,39 @@ public class RuleBasedNPCBrain
                 return SyncState(result, trade);
 
             case NegotiationIntent.REJECT:
-                trade.rejectionCount++;
-                AdjustEmotion(trade, 0.14f, -0.06f);
-                if (trade.rejectionCount >= GetMaxRejections(personality, trade))
+                if (input.hasHardRejection)
                 {
-                    LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY");
-                    return WalkAway(result, trade, GetWalkAwayLine(buyerName, personality), "WALK_AWAY");
+                    trade.hardRejectCount++;
+                    trade.rejectionCount++;
+                    AdjustEmotion(trade, 0.14f, -0.06f);
+                    if (trade.rejectionCount >= GetMaxRejections(personality, trade))
+                    {
+                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY", "hard rejection exhausted buyer patience");
+                        return WalkAway(result, trade, GetWalkAwayLine(buyerName, personality), "WALK_AWAY");
+                    }
+                }
+                else
+                {
+                    AdjustEmotion(trade, 0.06f, -0.02f);
                 }
 
                 int rejectionStep = Mathf.Max(GetMinimumVisibleMovement(currentOffer), Mathf.RoundToInt(currentOffer * 0.05f));
                 result.updatedOffer = Mathf.Min(currentOffer + rejectionStep, trade.maxBuyerPrice);
                 result.replyText = result.updatedOffer > currentOffer
-                    ? $"Then hear my better offer: {result.updatedOffer} varahas for {quantity} of {spiceDescriptor}."
-                    : "Then we are too far apart, merchant.";
-                LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, result.updatedOffer > currentOffer ? "COUNTER" : "REJECT");
+                    ? (input.hasHardRejection
+                        ? $"Then hear my better offer: {result.updatedOffer} varahas for {quantity} of {spiceDescriptor}."
+                        : $"If not that, I can improve it to {result.updatedOffer} varahas for {quantity} of {spiceDescriptor}.")
+                    : (input.hasHardRejection ? "Then we are too far apart, merchant." : "If that price does not suit you, name a better one.");
+                LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, result.updatedOffer > currentOffer ? "COUNTER" : "REJECT", input.hasHardRejection ? "hard rejection prompted counter" : "soft rejection prompted counter", result.updatedOffer - currentOffer);
                 return SyncState(result, trade);
 
             case NegotiationIntent.ACCEPT:
+                if (!CanFinalizeAcceptance(input, trade))
+                {
+                    result.replyText = GetClarificationLine(input, trade, spiceDescriptor, quantity, currentOffer);
+                    return SyncState(result, trade);
+                }
+
                 if (input.hasSellerPrice && trade.lastSellerPrice > 0 && trade.lastSellerPrice < targetMarketValue * 0.3f)
                 {
                     result.replyText = "That price is suspiciously low. I will not agree to it.";
@@ -162,54 +186,75 @@ public class RuleBasedNPCBrain
                     return SyncState(result, trade);
                 }
 
+                trade.actualPriceOfferCount++;
                 trade.sellerMinPrice = sellerPrice;
                 AdjustEmotion(trade, 0.1f, -0.05f);
                 if (sellerPrice > trade.maxBuyerPrice)
                 {
-                    LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY");
-                    return WalkAway(result, trade, "Then we shall not trade today.", "WALK_AWAY");
+                    if (ShouldWalkAwayFromHighPrice(trade, sellerPrice, roundCount))
+                    {
+                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY", "ultimatum above buyer max");
+                        return WalkAway(result, trade, "Then we shall not trade today.", "WALK_AWAY");
+                    }
+
+                    int stretchCounter = MoveTowardTarget(trade, trade.maxBuyerPrice, roundCount);
+                    result.updatedOffer = Mathf.Max(currentOffer, stretchCounter);
+                    result.replyText = $"{sellerPrice} is beyond what I can pay. My strongest offer is {result.updatedOffer} varahas.";
+                    LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, result.updatedOffer > currentOffer ? "COUNTER" : "HOLD", "ultimatum above buyer max, stretch counter", result.updatedOffer - currentOffer);
+                    return SyncState(result, trade);
                 }
 
-                if (ShouldHoldPosition(trade, sellerPrice))
+                if (ShouldHoldPosition(trade, sellerPrice, roundCount))
                 {
                     result.replyText = $"This is my limit. I can hold at {currentOffer} varahas.";
-                    LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "HOLD");
+                    LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "HOLD", "ultimatum hit buyer limit");
                     return SyncState(result, trade);
                 }
 
                 result.updatedOffer = MoveTowardTarget(trade, sellerPrice, roundCount);
                 result.replyText = $"You press hard, merchant. I can move to {result.updatedOffer} varahas, but not beyond that.";
-                LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, "COUNTER");
+                LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, "COUNTER", "ultimatum counter", result.updatedOffer - currentOffer);
                 return SyncState(result, trade);
 
             case NegotiationIntent.COUNTER:
-                trade.counterCount++;
-                AdjustEmotion(trade, 0.08f, 0f);
-                if (trade.counterCount > GetMaxCounters(personality, trade))
-                {
-                    LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY");
-                    return WalkAway(result, trade, GetWalkAwayLine(buyerName, personality), "WALK_AWAY");
-                }
-
                 if (input.hasSellerPrice)
                 {
+                    trade.actualPriceOfferCount++;
+                    trade.counterCount++;
+                    AdjustEmotion(trade, 0.08f, 0f);
+                    if (ShouldWalkAwayForNegotiationPressure(trade, input, roundCount))
+                    {
+                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY", "price-offer pressure exceeded buyer limits");
+                        return WalkAway(result, trade, GetWalkAwayLine(buyerName, personality), "WALK_AWAY");
+                    }
+
                     trade.lastSellerPrice = sellerPrice;
-                    if (ShouldHoldPosition(trade, sellerPrice))
+                    if (sellerPrice > trade.maxBuyerPrice && !ShouldWalkAwayFromHighPrice(trade, sellerPrice, roundCount))
+                    {
+                        result.updatedOffer = MoveTowardTarget(trade, trade.maxBuyerPrice, roundCount);
+                        result.replyText = GetCounterLine(trade, sellerPrice, result.updatedOffer, spiceDescriptor);
+                        LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, "COUNTER", "counter above buyer max, stretch toward limit", result.updatedOffer - currentOffer);
+                        return SyncState(result, trade);
+                    }
+
+                    if (ShouldHoldPosition(trade, sellerPrice, roundCount))
                     {
                         result.replyText = $"I cannot move beyond {currentOffer} varahas.";
-                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "HOLD");
+                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "HOLD", "counter-offer gap still too high");
                         return SyncState(result, trade);
                     }
 
                     result.updatedOffer = MoveTowardTarget(trade, sellerPrice, roundCount);
                     result.replyText = $"We are getting closer. I can offer {result.updatedOffer} varahas.";
-                    LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, "COUNTER");
+                    LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, "COUNTER", "counter-offer accepted for negotiation", result.updatedOffer - currentOffer);
                     return SyncState(result, trade);
                 }
 
-                result.updatedOffer = Mathf.Min(currentOffer + ComputeIncrement(trade, trade.lastSellerPrice > 0 ? trade.lastSellerPrice : trade.maxBuyerPrice, roundCount), trade.maxBuyerPrice);
+                trade.softBargainCount++;
+                int fallbackCounterStep = ComputeIncrement(trade, trade.lastSellerPrice > 0 ? trade.lastSellerPrice : trade.maxBuyerPrice, roundCount);
+                result.updatedOffer = Mathf.Min(currentOffer + fallbackCounterStep, trade.maxBuyerPrice);
                 result.replyText = $"I can increase my offer slightly to {result.updatedOffer} varahas.";
-                LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, "COUNTER");
+                LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, "COUNTER", "counter language without explicit price", fallbackCounterStep);
                 return SyncState(result, trade);
 
             case NegotiationIntent.PRICE:
@@ -220,6 +265,7 @@ public class RuleBasedNPCBrain
                     return SyncState(result, trade);
                 }
 
+                trade.actualPriceOfferCount++;
                 trade.priceIntroduced = true;
                 trade.lastSellerPrice = sellerPrice;
 
@@ -232,11 +278,11 @@ public class RuleBasedNPCBrain
                     AdjustEmotion(trade, 0.05f + (0.04f * Mathf.Min(trade.lowPriceCount - 1, 2)), -0.06f);
                     if (trade.lowPriceCount >= 3)
                     {
-                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY");
+                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY", "seller price suspiciously low");
                         return WalkAway(result, trade, "That price is too suspicious. I will take my leave.", "WALK_AWAY");
                     }
                     result.replyText = $"That is far too low for honest trade. My offer remains {currentOffer} varahas.";
-                    LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "HOLD");
+                    LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "HOLD", "seller price below honest trade floor");
                     return SyncState(result, trade);
                 }
 
@@ -244,19 +290,34 @@ public class RuleBasedNPCBrain
                 {
                     trade.tooExpensiveCount++;
                     AdjustEmotion(trade, 0.2f, -0.2f);
-                    if (trade.tooExpensiveCount >= 2 || input.intent == NegotiationIntent.ULTIMATUM)
+                    if (ShouldWalkAwayFromHighPrice(trade, sellerPrice, roundCount) || input.intent == NegotiationIntent.ULTIMATUM)
                     {
-                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY");
+                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY", "seller price far above market range");
                         return WalkAway(result, trade, "Your demand is too high. Then we shall not trade.", "WALK_AWAY");
                     }
-                    result.replyText = $"{sellerPrice} is too high, merchant. I can move only to {currentOffer} varahas.";
-                    LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "HOLD");
+                    int strongCounter = MoveTowardTarget(trade, trade.maxBuyerPrice, roundCount);
+                    result.updatedOffer = Mathf.Max(currentOffer, strongCounter);
+                    result.replyText = GetCounterLine(trade, sellerPrice, result.updatedOffer, spiceDescriptor);
+                    LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, result.updatedOffer > currentOffer ? "COUNTER" : "HOLD", "seller price high but still negotiable", result.updatedOffer - currentOffer);
                     return SyncState(result, trade);
                 }
 
-                if (sellerPrice <= currentOffer)
+                if (sellerPrice == currentOffer)
                 {
-                    if (CanAcceptNow(trade, roundCount))
+                    result.resolvedPrice = sellerPrice;
+                    result.resolvedQuantityGrams = quantityGrams;
+                    result.replyText = $"Agreed. {trade.quantityLabel} of {spiceDescriptor} for {sellerPrice} varahas.";
+                    result.isFinished = true;
+                    result.isAccepted = true;
+                    result.resolutionAction = "ACCEPT";
+                    AdjustEmotion(trade, -0.08f, 0.1f);
+                    LogNegotiation(trade, input, currentOffer, sellerPrice, roundCount, "ACCEPT", "seller exactly matched current buyer offer");
+                    return SyncState(result, trade);
+                }
+
+                if (sellerPrice < currentOffer)
+                {
+                    if (CanAcceptNow(trade, roundCount) && CanFinalizeAcceptance(input, trade))
                     {
                         result.resolvedPrice = sellerPrice;
                         result.resolvedQuantityGrams = quantityGrams;
@@ -265,16 +326,18 @@ public class RuleBasedNPCBrain
                         result.isAccepted = true;
                         result.resolutionAction = "ACCEPT";
                         AdjustEmotion(trade, -0.08f, 0.1f);
-                        LogNegotiation(trade, input, currentOffer, sellerPrice, roundCount, "ACCEPT");
+                        LogNegotiation(trade, input, currentOffer, sellerPrice, roundCount, "ACCEPT", "seller met current buyer offer");
                         return SyncState(result, trade);
                     }
 
                     result.replyText = $"Your price meets my offer, yet I will hold at {currentOffer} varahas.";
-                    LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "HOLD");
+                    LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "HOLD", "offer matched but acceptance gate not satisfied");
                     return SyncState(result, trade);
                 }
 
-                if (sellerPrice <= GetAcceptanceThreshold(trade, roundCount) && sellerPrice - currentOffer <= GetNearAcceptGap(trade, roundCount))
+                if (sellerPrice <= GetAcceptanceThreshold(trade, roundCount) &&
+                    sellerPrice - currentOffer <= GetNearAcceptGap(trade, roundCount) &&
+                    CanFinalizeAcceptance(input, trade))
                 {
                     result.resolvedPrice = sellerPrice;
                     result.resolvedQuantityGrams = quantityGrams;
@@ -283,42 +346,48 @@ public class RuleBasedNPCBrain
                     result.isAccepted = true;
                     result.resolutionAction = "ACCEPT";
                     AdjustEmotion(trade, -0.05f, 0.08f);
-                    LogNegotiation(trade, input, currentOffer, sellerPrice, roundCount, "ACCEPT");
+                    LogNegotiation(trade, input, currentOffer, sellerPrice, roundCount, "ACCEPT", "seller near buyer acceptance threshold");
                     return SyncState(result, trade);
                 }
 
                 if (sellerPrice > trade.maxBuyerPrice)
                 {
                     trade.repeatedRejectedPrice = trade.lastPlayerPrice == sellerPrice ? trade.repeatedRejectedPrice + 1 : 1;
+                    trade.repeatedOverMaxCount = trade.repeatedRejectedPrice;
                     trade.lastPlayerPrice = sellerPrice;
                     AdjustEmotion(trade, 0.1f, -0.06f);
 
                     if (trade.repeatedRejectedPrice >= 2)
                     {
                         result.replyText = $"I have already refused {sellerPrice}. Do not test my patience.";
-                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "REJECT");
+                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "REJECT", "repeated same over-max seller price");
                         return SyncState(result, trade);
                     }
 
-                    if (ShouldHoldPosition(trade, sellerPrice))
+                    if (ShouldHoldPosition(trade, sellerPrice, roundCount) && currentOffer >= Mathf.RoundToInt(trade.maxBuyerPrice * 0.9f))
                     {
                         result.replyText = $"{sellerPrice} is too high, merchant. I can only hold at {currentOffer} varahas.";
-                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "HOLD");
+                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "HOLD", "seller price above max and buyer near ceiling");
                         return SyncState(result, trade);
                     }
                 }
 
                 result.updatedOffer = MoveTowardTarget(trade, sellerPrice, roundCount);
                 result.replyText = GetCounterLine(trade, sellerPrice, result.updatedOffer, spiceDescriptor);
-                LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, "COUNTER");
+                LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, "COUNTER", "price offer moved buyer upward", result.updatedOffer - currentOffer);
                 return SyncState(result, trade);
 
             case NegotiationIntent.BARGAIN:
                 trade.repeatedBargains++;
+                trade.softBargainCount++;
                 AdjustEmotion(trade, 0.04f, 0.01f);
-                result.updatedOffer = Mathf.Min(currentOffer + Mathf.Max(GetMinimumVisibleMovement(currentOffer), trade.minIncrement), trade.maxBuyerPrice);
-                result.replyText = GetBargainLine(trade, result.updatedOffer, spiceDescriptor);
-                LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, "COUNTER");
+                int bargainTarget = trade.lastSellerPrice > 0 ? Mathf.Min(trade.lastSellerPrice, trade.maxBuyerPrice) : trade.maxBuyerPrice;
+                int bargainStep = ComputeBargainIncrement(trade, currentOffer, bargainTarget, roundCount);
+                result.updatedOffer = Mathf.Min(currentOffer + bargainStep, trade.maxBuyerPrice);
+                result.replyText = result.updatedOffer > currentOffer
+                    ? GetBargainLine(trade, result.updatedOffer, spiceDescriptor)
+                    : "I can improve a little, but not much.";
+                LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, result.updatedOffer > currentOffer ? "COUNTER" : "HOLD", "soft bargain response", result.updatedOffer - currentOffer);
                 return SyncState(result, trade);
 
             case NegotiationIntent.PRICE_QUERY:
@@ -326,7 +395,8 @@ public class RuleBasedNPCBrain
                 return SyncState(result, trade);
 
             case NegotiationIntent.CLARIFICATION:
-                result.replyText = "I did not understand your offer. State your price clearly, merchant.";
+            case NegotiationIntent.CONFUSED:
+                result.replyText = GetClarificationLine(input, trade, spiceDescriptor, quantity, currentOffer);
                 return SyncState(result, trade);
 
             default:
@@ -444,7 +514,7 @@ public class RuleBasedNPCBrain
             return 0;
         }
 
-        if (ShouldHoldPosition(trade, sellerPrice))
+        if (ShouldHoldPosition(trade, sellerPrice, roundCount))
         {
             return trade.npcOffer;
         }
@@ -474,7 +544,34 @@ public class RuleBasedNPCBrain
         return Mathf.Min(increment, Mathf.Max(GetMinimumVisibleMovement(trade.npcOffer), Mathf.RoundToInt(gap * 0.45f)));
     }
 
-    private static bool ShouldHoldPosition(LocalTradeState trade, int targetPrice)
+    private static int ComputeBargainIncrement(LocalTradeState trade, int currentOffer, int targetPrice, int roundCount)
+    {
+        int gap = Mathf.Max(0, targetPrice - currentOffer);
+        if (gap <= 0)
+        {
+            return 0;
+        }
+
+        int baseIncrement = ComputeIncrement(trade, targetPrice, roundCount);
+        int softBargainFloor = Mathf.Max(GetMinimumVisibleMovement(currentOffer), Mathf.CeilToInt(gap * 0.18f));
+        if (trade.softBargainCount <= 1)
+        {
+            softBargainFloor = Mathf.Max(softBargainFloor, Mathf.CeilToInt(gap * 0.22f));
+        }
+
+        if (IsStrict(trade.buyerPersonality))
+        {
+            softBargainFloor = Mathf.Max(GetMinimumVisibleMovement(currentOffer), Mathf.CeilToInt(softBargainFloor * 0.85f));
+        }
+        else if (IsFriendly(trade.buyerPersonality))
+        {
+            softBargainFloor = Mathf.CeilToInt(softBargainFloor * 1.1f);
+        }
+
+        return Mathf.Min(gap, Mathf.Max(baseIncrement, softBargainFloor));
+    }
+
+    private static bool ShouldHoldPosition(LocalTradeState trade, int targetPrice, int roundCount)
     {
         if (trade == null || targetPrice <= trade.npcOffer)
         {
@@ -482,13 +579,31 @@ public class RuleBasedNPCBrain
         }
 
         float gapRatio = (targetPrice - trade.npcOffer) / Mathf.Max(1f, trade.npcOffer);
-        bool finalization = trade.npcOffer >= Mathf.RoundToInt(trade.maxBuyerPrice * 0.9f);
-        if (trade.buyerFrustration >= 0.7f)
+        bool nearCeiling = trade.npcOffer >= Mathf.RoundToInt(trade.maxBuyerPrice * 0.9f);
+        bool repeatedHighPrice = trade.repeatedRejectedPrice >= 1 || trade.tooExpensiveCount >= 2;
+        bool lateNegotiation = roundCount >= 4 || trade.counterCount >= 2;
+
+        if (trade.buyerFrustration >= 0.78f)
         {
-            return false;
+            return nearCeiling;
         }
 
-        return (IsStrict(trade.buyerPersonality) && !finalization && gapRatio >= 0.5f) || gapRatio >= 0.7f;
+        if (nearCeiling)
+        {
+            return gapRatio >= 0.08f;
+        }
+
+        if (repeatedHighPrice && gapRatio >= 0.25f)
+        {
+            return true;
+        }
+
+        if (IsStrict(trade.buyerPersonality) && lateNegotiation && gapRatio >= 0.6f)
+        {
+            return true;
+        }
+
+        return lateNegotiation && gapRatio >= 1f;
     }
 
     private static bool CanAcceptNow(LocalTradeState trade, int roundCount)
@@ -519,6 +634,59 @@ public class RuleBasedNPCBrain
         }
 
         return true;
+    }
+
+    private static bool CanFinalizeAcceptance(NegotiationInput input, LocalTradeState trade)
+    {
+        if (input == null)
+        {
+            return false;
+        }
+
+        if (input.parseConfidence != ParseConfidence.High)
+        {
+            return false;
+        }
+
+        if (input.expectedReplyState == ExpectedReplyState.ExpectQuantity || input.expectedReplyState == ExpectedReplyState.ExpectOfferPrice)
+        {
+            return false;
+        }
+
+        return trade != null && trade.npcOffer > 0;
+    }
+
+    private static string GetClarificationLine(NegotiationInput input, LocalTradeState trade, string spiceDescriptor, string quantity, int currentOffer)
+    {
+        if (input != null)
+        {
+            if (input.parseReason == ParseReason.FulfillmentExpected)
+            {
+                return "Our bargain is already set. Bring the goods I asked for to complete the trade.";
+            }
+
+            if (input.parseReason == ParseReason.MissingQuantity || input.expectedReplyState == ExpectedReplyState.ExpectQuantity)
+            {
+                return $"Tell me the quantity plainly, merchant. How much of the {spiceDescriptor} do you mean?";
+            }
+
+            if (input.parseReason == ParseReason.StateBlockedAccept || input.parseReason == ParseReason.MissingPrice || input.expectedReplyState == ExpectedReplyState.ExpectOfferPrice)
+            {
+                return $"State your price clearly, merchant. What do you ask for the {quantity} of {spiceDescriptor}?";
+            }
+
+            if (input.parseReason == ParseReason.AmbiguousAcceptOrCounter || input.expectedReplyState == ExpectedReplyState.ExpectAcceptOrCounter)
+            {
+                return $"Speak plainly. Do you accept my offer of {currentOffer} varahas, or do you want a different price?";
+            }
+
+            if (input.intent == NegotiationIntent.CONFUSED || input.parseReason == ParseReason.ConfusedPlayer)
+            {
+                return $"I will say it again. My offer is {currentOffer} varahas for {quantity} of {spiceDescriptor}.";
+            }
+        }
+
+        return $"I did not understand you. State your price clearly for the {quantity} of {spiceDescriptor}.";
     }
 
     private static float GetQuantityMultiplier(LocalTradeState trade)
@@ -574,21 +742,70 @@ public class RuleBasedNPCBrain
         return Mathf.RoundToInt(trade.maxBuyerPrice * thresholdPercent);
     }
 
-    private static void LogNegotiation(LocalTradeState trade, NegotiationInput input, int previousBuyerPrice, int newBuyerCounter, int roundCount, string decision)
+    private static bool ShouldWalkAwayFromHighPrice(LocalTradeState trade, int sellerPrice, int roundCount)
+    {
+        if (trade == null)
+        {
+            return false;
+        }
+
+        if (sellerPrice <= trade.maxBuyerPrice)
+        {
+            return false;
+        }
+
+        bool repeatedTooHigh = trade.tooExpensiveCount >= 2 || trade.repeatedRejectedPrice >= 2;
+        bool exhausted = trade.buyerPatience <= 1 || trade.buyerFrustration >= 0.82f || roundCount >= 5;
+        bool farBeyondLimit = sellerPrice >= Mathf.RoundToInt(trade.maxBuyerPrice * 1.35f);
+        return repeatedTooHigh || (farBeyondLimit && exhausted);
+    }
+
+    private static bool ShouldWalkAwayForNegotiationPressure(LocalTradeState trade, NegotiationInput input, int roundCount)
+    {
+        if (trade == null)
+        {
+            return false;
+        }
+
+        if (input != null && input.hasHardRejection)
+        {
+            return true;
+        }
+
+        bool enoughActualPriceOffers = trade.actualPriceOfferCount >= 3;
+        bool finalRound = roundCount >= 5;
+        bool exhausted = trade.buyerPatience <= 0 || trade.buyerFrustration >= 0.86f;
+        bool repeatedOverMaxPressure = trade.repeatedOverMaxCount >= 2 || trade.tooExpensiveCount >= 2;
+        return repeatedOverMaxPressure || (finalRound && enoughActualPriceOffers && exhausted);
+    }
+
+    private static void LogNegotiation(LocalTradeState trade, NegotiationInput input, int previousBuyerPrice, int newBuyerCounter, int roundCount, string decision, string reason = "", int concessionStep = -1)
     {
         int playerOffer = input != null && input.hasSellerPrice ? input.sellerPrice : -1;
-        int gap = playerOffer >= 0 ? Mathf.Abs(previousBuyerPrice - playerOffer) : 0;
-        float concessionPercent = gap > 0 ? Mathf.Abs(newBuyerCounter - previousBuyerPrice) / Mathf.Max(1f, gap) : 0f;
-        Debug.Log("[NEGOTIATION] Personality: " + (trade != null ? trade.buyerPersonality : string.Empty) +
-                  " | Round: " + roundCount +
-                  " | Starting price: " + (trade != null ? trade.startingNpcOffer : previousBuyerPrice) +
-                  " | Player offer: " + playerOffer +
-                  " | Old counter: " + previousBuyerPrice +
-                  " | Gap: " + gap +
-                  " | Concession percent: " + Mathf.RoundToInt(concessionPercent * 100f) + "%" +
-                  " | New counter: " + newBuyerCounter +
-                  " | Minimum: " + (trade != null ? trade.maxBuyerPrice : 0) +
-                  " | Decision: " + decision);
+        int buyerMaxOffer = trade != null ? trade.maxBuyerPrice : 0;
+        int marketValue = trade != null ? trade.marketValue : 0;
+        int playerProfitIfAccepted = newBuyerCounter - marketValue;
+        float profitMargin = marketValue > 0 ? (float)playerProfitIfAccepted / marketValue : 0f;
+        int offerGap = playerOffer > 0 ? playerOffer - previousBuyerPrice : 0;
+        int resolvedConcessionStep = concessionStep >= 0 ? concessionStep : Mathf.Max(0, newBuyerCounter - previousBuyerPrice);
+        Level1DebugForceAccept.LogTrade("[NEGOTIATION] decision=" + decision +
+                                        " | round=" + roundCount +
+                                        " | marketValue=" + marketValue +
+                                        " | playerProfitIfAccepted=" + playerProfitIfAccepted +
+                                        " | sellerPrice=" + playerOffer +
+                                        " | previousBuyerOffer=" + previousBuyerPrice +
+                                        " | newBuyerOffer=" + newBuyerCounter +
+                                        " | buyerMaxOffer=" + buyerMaxOffer +
+                                        " | offerGap=" + offerGap +
+                                        " | concessionStep=" + resolvedConcessionStep +
+                                        " | actualPriceOfferCount=" + (trade != null ? trade.actualPriceOfferCount : 0) +
+                                        " | softBargainCount=" + (trade != null ? trade.softBargainCount : 0) +
+                                        " | hardRejectCount=" + (trade != null ? trade.hardRejectCount : 0) +
+                                        " | repeatedOverMaxCount=" + (trade != null ? trade.repeatedOverMaxCount : 0) +
+                                        " | profitMargin=" + profitMargin.ToString("0.00") +
+                                        " | personality=" + (trade != null ? trade.buyerPersonality : string.Empty) +
+                                        " | walkAwayReason=" + (decision == "WALK_AWAY" ? (string.IsNullOrWhiteSpace(reason) ? "unspecified" : reason) : "n/a") +
+                                        (string.IsNullOrWhiteSpace(reason) ? string.Empty : " | reason=" + reason));
     }
 
     private static void AdjustEmotion(LocalTradeState trade, float frustrationDelta, float trustDelta)
@@ -738,21 +955,21 @@ public class RuleBasedNPCBrain
     {
         if (sellerPrice > trade.maxBuyerPrice)
         {
-            return $"{sellerPrice} is too high, merchant. I can move to {counterOffer}, but not beyond that.";
+            return $"{sellerPrice} is too steep, merchant. I can raise my offer to {counterOffer} varahas, but not beyond that.";
         }
         if (IsStrict(trade.buyerPersonality))
         {
-            return $"This is already a fair price. I can move only slightly, to {counterOffer} varahas.";
+            return $"Not {sellerPrice}, merchant. I can move only slightly, to {counterOffer} varahas.";
         }
         if (IsFriendly(trade.buyerPersonality))
         {
-            return $"You bargain well. I can increase my offer to {counterOffer} varahas for the {spiceDescriptor}.";
+            return $"{sellerPrice} is high, but you bargain well. I can increase my offer to {counterOffer} varahas for the {spiceDescriptor}.";
         }
         if (IsImpatient(trade.buyerPersonality))
         {
-            return $"Let us finish this quickly. I can make it {counterOffer} varahas.";
+            return $"Let us finish this quickly. Not {sellerPrice}, but I can make it {counterOffer} varahas.";
         }
-        return $"We are drawing closer. I can offer {counterOffer} varahas for the {spiceDescriptor}.";
+        return $"We are drawing closer. Not {sellerPrice}, but I can offer {counterOffer} varahas for the {spiceDescriptor}.";
     }
 
     private static string GetBargainLine(LocalTradeState trade, int nextOffer, string spiceDescriptor)
@@ -804,10 +1021,10 @@ public class RuleBasedNPCBrain
 
     private static float GetMaxMultiplier(string personality)
     {
-        if (IsStrict(personality)) return 1.08f;
-        if (IsFriendly(personality)) return 1.2f;
-        if (IsImpatient(personality)) return 1.12f;
-        return 1.15f;
+        if (IsStrict(personality)) return 1.18f;
+        if (IsFriendly(personality)) return 1.42f;
+        if (IsImpatient(personality)) return 1.3f;
+        return 1.28f;
     }
 
     private static float GetStartingTrust(string personality)

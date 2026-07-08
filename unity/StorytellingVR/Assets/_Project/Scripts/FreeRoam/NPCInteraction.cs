@@ -1,0 +1,110 @@
+using UnityEngine;
+using UnityEngine.XR;
+
+public class NPCInteraction : MonoBehaviour
+{
+    [Header("Dialogue")]
+    public NPCDialogueData dialogue;
+
+    [Header("Optional Prompt")]
+    public GameObject talkPromptObject; // optional "Press X to talk" object
+
+    private bool playerNearby = false;
+    private bool inConversation = false;
+    private bool buttonHeld = false;
+
+    private void Start()
+    {
+        if (talkPromptObject != null)
+            talkPromptObject.SetActive(false);
+    }
+
+    private void Update()
+    {
+        if (!playerNearby && !inConversation)
+            return;
+
+        bool pressed = GetInteractButton();
+
+        if (pressed && !buttonHeld)
+        {
+            buttonHeld = true;
+
+            if (!inConversation)
+                StartConversation();
+            else
+                EndConversation();
+        }
+
+        if (!pressed)
+            buttonHeld = false;
+    }
+
+    private void StartConversation()
+    {
+        if (dialogue == null)
+        {
+            Debug.LogWarning("[NPC] Dialogue data missing.");
+            return;
+        }
+
+        inConversation = true;
+
+        if (talkPromptObject != null)
+            talkPromptObject.SetActive(false);
+
+        NarratorUIManager.Instance.ShowNarration(
+            dialogue.npcName,
+            dialogue.openingDialogue,
+            5f
+        );
+
+        NPCQuestionUIManager.Instance.Open(dialogue);
+
+        Debug.Log("[NPC] Conversation started");
+    }
+
+    private void EndConversation()
+    {
+        inConversation = false;
+
+        NPCQuestionUIManager.Instance.Close();
+
+        if (playerNearby && talkPromptObject != null)
+            talkPromptObject.SetActive(true);
+
+        Debug.Log("[NPC] Conversation ended");
+    }
+
+    private bool GetInteractButton()
+    {
+        InputDevice leftHand = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
+
+        bool pressed = false;
+
+        // Your logs showed left primaryButton works
+        leftHand.TryGetFeatureValue(CommonUsages.primaryButton, out pressed);
+
+        return pressed;
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        Debug.Log("[NPC] Entered by: " + other.name);
+
+        playerNearby = true;
+
+        if (!inConversation && talkPromptObject != null)
+            talkPromptObject.SetActive(true);
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        Debug.Log("[NPC] Exited by: " + other.name);
+
+        playerNearby = false;
+
+        if (talkPromptObject != null)
+            talkPromptObject.SetActive(false);
+    }
+}
