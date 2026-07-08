@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using TMPro;
 
 public class MainMenuVRLaserPointer : MonoBehaviour
 {
@@ -205,8 +206,23 @@ public class MainMenuVRLaserPointer : MonoBehaviour
         {
             PointerEventData eventData = CreatePointerEventData();
             Debug.Log($"{nameof(MainMenuVRLaserPointer)} clicked '{hoverTarget.name}' with {controllerHand} controller.");
-            ExecuteEvents.ExecuteHierarchy(hoverTarget, eventData, ExecuteEvents.pointerClickHandler);
-            ExecuteEvents.ExecuteHierarchy(hoverTarget, eventData, ExecuteEvents.selectHandler);
+
+            TMP_InputField inputField = hoverTarget.GetComponent<TMP_InputField>();
+            if (inputField != null)
+            {
+                if (eventSystem == null)
+                    eventSystem = EventSystem.current;
+
+                eventSystem?.SetSelectedGameObject(hoverTarget, eventData);
+                ExecuteEvents.Execute(hoverTarget, eventData, ExecuteEvents.pointerClickHandler);
+                ExecuteEvents.Execute(hoverTarget, eventData, ExecuteEvents.selectHandler);
+                inputField.ActivateInputField();
+            }
+            else
+            {
+                ExecuteEvents.Execute(hoverTarget, eventData, ExecuteEvents.pointerClickHandler);
+                ExecuteEvents.Execute(hoverTarget, eventData, ExecuteEvents.selectHandler);
+            }
         }
 
         wasTriggerPressed = isTriggerPressed;
