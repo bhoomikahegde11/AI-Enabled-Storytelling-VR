@@ -5,9 +5,18 @@ public class MenuSceneButton : MonoBehaviour
 {
     [Header("Scene")]
     [SerializeField] private string sceneName;
+    [Header("Save Flow")]
+    [SerializeField] private MainMenuSaveFlow mainMenuSaveFlow;
 
     public void BeginJourney()
     {
+        if (mainMenuSaveFlow != null)
+        {
+            Debug.Log($"{nameof(MenuSceneButton)} on '{gameObject.name}' opening save select flow.");
+            mainMenuSaveFlow.OpenSaveSelect();
+            return;
+        }
+
         if (GameManager.Instance != null)
         {
             Debug.Log($"{nameof(MenuSceneButton)} on '{gameObject.name}' advancing with GameManager scene flow.");
