@@ -18053,8 +18053,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 73e6157f4cb5478b901ca6d125d1d2fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Level1DebugForceAccept
-  debugModeEnabled: 1
-  bypassScoopFulfillmentForTesting: 1
+  debugModeEnabled: 0
+  bypassScoopFulfillmentForTesting: 0
   enableKeyboardDebugShortcuts: 0
   enableKeyboardVoiceShortcut: 0
   enableKeyboardResetShortcut: 0

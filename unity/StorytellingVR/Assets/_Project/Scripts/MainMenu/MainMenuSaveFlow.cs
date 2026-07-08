@@ -51,12 +51,14 @@ public class MainMenuSaveFlow : MonoBehaviour
 
     public void ContinueExistingSave()
     {
+        PlayMenuClick();
         SaveCurrentFieldValuesToPrefs();
         StartGameplay();
     }
 
     public void OpenNewSave()
     {
+        PlayMenuClick();
         PopulateFieldsFromPrefs();
         SetPanelActive(saveSelectPanel, true);
         SetPanelActive(newSavePanel, true);
@@ -64,6 +66,8 @@ public class MainMenuSaveFlow : MonoBehaviour
 
     public void Back()
     {
+        PlayMenuClick();
+
         if (newSavePanel != null && newSavePanel.activeSelf)
         {
             SetPanelActive(newSavePanel, false);
@@ -75,6 +79,7 @@ public class MainMenuSaveFlow : MonoBehaviour
 
     public void StartNewSave()
     {
+        PlayMenuClick();
         SaveCurrentFieldValuesToPrefs();
         ClearExistingLevel1SaveForNewJourney();
         StartGameplay();
@@ -254,5 +259,10 @@ public class MainMenuSaveFlow : MonoBehaviour
         {
             panel.SetActive(isActive);
         }
+    }
+
+    private static void PlayMenuClick()
+    {
+        MainMenuAudioController.Instance?.PlayClick();
     }
 }

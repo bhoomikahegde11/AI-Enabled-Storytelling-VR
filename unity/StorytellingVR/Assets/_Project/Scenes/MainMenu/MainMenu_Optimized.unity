@@ -29659,6 +29659,7 @@ GameObject:
   - component: {fileID: 1353097256}
   - component: {fileID: 1353097255}
   - component: {fileID: 1353097254}
+  - component: {fileID: 1353097257}
   m_Layer: 0
   m_Name: SaveNameInput
   m_TagString: Untagged
@@ -29827,6 +29828,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1353097252}
   m_CullTransparentMesh: 1
+--- !u!114 &1353097257
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1353097252}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1604178b14e54cd0ac057db9f5588c71, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::QuestSystemKeyboardInput
+  inputField: {fileID: 1353097254}
+  keyboardType: 0
+  openOnSelect: 1
+  openOnPointerClick: 1
 --- !u!1 &1361707303
 GameObject:
   m_ObjectHideFlags: 0
@@ -29929,6 +29946,7 @@ GameObject:
   - component: {fileID: 1364243404}
   - component: {fileID: 1364243403}
   - component: {fileID: 1364243402}
+  - component: {fileID: 1364243405}
   m_Layer: 0
   m_Name: CharacterNameInput
   m_TagString: Untagged
@@ -30097,6 +30115,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1364243400}
   m_CullTransparentMesh: 1
+--- !u!114 &1364243405
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1364243400}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1604178b14e54cd0ac057db9f5588c71, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::QuestSystemKeyboardInput
+  inputField: {fileID: 1364243402}
+  keyboardType: 0
+  openOnSelect: 1
+  openOnPointerClick: 1
 --- !u!1 &1367742212
 GameObject:
   m_ObjectHideFlags: 0
@@ -40281,6 +40315,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2147456512}
   - component: {fileID: 2147456513}
+  - component: {fileID: 2147456514}
   m_Layer: 0
   m_Name: MainMenu_Audio
   m_TagString: Untagged
@@ -40400,6 +40435,25 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &2147456514
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147456511}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3c2f4ec72b342fd8c0e6c4e8cbcc1f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MainMenuAudioController
+  bgmSource: {fileID: 2147456513}
+  playBgmOnAwake: 1
+  sfxSource: {fileID: 0}
+  hoverClip: {fileID: 0}
+  clickClip: {fileID: 0}
+  hoverVolume: 1
+  clickVolume: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -21,11 +21,6 @@ public class MenuButtonHoverEffect : MonoBehaviour,
     [SerializeField] private float clickScale = 0.95f;
     [SerializeField] private float animationSpeed = 10f;
 
-    [Header("Audio")]
-    [SerializeField] private AudioSource audioSource;
-    [SerializeField] private AudioClip hoverSfx;
-    [SerializeField] private AudioClip clickSfx;
-
     private Vector3 originalScale;
     private Vector3 targetScale;
     private Color targetColor;
@@ -36,9 +31,6 @@ public class MenuButtonHoverEffect : MonoBehaviour,
     {
         if (targetImage == null)
             targetImage = GetComponent<Image>();
-
-        if (audioSource == null)
-            audioSource = GetComponent<AudioSource>();
 
         originalScale = transform.localScale;
         targetScale = originalScale;
@@ -68,11 +60,14 @@ public class MenuButtonHoverEffect : MonoBehaviour,
 
     public void OnPointerEnter(PointerEventData eventData)
     {
+        if (isHovered)
+            return;
+
         isHovered = true;
         targetScale = originalScale * hoverScale;
         targetColor = hoverColor;
 
-        PlaySfx(hoverSfx);
+        MainMenuAudioController.Instance?.PlayHover();
     }
 
     public void OnPointerExit(PointerEventData eventData)
@@ -84,8 +79,6 @@ public class MenuButtonHoverEffect : MonoBehaviour,
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        PlaySfx(clickSfx);
-
         if (clickRoutine != null)
             StopCoroutine(clickRoutine);
 
@@ -103,11 +96,5 @@ public class MenuButtonHoverEffect : MonoBehaviour,
             : originalScale;
 
         clickRoutine = null;
-    }
-
-    private void PlaySfx(AudioClip clip)
-    {
-        if (audioSource != null && clip != null)
-            audioSource.PlayOneShot(clip);
     }
 }
