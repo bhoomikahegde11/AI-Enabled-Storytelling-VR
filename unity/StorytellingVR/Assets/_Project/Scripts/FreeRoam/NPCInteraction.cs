@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.XR;
-
+using System.Collections;
 public class NPCInteraction : MonoBehaviour
 {
     [Header("Dialogue")]
@@ -8,6 +8,9 @@ public class NPCInteraction : MonoBehaviour
 
     [Header("Optional Prompt")]
     public GameObject talkPromptObject; // optional "Press X to talk" object
+    
+    [Header("Movement")]
+    public GameObject teleportSystem;
 
     private bool playerNearby = false;
     private bool inConversation = false;
@@ -39,7 +42,11 @@ public class NPCInteraction : MonoBehaviour
         if (!pressed)
             buttonHeld = false;
     }
-
+    private IEnumerator OpenQuestionsAfterDelay()
+    {
+        yield return new WaitForSeconds(5.2f);
+        NPCQuestionUIManager.Instance.Open(dialogue);
+    }
     private void StartConversation()
     {
         if (dialogue == null)
@@ -59,7 +66,10 @@ public class NPCInteraction : MonoBehaviour
             5f
         );
 
-        NPCQuestionUIManager.Instance.Open(dialogue);
+        if (teleportSystem != null)
+            teleportSystem.SetActive(false);
+
+        StartCoroutine(OpenQuestionsAfterDelay());
 
         Debug.Log("[NPC] Conversation started");
     }
@@ -72,7 +82,9 @@ public class NPCInteraction : MonoBehaviour
 
         if (playerNearby && talkPromptObject != null)
             talkPromptObject.SetActive(true);
-
+        
+        if (teleportSystem != null)
+            teleportSystem.SetActive(true);
         Debug.Log("[NPC] Conversation ended");
     }
 
