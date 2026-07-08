@@ -10,8 +10,6 @@ public class MainMenuVRLaserPointer : MonoBehaviour
         Right
     }
 
-    private const string CanvasObjectName = "MainMenu_Canvas";
-
     private static bool collidersInitialized;
 
     [Header("Controller")]
@@ -67,11 +65,11 @@ public class MainMenuVRLaserPointer : MonoBehaviour
 
         Vector3 origin = transform.position;
         Vector3 direction = transform.forward;
-        Button hitButton = FindButtonHit(origin, direction, out RaycastHit hitInfo);
-        GameObject hoverTarget = hitButton != null ? hitButton.gameObject : null;
+        Selectable hitSelectable = FindSelectableHit(origin, direction, out RaycastHit hitInfo);
+        GameObject hoverTarget = hitSelectable != null ? hitSelectable.gameObject : null;
 
         UpdateHoverTarget(hoverTarget);
-        UpdateLine(origin, hitButton != null ? hitInfo.point : origin, hoverTarget != null);
+        UpdateLine(origin, hitSelectable != null ? hitInfo.point : origin, hoverTarget != null);
         HandleTriggerPress(hoverTarget);
     }
 
@@ -105,37 +103,58 @@ public class MainMenuVRLaserPointer : MonoBehaviour
         if (collidersInitialized)
             return;
 
-        GameObject canvasObject = GameObject.Find(CanvasObjectName);
-        if (canvasObject == null)
+        Canvas[] canvases = Resources.FindObjectsOfTypeAll<Canvas>();
+        if (canvases == null || canvases.Length == 0)
         {
-            Debug.LogWarning($"{nameof(MainMenuVRLaserPointer)} could not find '{CanvasObjectName}' to prepare button colliders.");
+            Debug.LogWarning($"{nameof(MainMenuVRLaserPointer)} could not find any canvases to prepare menu colliders.");
             return;
         }
 
-        Button[] buttons = canvasObject.GetComponentsInChildren<Button>(true);
-        foreach (Button button in buttons)
+        bool foundAnySelectable = false;
+
+        foreach (Canvas canvas in canvases)
         {
-            RectTransform rectTransform = button.GetComponent<RectTransform>();
-            if (rectTransform == null)
+            if (canvas == null)
                 continue;
 
-            BoxCollider boxCollider = button.GetComponent<BoxCollider>();
-            if (boxCollider == null)
-            {
-                boxCollider = button.gameObject.AddComponent<BoxCollider>();
-                Debug.Log($"{nameof(MainMenuVRLaserPointer)} added runtime BoxCollider to '{button.gameObject.name}'.");
-            }
+            if (!canvas.gameObject.scene.IsValid())
+                continue;
 
-            Rect rect = rectTransform.rect;
-            boxCollider.center = new Vector3(rect.center.x, rect.center.y, 0f);
-            boxCollider.size = new Vector3(Mathf.Abs(rect.width), Mathf.Abs(rect.height), 0.02f);
-            boxCollider.isTrigger = true;
+            Selectable[] selectables = canvas.GetComponentsInChildren<Selectable>(true);
+            foreach (Selectable selectable in selectables)
+            {
+                if (selectable == null)
+                    continue;
+
+                RectTransform rectTransform = selectable.GetComponent<RectTransform>();
+                if (rectTransform == null)
+                    continue;
+
+                BoxCollider boxCollider = selectable.GetComponent<BoxCollider>();
+                if (boxCollider == null)
+                {
+                    boxCollider = selectable.gameObject.AddComponent<BoxCollider>();
+                    Debug.Log($"{nameof(MainMenuVRLaserPointer)} added runtime BoxCollider to '{selectable.gameObject.name}'.");
+                }
+
+                Rect rect = rectTransform.rect;
+                boxCollider.center = new Vector3(rect.center.x, rect.center.y, 0f);
+                boxCollider.size = new Vector3(Mathf.Abs(rect.width), Mathf.Abs(rect.height), 0.02f);
+                boxCollider.isTrigger = true;
+                foundAnySelectable = true;
+            }
+        }
+
+        if (!foundAnySelectable)
+        {
+            Debug.LogWarning($"{nameof(MainMenuVRLaserPointer)} found canvases but no selectable menu controls to prepare.");
+            return;
         }
 
         collidersInitialized = true;
     }
 
-    private Button FindButtonHit(Vector3 origin, Vector3 direction, out RaycastHit closestHit)
+    private Selectable FindSelectableHit(Vector3 origin, Vector3 direction, out RaycastHit closestHit)
     {
         closestHit = default;
         RaycastHit[] hits = Physics.RaycastAll(origin, direction, maxDistance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
@@ -147,12 +166,12 @@ public class MainMenuVRLaserPointer : MonoBehaviour
 
         foreach (RaycastHit hit in hits)
         {
-            Button button = hit.collider.GetComponentInParent<Button>();
-            if (button == null || !button.isActiveAndEnabled || !button.interactable)
+            Selectable selectable = hit.collider.GetComponentInParent<Selectable>();
+            if (selectable == null || !selectable.isActiveAndEnabled || !selectable.interactable)
                 continue;
 
             closestHit = hit;
-            return button;
+            return selectable;
         }
 
         return null;
@@ -187,6 +206,7 @@ public class MainMenuVRLaserPointer : MonoBehaviour
             PointerEventData eventData = CreatePointerEventData();
             Debug.Log($"{nameof(MainMenuVRLaserPointer)} clicked '{hoverTarget.name}' with {controllerHand} controller.");
             ExecuteEvents.ExecuteHierarchy(hoverTarget, eventData, ExecuteEvents.pointerClickHandler);
+            ExecuteEvents.ExecuteHierarchy(hoverTarget, eventData, ExecuteEvents.selectHandler);
         }
 
         wasTriggerPressed = isTriggerPressed;
