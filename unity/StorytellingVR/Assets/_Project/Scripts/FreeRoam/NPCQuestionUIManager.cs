@@ -16,7 +16,8 @@ public class NPCQuestionUIManager : MonoBehaviour
 
     private NPCDialogueData currentDialogue;
     private bool[] askedQuestions;
-
+    
+    
     private void Awake()
     {
         Instance = this;
@@ -27,7 +28,7 @@ public class NPCQuestionUIManager : MonoBehaviour
         if (questionCanvas != null)
             questionCanvas.SetActive(false);
     }
-
+    
     public void Open(NPCDialogueData dialogue)
     {
         currentDialogue = dialogue;
@@ -54,6 +55,7 @@ public class NPCQuestionUIManager : MonoBehaviour
                 questionButtons[i].gameObject.SetActive(false);
             }
         }
+        
 
         Debug.Log("[QUESTION UI] Opened");
     }
