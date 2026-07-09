@@ -685,8 +685,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 2801d8674d1771547b396ff9e4bd4aa0, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 2801d8674d1771547b396ff9e4bd4aa0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -783,7 +783,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2180264, guid: 2801d8674d1771547b396ff9e4bd4aa0, type: 2}
+  - {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1803,6 +1803,7 @@ GameObject:
   - component: {fileID: 360437192}
   - component: {fileID: 360437191}
   - component: {fileID: 360437190}
+  - component: {fileID: 360437193}
   m_Layer: 3
   m_Name: 'ReputationPanel '
   m_TagString: Untagged
@@ -1886,6 +1887,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 360437188}
   m_CullTransparentMesh: 1
+--- !u!114 &360437193
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 360437188}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7fc1b8809b2b434ea239fa3c987ead3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHighlighter
+  highlightScale: 1.15
+  speed: 4
 --- !u!1 &366155203
 GameObject:
   m_ObjectHideFlags: 0
@@ -3536,6 +3551,7 @@ GameObject:
   - component: {fileID: 740974893}
   - component: {fileID: 740974892}
   - component: {fileID: 740974891}
+  - component: {fileID: 740974894}
   m_Layer: 3
   m_Name: 'MoneyPanel '
   m_TagString: Untagged
@@ -3617,6 +3633,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 740974889}
   m_CullTransparentMesh: 1
+--- !u!114 &740974894
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 740974889}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7fc1b8809b2b434ea239fa3c987ead3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHighlighter
+  highlightScale: 1.15
+  speed: 4
 --- !u!1 &744043054
 GameObject:
   m_ObjectHideFlags: 0
@@ -3665,6 +3695,8 @@ MonoBehaviour:
   coinsEarnedText: {fileID: 1977646909}
   spokenPriceText: {fileID: 152489717}
   respectUIManager: {fileID: 360437190}
+  coinHighlighter: {fileID: 740974894}
+  respectHighlighter: {fileID: 360437193}
 --- !u!4 &744043056
 Transform:
   m_ObjectHideFlags: 0

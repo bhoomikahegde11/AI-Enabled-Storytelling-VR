@@ -33,6 +33,8 @@ public class TutorialManager : MonoBehaviour
 
     [Header("Respect")]
     public RespectUIManager respectUIManager;
+    public UIHighlighter coinHighlighter;
+    public UIHighlighter respectHighlighter;
 
     private int respect = 100;
     private int coins = 0;
@@ -107,6 +109,7 @@ public class TutorialManager : MonoBehaviour
     string[] lines,
     float[] startTimes)
     {
+        Debug.Log("ShowDialogueSequenceWithTimings started");
         if (speakerNameText != null)
         {
             speakerNameText.text = speaker;
@@ -116,6 +119,7 @@ public class TutorialManager : MonoBehaviour
         {
             audioSource.clip = audioClip;
             audioSource.Play();
+            Debug.Log("Playing clip: " + audioClip.name);
         }
 
         if (hudManager != null)
@@ -130,13 +134,25 @@ public class TutorialManager : MonoBehaviour
                 yield return new WaitUntil(() =>
                     audioSource.time >= startTimes[i]);
             }
-            else
-            {
-                yield return new WaitForSeconds(2.0f);
-            }
 
             if (dialogueText != null)
                 dialogueText.text = lines[i];
+
+            // Pause after the Coins line
+            if (i == 2)
+            {
+                yield return StartCoroutine(
+                    PauseForHighlight(coinHighlighter, audioSource)
+                );
+            }
+
+            // Pause after the Respect line
+            if (i == 3)
+            {
+                yield return StartCoroutine(
+                    PauseForHighlight(respectHighlighter, audioSource)
+                );
+            }
         }
 
         while (audioSource != null && audioSource.isPlaying)
@@ -176,21 +192,35 @@ public class TutorialManager : MonoBehaviour
     )
 );
 
-        yield return StartCoroutine(ShowDialogueSequence(
+        yield return StartCoroutine(ShowDialogueSequenceWithTimings(
             "Narrator:",
             Color.yellow,
             narratorAudioSource,
             narratorIntroClip,
-            "Now, let us learn the art of negotiation.",
-            "The base price of one veesai of cardamom is 18 Varahas.",
-            "To your right, you will see the number of Varahas you earn from each successful trade.",
-            "Next to it, you will also find your Reputation in the market.",
-            "As a trader, you must maintain a good reputation.",
-            "Merchants who earn the trust and respect of their customers attract more business and greater opportunities.",
-            "Start by offering 70 varahas.",
-            "Be careful... a price that is too high may cost you the deal entirely."
-        ));
+            new string[]
+{
+    "Now, let us learn the art of negotiation.",
+    "The base price of one veesai of cardamom is 18 Varahas.",
+    "To your right, you will see the number of Varahas you earn from each successful trade.",
+    "Next to it, you will also find your Reputation in the market.",
+    "As a trader, you must maintain a good reputation.",
+    "Merchants who earn the trust and respect of their customers attract more business and greater opportunities.",
+    "Start by offering 70 Varahas.",
+    "Be careful... a price that is too high may cost you the deal entirely."
+},
 
+new float[]
+{
+    0.0f,     // Now, let us learn...
+    3.0f,     // The base price...
+    7.3f,     // To your right...
+    12.2f,    // Next to it...
+    15.5f,    // As a trader...
+    18.8f,    // Merchants who earn...
+    25.8f,    // Start by offering...
+    29.5f     // Be careful...
+}
+        ));
         voiceRecognitionManager.voicePromptText.text = "Say 70";
 
         voiceRecognitionManager.ListenForPrice();
@@ -445,5 +475,26 @@ public class TutorialManager : MonoBehaviour
         {
             hudManager.ShowSubtitle("Rahim", text);
         }
+    }
+    IEnumerator PauseForHighlight(UIHighlighter highlighter, AudioSource audioSource)
+    {
+        // Pause narration
+        if (audioSource != null && audioSource.isPlaying)
+            audioSource.Pause();
+
+        // Highlight UI
+        if (highlighter != null)
+            highlighter.Highlight();
+
+        // Wait 3 seconds
+        yield return new WaitForSeconds(3f);
+
+        // Stop highlight
+        if (highlighter != null)
+            highlighter.StopHighlight();
+
+        // Resume narration
+        if (audioSource != null)
+            audioSource.UnPause();
     }
 }
