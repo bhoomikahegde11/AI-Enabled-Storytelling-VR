@@ -11,6 +11,9 @@ public class NPCInteraction : MonoBehaviour
     
     [Header("Movement")]
     public GameObject teleportSystem;
+    
+    [Header("Indicator")]
+    [SerializeField] private NPCIndicator indicator;
 
     private bool playerNearby = false;
     private bool inConversation = false;
@@ -20,6 +23,9 @@ public class NPCInteraction : MonoBehaviour
     {
         if (talkPromptObject != null)
             talkPromptObject.SetActive(false);
+
+        if (indicator != null)
+            indicator.Hide();
     }
 
     private void Update()
@@ -67,7 +73,10 @@ public class NPCInteraction : MonoBehaviour
         );
 
         if (teleportSystem != null)
-            teleportSystem.SetActive(false);
+            teleportSystem.SetActive(false);\
+
+        if (indicator != null)
+            indicator.Hide();
 
         StartCoroutine(OpenQuestionsAfterDelay());
 
@@ -118,5 +127,16 @@ public class NPCInteraction : MonoBehaviour
 
         if (talkPromptObject != null)
             talkPromptObject.SetActive(false);
+    }
+    public void EnableIndicator()
+    {
+        if (indicator != null)
+            indicator.Show();
+    }
+
+    public void DisableIndicator()
+    {
+        if (indicator != null)
+            indicator.Hide();
     }
 }
