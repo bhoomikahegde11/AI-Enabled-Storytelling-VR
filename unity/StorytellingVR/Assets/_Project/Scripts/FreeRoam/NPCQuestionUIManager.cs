@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,12 +14,10 @@ public class NPCQuestionUIManager : MonoBehaviour
     public Button[] questionButtons;
     public TMP_Text[] questionButtonTexts;
 
-    [Header("Controller Rays")]
-    public GameObject leftRay;
-    public GameObject rightRay;
-
     private NPCDialogueData currentDialogue;
-
+    private bool[] askedQuestions;
+    
+    
     private void Awake()
     {
         Instance = this;
@@ -28,22 +27,22 @@ public class NPCQuestionUIManager : MonoBehaviour
     {
         if (questionCanvas != null)
             questionCanvas.SetActive(false);
-
-        SetRays(false);
     }
-
+    
     public void Open(NPCDialogueData dialogue)
     {
         currentDialogue = dialogue;
 
+        if (askedQuestions == null || askedQuestions.Length != dialogue.questions.Length)
+            askedQuestions = new bool[dialogue.questions.Length];
+
         questionCanvas.SetActive(true);
-        SetRays(true);
 
         for (int i = 0; i < questionButtons.Length; i++)
         {
             int index = i;
 
-            if (i < dialogue.questions.Length)
+            if (i < dialogue.questions.Length && !askedQuestions[i])
             {
                 questionButtons[i].gameObject.SetActive(true);
                 questionButtonTexts[i].text = dialogue.questions[i].question;
@@ -56,20 +55,9 @@ public class NPCQuestionUIManager : MonoBehaviour
                 questionButtons[i].gameObject.SetActive(false);
             }
         }
+        
 
         Debug.Log("[QUESTION UI] Opened");
-    }
-
-    public void Close()
-    {
-        currentDialogue = null;
-
-        if (questionCanvas != null)
-            questionCanvas.SetActive(false);
-
-        SetRays(false);
-
-        Debug.Log("[QUESTION UI] Closed");
     }
 
     private void AskQuestion(int index)
@@ -77,19 +65,53 @@ public class NPCQuestionUIManager : MonoBehaviour
         if (currentDialogue == null)
             return;
 
+        askedQuestions[index] = true;
+
+        if (questionCanvas != null)
+            questionCanvas.SetActive(false);
+
+        StartCoroutine(AnswerThenReopen(index));
+    }
+
+    private IEnumerator AnswerThenReopen(int index)
+    {
         NarratorUIManager.Instance.ShowNarration(
             currentDialogue.npcName,
             currentDialogue.questions[index].response,
             6f
         );
+
+        yield return new WaitForSeconds(6.2f);
+
+        if (HasRemainingQuestions())
+        {
+            Open(currentDialogue);
+        }
+        else
+        {
+            Debug.Log("[QUESTION UI] All questions asked");
+        }
     }
 
-    private void SetRays(bool active)
+    private bool HasRemainingQuestions()
     {
-        if (leftRay != null)
-            leftRay.SetActive(active);
+        for (int i = 0; i < askedQuestions.Length; i++)
+        {
+            if (!askedQuestions[i])
+                return true;
+        }
 
-        if (rightRay != null)
-            rightRay.SetActive(active);
+        return false;
+    }
+
+    public void Close()
+    {
+        currentDialogue = null;
+        askedQuestions = null;
+
+        if (questionCanvas != null)
+            questionCanvas.SetActive(false);
+
+        Debug.Log("[QUESTION UI] Closed");
     }
 }

@@ -5171,7 +5171,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: -0.02679443, w: 0}
+  m_margin: {x: -73.05215, y: 0, z: -73.443306, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -7581,8 +7581,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7521bccb4fe6774494da7aed990309a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NPCInteraction
-  dialogue: {fileID: 11400000, guid: ee50fb1a3cc965b4cb64cda04aed5ffe, type: 2}
+  dialogue: {fileID: 11400000, guid: 304066c3b2b1d2445b4bc3d8cda25d18, type: 2}
   talkPromptObject: {fileID: 0}
+  teleportSystem: {fileID: 1309237751}
 --- !u!65 &414398906
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -16840,6 +16841,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ForeignTraderInteractable
   conversationManager: {fileID: 0}
+  interactable: {fileID: 0}
 --- !u!114 &959907431
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -20312,6 +20314,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1176455202}
+  - component: {fileID: 1176455203}
   m_Layer: 0
   m_Name: RightControllerAnchor
   m_TagString: Untagged
@@ -20335,6 +20338,24 @@ Transform:
   - {fileID: 36736724}
   m_Father: {fileID: 177905679}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1176455203
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1176455201}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 173c32425d1958149ae5f71fec597fdc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NPCDialogueVRLaserPointer
+  controllerHand: 1
+  triggerThreshold: 0.75
+  maxDistance: 8
+  rayWidth: 0.01
+  idleColor: {r: 1, g: 0.95, b: 0.6, a: 0.9}
+  hoverColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &1188587555
 GameObject:
   m_ObjectHideFlags: 0
@@ -24754,7 +24775,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: -0.02679443, w: 0}
+  m_margin: {x: -73.36183, y: 0, z: -72.05041, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -26007,8 +26028,6 @@ MonoBehaviour:
   - {fileID: 262275109}
   - {fileID: 2108384049}
   - {fileID: 1656240785}
-  leftRay: {fileID: 2004912799}
-  rightRay: {fileID: 0}
 --- !u!114 &1523463357
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -29649,7 +29668,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: -0.02679443, w: 0}
+  m_margin: {x: -74.22262, y: 0, z: -72.85071, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -31753,7 +31772,7 @@ Transform:
   m_GameObject: {fileID: 1786493390}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -26.04, y: -0.06, z: 0.28}
+  m_LocalPosition: {x: -26.36, y: -0.06, z: 0.57}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -35186,11 +35205,6 @@ MonoBehaviour:
   installationRoutineCheckpoint:
     _installationRoutineId: 2063f481-1b63-4eda-9ee8-a00df98536bc
     _installationVariants: []
---- !u!1 &2004912799 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 6033742252131765594, guid: 0a7d2469f24041c4284c66706f84c45e, type: 3}
-  m_PrefabInstance: {fileID: 2004912795}
-  m_PrefabAsset: {fileID: 0}
 --- !u!4 &2007376706 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 607b1c12b76a012419f6e2802a7fb171, type: 3}
@@ -36713,7 +36727,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: -0.02679443, w: 0}
+  m_margin: {x: -73.66709, y: 0, z: -73.91975, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
