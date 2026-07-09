@@ -3,8 +3,8 @@ using System.Collections;
 
 public class UIHighlighter : MonoBehaviour
 {
-    public float highlightScale = 1.15f;
-    public float speed = 4f;
+    public float highlightScale = 1.35f;
+    public float speed = 2.5f;
 
     private Vector3 originalScale;
     private Coroutine pulseRoutine;

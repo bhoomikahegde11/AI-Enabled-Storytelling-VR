@@ -109,7 +109,7 @@ public class TutorialManager : MonoBehaviour
     string[] lines,
     float[] startTimes)
     {
-        Debug.Log("ShowDialogueSequenceWithTimings started");
+        
         if (speakerNameText != null)
         {
             speakerNameText.text = speaker;
@@ -119,7 +119,7 @@ public class TutorialManager : MonoBehaviour
         {
             audioSource.clip = audioClip;
             audioSource.Play();
-            Debug.Log("Playing clip: " + audioClip.name);
+            
         }
 
         if (hudManager != null)
@@ -137,22 +137,6 @@ public class TutorialManager : MonoBehaviour
 
             if (dialogueText != null)
                 dialogueText.text = lines[i];
-
-            // Pause after the Coins line
-            if (i == 2)
-            {
-                yield return StartCoroutine(
-                    PauseForHighlight(coinHighlighter, audioSource)
-                );
-            }
-
-            // Pause after the Respect line
-            if (i == 3)
-            {
-                yield return StartCoroutine(
-                    PauseForHighlight(respectHighlighter, audioSource)
-                );
-            }
         }
 
         while (audioSource != null && audioSource.isPlaying)
@@ -192,35 +176,36 @@ public class TutorialManager : MonoBehaviour
     )
 );
 
-        yield return StartCoroutine(ShowDialogueSequenceWithTimings(
-            "Narrator:",
-            Color.yellow,
-            narratorAudioSource,
-            narratorIntroClip,
-            new string[]
-{
-    "Now, let us learn the art of negotiation.",
-    "The base price of one veesai of cardamom is 18 Varahas.",
-    "To your right, you will see the number of Varahas you earn from each successful trade.",
-    "Next to it, you will also find your Reputation in the market.",
-    "As a trader, you must maintain a good reputation.",
-    "Merchants who earn the trust and respect of their customers attract more business and greater opportunities.",
-    "Start by offering 70 Varahas.",
-    "Be careful... a price that is too high may cost you the deal entirely."
-},
+//        yield return StartCoroutine(ShowDialogueSequenceWithTimings(
+//            "Narrator:",
+//            Color.yellow,
+//            narratorAudioSource,
+//            narratorIntroClip,
+//            new string[]
+//{
+//    "Now, let us learn the art of negotiation.",
+//    "The base price of one veesai of cardamom is 18 Varahas.",
+//    "To your right, you will see the number of Varahas you earn from each successful trade.",
+//    "Next to it, you will also find your Reputation in the market.",
+//    "As a trader, you must maintain a good reputation.",
+//    "Merchants who earn the trust and respect of their customers attract more business and greater opportunities.",
+//    "Start by offering 70 Varahas.",
+//    "Be careful... a price that is too high may cost you the deal entirely."
+//},
 
-new float[]
-{
-    0.0f,     // Now, let us learn...
-    3.0f,     // The base price...
-    7.3f,     // To your right...
-    12.2f,    // Next to it...
-    15.5f,    // As a trader...
-    18.8f,    // Merchants who earn...
-    25.8f,    // Start by offering...
-    29.5f     // Be careful...
-}
-        ));
+//        new float[]
+//{
+//    0.0f,    // Now, let us learn the art of negotiation.
+//    3.0f,    // The base price of one veesai...
+//    7.3f,    // To your right, you will see...
+//    16.5f,   // Next to it, you will also find your Reputation...
+//    21.5f,   // As a trader, you must maintain...
+//    25.0f,   // Merchants who earn...
+//    31.0f,   // Start by offering 70 Varahas.
+//    33.2f    // Be careful...
+//}
+//        ));
+        yield return StartCoroutine(NarratorTutorialIntro());
         voiceRecognitionManager.voicePromptText.text = "Say 70";
 
         voiceRecognitionManager.ListenForPrice();
@@ -487,7 +472,7 @@ new float[]
             highlighter.Highlight();
 
         // Wait 3 seconds
-        yield return new WaitForSeconds(3f);
+        yield return new WaitForSeconds(4.5f);
 
         // Stop highlight
         if (highlighter != null)
@@ -496,5 +481,115 @@ new float[]
         // Resume narration
         if (audioSource != null)
             audioSource.UnPause();
+    }
+    IEnumerator NarratorTutorialIntro()
+    {
+        speakerNameText.text = "Narrator:";
+
+        narratorAudioSource.clip = narratorIntroClip;
+        narratorAudioSource.Play();
+
+        //-------------------------
+        // Line 1
+        //-------------------------
+
+        dialogueText.text =
+            "Now, let us learn the art of negotiation.";
+       
+        yield return new WaitForSeconds(3.0f);
+
+        //-------------------------
+        // Line 2
+        //-------------------------
+
+        dialogueText.text =
+            "The base price of one veesai of cardamom is 18 Varahas.";
+        
+        yield return new WaitForSeconds(4.2f);
+
+        //-------------------------
+        // Line 3
+        //-------------------------
+
+        dialogueText.text =
+            "To your right, you will see the number of Varahas you earn from each successful trade.";
+        
+        yield return new WaitForSeconds(4.7f);
+
+        //-------------------------
+        // COINS
+        //-------------------------
+
+        narratorAudioSource.Pause();
+
+        coinHighlighter.Highlight();
+
+        yield return new WaitForSeconds(5f);
+
+        coinHighlighter.StopHighlight();
+
+        narratorAudioSource.UnPause();
+
+        //-------------------------
+        // Line 4
+        //-------------------------
+
+        dialogueText.text =
+            "Next to it, you will also find your Reputation in the market.";
+        
+        yield return new WaitForSeconds(3.5f);
+
+        
+
+        //-------------------------
+        // RESPECT
+        //-------------------------
+
+        narratorAudioSource.Pause();
+
+        respectHighlighter.Highlight();
+
+        yield return new WaitForSeconds(5f);
+
+        respectHighlighter.StopHighlight();
+
+        narratorAudioSource.UnPause();
+        //-------------------------
+        // Line 5
+        //-------------------------
+
+        dialogueText.text =
+            "As a trader, you must maintain a good reputation.";
+        
+        yield return new WaitForSeconds(3.2f);
+        //-------------------------
+        // Line 6
+        //-------------------------
+
+        dialogueText.text =
+            "Merchants who earn the trust and respect of their customers attract more business and greater opportunities.";
+        
+        yield return new WaitForSeconds(6.7f);
+
+        //-------------------------
+        // Line 7
+        //-------------------------
+
+        dialogueText.text =
+            "Start by offering 70 Varahas.";
+        
+        yield return new WaitForSeconds(3.0f);
+
+        //-------------------------
+        // Line 8
+        //-------------------------
+
+        dialogueText.text =
+            "Be careful... a price that is too high may cost you the deal entirely.";
+        
+        while (narratorAudioSource.isPlaying)
+            yield return null;
+
+        hudManager.HideSubtitle();
     }
 }
