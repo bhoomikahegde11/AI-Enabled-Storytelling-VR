@@ -33,7 +33,7 @@ public class NPCInteraction : MonoBehaviour
             talkPromptObject.SetActive(false);
 
         if (indicator != null)
-            indicator.Show();honestly it 
+            indicator.Show();
     }
 
     private void Update()
