@@ -1,7 +1,7 @@
 {
     "global_metrics": {
-        "reputation": 54,
-        "total_varahas": 163,
+        "reputation": 50,
+        "total_varahas": 100,
         "completed_levels": []
     },
     "inventory": [
@@ -15,7 +15,7 @@
         },
         {
             "spiceKey": "cinnamon",
-            "grams": 11440
+            "grams": 12000
         },
         {
             "spiceKey": "cardamom",
