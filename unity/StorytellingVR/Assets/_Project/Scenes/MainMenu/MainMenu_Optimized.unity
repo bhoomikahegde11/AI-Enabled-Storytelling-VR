@@ -17988,8 +17988,8 @@ MonoBehaviour:
   sfxSource: {fileID: 884834782}
   hoverClip: {fileID: 8300000, guid: f72d1c2d3321ceb4db881891277a6e66, type: 3}
   clickClip: {fileID: 8300000, guid: f9a7978642ac9204186170068017ce46, type: 3}
-  hoverVolume: 0.2
-  clickVolume: 0.7
+  hoverVolume: 0.05
+  clickVolume: 0.55
 --- !u!1 &885068819
 GameObject:
   m_ObjectHideFlags: 0
@@ -26020,6 +26020,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   controllerHand: 0
   triggerThreshold: 0.75
+  hoverHapticStrength: 0.1
+  hoverHapticDuration: 0.03
+  clickHapticStrength: 0.22
+  clickHapticDuration: 0.045
+  hapticFrequency: 0.3
   maxDistance: 8
   rayWidth: 0.01
   idleColor: {r: 1, g: 0.95, b: 0.6, a: 0.9}
@@ -28632,6 +28637,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   controllerHand: 1
   triggerThreshold: 0.75
+  hoverHapticStrength: 0.1
+  hoverHapticDuration: 0.03
+  clickHapticStrength: 0.22
+  clickHapticDuration: 0.045
+  hapticFrequency: 0.3
   maxDistance: 8
   rayWidth: 0.01
   idleColor: {r: 1, g: 0.95, b: 0.6, a: 0.9}

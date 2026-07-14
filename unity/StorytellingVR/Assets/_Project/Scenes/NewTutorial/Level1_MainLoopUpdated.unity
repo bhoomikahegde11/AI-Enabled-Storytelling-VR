@@ -7231,7 +7231,7 @@ MonoBehaviour:
   centerEyeAnchor: {fileID: 1388768017}
   positionOffset: {x: 0, y: -1.02, z: 0.02}
   rotationOffsetEuler: {x: 0, y: 0, z: 0}
-  bodySelectionMode: 1
+  bodySelectionMode: 0
   maleBodyRoot: {fileID: 901000021}
   femaleBodyRoot: {fileID: 901000010}
   maleBodyLocalPosition: {x: 0, y: 0.45, z: -0.13}
