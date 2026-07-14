@@ -14,10 +14,12 @@ public class NPCQuestionUIManager : MonoBehaviour
     public Button[] questionButtons;
     public TMP_Text[] questionButtonTexts;
 
+    public bool IsOpen { get; private set; }
+    private NPCInteraction currentNPC;
     private NPCDialogueData currentDialogue;
     private bool[] askedQuestions;
-    
-    
+    private Coroutine answerRoutine;
+
     private void Awake()
     {
         Instance = this;
@@ -25,63 +27,86 @@ public class NPCQuestionUIManager : MonoBehaviour
 
     private void Start()
     {
-        if (questionCanvas != null)
-            questionCanvas.SetActive(false);
+        SetCanvasVisible(false);
     }
-    
-    public void Open(NPCDialogueData dialogue)
+
+    public void Open(
+    NPCDialogueData dialogue,
+    NPCInteraction npc = null)
     {
         currentDialogue = dialogue;
 
-        if (askedQuestions == null || askedQuestions.Length != dialogue.questions.Length)
-            askedQuestions = new bool[dialogue.questions.Length];
+        if (npc != null)
+            currentNPC = npc;
 
-        questionCanvas.SetActive(true);
+        if (askedQuestions == null ||
+            askedQuestions.Length != dialogue.questions.Length)
+        {
+            askedQuestions = new bool[dialogue.questions.Length];
+        }
 
         for (int i = 0; i < questionButtons.Length; i++)
         {
             int index = i;
 
-            if (i < dialogue.questions.Length && !askedQuestions[i])
-            {
-                questionButtons[i].gameObject.SetActive(true);
-                questionButtonTexts[i].text = dialogue.questions[i].question;
+            bool shouldShow =
+                i < dialogue.questions.Length &&
+                !askedQuestions[i];
 
-                questionButtons[i].onClick.RemoveAllListeners();
-                questionButtons[i].onClick.AddListener(() => AskQuestion(index));
-            }
-            else
-            {
-                questionButtons[i].gameObject.SetActive(false);
-            }
+            questionButtons[i].gameObject.SetActive(shouldShow);
+
+            if (!shouldShow)
+                continue;
+
+            questionButtonTexts[i].text =
+                dialogue.questions[i].question;
+
+            questionButtons[i].onClick.RemoveAllListeners();
+            questionButtons[i].onClick.AddListener(
+                () => AskQuestion(index)
+            );
         }
-        
 
-        Debug.Log("[QUESTION UI] Opened");
+        SetCanvasVisible(true);
+
+        Debug.Log("[QUESTION UI] Opened.");
     }
 
     private void AskQuestion(int index)
     {
-        if (currentDialogue == null)
+        if (currentDialogue == null ||
+            index < 0 ||
+            index >= currentDialogue.questions.Length)
+        {
             return;
+        }
 
         askedQuestions[index] = true;
 
-        if (questionCanvas != null)
-            questionCanvas.SetActive(false);
+        SetCanvasVisible(false);
 
-        StartCoroutine(AnswerThenReopen(index));
+        if (answerRoutine != null)
+            StopCoroutine(answerRoutine);
+
+        answerRoutine =
+            StartCoroutine(AnswerThenReopen(index));
     }
 
     private IEnumerator AnswerThenReopen(int index)
     {
-        NarratorUIManager.Instance.ShowNarration(
-            currentDialogue.npcName,
-            currentDialogue.questions[index].response,
-            6f
-        );
+        NPCDialogueData dialogueAtStart =
+            currentDialogue;
 
-        yield return new WaitForSeconds(6.2f);
+        yield return NarratorUIManager.Instance
+            .PlayNarrationLineByLine(
+                dialogueAtStart.npcName,
+                dialogueAtStart.questions[index].response
+            );
+
+        answerRoutine = null;
+
+        if (currentDialogue == null)
+            yield break;
 
         if (HasRemainingQuestions())
         {
@@ -89,15 +114,23 @@ public class NPCQuestionUIManager : MonoBehaviour
         }
         else
         {
-            Debug.Log("[QUESTION UI] All questions asked");
+            Debug.Log("[QUESTION UI] All questions asked.");
+
+            SetCanvasVisible(false);
+
+            if (currentNPC != null)
+                currentNPC.OnAllQuestionsAsked();
         }
     }
 
     private bool HasRemainingQuestions()
     {
-        for (int i = 0; i < askedQuestions.Length; i++)
+        if (askedQuestions == null)
+            return false;
+
+        foreach (bool asked in askedQuestions)
         {
-            if (!askedQuestions[i])
+            if (!asked)
                 return true;
         }
 
@@ -106,12 +139,38 @@ public class NPCQuestionUIManager : MonoBehaviour
 
     public void Close()
     {
+        if (answerRoutine != null)
+        {
+            StopCoroutine(answerRoutine);
+            answerRoutine = null;
+        }
+
+        SetCanvasVisible(false);
+
         currentDialogue = null;
         askedQuestions = null;
+        currentNPC = null;
+        Debug.Log("[QUESTION UI] Closed.");
+    }
+
+    private void SetCanvasVisible(bool visible)
+    {
+        IsOpen = visible;
 
         if (questionCanvas != null)
-            questionCanvas.SetActive(false);
+            questionCanvas.SetActive(visible);
 
-        Debug.Log("[QUESTION UI] Closed");
+        SetLaserPointerEnabled(visible);
+    }
+
+    private void SetLaserPointerEnabled(bool enabled)
+    {
+        NPCDialogueVRLaserPointer laser =
+            Object.FindAnyObjectByType<NPCDialogueVRLaserPointer>(
+                FindObjectsInactive.Include
+            );
+
+        if (laser != null)
+            laser.enabled = enabled;
     }
 }
