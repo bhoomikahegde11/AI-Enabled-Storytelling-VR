@@ -8,6 +8,9 @@ public class NPCDialogueData : ScriptableObject
     [TextArea(3, 8)]
     public string openingDialogue;
 
+    [TextArea(3, 8)]
+    public string closingDialogue;
+
     public DialogueQuestion[] questions;
 }
 
