@@ -13,14 +13,13 @@ public class NPCDirectionalIndicator : MonoBehaviour
     [Tooltip("Duplicated particle system parented to CenterEyeAnchor.")]
     [SerializeField] private ParticleSystem edgeIndicator;
 
-    [Header("Edge Positions - Camera Local Space")]
-    [SerializeField]
-    private Vector3 leftEdgePosition =
-        new Vector3(-0.42f, 0f, 1f);
+    [Header("Edge Placement")]
+    [Range(0.01f, 0.3f)]
+    [SerializeField] private float screenEdgePadding = 0.1f;
 
-    [SerializeField]
-    private Vector3 rightEdgePosition =
-        new Vector3(0.42f, 0f, 1f);
+    [SerializeField] private float edgeDepth = 1f;
+
+    [SerializeField] private float edgeVerticalPosition = 0.5f;
 
     [Header("Visibility")]
     [Range(0f, 0.25f)]
@@ -120,27 +119,36 @@ public class NPCDirectionalIndicator : MonoBehaviour
         if (!edgeVisible)
         {
             edgeVisible = true;
+
             edgeIndicator.gameObject.SetActive(true);
             edgeIndicator.Play(true);
         }
 
-        Vector3 targetPosition =
-            onLeft ? leftEdgePosition : rightEdgePosition;
+        float viewportX = onLeft
+            ? screenEdgePadding
+            : 1f - screenEdgePadding;
 
-        edgeTransform.localPosition = Vector3.Lerp(
-            edgeTransform.localPosition,
-            targetPosition,
+        Vector3 viewportPosition = new Vector3(
+            viewportX,
+            edgeVerticalPosition,
+            edgeDepth
+        );
+
+        Vector3 targetWorldPosition =
+            playerCamera.ViewportToWorldPoint(viewportPosition);
+
+        edgeTransform.position = Vector3.Lerp(
+            edgeTransform.position,
+            targetWorldPosition,
             edgeMovementSpeed * Time.unscaledDeltaTime
         );
 
-        // Left edge particles drift right, toward the centre.
-        // Right edge particles drift left, toward the centre.
-        float inwardSpeed =
-            onLeft
-                ? horizontalParticleSpeed
-                : -horizontalParticleSpeed;
+        float inwardSpeed = onLeft
+            ? horizontalParticleSpeed
+            : -horizontalParticleSpeed;
 
-        edgeVelocity.x = new ParticleSystem.MinMaxCurve(inwardSpeed);
+        edgeVelocity.x =
+            new ParticleSystem.MinMaxCurve(inwardSpeed);
     }
 
     private void HideEdgeIndicator()
