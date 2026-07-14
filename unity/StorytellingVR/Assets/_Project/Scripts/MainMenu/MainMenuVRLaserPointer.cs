@@ -15,6 +15,13 @@ public class MainMenuVRLaserPointer : MonoBehaviour
     [SerializeField] private ControllerHand controllerHand = ControllerHand.Right;
     [SerializeField] private float triggerThreshold = 0.75f;
 
+    [Header("Haptics")]
+    [SerializeField] [Range(0f, 1f)] private float hoverHapticStrength = 0.1f;
+    [SerializeField] private float hoverHapticDuration = 0.03f;
+    [SerializeField] [Range(0f, 1f)] private float clickHapticStrength = 0.22f;
+    [SerializeField] private float clickHapticDuration = 0.045f;
+    [SerializeField] private float hapticFrequency = 0.3f;
+
     [Header("Ray")]
     [SerializeField] private float maxDistance = 8f;
     [SerializeField] private float rayWidth = 0.01f;
@@ -25,6 +32,7 @@ public class MainMenuVRLaserPointer : MonoBehaviour
     private LineRenderer lineRenderer;
     private GameObject currentHoverObject;
     private bool wasTriggerPressed;
+    private Coroutine hapticRoutine;
 
     private OVRInput.Controller OvrController =>
         controllerHand == ControllerHand.Left
@@ -75,6 +83,7 @@ public class MainMenuVRLaserPointer : MonoBehaviour
     private void OnDisable()
     {
         ClearHover();
+        OVRInput.SetControllerVibration(0f, 0f, OvrController);
     }
 
     private void EnsureLineRenderer()
@@ -199,6 +208,8 @@ public class MainMenuVRLaserPointer : MonoBehaviour
         if (currentHoverObject != null)
         {
             ExecuteEvents.ExecuteHierarchy(currentHoverObject, eventData, ExecuteEvents.pointerEnterHandler);
+            MainMenuAudioController.Instance?.PlayHover();
+            PlayHapticPulse(hoverHapticStrength, hoverHapticDuration);
         }
     }
 
@@ -214,6 +225,9 @@ public class MainMenuVRLaserPointer : MonoBehaviour
             TMP_InputField inputField = hoverTarget.GetComponent<TMP_InputField>();
             if (inputField != null)
             {
+                MainMenuAudioController.Instance?.PlayClick();
+                PlayHapticPulse(clickHapticStrength, clickHapticDuration);
+
                 if (eventSystem == null)
                     eventSystem = EventSystem.current;
 
@@ -224,8 +238,21 @@ public class MainMenuVRLaserPointer : MonoBehaviour
             }
             else
             {
+                Toggle toggle = hoverTarget.GetComponent<Toggle>();
+                bool previousToggleValue = toggle != null && toggle.isOn;
+
                 ExecuteEvents.Execute(hoverTarget, eventData, ExecuteEvents.pointerClickHandler);
                 ExecuteEvents.Execute(hoverTarget, eventData, ExecuteEvents.selectHandler);
+
+                if (toggle != null && toggle.isOn != previousToggleValue)
+                {
+                    MainMenuAudioController.Instance?.PlayClick();
+                    PlayHapticPulse(clickHapticStrength, clickHapticDuration);
+                }
+                else if (toggle == null)
+                {
+                    PlayHapticPulse(clickHapticStrength, clickHapticDuration);
+                }
             }
         }
 
@@ -312,5 +339,24 @@ public class MainMenuVRLaserPointer : MonoBehaviour
     private void LogClickTarget(string targetName)
     {
         Debug.Log($"{nameof(MainMenuVRLaserPointer)} clicked '{targetName}' with {controllerHand} controller.");
+    }
+
+    private void PlayHapticPulse(float amplitude, float duration)
+    {
+        if (!IsControllerConnected())
+            return;
+
+        if (hapticRoutine != null)
+            StopCoroutine(hapticRoutine);
+
+        hapticRoutine = StartCoroutine(HapticPulseRoutine(Mathf.Clamp01(amplitude), duration));
+    }
+
+    private System.Collections.IEnumerator HapticPulseRoutine(float amplitude, float duration)
+    {
+        OVRInput.SetControllerVibration(hapticFrequency, amplitude, OvrController);
+        yield return new WaitForSecondsRealtime(Mathf.Max(0.01f, duration));
+        OVRInput.SetControllerVibration(0f, 0f, OvrController);
+        hapticRoutine = null;
     }
 }

@@ -36,6 +36,7 @@ public class MainMenuSaveFlow : MonoBehaviour
 
     public void OpenSaveSelect()
     {
+        PlayMenuClick();
         PopulateFieldsFromPrefs();
         SetPanelActive(mainMenuRoot, false);
         SetPanelActive(saveSelectPanel, true);

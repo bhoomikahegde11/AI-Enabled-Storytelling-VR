@@ -67,7 +67,10 @@ public class MenuButtonHoverEffect : MonoBehaviour,
         targetScale = originalScale * hoverScale;
         targetColor = hoverColor;
 
-        MainMenuAudioController.Instance?.PlayHover();
+        if (eventData == null || eventData.pointerId >= 0)
+        {
+            MainMenuAudioController.Instance?.PlayHover();
+        }
     }
 
     public void OnPointerExit(PointerEventData eventData)

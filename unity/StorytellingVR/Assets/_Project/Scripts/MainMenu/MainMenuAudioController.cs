@@ -6,6 +6,7 @@ public class MainMenuAudioController : MonoBehaviour
 
     [Header("Background Music")]
     [SerializeField] private AudioSource bgmSource;
+    [SerializeField] private AudioClip backgroundMusicClip;
     [SerializeField] private bool playBgmOnAwake = true;
 
     [Header("UI SFX")]
@@ -60,9 +61,16 @@ public class MainMenuAudioController : MonoBehaviour
             return;
         }
 
+        if (backgroundMusicClip != null)
+        {
+            bgmSource.clip = backgroundMusicClip;
+        }
+
+        bgmSource.playOnAwake = false;
+        bgmSource.spatialBlend = 0f;
         bgmSource.loop = true;
 
-        if (playBgmOnAwake && !bgmSource.isPlaying)
+        if (playBgmOnAwake && bgmSource.clip != null && !bgmSource.isPlaying)
         {
             bgmSource.Play();
         }
@@ -70,8 +78,11 @@ public class MainMenuAudioController : MonoBehaviour
 
     private void EnsureSfxSource()
     {
-        if (sfxSource != null)
+        if (sfxSource != null && sfxSource != bgmSource)
         {
+            sfxSource.playOnAwake = false;
+            sfxSource.loop = false;
+            sfxSource.spatialBlend = 0f;
             return;
         }
 

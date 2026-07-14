@@ -10,14 +10,14 @@ public class MenuSceneButton : MonoBehaviour
 
     public void BeginJourney()
     {
-        PlayMenuClick();
-
         if (mainMenuSaveFlow != null)
         {
             Debug.Log($"{nameof(MenuSceneButton)} on '{gameObject.name}' opening save select flow.");
             mainMenuSaveFlow.OpenSaveSelect();
             return;
         }
+
+        PlayMenuClick();
 
         if (GameManager.Instance != null)
         {
