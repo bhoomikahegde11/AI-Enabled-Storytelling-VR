@@ -16,7 +16,7 @@ public class TutorialManager : MonoBehaviour
     public VoiceRecognitionManager voiceRecognitionManager;
     public Level1HUDManager hudManager;
     public RespectUIManager respectUIManager;
-
+    public PromptManager promptmanager;
 
     //==================================================
     // AUDIO SOURCES
@@ -173,8 +173,9 @@ public class TutorialManager : MonoBehaviour
                 currentTradePanelVisible
             );
 
-            SetControlPrompt(
-                "Press Y whenever you want to open or close the Current Trade panel."
+            ShowControlPrompt(
+                "Press Y whenever you want to open or close the Current Trade panel.",
+                PromptManager.Instance.yButton
             );
         }
     }
@@ -276,16 +277,14 @@ public class TutorialManager : MonoBehaviour
     //==================================================
 
     IEnumerator ShowControlInstruction(
-        string instruction,
-        AudioClip audioClip)
+    string instruction,
+    AudioClip audioClip,
+    Sprite buttonIcon)
     {
-        // Narrator is NOT shown as a normal dialogue speaker.
-        // The instruction appears in the tutorial/control UI.
-
         if (hudManager != null)
             hudManager.HideSubtitle();
 
-        SetControlPrompt(instruction);
+        ShowControlPrompt(instruction, buttonIcon);
 
         if (audioClip != null && narratorAudioSource != null)
         {
@@ -297,8 +296,10 @@ public class TutorialManager : MonoBehaviour
         }
         else
         {
-            yield return new WaitForSeconds(2.5f);
+            yield return new WaitForSeconds(2f);
         }
+
+       
     }
 
 
@@ -377,17 +378,19 @@ public class TutorialManager : MonoBehaviour
         yield return StartCoroutine(
             ShowControlInstruction(
                 "Hold the left trigger while speaking.",
-                narratorHoldTriggerClip
+                narratorHoldTriggerClip,
+                PromptManager.Instance.leftTriggerButton
             )
         );
 
         yield return StartCoroutine(
             ShowControlInstruction(
                 "Release the trigger to review your words. Press A to confirm your offer.",
-                narratorConfirmOfferClip
+                narratorConfirmOfferClip,
+                PromptManager.Instance.aButton
             )
         );
-
+        
 
         //--------------------------------------------------
         // START VOICE RECOGNITION
@@ -428,12 +431,13 @@ public class TutorialManager : MonoBehaviour
         yield return StartCoroutine(
             ShowControlInstruction(
                 "Press Y to open the Current Trade panel.",
-                narratorOpenTradePanelClip
+                narratorOpenTradePanelClip,
+                PromptManager.Instance.yButton
             )
         );
 
         yield return new WaitUntil(() => currentTradePanelOpened);
-
+        PromptManager.Instance.HidePrompt();
 
         //--------------------------------------------------
         // MERCHANT EXPLAINS THE PANEL
@@ -510,12 +514,12 @@ public class TutorialManager : MonoBehaviour
         }
         else
         {
-            SetControlPrompt(
-                "Try offering a very high price like 70 Varahas so you can see the customer's reaction."
+            ShowControlPrompt(
+                "Hold Left Trigger and say '70 Varahas'",
+                PromptManager.Instance.leftTriggerButton
             );
-
             voiceRecognitionManager.ListenForPrice(
-                "70 Varahas"
+                "70"
             );
 
             waitingForHighPrice = true;
@@ -803,13 +807,14 @@ public class TutorialManager : MonoBehaviour
     // CONTROL PROMPT
     //==================================================
 
-    private void SetControlPrompt(string text)
+    private void ShowControlPrompt(string text, Sprite icon)
     {
-        if (hudManager == null)
-            return;
+        PromptManager.Instance.ShowPrompt(text, icon);
+    }
 
-        hudManager.ShowPlayerInputPanel();
-        hudManager.SetVoiceStatus(text);
+    private void HideControlPrompt()
+    {
+        PromptManager.Instance.HidePrompt();
     }
     //==================================================
     // VALUE CHANGES
