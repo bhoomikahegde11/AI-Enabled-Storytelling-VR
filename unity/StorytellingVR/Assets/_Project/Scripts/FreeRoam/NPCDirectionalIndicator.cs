@@ -14,7 +14,7 @@ public class NPCDirectionalIndicator : MonoBehaviour
     [SerializeField] private ParticleSystem edgeIndicator;
 
     [Header("Edge Placement")]
-    [Range(0.01f, 0.3f)]
+    [Range(0.01f, 0.5f)]
     [SerializeField] private float screenEdgePadding = 0.1f;
 
     [SerializeField] private float edgeDepth = 1f;
