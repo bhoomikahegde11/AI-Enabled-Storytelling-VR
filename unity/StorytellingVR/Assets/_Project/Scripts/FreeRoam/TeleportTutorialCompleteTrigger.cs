@@ -3,6 +3,9 @@ using UnityEngine;
 
 public class TeleportTutorialCompleteTrigger : MonoBehaviour
 {
+    [Header("NPC Progression")]
+    [SerializeField] private NPCInteraction localNPCInteraction;
+
     private bool completed = false;
 
     private void OnTriggerEnter(Collider other)
@@ -11,7 +14,10 @@ public class TeleportTutorialCompleteTrigger : MonoBehaviour
 
         if (completed)
         {
-            Debug.Log("[TELEPORT TUTORIAL] Ignored because tutorial is already complete.");
+            Debug.Log(
+                "[TELEPORT TUTORIAL] Ignored because tutorial is already complete."
+            );
+
             return;
         }
 
@@ -21,6 +27,7 @@ public class TeleportTutorialCompleteTrigger : MonoBehaviour
                 "[TELEPORT TUTORIAL] Ignored collider because it was not recognised as the player: "
                 + other.name
             );
+
             return;
         }
 
@@ -35,22 +42,33 @@ public class TeleportTutorialCompleteTrigger : MonoBehaviour
 
         if (TeleportLockController.Instance != null)
         {
-            TeleportLockController.Instance.SetAllTeleportEnabled(false);
-            Debug.Log("[TELEPORT TUTORIAL] Teleport hotspots disabled.");
+            TeleportLockController.Instance
+                .SetAllTeleportEnabled(false);
+
+            Debug.Log(
+                "[TELEPORT TUTORIAL] Teleport hotspots disabled."
+            );
         }
         else
         {
-            Debug.LogWarning("[TELEPORT TUTORIAL] TeleportLockController.Instance is null.");
+            Debug.LogWarning(
+                "[TELEPORT TUTORIAL] TeleportLockController.Instance is null."
+            );
         }
 
         if (TutorialPromptUIManager.Instance != null)
         {
             TutorialPromptUIManager.Instance.HidePrompt();
-            Debug.Log("[TELEPORT TUTORIAL] Tutorial prompt hidden.");
+
+            Debug.Log(
+                "[TELEPORT TUTORIAL] Tutorial prompt hidden."
+            );
         }
         else
         {
-            Debug.LogError("[TELEPORT TUTORIAL] TutorialPromptUIManager.Instance is null.");
+            Debug.LogError(
+                "[TELEPORT TUTORIAL] TutorialPromptUIManager.Instance is null."
+            );
         }
 
         if (ObjectiveUIManager.Instance != null)
@@ -61,7 +79,9 @@ public class TeleportTutorialCompleteTrigger : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[TELEPORT TUTORIAL] ObjectiveUIManager.Instance is null.");
+            Debug.LogWarning(
+                "[TELEPORT TUTORIAL] ObjectiveUIManager.Instance is null."
+            );
         }
 
         StartCoroutine(ShowNextObjectiveRoutine());
@@ -69,23 +89,21 @@ public class TeleportTutorialCompleteTrigger : MonoBehaviour
 
     private bool IsPlayer(Collider other)
     {
-        // Preferred component-based check.
         if (other.GetComponentInParent<CharacterController>() != null)
             return true;
 
-        // Fallback for the Meta VR player collider used in this scene.
         if (other.name.Contains("PlayerController"))
             return true;
 
-        if (other.transform.root.name.Contains("PlayerController"))
-            return true;
+        Transform root = other.transform.root;
 
-        return false;
+        return root != null &&
+               root.name.Contains("PlayerController");
     }
 
     private IEnumerator ShowNextObjectiveRoutine()
     {
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSecondsRealtime(2f);
 
         if (ObjectiveUIManager.Instance != null)
         {
@@ -96,23 +114,45 @@ public class TeleportTutorialCompleteTrigger : MonoBehaviour
 
         if (NarratorUIManager.Instance != null)
         {
-            yield return StartCoroutine(
-                NarratorUIManager.Instance.PlayNarration(
+            yield return NarratorUIManager.Instance
+                .PlayNarration(
                     "Narrator",
                     "Good. Now that you can move through the bazaar, speak with someone nearby. A local resident may help you understand this place.",
                     6f
-                )
+                );
+        }
+        else
+        {
+            Debug.LogError(
+                "[TELEPORT TUTORIAL] NarratorUIManager.Instance is null."
+            );
+        }
+
+        // Unlock and show the local NPC only after
+        // the narrator finishes speaking.
+        if (localNPCInteraction != null)
+        {
+            localNPCInteraction.EnableIndicator();
+
+            Debug.Log(
+                "[TELEPORT TUTORIAL] Local NPC unlocked and indicator enabled."
             );
         }
         else
         {
-            Debug.LogError("[TELEPORT TUTORIAL] NarratorUIManager.Instance is null.");
+            Debug.LogError(
+                "[TELEPORT TUTORIAL] Local NPC Interaction reference is missing."
+            );
         }
 
         if (TeleportLockController.Instance != null)
         {
-            TeleportLockController.Instance.SetGeneralHotspotsEnabled(true);
-            Debug.Log("[TELEPORT TUTORIAL] General hotspots enabled.");
+            TeleportLockController.Instance
+                .SetGeneralHotspotsEnabled(true);
+
+            Debug.Log(
+                "[TELEPORT TUTORIAL] General hotspots enabled."
+            );
         }
 
         gameObject.SetActive(false);

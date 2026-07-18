@@ -45,9 +45,15 @@ public class NPCDirectionalIndicator : MonoBehaviour
             edgeTransform = edgeIndicator.transform;
             edgeVelocity = edgeIndicator.velocityOverLifetime;
             edgeVelocity.enabled = true;
-
-            HideEdgeIndicatorImmediately();
         }
+
+        HideWorldIndicator();
+
+        if (edgeIndicator != null)
+            HideEdgeIndicatorImmediately();
+
+        // Do not run LateUpdate until an NPC explicitly enables this indicator.
+        enabled = false;
     }
 
     private void LateUpdate()
@@ -178,16 +184,44 @@ public class NPCDirectionalIndicator : MonoBehaviour
         edgeIndicator.gameObject.SetActive(false);
     }
 
+    public void SetTarget(
+    Transform target,
+    GameObject newWorldIndicator)
+    {
+        // Hide the previous NPC's world marker first.
+        HideWorldIndicator();
+
+        if (edgeIndicator != null)
+            HideEdgeIndicatorImmediately();
+
+        npcTarget = target;
+        worldIndicator = newWorldIndicator;
+
+        // Ensure the newly selected world marker begins hidden.
+        HideWorldIndicator();
+    }
+
     public void Show()
     {
+        if (npcTarget == null)
+        {
+            Debug.LogWarning(
+                "[DIRECTIONAL INDICATOR] Cannot show without a target."
+            );
+
+            return;
+        }
+
         enabled = true;
     }
 
     public void Hide()
     {
-        enabled = false;
-
         HideWorldIndicator();
-        HideEdgeIndicator();
+
+        if (edgeIndicator != null)
+            HideEdgeIndicatorImmediately();
+
+        enabled = false;
     }
 }
