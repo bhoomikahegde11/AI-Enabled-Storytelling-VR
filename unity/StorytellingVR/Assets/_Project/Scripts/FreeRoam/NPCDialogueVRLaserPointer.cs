@@ -10,7 +10,6 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
         Right
     }
 
-    private const string CanvasObjectName = "QuestionCanvas";
 
     [Header("Controller")]
     [SerializeField]
@@ -29,7 +28,6 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
 
     [SerializeField] private Color hoverColor = Color.white;
 
-    private bool collidersInitialized;
     private EventSystem eventSystem;
     private LineRenderer lineRenderer;
     private GameObject currentHoverObject;
@@ -149,17 +147,13 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
 
     private void EnsureButtonColliders()
     {
-        if (collidersInitialized)
-            return;
-
-        GameObject canvasObject =
-            GameObject.Find(CanvasObjectName);
-
-        if (canvasObject == null)
-            return;
+        
 
         Button[] buttons =
-            canvasObject.GetComponentsInChildren<Button>(true);
+            Object.FindObjectsByType<Button>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None
+            );
 
         foreach (Button button in buttons)
         {
@@ -191,7 +185,6 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
             boxCollider.isTrigger = true;
         }
 
-        collidersInitialized = true;
     }
 
     private Button FindButtonHit(

@@ -898,7 +898,7 @@ MonoBehaviour:
   playerCamera: {fileID: 1388768018}
   worldIndicator: {fileID: 222722392}
   edgeIndicator: {fileID: 750772230}
-  screenEdgePadding: 0.43
+  screenEdgePadding: 0.4
   edgeDepth: 1
   edgeVerticalPosition: 0.5
   horizontalViewportPadding: 0.08
