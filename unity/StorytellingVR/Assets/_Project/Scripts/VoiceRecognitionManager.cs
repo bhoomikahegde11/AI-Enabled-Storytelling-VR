@@ -13,13 +13,31 @@ public class VoiceRecognitionManager : MonoBehaviour
     public TMP_Text spokenPriceText;
 
     public TMP_Text voicePromptText;
+    [Tooltip("The live UI System HUD used for all tutorial prompts.")]
+    public Level1HUDManager hudManager;
+
+    [Header("Tutorial Controls")]
+    [Tooltip("Match the game input flow: hold the left trigger to speak, then press A to submit the recognised offer.")]
+    public bool requireTriggerAndConfirm = true;
 
     private bool waitingForInput = false;
+    private bool isListeningForPrice = false;
+    private bool hasPendingOffer = false;
+    private int pendingOffer;
+    private string offerHint = "a price";
+    private Color promptBaseColor;
 
     
     void Start()
-{
-        voicePromptText.text = "";
+    {
+        if (hudManager == null)
+            hudManager = FindFirstObjectByType<Level1HUDManager>();
+
+        if (voicePromptText != null)
+        {
+            voicePromptText.text = "";
+            promptBaseColor = voicePromptText.color;
+        }
         Debug.Log("VOICE MANAGER STARTED");
 
     
@@ -45,10 +63,54 @@ public class VoiceRecognitionManager : MonoBehaviour
         Debug.Log("FULL: " + text);
         OnTranscription(text);
     });
-}
+    }
 
-    public void ListenForPrice()
+    private void Update()
     {
+        if (!requireTriggerAndConfirm || !waitingForInput)
+            return;
+
+        PulsePrompt();
+
+        if (hasPendingOffer)
+        {
+            if (OVRInput.GetDown(OVRInput.Button.One) || Input.GetKeyDown(KeyCode.Return))
+            {
+                ConfirmPendingOffer();
+            }
+            else if (OVRInput.GetDown(OVRInput.Button.Two) || Input.GetKeyDown(KeyCode.R))
+            {
+                DiscardPendingOffer();
+            }
+            return;
+        }
+
+        if (OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger) || Input.GetKeyDown(KeyCode.V))
+        {
+            BeginListeningForPrice();
+        }
+
+        if (isListeningForPrice && (OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger) || Input.GetKeyUp(KeyCode.V)))
+        {
+            isListeningForPrice = false;
+            SetPrompt("Understanding your offer...");
+            voiceExperience.Deactivate();
+        }
+    }
+
+    public void ListenForPrice(string priceHint = "")
+    {
+        offerHint = string.IsNullOrWhiteSpace(priceHint) ? "a price" : priceHint;
+        hasPendingOffer = false;
+        pendingOffer = 0;
+
+        if (requireTriggerAndConfirm)
+        {
+            waitingForInput = true;
+            SetPrompt("Hold LEFT TRIGGER, say " + offerHint + ", then release.");
+            return;
+        }
+
         StartCoroutine(StartFreshListening());
     }
 
@@ -64,22 +126,101 @@ public class VoiceRecognitionManager : MonoBehaviour
 
         if (TryExtractNumber(transcription, out number))
         {
-            waitingForInput = false;
+            if (requireTriggerAndConfirm)
+            {
+                hasPendingOffer = true;
+                pendingOffer = number;
+                isListeningForPrice = false;
+                if (spokenPriceText != null)
+                    spokenPriceText.text = "Spoken Price: " + number + " Varahas";
+                if (hudManager != null && hudManager.playerInput != null)
+                    hudManager.playerInput.text = number + " Varahas";
 
-            spokenPriceText.text =
-                "Spoken Price: " + number + " Varahas";
-            voicePromptText.text = "";
-
-            tutorialManager.HandlePlayerOffer(number);
+                SetPrompt("You said " + number + ". Press A to confirm or B to try again.");
+            }
+            else
+            {
+                SubmitOffer(number);
+            }
         }
         else
         {
-            voicePromptText.text = "Please say a number.";
+            SetPrompt("I did not hear a price. Hold LEFT TRIGGER and try again.");
 
             StartCoroutine(ClearPromptAfterDelay());
-
-            StartCoroutine(RestartListening());
+            if (!requireTriggerAndConfirm)
+                StartCoroutine(RestartListening());
         }
+    }
+
+    private void BeginListeningForPrice()
+    {
+        if (isListeningForPrice || voiceExperience == null)
+            return;
+
+        isListeningForPrice = true;
+        SetPrompt("Listening... say " + offerHint + ".");
+        voiceExperience.Activate();
+    }
+
+    private void ConfirmPendingOffer()
+    {
+        if (!hasPendingOffer)
+            return;
+
+        SubmitOffer(pendingOffer);
+    }
+
+    private void DiscardPendingOffer()
+    {
+        hasPendingOffer = false;
+        pendingOffer = 0;
+        if (spokenPriceText != null)
+            spokenPriceText.text = "Spoken Price: --";
+        if (hudManager != null && hudManager.playerInput != null)
+            hudManager.playerInput.text = "";
+        SetPrompt("Hold LEFT TRIGGER, say " + offerHint + ", then release.");
+    }
+
+    private void SubmitOffer(int offer)
+    {
+        waitingForInput = false;
+        hasPendingOffer = false;
+        pendingOffer = 0;
+        SetPrompt("");
+
+        if (spokenPriceText != null)
+            spokenPriceText.text = "Spoken Price: " + offer + " Varahas";
+
+        if (tutorialManager != null)
+            tutorialManager.HandlePlayerOffer(offer);
+    }
+
+    private void SetPrompt(string message)
+    {
+        if (voicePromptText != null)
+            voicePromptText.text = message;
+
+        if (hudManager != null)
+        {
+            if (string.IsNullOrEmpty(message))
+                hudManager.HidePlayerInputPanel();
+            else
+            {
+                hudManager.ShowPlayerInputPanel();
+                hudManager.SetVoiceStatus(message);
+            }
+        }
+    }
+
+    private void PulsePrompt()
+    {
+        if (voicePromptText == null)
+            return;
+
+        Color color = promptBaseColor;
+        color.a = 0.7f + Mathf.Sin(Time.time * 4f) * 0.3f;
+        voicePromptText.color = color;
     }
 
     bool TryExtractNumber(string text, out int number)
@@ -121,8 +262,10 @@ public class VoiceRecognitionManager : MonoBehaviour
         yield return new WaitForSeconds(2f);
 
         if (waitingForInput)
-            voicePromptText.text = "Speak now";
+            SetPrompt(requireTriggerAndConfirm
+                ? "Hold LEFT TRIGGER and try again."
+                : "Speak now");
         else
-            voicePromptText.text = "";
+            SetPrompt("");
     }
 }

@@ -38,8 +38,10 @@ public class Level1HUDManager : MonoBehaviour
     [SerializeField] private UnityEngine.UI.Image reputationFillImage;
     [SerializeField] private TMP_Text reputationRankText;
     [SerializeField] private TMP_Text reputationDeltaText;
+    [SerializeField] private RectTransform reputationPanelTransform;
 
     private Coroutine reputationAnimCoroutine;
+    private Coroutine reputationPulseCoroutine;
 
     [Header("Varaha Money References")]
     [SerializeField] private TMP_Text varahaAmountText;
@@ -48,6 +50,7 @@ public class Level1HUDManager : MonoBehaviour
 
     private int lastMoneyAmount = -1;
     private Coroutine moneyAnimCoroutine;
+    private Coroutine moneyPulseCoroutine;
 
     [Header("NPC Intro References")]
     public GameObject npcIntroPanel;
@@ -784,14 +787,18 @@ public class Level1HUDManager : MonoBehaviour
 
     public void UpdateRespect(int respect)
     {
+        respect = Mathf.Clamp(respect, 0, 100);
+
         if (reputationText != null)
         {
-            reputationText.text = $"MERCHANT HONOUR\n{respect} / 100";
+            reputationText.text =
+                $"MERCHANT HONOUR\n{respect} / 100";
         }
 
         if (reputationRankText != null)
         {
-            reputationRankText.text = GetReputationRank(respect);
+            reputationRankText.text =
+                GetReputationRank(respect);
         }
 
         if (reputationSlider != null)
@@ -800,7 +807,9 @@ public class Level1HUDManager : MonoBehaviour
             {
                 StopCoroutine(reputationAnimCoroutine);
             }
-            reputationAnimCoroutine = StartCoroutine(AnimateReputation(respect));
+
+            reputationAnimCoroutine =
+                StartCoroutine(AnimateReputation(respect));
         }
     }
 
@@ -960,7 +969,97 @@ public class Level1HUDManager : MonoBehaviour
 
         reputationFillImage.color = originalColor;
     }
+    // ─────────────────────────────────────────────
+    //  TUTORIAL PANEL PULSES
+    // ─────────────────────────────────────────────
 
+    public void PulseMoneyPanel(float duration = 3f)
+    {
+        if (moneyPanelTransform == null)
+        {
+            Debug.LogWarning(
+                "[HUD] Money Panel Transform is not assigned."
+            );
+
+            return;
+        }
+
+        if (moneyPulseCoroutine != null)
+        {
+            StopCoroutine(moneyPulseCoroutine);
+        }
+
+        moneyPulseCoroutine = StartCoroutine(
+            PulsePanelRoutine(
+                moneyPanelTransform,
+                duration
+            )
+        );
+    }
+
+
+    public void PulseRespectPanel(float duration = 3f)
+    {
+        if (reputationPanelTransform == null)
+        {
+            Debug.LogWarning(
+                "[HUD] Reputation Panel Transform is not assigned."
+            );
+
+            return;
+        }
+
+        if (reputationPulseCoroutine != null)
+        {
+            StopCoroutine(reputationPulseCoroutine);
+        }
+
+        reputationPulseCoroutine = StartCoroutine(
+            PulsePanelRoutine(
+                reputationPanelTransform,
+                duration
+            )
+        );
+    }
+
+
+    private IEnumerator PulsePanelRoutine(
+        RectTransform panel,
+        float duration)
+    {
+        if (panel == null)
+            yield break;
+
+        Vector3 originalScale = panel.localScale;
+
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+
+            float pulse =
+                (Mathf.Sin(elapsed * Mathf.PI * 2f) + 1f)
+                * 0.5f;
+
+            float scaleMultiplier =
+                Mathf.Lerp(
+                    1f,
+                    1.12f,
+                    pulse
+                );
+
+            panel.localScale =
+                originalScale * scaleMultiplier;
+
+            yield return null;
+        }
+
+        panel.localScale = originalScale;
+
+        moneyPulseCoroutine = null;
+        reputationPulseCoroutine = null;
+    }
     // ─────────────────────────────────────────────
     //  TRADE COMPLETE POPUP
     // ─────────────────────────────────────────────
@@ -1136,6 +1235,31 @@ public class Level1HUDManager : MonoBehaviour
             if (tradeBuyerText != null) tradeBuyerText.text = $"Customer:\n{buyerName}";
             if (tradeQuantityText != null) tradeQuantityText.text = $"Seeking:\n{quantity}";
             if (tradeSpiceText != null) tradeSpiceText.text = spice;
+        }
+    }
+
+    // Used by the scripted transaction tutorial, where the player proposes every price.
+    // This deliberately avoids the gameplay-only "NPC Offer" wording.
+    public void SetTutorialTrade(string buyerName, string spice, string quantity, int costPrice, int playerOffer, bool showPanel)
+    {
+        if (currentTradePanel == null) return;
+
+        ledgerOpen = showPanel;
+        currentTradePanel.SetActive(showPanel);
+
+        if (tradeBuyerText != null) tradeBuyerText.text = $"Customer:\n{buyerName}";
+        if (tradeQuantityText != null) tradeQuantityText.text = $"Seeking:\n{quantity}";
+        if (tradeSpiceText != null) tradeSpiceText.text = spice;
+        if (tradeNPCOfferText != null)
+        {
+            tradeNPCOfferText.text = playerOffer > 0
+                ? $"Your Offer:\n{playerOffer} Varahas"
+                : "Your Offer:\n--";
+        }
+        if (tradeMarketValueText != null)
+        {
+            tradeMarketValueText.text =
+                $"Cost Price:\n{costPrice} Varahas\nFair Range:\n22-30 Varahas";
         }
     }
 
