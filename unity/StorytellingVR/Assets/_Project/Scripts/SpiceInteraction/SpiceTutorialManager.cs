@@ -228,6 +228,7 @@ public class SpiceTutorialManager : MonoBehaviour
             narratorAudioSource,
             narratorCompletedClip,
             "Well done. You have successfully completed your first spice order."
+
         ));
     }
 

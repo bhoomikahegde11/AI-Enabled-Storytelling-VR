@@ -6,8 +6,14 @@ public class StallEntryTrigger : MonoBehaviour
     [Header("UI")]
     public GameObject promptCanvas;
 
+    [Header("Merchant")]
+    public SpiceMerchantGuideSequence merchantSequence;
+
     private bool playerInside = false;
     private bool buttonHeld = false;
+
+    private bool arrivalDialogueStarted = false;
+    private bool arrivalDialogueFinished = false;
 
     private void Start()
     {
@@ -20,7 +26,12 @@ public class StallEntryTrigger : MonoBehaviour
         if (!playerInside)
             return;
 
-        InputDevice leftHand = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
+        // Player cannot enter until merchant finishes speaking
+        if (!arrivalDialogueFinished)
+            return;
+
+        InputDevice leftHand =
+            InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
 
         bool xPressed = false;
 
@@ -36,7 +47,9 @@ public class StallEntryTrigger : MonoBehaviour
             if (promptCanvas != null)
                 promptCanvas.SetActive(false);
 
-            Debug.Log("[STALL ENTRY] Entering stall through GameManager");
+            Debug.Log(
+                "[STALL ENTRY] Entering stall through GameManager"
+            );
 
             GameManager.Instance.LoadNextScene();
         }
@@ -54,10 +67,65 @@ public class StallEntryTrigger : MonoBehaviour
 
         playerInside = true;
 
+        Debug.Log("[STALL ENTRY] Player near stall");
+
+        // Do not show Press X yet
+        if (promptCanvas != null)
+            promptCanvas.SetActive(false);
+
+        // Play merchant dialogue once
+        if (!arrivalDialogueStarted)
+        {
+            arrivalDialogueStarted = true;
+
+            if (merchantSequence != null)
+            {
+                Debug.Log(
+                    "[STALL ENTRY] Starting merchant arrival dialogue"
+                );
+
+                merchantSequence.PlayStallArrivalDialogue(
+                    OnArrivalDialogueFinished
+                );
+            }
+            else
+            {
+                Debug.LogWarning(
+                    "[STALL ENTRY] Merchant Sequence is not assigned!"
+                );
+
+                OnArrivalDialogueFinished();
+            }
+        }
+        else if (arrivalDialogueFinished)
+        {
+            ShowEntryPrompt();
+        }
+    }
+
+    private void OnArrivalDialogueFinished()
+    {
+        arrivalDialogueFinished = true;
+
+        Debug.Log(
+            "[STALL ENTRY] Merchant arrival dialogue finished"
+        );
+
+        if (ObjectiveUIManager.Instance != null)
+        {
+            ObjectiveUIManager.Instance.SetObjective(
+                "Enter the spice stall"
+            );
+        }
+
+        if (playerInside)
+            ShowEntryPrompt();
+    }
+
+    private void ShowEntryPrompt()
+    {
         if (promptCanvas != null)
             promptCanvas.SetActive(true);
-
-        Debug.Log("[STALL ENTRY] Player near stall");
     }
 
     private void OnTriggerExit(Collider other)

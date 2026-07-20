@@ -1096,8 +1096,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 2801d8674d1771547b396ff9e4bd4aa0, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 2801d8674d1771547b396ff9e4bd4aa0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1194,7 +1194,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2180264, guid: 2801d8674d1771547b396ff9e4bd4aa0, type: 2}
+  - {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3086,6 +3086,7 @@ GameObject:
   - component: {fileID: 360437192}
   - component: {fileID: 360437191}
   - component: {fileID: 360437190}
+  - component: {fileID: 360437193}
   m_Layer: 3
   m_Name: 'ReputationPanel '
   m_TagString: Untagged
@@ -3167,6 +3168,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 360437188}
   m_CullTransparentMesh: 1
+--- !u!114 &360437193
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 360437188}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7fc1b8809b2b434ea239fa3c987ead3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHighlighter
+  highlightScale: 1.15
+  speed: 4
 --- !u!1 &366155203
 GameObject:
   m_ObjectHideFlags: 0
@@ -6206,6 +6221,7 @@ GameObject:
   - component: {fileID: 740974893}
   - component: {fileID: 740974892}
   - component: {fileID: 740974891}
+  - component: {fileID: 740974894}
   m_Layer: 3
   m_Name: 'MoneyPanel '
   m_TagString: Untagged
@@ -6285,6 +6301,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 740974889}
   m_CullTransparentMesh: 1
+--- !u!114 &740974894
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 740974889}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7fc1b8809b2b434ea239fa3c987ead3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHighlighter
+  highlightScale: 1.15
+  speed: 4
 --- !u!1 &744043054
 GameObject:
   m_ObjectHideFlags: 0
@@ -6322,6 +6352,16 @@ MonoBehaviour:
   promptmanager: {fileID: 0}
   narratorAudioSource: {fileID: 374105755}
   customerAudioSource: {fileID: 1121223228}
+  narratorIntroClip: {fileID: 8300000, guid: a9956f9cfe36c5549b2832141bfe9214, type: 3}
+  customerIntroClip: {fileID: 8300000, guid: 9ddedfced98345e44866fab006d72c86, type: 3}
+  customerAngryClip: {fileID: 8300000, guid: d9c84e1cff857bd4a953c749e2e61a2e, type: 3}
+  narratorGreedClip: {fileID: 8300000, guid: aacb8ec42f2b8cf4e96e0e4e8ca29dbd, type: 3}
+  customerAcceptClip: {fileID: 8300000, guid: a60381178eda0f64085a174de1cfff79, type: 3}
+  narratorEndingClip: {fileID: 8300000, guid: 0f3cc30f24c924f4d9a6f204e0cbdee3, type: 3}
+  customerTooHighClip: {fileID: 8300000, guid: 9a345b8288a4b1240bf425cc60aac5f7, type: 3}
+  narratorTryAgainClip: {fileID: 8300000, guid: f46ef90e7025a4f4f867841e8866873d, type: 3}
+  customerTooLowClip: {fileID: 8300000, guid: 10f48d6d0cf095e458d82275179a2193, type: 3}
+  narratorLowProfitClip: {fileID: 8300000, guid: 8ad1a12b42f60a941bd05bbdc15f1c33, type: 3}
   merchantAudioSource: {fileID: 0}
   rahimIntroClip: {fileID: 0}
   rahimAngryHighPriceClip: {fileID: 0}
@@ -6339,8 +6379,11 @@ MonoBehaviour:
   narratorOpenTradePanelClip: {fileID: 0}
   narratorHoldTriggerClip: {fileID: 0}
   narratorConfirmOfferClip: {fileID: 0}
-  coinsEarnedText: {fileID: 205516582}
-  spokenPriceText: {fileID: 0}
+  coinsEarnedText: {fileID: 1977646909}
+  spokenPriceText: {fileID: 152489717}
+  respectUIManager: {fileID: 360437190}
+  coinHighlighter: {fileID: 740974894}
+  respectHighlighter: {fileID: 360437193}
 --- !u!4 &744043056
 Transform:
   m_ObjectHideFlags: 0
