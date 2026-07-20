@@ -16,15 +16,10 @@ public class TutorialManager : MonoBehaviour
     public VoiceRecognitionManager voiceRecognitionManager;
     public Level1HUDManager hudManager;
     public RespectUIManager respectUIManager;
-    public PromptManager promptmanager;
 
     //==================================================
     // AUDIO SOURCES
     //==================================================
-
-    [Header("Audio Sources")]
-    [Tooltip("Audio source used for short tutorial/control instructions.")]
-    public AudioSource narratorAudioSource;
 
     [Tooltip("Audio source used for Rahim's dialogue.")]
     public AudioSource customerAudioSource;
@@ -84,23 +79,6 @@ public class TutorialManager : MonoBehaviour
 
     [Tooltip("Stall owner explains the danger of selling below value.")]
     public AudioClip merchantLowProfitLessonClip;
-
-
-    //==================================================
-    // NARRATOR / CONTROL AUDIO
-    //==================================================
-
-    [Header("Narrator - Control Instruction Audio")]
-
-    [Tooltip("Tutorial voice: Press Y to open the Current Trade panel.")]
-    public AudioClip narratorOpenTradePanelClip;
-
-    [Tooltip("Tutorial voice: Hold the left trigger while speaking.")]
-    public AudioClip narratorHoldTriggerClip;
-
-    [Tooltip("Tutorial voice: Release the trigger to review your words and press A to confirm.")]
-    public AudioClip narratorConfirmOfferClip;
-
 
     //==================================================
     // UI
@@ -171,11 +149,6 @@ public class TutorialManager : MonoBehaviour
                 TutorialCostPrice,
                 0,
                 currentTradePanelVisible
-            );
-
-            ShowControlPrompt(
-                "Press Y whenever you want to open or close the Current Trade panel.",
-                PromptManager.Instance.yButton
             );
         }
     }
@@ -272,37 +245,7 @@ public class TutorialManager : MonoBehaviour
     }
 
 
-    //==================================================
-    // NARRATOR / CONTROL INSTRUCTIONS
-    //==================================================
-
-    IEnumerator ShowControlInstruction(
-    string instruction,
-    AudioClip audioClip,
-    Sprite buttonIcon)
-    {
-        if (hudManager != null)
-            hudManager.HideSubtitle();
-
-        ShowControlPrompt(instruction, buttonIcon);
-
-        if (audioClip != null && narratorAudioSource != null)
-        {
-            narratorAudioSource.clip = audioClip;
-            narratorAudioSource.Play();
-
-            while (narratorAudioSource.isPlaying)
-                yield return null;
-        }
-        else
-        {
-            yield return new WaitForSeconds(2f);
-        }
-
-       
-    }
-
-
+    
     //==================================================
     // MAIN TUTORIAL SEQUENCE
     //==================================================
@@ -375,22 +318,16 @@ public class TutorialManager : MonoBehaviour
         // CONTROL INSTRUCTIONS
         //--------------------------------------------------
 
-        yield return StartCoroutine(
-            ShowControlInstruction(
-                "Hold the left trigger while speaking.",
-                narratorHoldTriggerClip,
-                PromptManager.Instance.leftTriggerButton
-            )
+        PromptManager.Instance.ShowPrompt(
+            "Hold Left Trigger and say '70 Varahas'",
+            PromptManager.Instance.leftTriggerButton
         );
 
-        yield return StartCoroutine(
-            ShowControlInstruction(
-                "Release the trigger to review your words. Press A to confirm your offer.",
-                narratorConfirmOfferClip,
-                PromptManager.Instance.aButton
-            )
+        PromptManager.Instance.ShowPrompt(
+            "Release the trigger to review your words. Press A to confirm your offer.",
+            PromptManager.Instance.aButton
         );
-        
+
 
         //--------------------------------------------------
         // START VOICE RECOGNITION
@@ -428,12 +365,9 @@ public class TutorialManager : MonoBehaviour
         // NARRATOR EXPLAINS BUTTON
         //--------------------------------------------------
 
-        yield return StartCoroutine(
-            ShowControlInstruction(
-                "Press Y to open the Current Trade panel.",
-                narratorOpenTradePanelClip,
-                PromptManager.Instance.yButton
-            )
+        PromptManager.Instance.ShowPrompt(
+            "Press Y to open the Current Trade panel.",
+            PromptManager.Instance.yButton
         );
 
         yield return new WaitUntil(() => currentTradePanelOpened);
@@ -504,6 +438,7 @@ public class TutorialManager : MonoBehaviour
     {
         if (offer >= 60)
         {
+            PromptManager.Instance.HidePrompt();
             waitingForHighPrice = false;
 
             ChangeRespect(-40);
@@ -514,7 +449,7 @@ public class TutorialManager : MonoBehaviour
         }
         else
         {
-            ShowControlPrompt(
+            PromptManager.Instance.ShowPrompt(
                 "Hold Left Trigger and say '70 Varahas'",
                 PromptManager.Instance.leftTriggerButton
             );
@@ -803,19 +738,6 @@ public class TutorialManager : MonoBehaviour
     }
 
 
-    //==================================================
-    // CONTROL PROMPT
-    //==================================================
-
-    private void ShowControlPrompt(string text, Sprite icon)
-    {
-        PromptManager.Instance.ShowPrompt(text, icon);
-    }
-
-    private void HideControlPrompt()
-    {
-        PromptManager.Instance.HidePrompt();
-    }
     //==================================================
     // VALUE CHANGES
     //==================================================
