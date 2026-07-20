@@ -882,9 +882,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e9f34037cfe38d4194eff64ef0d27ab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NPCQuestionUIManager
-  questionCanvas: {fileID: 0}
-  questionButtons: []
-  questionButtonTexts: []
 --- !u!114 &23441728
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -901,8 +898,9 @@ MonoBehaviour:
   playerCamera: {fileID: 1388768018}
   worldIndicator: {fileID: 222722392}
   edgeIndicator: {fileID: 750772230}
-  leftEdgePosition: {x: -0.42, y: 0, z: 1}
-  rightEdgePosition: {x: 0.42, y: 0, z: 1}
+  screenEdgePadding: 0.1
+  edgeDepth: 1
+  edgeVerticalPosition: 0.5
   horizontalViewportPadding: 0.08
   verticalViewportPadding: 0.1
   edgeMovementSpeed: 8
@@ -20982,7 +20980,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 475207827}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: 0, y: 0, z: 1.0740007}
   m_LocalScale: {x: 0.0013300003, y: 0.0013300003, z: 0.0013300006}
   m_ConstrainProportionsScale: 0
@@ -20990,10 +20988,10 @@ RectTransform:
   - {fileID: 234648403}
   - {fileID: 602260476}
   m_Father: {fileID: 316868948}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0.07000094, y: 0.04000002}
+  m_AnchoredPosition: {x: 0.07000094, y: 0.34500003}
   m_SizeDelta: {x: 1853, y: 1002}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &475207829
@@ -24586,9 +24584,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NPCInteraction
   dialogue: {fileID: 11400000, guid: 304066c3b2b1d2445b4bc3d8cda25d18, type: 2}
+  questionCanvasView: {fileID: 0}
   talkPromptObject: {fileID: 0}
   teleportSystem: {fileID: 0}
+  availableOnStart: 0
   indicator: {fileID: 0}
+  indicatorTarget: {fileID: 0}
+  worldIndicator: {fileID: 0}
   nextNPCsToUnlock:
   - {fileID: 1891705896}
 --- !u!1 &605785208
@@ -25308,7 +25310,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 645361635}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: 0, y: 0, z: 1.0899997}
   m_LocalScale: {x: 0.0013300003, y: 0.0013300003, z: 0.0013300006}
   m_ConstrainProportionsScale: 0
@@ -25318,10 +25320,10 @@ RectTransform:
   - {fileID: 79894246}
   - {fileID: 1224149567}
   m_Father: {fileID: 316868948}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0.030000225, y: 0.08000001}
+  m_AnchoredPosition: {x: 0.030000225, y: 0.385}
   m_SizeDelta: {x: 1853, y: 1002}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &645361637
@@ -33866,17 +33868,17 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 787099019}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: 0, y: 0, z: 1.3599991}
   m_LocalScale: {x: 0.0013300003, y: 0.0013300003, z: 0.0013300006}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 806500096}
   m_Father: {fileID: 316868948}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0.03, y: 0.31}
+  m_AnchoredPosition: {x: 0.03, y: 0.615}
   m_SizeDelta: {x: 1920, y: 1080}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &787099021
@@ -34464,17 +34466,17 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 801433266}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: 0, y: 0, z: 1}
   m_LocalScale: {x: 0.0010000003, y: 0.001, z: 0.0010000003}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 750772228}
   m_Father: {fileID: 316868948}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0.3}
+  m_AnchoredPosition: {x: 0, y: 0.605}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &801433268
@@ -40448,6 +40450,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StallEntryTrigger
   promptCanvas: {fileID: 1606039911}
+  merchantSequence: {fileID: 0}
 --- !u!1 &1062610836
 GameObject:
   m_ObjectHideFlags: 0
@@ -58412,9 +58415,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NPCInteraction
   dialogue: {fileID: 11400000, guid: 8552c1a58327a844f9c4759c30878bfc, type: 2}
+  questionCanvasView: {fileID: 0}
   talkPromptObject: {fileID: 0}
   teleportSystem: {fileID: 0}
+  availableOnStart: 0
   indicator: {fileID: 0}
+  indicatorTarget: {fileID: 0}
+  worldIndicator: {fileID: 0}
   nextNPCsToUnlock: []
 --- !u!65 &1891705897
 BoxCollider:
@@ -62018,6 +62025,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ddbe3ff47c5160342bab6236ed08d361, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TeleportTutorialCompleteTrigger
+  localNPCInteraction: {fileID: 0}
 --- !u!1 &2059834579
 GameObject:
   m_ObjectHideFlags: 0

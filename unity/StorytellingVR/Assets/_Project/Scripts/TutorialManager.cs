@@ -88,9 +88,6 @@ public class TutorialManager : MonoBehaviour
     public TMP_Text coinsEarnedText;
     public TMP_Text spokenPriceText;
 
-    [Header("Respect")]
-    public UIHighlighter coinHighlighter;
-    public UIHighlighter respectHighlighter;
 
     //==================================================
     // TUTORIAL STATE
@@ -208,7 +205,6 @@ public class TutorialManager : MonoBehaviour
         string[] lines,
         float[] startTimes)
     {
-        
         if (speakerNameText != null)
             speakerNameText.text = speaker + ":";
 
@@ -216,7 +212,6 @@ public class TutorialManager : MonoBehaviour
         {
             audioSource.clip = audioClip;
             audioSource.Play();
-            
         }
 
         for (int i = 0; i < lines.Length; i++)
@@ -250,7 +245,7 @@ public class TutorialManager : MonoBehaviour
     }
 
 
-    
+
     //==================================================
     // MAIN TUTORIAL SEQUENCE
     //==================================================
@@ -301,12 +296,10 @@ public class TutorialManager : MonoBehaviour
     MerchantExplainNegotiationSequence()
 );
 
+
         //--------------------------------------------------
         // STALL OWNER ASKS PLAYER TO TRY HIGH PRICE
         //--------------------------------------------------
-
-        yield return StartCoroutine(NarratorTutorialIntro());
-        voiceRecognitionManager.voicePromptText.text = "Say 70";
 
         yield return StartCoroutine(
             ShowDialogueSequence(
@@ -958,136 +951,5 @@ public class TutorialManager : MonoBehaviour
                 line
             );
         }
-    }
-    IEnumerator PauseForHighlight(UIHighlighter highlighter, AudioSource audioSource)
-    {
-        // Pause narration
-        if (audioSource != null && audioSource.isPlaying)
-            audioSource.Pause();
-
-        // Highlight UI
-        if (highlighter != null)
-            highlighter.Highlight();
-
-        // Wait 3 seconds
-        yield return new WaitForSeconds(4.5f);
-
-        // Stop highlight
-        if (highlighter != null)
-            highlighter.StopHighlight();
-
-        // Resume narration
-        if (audioSource != null)
-            audioSource.UnPause();
-    }
-    IEnumerator NarratorTutorialIntro()
-    {
-        speakerNameText.text = "Narrator:";
-
-        narratorAudioSource.clip = narratorIntroClip;
-        narratorAudioSource.Play();
-
-        //-------------------------
-        // Line 1
-        //-------------------------
-
-        dialogueText.text =
-            "Now, let us learn the art of negotiation.";
-       
-        yield return new WaitForSeconds(3.0f);
-
-        //-------------------------
-        // Line 2
-        //-------------------------
-
-        dialogueText.text =
-            "The base price of one veesai of cardamom is 18 Varahas.";
-        
-        yield return new WaitForSeconds(4.2f);
-
-        //-------------------------
-        // Line 3
-        //-------------------------
-
-        dialogueText.text =
-            "To your right, you will see the number of Varahas you earn from each successful trade.";
-        
-        yield return new WaitForSeconds(4.7f);
-
-        //-------------------------
-        // COINS
-        //-------------------------
-
-        narratorAudioSource.Pause();
-
-        coinHighlighter.Highlight();
-
-        yield return new WaitForSeconds(5f);
-
-        coinHighlighter.StopHighlight();
-
-        narratorAudioSource.UnPause();
-
-        //-------------------------
-        // Line 4
-        //-------------------------
-
-        dialogueText.text =
-            "Next to it, you will also find your Reputation in the market.";
-        
-        yield return new WaitForSeconds(3.5f);
-
-        
-
-        //-------------------------
-        // RESPECT
-        //-------------------------
-
-        narratorAudioSource.Pause();
-
-        respectHighlighter.Highlight();
-
-        yield return new WaitForSeconds(5f);
-
-        respectHighlighter.StopHighlight();
-
-        narratorAudioSource.UnPause();
-        //-------------------------
-        // Line 5
-        //-------------------------
-
-        dialogueText.text =
-            "As a trader, you must maintain a good reputation.";
-        
-        yield return new WaitForSeconds(3.2f);
-        //-------------------------
-        // Line 6
-        //-------------------------
-
-        dialogueText.text =
-            "Merchants who earn the trust and respect of their customers attract more business and greater opportunities.";
-        
-        yield return new WaitForSeconds(6.7f);
-
-        //-------------------------
-        // Line 7
-        //-------------------------
-
-        dialogueText.text =
-            "Start by offering 70 Varahas.";
-        
-        yield return new WaitForSeconds(3.0f);
-
-        //-------------------------
-        // Line 8
-        //-------------------------
-
-        dialogueText.text =
-            "Be careful... a price that is too high may cost you the deal entirely.";
-        
-        while (narratorAudioSource.isPlaying)
-            yield return null;
-
-        hudManager.HideSubtitle();
     }
 }
