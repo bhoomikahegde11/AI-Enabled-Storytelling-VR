@@ -111,7 +111,6 @@ public class TutorialManager : MonoBehaviour
     public TMP_Text spokenPriceText;
 
     [Header("Respect")]
-    public RespectUIManager respectUIManager;
     public UIHighlighter coinHighlighter;
     public UIHighlighter respectHighlighter;
 
