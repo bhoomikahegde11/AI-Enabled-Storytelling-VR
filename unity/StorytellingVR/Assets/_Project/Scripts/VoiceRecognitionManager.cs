@@ -87,6 +87,7 @@ public class VoiceRecognitionManager : MonoBehaviour
 
         if (OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger) || Input.GetKeyDown(KeyCode.V))
         {
+            PromptManager.Instance.HidePrompt();
             BeginListeningForPrice();
         }
 

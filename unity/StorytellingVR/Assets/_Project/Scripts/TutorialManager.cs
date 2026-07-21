@@ -323,10 +323,7 @@ public class TutorialManager : MonoBehaviour
             PromptManager.Instance.leftTriggerButton
         );
 
-        PromptManager.Instance.ShowPrompt(
-            "Release the trigger to review your words. Press A to confirm your offer.",
-            PromptManager.Instance.aButton
-        );
+        
 
 
         //--------------------------------------------------
@@ -336,6 +333,11 @@ public class TutorialManager : MonoBehaviour
         voiceRecognitionManager.ListenForPrice("70 Varahas");
 
         waitingForHighPrice = true;
+
+        PromptManager.Instance.ShowPrompt(
+            "Release the trigger to review your words. Press A to confirm your offer.",
+            PromptManager.Instance.aButton
+        );
     }
 
 

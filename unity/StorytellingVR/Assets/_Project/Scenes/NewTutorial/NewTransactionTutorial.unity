@@ -2514,6 +2514,8 @@ Transform:
   - {fileID: 462941643}
   - {fileID: 2097265780}
   - {fileID: 1925751493}
+  - {fileID: 621890425}
+  - {fileID: 3278050782966448088}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &319214671
@@ -5546,13 +5548,13 @@ Transform:
   m_GameObject: {fileID: 621890424}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
-  m_LocalPosition: {x: 29.93, y: 0.94, z: 5.67155}
+  m_LocalPosition: {x: 0.16000175, y: 1.678, z: 1.6904497}
   m_LocalScale: {x: 0.6, y: 0.6, z: 0.6}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 1274161121}
   - {fileID: 831380861}
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 316868948}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &646646651
 GameObject:
@@ -6319,8 +6321,6 @@ MonoBehaviour:
   voiceRecognitionManager: {fileID: 1408326717}
   hudManager: {fileID: 1274161122}
   respectUIManager: {fileID: 490512593}
-  promptmanager: {fileID: 0}
-  narratorAudioSource: {fileID: 374105755}
   customerAudioSource: {fileID: 1121223228}
   merchantAudioSource: {fileID: 0}
   rahimIntroClip: {fileID: 0}
@@ -6336,9 +6336,6 @@ MonoBehaviour:
   merchantFairPriceEndingClip: {fileID: 0}
   merchantStillTooHighLessonClip: {fileID: 0}
   merchantLowProfitLessonClip: {fileID: 0}
-  narratorOpenTradePanelClip: {fileID: 0}
-  narratorHoldTriggerClip: {fileID: 0}
-  narratorConfirmOfferClip: {fileID: 0}
   coinsEarnedText: {fileID: 205516582}
   spokenPriceText: {fileID: 0}
 --- !u!4 &744043056
@@ -10081,7 +10078,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e80d1ce7854895b41abe5612ca80bdcb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PromptManager
-  panel: {fileID: 2115822408}
+  panel: {fileID: 3278050782966448087}
   promptText: {fileID: 1091451974}
   buttonIcon: {fileID: 928451121}
   aButton: {fileID: 21300000, guid: 1f811ce1426e527428e06120078df97a, type: 3}
@@ -10090,12 +10087,10 @@ MonoBehaviour:
   yButton: {fileID: 21300000, guid: 319881f83b3a34c4ab63fd873267ee73, type: 3}
   leftTriggerButton: {fileID: 0}
   rightTriggerButton: {fileID: 0}
-  leftGripButton: {fileID: 0}
-  rightGripButton: {fileID: 0}
-  leftJoyStick: {fileID: 0}
-  rightJoyStick: {fileID: 21300000, guid: e6f852e66c1aaf84d822fd6d4857840b, type: 3}
+  gripButton: {fileID: 0}
+  thumbstickButton: {fileID: 0}
   audioSource: {fileID: 0}
-  promptSound: {fileID: 0}
+  promptAppearSound: {fileID: 0}
 --- !u!1 &1203711822
 GameObject:
   m_ObjectHideFlags: 0
@@ -15740,11 +15735,6 @@ Transform:
   - {fileID: 1774755131}
   m_Father: {fileID: 462941643}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2115822408 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4153919142608481950, guid: 985d9be383067b04aae95e7ae6b18e0b, type: 3}
-  m_PrefabInstance: {fileID: 3278050782966448086}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2117881514
 GameObject:
   m_ObjectHideFlags: 0
@@ -16579,7 +16569,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 0}
+    m_TransformParent: {fileID: 316868948}
     m_Modifications:
     - target: {fileID: 4112548415912437061, guid: 985d9be383067b04aae95e7ae6b18e0b, type: 3}
       propertyPath: m_Pivot.x
@@ -16623,7 +16613,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4112548415912437061, guid: 985d9be383067b04aae95e7ae6b18e0b, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 5.88
+      value: 1.8989
       objectReference: {fileID: 0}
     - target: {fileID: 4112548415912437061, guid: 985d9be383067b04aae95e7ae6b18e0b, type: 3}
       propertyPath: m_LocalRotation.w
@@ -16631,23 +16621,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4112548415912437061, guid: 985d9be383067b04aae95e7ae6b18e0b, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 4112548415912437061, guid: 985d9be383067b04aae95e7ae6b18e0b, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 4112548415912437061, guid: 985d9be383067b04aae95e7ae6b18e0b, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 4112548415912437061, guid: 985d9be383067b04aae95e7ae6b18e0b, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 29.79
+      value: 0.020004272
       objectReference: {fileID: 0}
     - target: {fileID: 4112548415912437061, guid: 985d9be383067b04aae95e7ae6b18e0b, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.34
+      value: 1.078
       objectReference: {fileID: 0}
     - target: {fileID: 4112548415912437061, guid: 985d9be383067b04aae95e7ae6b18e0b, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -16670,6 +16660,16 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 985d9be383067b04aae95e7ae6b18e0b, type: 3}
+--- !u!1 &3278050782966448087 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6998029760662305058, guid: 985d9be383067b04aae95e7ae6b18e0b, type: 3}
+  m_PrefabInstance: {fileID: 3278050782966448086}
+  m_PrefabAsset: {fileID: 0}
+--- !u!224 &3278050782966448088 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 4112548415912437061, guid: 985d9be383067b04aae95e7ae6b18e0b, type: 3}
+  m_PrefabInstance: {fileID: 3278050782966448086}
+  m_PrefabAsset: {fileID: 0}
 --- !u!23 &3299161055570316704
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -17686,7 +17686,5 @@ SceneRoots:
   - {fileID: 525394641}
   - {fileID: 610523525}
   - {fileID: 326974111}
-  - {fileID: 621890425}
   - {fileID: 1754038817}
-  - {fileID: 3278050782966448086}
   - {fileID: 1200391515}
