@@ -5,9 +5,14 @@ using UnityEngine.InputSystem;
 
 public class SpiceGuideTutorialPrompt : MonoBehaviour
 {
-    [Header("Tutorial Prompt UI")]
-    [SerializeField] private CanvasGroup promptCanvas;
-    [SerializeField] private TMP_Text promptText;
+    [Header("Dialogue UI")]
+    [SerializeField] private TMP_Text speakerNameText;
+    [SerializeField] private TMP_Text dialogueText;
+    [SerializeField] private Level1HUDManager hudManager;
+
+    [Header("Bhaskara Audio")]
+    [SerializeField] private AudioSource merchantAudioSource;
+    [SerializeField] private AudioClip spiceGuideIntroClip;
 
     [Header("Spice Guide Controller")]
     [SerializeField] private SpiceCostGuideController guideController;
@@ -28,7 +33,6 @@ public class SpiceGuideTutorialPrompt : MonoBehaviour
 
     private void Awake()
     {
-        SetCanvas(promptCanvas, 0f);
 
         if (guideController != null)
             guideController.LockGuide();
@@ -46,36 +50,42 @@ public class SpiceGuideTutorialPrompt : MonoBehaviour
     {
         PauseWorld();
 
-        if (promptText != null)
-        {
-            promptText.text =
-                "NEW REFERENCE TOOL\n\n" +
-                "Hold X to open the Spice Cost Guide.\n\n" +
-                "Release X after checking the prices.";
-        }
+        yield return StartCoroutine(
+            ShowDialogueSequence(
+                "Bhaskara",
+                merchantAudioSource,
+                spiceGuideIntroClip,
 
-        yield return FadeCanvas(promptCanvas, 1f, 0.4f);
+                new string[]
+                {
+                "Welcome to your workspace. The marketplace is moving fast today, and your success depends entirely on knowing the baseline worth of what is under your feet.",
+
+                "Look down. Pepper is the black gold of the empire, highly sought after by foreign traders. Turmeric is crucial for everyday meals and medicine. Cardamom is rare and fragrant, prized by temple kitchens. And Cinnamon travels long land routes, making it highly valuable."
+                },
+
+                new float[]
+                {
+                0f,
+                8.2f
+                }
+            )
+        );
+
+        PromptManager.Instance.ShowPrompt(
+            "Press X to view the Spice Cost Price List.",
+            PromptManager.Instance.xButton
+        );
 
         EnableInput();
 
-        //yield return new WaitUntil(() => isHolding);
+        yield return new WaitUntil(() => isHolding);
 
-        //yield return FadeCanvas(promptCanvas, 0f, 0.25f);
-
-        //if (guideController != null)
-        //    guideController.ShowGuide();
-
-        //yield return new WaitForSeconds(1.5f);
-
-        //yield return new WaitUntil(() => !isHolding);
-
-        //if (guideController != null)
-        //    guideController.HideGuide();
+        PromptManager.Instance.HidePrompt();
 
         DisableInput();
 
-        //if (guideController != null)
-            //guideController.UnlockGuide();
+        if (guideController != null)
+            guideController.UnlockGuide();
 
         ResumeWorld();
     }
@@ -103,13 +113,17 @@ public class SpiceGuideTutorialPrompt : MonoBehaviour
     private void OnHoldStarted(InputAction.CallbackContext context)
     {
         isHolding = true;
-    }
 
+        if (guideController != null)
+            guideController.ShowGuide();
+    }
     private void OnHoldEnded(InputAction.CallbackContext context)
     {
         isHolding = false;
-    }
 
+        if (guideController != null)
+            guideController.HideGuide();
+    }
     private void PauseWorld()
     {
         foreach (Animator animator in animatorsToPause)
@@ -151,34 +165,42 @@ public class SpiceGuideTutorialPrompt : MonoBehaviour
                 audioSourcesToLower[i].volume = originalVolumes[i];
         }
     }
-
-    private IEnumerator FadeCanvas(CanvasGroup canvasGroup, float targetAlpha, float duration)
+    private IEnumerator ShowDialogueSequence(
+    string speaker,
+    AudioSource audioSource,
+    AudioClip clip,
+    string[] lines,
+    float[] startTimes)
     {
-        if (canvasGroup == null)
-            yield break;
+        if (speakerNameText != null)
+            speakerNameText.text = speaker + ":";
 
-        canvasGroup.gameObject.SetActive(true);
-
-        float startAlpha = canvasGroup.alpha;
-        float timer = 0f;
-
-        while (timer < duration)
+        if (clip != null && audioSource != null)
         {
-            timer += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, timer / duration);
-            yield return null;
+            audioSource.clip = clip;
+            audioSource.Play();
         }
 
-        SetCanvas(canvasGroup, targetAlpha);
-    }
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (clip != null && audioSource != null)
+            {
+                yield return new WaitUntil(() =>
+                    audioSource.time >= startTimes[i] ||
+                    !audioSource.isPlaying);
+            }
 
-    private void SetCanvas(CanvasGroup canvasGroup, float alpha)
-    {
-        if (canvasGroup == null)
-            return;
+            if (dialogueText != null)
+                dialogueText.text = lines[i];
 
-        canvasGroup.alpha = alpha;
-        canvasGroup.interactable = alpha > 0.01f;
-        canvasGroup.blocksRaycasts = alpha > 0.01f;
+            if (hudManager != null)
+                hudManager.ShowSubtitle(speaker, lines[i]);
+        }
+
+        while (audioSource != null && audioSource.isPlaying)
+            yield return null;
+
+        if (hudManager != null)
+            hudManager.HideSubtitle();
     }
 }

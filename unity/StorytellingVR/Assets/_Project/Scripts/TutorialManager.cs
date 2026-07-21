@@ -358,7 +358,8 @@ public class TutorialManager : MonoBehaviour
                 merchantTeachTradeClip,
 
                 "Before you answer, take a moment to study the trade.",
-                "A wise merchant always knows what the customer wants and what his goods have cost him."
+                "A wise merchant always knows what the customer wants and what his goods have cost him.",
+                "Every customer has a different background, a different patience level, and a different strategy."
             )
         );
 
@@ -801,7 +802,7 @@ public class TutorialManager : MonoBehaviour
 
         string[] lines =
         {
-        "Good. Rahim wants one veesai of cardamom.",
+        "Rahim wants one veesai of cardamom.",
 
         "The cardamom has cost us 18 Varahas. Keep that in mind when naming your price.",
 
