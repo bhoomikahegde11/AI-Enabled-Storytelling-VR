@@ -12,22 +12,18 @@ public class SpiceTutorialManager : MonoBehaviour
     public Level1HUDManager hudManager;
 
     [Header("Audio Sources")]
-    public AudioSource narratorAudioSource;
     public AudioSource customerAudioSource;
+    public AudioSource merchantAudioSource;
 
     [Header("Dialogue Audio")]
     public AudioClip customerRequestClip;
-    public AudioClip narratorScooperAppearedClip;
-    public AudioClip narratorScoopedClip;
-    public AudioClip narratorWrongSpiceClip;
-    public AudioClip narratorWrongBagClip;
     public AudioClip customerThanksClip;
-    public AudioClip narratorCompletedClip;
-
-    [Header("UI Prompt")]
-    public GameObject promptPanel;
-    public TMP_Text promptText;
-    public InstructionPromptManager instructionPromptManager;
+    public AudioClip merchantExplainOrderClip;
+    public AudioClip merchantMoveToSackClip;
+    public AudioClip merchantCarryBagClip;
+    public AudioClip merchantWrongSpiceClip;
+    public AudioClip merchantWrongBagClip;
+    public AudioClip merchantCompletedClip;
 
     [Header("Tutorial")]
     public string customerName = "Customer";
@@ -66,7 +62,7 @@ public class SpiceTutorialManager : MonoBehaviour
     {
         if (!IsTutorialActive)
         {
-            HidePrompt();
+            PromptManager.Instance.HidePrompt();
             return;
         }
 
@@ -80,22 +76,37 @@ public class SpiceTutorialManager : MonoBehaviour
             return;
 
         tutorialStarted = true;
-        SetPrompt("Hold Right Trigger to pick up the scooper.");
 
         StartDialogueSequence(OpeningSequence());
     }
 
     IEnumerator OpeningSequence()
     {
-        yield return StartCoroutine(ShowDialogueSequence(
-            customerName + ":",
-            Color.white,
-            customerAudioSource,
-            customerRequestClip,
-            "Could you fill one bag of " + GetRequestedSpiceName() + " for me?"
-        ));
+        yield return StartCoroutine(
+            ShowDialogueSequence(
+                customerName + ":",
+                Color.white,
+                customerAudioSource,
+                customerRequestClip,
+                "Could you fill one bag of " + GetRequestedSpiceName() + " for me?"
+            )
+        );
 
-        
+        yield return StartCoroutine(
+            ShowDialogueSequence(
+                "Stall Owner:",
+                Color.yellow,
+                merchantAudioSource,
+                merchantExplainOrderClip,
+                "The customer wants a bag of cardamom.",
+                "Make sure you collect the spice they asked for."
+            )
+        );
+
+        PromptManager.Instance.ShowPrompt(
+            "Hold the right trigger to pick up the scooper.",
+            PromptManager.Instance.rightTriggerButton
+        );
     }
 
     public void NotifyCustomerHandedBag()
@@ -103,7 +114,11 @@ public class SpiceTutorialManager : MonoBehaviour
         if (!IsTutorialActive)
             return;
 
-        SetPrompt("Hold Right Trigger to pick up the scooper.");
+
+        PromptManager.Instance.ShowPrompt(
+            "Hold the right trigger to pick up the scooper.",
+            PromptManager.Instance.rightTriggerButton
+        );
     }
 
     public void NotifyScooperAppeared()
@@ -112,15 +127,25 @@ public class SpiceTutorialManager : MonoBehaviour
             return;
 
         scooperAppeared = true;
-        SetPrompt("Move the scooper into the highlighted sack.");
 
-        StartDialogueSequence(ShowDialogueSequence(
-            "Narrator:",
-            Color.yellow,
-            narratorAudioSource,
-            narratorScooperAppearedClip,
-            "Good. Move the scooper into the sack of the requested spice."
-        ));
+        PromptManager.Instance.HidePrompt();
+
+        StartDialogueSequence(
+            ScooperAppearedSequence()
+        );
+    }
+    IEnumerator ScooperAppearedSequence()
+    {
+        yield return StartCoroutine(
+            ShowDialogueSequence(
+                "Stall Owner:",
+                Color.yellow,
+                merchantAudioSource,
+                merchantMoveToSackClip,
+                "Good. Take the scooper to the cardamom sack."
+            )
+        );
+
     }
 
     public void NotifyScooperEnteredSack(SpiceType spice)
@@ -129,9 +154,12 @@ public class SpiceTutorialManager : MonoBehaviour
             return;
 
         if (spice == GetRequestedSpice())
-            SetPrompt("Keep holding the trigger to scoop.");
-        else
-            SetPrompt("Collect " + GetRequestedSpiceName() + ".");
+        {
+            PromptManager.Instance.ShowPrompt(
+                "Keep holding the trigger to scoop.",
+                PromptManager.Instance.rightTriggerButton
+            );
+        }
     }
 
     public void NotifyScooperFilled(SpiceType spice)
@@ -149,15 +177,29 @@ public class SpiceTutorialManager : MonoBehaviour
             return;
 
         scooperFilled = true;
-        SetPrompt("Bring the filled scooper to the customer's bag.");
 
-        StartDialogueSequence(ShowDialogueSequence(
-            "Narrator:",
-            Color.yellow,
-            narratorAudioSource,
-            narratorScoopedClip,
-            "Excellent. Now carry the spice to the customer's bag."
-        ));
+        PromptManager.Instance.HidePrompt();
+
+        StartDialogueSequence(
+            ScooperFilledSequence()
+        );
+    }
+    IEnumerator ScooperFilledSequence()
+    {
+        yield return StartCoroutine(
+            ShowDialogueSequence(
+                "Stall Owner:",
+                Color.yellow,
+                merchantAudioSource,
+                merchantCarryBagClip,
+                "Excellent. Now carry the cardamom to the customer's bag."
+            )
+        );
+
+        PromptManager.Instance.ShowPrompt(
+            "Bring the filled scooper to the customer's bag.",
+            PromptManager.Instance.rightTriggerButton
+        );
     }
 
     public void NotifyWrongSpiceCollected()
@@ -169,17 +211,27 @@ public class SpiceTutorialManager : MonoBehaviour
             return;
 
         nextWrongSpiceReminderTime = Time.time + wrongActionReminderCooldown;
-        SetPrompt("Collect " + GetRequestedSpiceName() + ".");
 
-        StartDialogueSequence(ShowDialogueSequence(
-            "Narrator:",
-            Color.yellow,
-            narratorAudioSource,
-            narratorWrongSpiceClip,
-            "That is not the spice the customer requested. Try Again."
-        ));
+        PromptManager.Instance.HidePrompt();
+
+        StartDialogueSequence(
+            WrongSpiceSequence()
+        );
     }
+    IEnumerator WrongSpiceSequence()
+    {
+        yield return StartCoroutine(
+            ShowDialogueSequence(
+                "Stall Owner:",
+                Color.yellow,
+                merchantAudioSource,
+                merchantWrongSpiceClip,
+                "That's the wrong spice.",
+                "The customer asked for cardamom. Try again."
+            )
+        );
 
+    }
     public void NotifyWrongSpiceBroughtToBag()
     {
         if (!IsTutorialActive)
@@ -189,16 +241,28 @@ public class SpiceTutorialManager : MonoBehaviour
             return;
 
         nextWrongBagReminderTime = Time.time + wrongActionReminderCooldown;
-        scooperFilled = false;
-        SetPrompt("Collect " + GetRequestedSpiceName() + ".");
 
-        StartDialogueSequence(ShowDialogueSequence(
-            "Narrator:",
-            Color.yellow,
-            narratorAudioSource,
-            narratorWrongBagClip,
-            "Collect the correct spice before filling the customer's bag."
-        ));
+        scooperFilled = false;
+
+        PromptManager.Instance.HidePrompt();
+
+        StartDialogueSequence(
+            WrongBagSequence()
+        );
+    }
+    IEnumerator WrongBagSequence()
+    {
+        yield return StartCoroutine(
+            ShowDialogueSequence(
+                "Stall Owner:",
+                Color.yellow,
+                merchantAudioSource,
+                merchantWrongBagClip,
+                "You need the correct spice before filling the customer's bag.",
+                "Collect the cardamom and try again."
+            )
+        );
+
     }
 
     public void NotifyCorrectBagFilled()
@@ -208,27 +272,34 @@ public class SpiceTutorialManager : MonoBehaviour
 
         bagFilled = true;
         EnsureCanRunCoroutines();
-        StartCoroutine(HidePromptAfterDelay(completionPromptHoldSeconds));
+        //StartCoroutine(HidePromptAfterDelay(completionPromptHoldSeconds));
         StartDialogueSequence(CompletionSequence());
     }
 
     IEnumerator CompletionSequence()
     {
-        yield return StartCoroutine(ShowDialogueSequence(
-            customerName + ":",
-            Color.white,
-            customerAudioSource,
-            customerThanksClip,
-            "Thank you, Merchant."
-        ));
+        yield return StartCoroutine(
+            ShowDialogueSequence(
+                customerName + ":",
+                Color.white,
+                customerAudioSource,
+                customerThanksClip,
+                "Thank you, merchant."
+            )
+        );
 
-        yield return StartCoroutine(ShowDialogueSequence(
-            "Narrator:",
-            Color.yellow,
-            narratorAudioSource,
-            narratorCompletedClip,
-            "Well done. You have successfully completed your first spice order."
-        ));
+        yield return StartCoroutine(
+            ShowDialogueSequence(
+                "Stall Owner:",
+                Color.yellow,
+                merchantAudioSource,
+                merchantCompletedClip,
+                "Well done.",
+                "You've successfully completed your first spice order."
+            )
+        );
+
+        PromptManager.Instance.HidePrompt();
     }
 
     IEnumerator ShowDialogueSequence(
@@ -394,44 +465,9 @@ public class SpiceTutorialManager : MonoBehaviour
         }
     }
 
-    void SetPrompt(string message)
-    {
-        if (instructionPromptManager != null)
-        {
-            instructionPromptManager.ShowTrigger(message);
-            return;
-        }
-
-        if (promptPanel != null)
-            promptPanel.SetActive(true);
-
-        if (promptText != null)
-            promptText.text = message;
-    }
-
-    void HidePrompt()
-    {
-        if (instructionPromptManager != null)
-        {
-            instructionPromptManager.Hide();
-            return;
-        }
-
-        if (promptPanel != null)
-            promptPanel.SetActive(false);
-
-        if (promptText != null)
-            promptText.text = "";
-    }
-
-    IEnumerator HidePromptAfterDelay(float delay)
-    {
-        if (delay > 0f)
-            yield return new WaitForSeconds(delay);
-
-        HidePrompt();
-    }
-
+    
+   
+    
     void StartDialogueSequence(IEnumerator sequence)
     {
         EnsureCanRunCoroutines();
