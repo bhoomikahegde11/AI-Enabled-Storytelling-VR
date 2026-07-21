@@ -5,14 +5,12 @@ using UnityEngine.UI;
 
 public class NPCQuestionUIManager : MonoBehaviour
 {
-    public static NPCQuestionUIManager Instance;
+    public static NPCQuestionUIManager Instance { get; private set; }
 
     public bool IsOpen { get; private set; }
 
-    public bool IsAnswerPlaying
-    {
-        get { return answerRoutine != null; }
-    }
+    public bool IsAnswerPlaying =>
+        answerRoutine != null;
 
     private NPCInteraction currentNPC;
     private NPCDialogueData currentDialogue;
@@ -27,7 +25,7 @@ public class NPCQuestionUIManager : MonoBehaviour
         {
             Debug.LogWarning(
                 "[QUESTION UI] Duplicate NPCQuestionUIManager found. " +
-                "Destroying the duplicate component."
+                "Destroying duplicate component."
             );
 
             Destroy(this);
@@ -46,6 +44,15 @@ public class NPCQuestionUIManager : MonoBehaviour
         {
             Debug.LogError(
                 "[QUESTION UI] Cannot open because dialogue is null."
+            );
+
+            return;
+        }
+
+        if (npc == null)
+        {
+            Debug.LogError(
+                "[QUESTION UI] Cannot open because NPCInteraction is null."
             );
 
             return;
@@ -71,7 +78,7 @@ public class NPCQuestionUIManager : MonoBehaviour
             return;
         }
 
-        // Hide the previous NPC canvas when switching NPCs.
+        // Hide a previous NPC canvas when changing conversations.
         if (currentCanvasView != null &&
             currentCanvasView != canvasView)
         {
@@ -82,12 +89,11 @@ public class NPCQuestionUIManager : MonoBehaviour
         currentNPC = npc;
         currentCanvasView = canvasView;
 
-        if (askedQuestions == null ||
-            askedQuestions.Length != dialogue.questions.Length)
-        {
-            askedQuestions =
-                new bool[dialogue.questions.Length];
-        }
+        // A new conversation should always start with fresh questions.
+        askedQuestions =
+            new bool[dialogue.questions != null
+                ? dialogue.questions.Length
+                : 0];
 
         RefreshButtons();
         SetCanvasVisible(true);
@@ -111,40 +117,47 @@ public class NPCQuestionUIManager : MonoBehaviour
         TMP_Text[] buttonTexts =
             currentCanvasView.QuestionButtonTexts;
 
+        DialogueQuestion[] questions =
+            currentDialogue.questions;
+
+        int questionCount =
+            questions != null ? questions.Length : 0;
+
         for (int i = 0; i < buttons.Length; i++)
         {
+            Button button = buttons[i];
+
+            if (button == null)
+                continue;
+
             int index = i;
 
             bool questionExists =
-                i < currentDialogue.questions.Length;
+                index < questionCount;
 
             bool alreadyAsked =
                 questionExists &&
                 askedQuestions != null &&
-                i < askedQuestions.Length &&
-                askedQuestions[i];
+                index < askedQuestions.Length &&
+                askedQuestions[index];
 
             bool shouldShow =
                 questionExists && !alreadyAsked;
 
-            if (buttons[i] == null)
-                continue;
-
-            buttons[i].gameObject.SetActive(shouldShow);
-
-            buttons[i].onClick.RemoveAllListeners();
+            button.onClick.RemoveAllListeners();
+            button.gameObject.SetActive(shouldShow);
 
             if (!shouldShow)
                 continue;
 
-            if (i < buttonTexts.Length &&
-                buttonTexts[i] != null)
+            if (index < buttonTexts.Length &&
+                buttonTexts[index] != null)
             {
-                buttonTexts[i].text =
-                    currentDialogue.questions[i].question;
+                buttonTexts[index].text =
+                    questions[index].question;
             }
 
-            buttons[i].onClick.AddListener(
+            button.onClick.AddListener(
                 () => AskQuestion(index)
             );
         }
@@ -156,6 +169,7 @@ public class NPCQuestionUIManager : MonoBehaviour
             return;
 
         if (currentDialogue == null ||
+            currentDialogue.questions == null ||
             index < 0 ||
             index >= currentDialogue.questions.Length)
         {
@@ -170,14 +184,13 @@ public class NPCQuestionUIManager : MonoBehaviour
 
         askedQuestions[index] = true;
 
-        // Hide only the current NPC's canvas.
         SetCanvasVisible(false);
 
         answerRoutine =
-            StartCoroutine(AnswerThenReopen(index));
+            StartCoroutine(AnswerThenContinue(index));
     }
 
-    private IEnumerator AnswerThenReopen(int index)
+    private IEnumerator AnswerThenContinue(int index)
     {
         NPCDialogueData dialogueAtStart =
             currentDialogue;
@@ -188,15 +201,28 @@ public class NPCQuestionUIManager : MonoBehaviour
         NPCQuestionCanvasView canvasAtStart =
             currentCanvasView;
 
-        yield return NarratorUIManager.Instance
-            .PlayNarrationLineByLine(
-                dialogueAtStart.npcName,
-                dialogueAtStart.questions[index].response
-            );
+        DialogueQuestion question =
+            dialogueAtStart.questions[index];
 
+        if (NarratorUIManager.Instance != null)
+        {
+            yield return NarratorUIManager.Instance
+                .PlayNarrationLineByLine(
+                    dialogueAtStart.npcName,
+                    question.response
+                );
+        }
+        else
+        {
+            Debug.LogError(
+                "[QUESTION UI] NarratorUIManager.Instance is missing."
+            );
+        }
+
+        // This answer coroutine has now genuinely finished.
         answerRoutine = null;
 
-        // Conversation may have been closed externally.
+        // The conversation might have been closed externally.
         if (currentDialogue == null ||
             currentNPC == null ||
             currentCanvasView == null)
@@ -204,7 +230,7 @@ public class NPCQuestionUIManager : MonoBehaviour
             yield break;
         }
 
-        // Ensure this is still the same NPC conversation.
+        // Ensure another NPC conversation did not replace this one.
         if (currentDialogue != dialogueAtStart ||
             currentNPC != npcAtStart ||
             currentCanvasView != canvasAtStart)
@@ -218,26 +244,58 @@ public class NPCQuestionUIManager : MonoBehaviour
             SetCanvasVisible(true);
 
             Debug.Log(
-                "[QUESTION UI] Answer completed; questions reopened."
+                "[QUESTION UI] Answer complete; remaining questions reopened."
             );
+
+            yield break;
+        }
+
+        Debug.Log(
+            "[QUESTION UI] All questions asked. " +
+            "Preparing closing dialogue."
+        );
+
+        /*
+         * Important:
+         * Save the NPC before clearing this manager's state.
+         * Then clear the UI locally without stopping this coroutine.
+         */
+        NPCInteraction npcToComplete =
+            currentNPC;
+
+        ClearConversationState();
+
+        /*
+         * Wait one frame before asking NPCInteraction to start the
+         * closing narration. This prevents the final answer and the
+         * closing sequence from fighting over the narrator/UI state.
+         */
+        yield return null;
+
+        if (npcToComplete != null)
+        {
+            Debug.Log(
+                "[QUESTION UI] Calling OnAllQuestionsAsked."
+            );
+
+            npcToComplete.OnAllQuestionsAsked();
         }
         else
         {
-            Debug.Log(
-                "[QUESTION UI] All questions asked."
+            Debug.LogError(
+                "[QUESTION UI] Cannot start closing dialogue because " +
+                "the NPC reference was lost."
             );
-
-            SetCanvasVisible(false);
-
-            if (currentNPC != null)
-                currentNPC.OnAllQuestionsAsked();
         }
     }
 
     private bool HasRemainingQuestions()
     {
-        if (askedQuestions == null)
+        if (askedQuestions == null ||
+            askedQuestions.Length == 0)
+        {
             return false;
+        }
 
         foreach (bool asked in askedQuestions)
         {
@@ -256,14 +314,19 @@ public class NPCQuestionUIManager : MonoBehaviour
             answerRoutine = null;
         }
 
+        ClearConversationState();
+
+        Debug.Log("[QUESTION UI] Closed.");
+    }
+
+    private void ClearConversationState()
+    {
         SetCanvasVisible(false);
 
         currentDialogue = null;
         currentNPC = null;
         currentCanvasView = null;
         askedQuestions = null;
-
-        Debug.Log("[QUESTION UI] Closed.");
     }
 
     private void SetCanvasVisible(bool visible)

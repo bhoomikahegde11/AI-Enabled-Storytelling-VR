@@ -4,15 +4,25 @@ using UnityEngine.XR;
 
 public class NPCInteraction : MonoBehaviour
 {
+    public enum StoryNPCType
+    {
+        None,
+        LocalResident,
+        ForeignTraveller,
+        Meera,
+        Bhaskara
+    }
+
     [Header("Dialogue")]
     public NPCDialogueData dialogue;
 
     [Header("Question Canvas")]
-    [Tooltip(
-        "Assign the NPCQuestionCanvasView beside this specific NPC."
-    )]
     [SerializeField]
     private NPCQuestionCanvasView questionCanvasView;
+
+    [Header("Story Identity")]
+    [SerializeField]
+    private StoryNPCType storyNPCType = StoryNPCType.None;
 
     [Header("Optional Prompt")]
     public GameObject talkPromptObject;
@@ -24,22 +34,14 @@ public class NPCInteraction : MonoBehaviour
     [SerializeField]
     private bool availableOnStart;
 
-    [Header("Shared Directional Indicator")]
+    [Header("Indicator")]
     [SerializeField]
     private NPCDirectionalIndicator indicator;
 
+    [Header("Legacy Next NPCs")]
     [Tooltip(
-        "The position that the shared indicator should point toward " +
-        "for this NPC."
+        "Temporary legacy field. Leave empty when using FreeRoamStoryManager."
     )]
-    [SerializeField]
-    private Transform indicatorTarget;
-
-    [Tooltip("The world-space particle object above this NPC.")]
-    [SerializeField]
-    private GameObject worldIndicator;
-
-    [Header("Next NPCs")]
     [SerializeField]
     private NPCInteraction[] nextNPCsToUnlock;
 
@@ -51,7 +53,6 @@ public class NPCInteraction : MonoBehaviour
     private bool interactionUnlocked;
 
     private Coroutine conversationRoutine;
-    private Coroutine closingRoutine;
 
     private void Start()
     {
@@ -60,16 +61,16 @@ public class NPCInteraction : MonoBehaviour
         if (talkPromptObject != null)
             talkPromptObject.SetActive(false);
 
+        if (indicator != null)
+        {
+            if (interactionUnlocked)
+                indicator.Show();
+            else
+                indicator.Hide();
+        }
+
         if (questionCanvasView != null)
             questionCanvasView.SetVisible(false);
-
-        // Do not hide the shared indicator here.
-        // Another NPC may own it.
-        //
-        // Only show it here when this NPC is intentionally
-        // available when the scene starts.
-        if (interactionUnlocked)
-            ShowIndicatorForThisNPC();
     }
 
     private void Update()
@@ -93,20 +94,9 @@ public class NPCInteraction : MonoBehaviour
             }
             else
             {
-                NPCQuestionUIManager questionManager =
-                    NPCQuestionUIManager.Instance;
-
-                // X ends the conversation only while the
-                // question selection canvas is visibly open.
-                //
-                // X does nothing during:
-                // - opening dialogue
-                // - an NPC answer
-                // - closing dialogue
                 if (!closingDialoguePlaying &&
-                    questionManager != null &&
-                    questionManager.IsOpen &&
-                    !questionManager.IsAnswerPlaying)
+                    NPCQuestionUIManager.Instance != null &&
+                    NPCQuestionUIManager.Instance.IsOpen)
                 {
                     BeginClosingDialogue();
                 }
@@ -119,10 +109,13 @@ public class NPCInteraction : MonoBehaviour
 
     private void StartConversation()
     {
-        if (dialogue == null)
+        if (dialogue == null ||
+            NarratorUIManager.Instance == null ||
+            NPCQuestionUIManager.Instance == null)
         {
             Debug.LogError(
-                $"[NPC] {gameObject.name} has no dialogue assigned."
+                "[NPC] Cannot start conversation. " +
+                "A dialogue or manager reference is missing."
             );
 
             return;
@@ -138,32 +131,17 @@ public class NPCInteraction : MonoBehaviour
             return;
         }
 
-        if (NarratorUIManager.Instance == null ||
-            NPCQuestionUIManager.Instance == null)
-        {
-            Debug.LogError(
-                "[NPC] Cannot start conversation because a " +
-                "dialogue manager is missing."
-            );
-
-            return;
-        }
-
         inConversation = true;
 
         if (talkPromptObject != null)
             talkPromptObject.SetActive(false);
 
-        if (TeleportLockController.Instance != null)
-        {
-            TeleportLockController.Instance
-                .SetAllTeleportEnabled(false);
-        }
+        if (TeleportManager.Instance != null)
+            TeleportManager.Instance.DisableAll();
 
         if (teleportSystem != null)
             teleportSystem.SetActive(false);
 
-        // Hide the one shared indicator when interaction begins.
         if (indicator != null)
             indicator.Hide();
 
@@ -173,7 +151,7 @@ public class NPCInteraction : MonoBehaviour
             StartCoroutine(ConversationFlowRoutine());
 
         Debug.Log(
-            $"[NPC] Conversation started with {gameObject.name}."
+            $"[NPC] Conversation started for {storyNPCType}."
         );
     }
 
@@ -252,6 +230,12 @@ public class NPCInteraction : MonoBehaviour
 
     private bool IsPlayer(Collider other)
     {
+        if (other == null)
+            return false;
+
+        if (other.CompareTag("Player"))
+            return true;
+
         if (other.GetComponentInParent<CharacterController>() != null)
             return true;
 
@@ -271,7 +255,8 @@ public class NPCInteraction : MonoBehaviour
 
         interactionUnlocked = true;
 
-        ShowIndicatorForThisNPC();
+        if (indicator != null)
+            indicator.Show();
 
         if (playerNearby &&
             !inConversation &&
@@ -281,7 +266,7 @@ public class NPCInteraction : MonoBehaviour
         }
 
         Debug.Log(
-            $"[NPC] {gameObject.name} unlocked."
+            $"[NPC] {storyNPCType} unlocked."
         );
     }
 
@@ -289,35 +274,6 @@ public class NPCInteraction : MonoBehaviour
     {
         if (indicator != null)
             indicator.Hide();
-    }
-
-    private void ShowIndicatorForThisNPC()
-    {
-        if (indicator == null)
-        {
-            Debug.LogWarning(
-                $"[NPC] {gameObject.name} has no shared " +
-                "NPCDirectionalIndicator assigned."
-            );
-
-            return;
-        }
-
-        if (indicatorTarget == null)
-        {
-            Debug.LogWarning(
-                $"[NPC] {gameObject.name} has no indicator target assigned."
-            );
-
-            return;
-        }
-
-        indicator.SetTarget(
-            indicatorTarget,
-            worldIndicator
-        );
-
-        indicator.Show();
     }
 
     private void SetLaserPointerEnabled(bool enabled)
@@ -333,35 +289,19 @@ public class NPCInteraction : MonoBehaviour
 
     private void BeginClosingDialogue()
     {
-        if (!inConversation ||
-            closingDialoguePlaying)
-        {
+        if (!inConversation || closingDialoguePlaying)
             return;
-        }
-
-        NPCQuestionUIManager manager =
-            NPCQuestionUIManager.Instance;
-
-        // Safety check: never interrupt an answer.
-        if (manager != null &&
-            manager.IsAnswerPlaying)
-        {
-            return;
-        }
 
         closingDialoguePlaying = true;
 
-        if (manager != null)
-            manager.Close();
+        if (NPCQuestionUIManager.Instance != null)
+            NPCQuestionUIManager.Instance.Close();
 
         SetLaserPointerEnabled(false);
 
-        closingRoutine =
-            StartCoroutine(ClosingConversationRoutine());
+        StartCoroutine(ClosingConversationRoutine());
 
-        Debug.Log(
-            $"[NPC] Closing dialogue started for {gameObject.name}."
-        );
+        Debug.Log("[NPC] Closing dialogue started.");
     }
 
     public void OnAllQuestionsAsked()
@@ -373,8 +313,7 @@ public class NPCInteraction : MonoBehaviour
     {
         SetLaserPointerEnabled(false);
 
-        if (!string.IsNullOrWhiteSpace(
-                dialogue.closingDialogue))
+        if (!string.IsNullOrWhiteSpace(dialogue.closingDialogue))
         {
             yield return NarratorUIManager.Instance
                 .PlayNarrationLineByLine(
@@ -382,8 +321,6 @@ public class NPCInteraction : MonoBehaviour
                     dialogue.closingDialogue
                 );
         }
-
-        closingRoutine = null;
 
         CompleteConversation();
     }
@@ -393,24 +330,14 @@ public class NPCInteraction : MonoBehaviour
         inConversation = false;
         conversationCompleted = true;
         closingDialoguePlaying = false;
-        interactionUnlocked = false;
 
         if (NPCQuestionUIManager.Instance != null)
             NPCQuestionUIManager.Instance.Close();
-
-        if (questionCanvasView != null)
-            questionCanvasView.SetVisible(false);
 
         SetLaserPointerEnabled(false);
 
         if (teleportSystem != null)
             teleportSystem.SetActive(true);
-
-        if (TeleportLockController.Instance != null)
-        {
-            TeleportLockController.Instance
-                .SetGeneralHotspotsEnabled(true);
-        }
 
         if (talkPromptObject != null)
             talkPromptObject.SetActive(false);
@@ -418,20 +345,99 @@ public class NPCInteraction : MonoBehaviour
         if (indicator != null)
             indicator.Hide();
 
-        if (nextNPCsToUnlock != null)
+        NotifyStoryManager();
+
+        Debug.Log(
+            $"[NPC] Conversation fully completed for {storyNPCType}."
+        );
+    }
+
+    private void NotifyStoryManager()
+    {
+        Debug.Log(
+            $"[NPC STORY] NotifyStoryManager called. " +
+            $"NPC type: {storyNPCType}"
+        );
+
+        FreeRoamStoryManager storyManager =
+            FreeRoamStoryManager.Instance;
+
+        if (storyManager == null)
         {
-            foreach (
-                NPCInteraction nextNPC
-                in nextNPCsToUnlock)
-            {
-                if (nextNPC != null)
-                    nextNPC.EnableIndicator();
-            }
+            Debug.LogError(
+                "[NPC STORY] FreeRoamStoryManager.Instance is null."
+            );
+
+            EnableLegacyNextNPCs();
+            RestoreGeneralTeleport();
+            return;
         }
 
         Debug.Log(
-            "[NPC] Conversation fully completed. " +
-            "Next NPC unlocked."
+            $"[NPC STORY] Current story stage before notification: " +
+            $"{storyManager.CurrentStage}"
         );
+
+        switch (storyNPCType)
+        {
+            case StoryNPCType.LocalResident:
+                Debug.Log(
+                    "[NPC STORY] Sending Local NPC completed event."
+                );
+
+                storyManager.NotifyLocalNPCCompleted();
+                break;
+
+            case StoryNPCType.ForeignTraveller:
+                Debug.Log(
+                    "[NPC STORY] Sending Foreign Traveller completed event."
+                );
+
+                storyManager.NotifyForeignNPCCompleted();
+                break;
+
+            case StoryNPCType.Meera:
+                Debug.Log(
+                    "[NPC STORY] Sending Meera completed event."
+                );
+
+                storyManager.NotifyNotebookConversationCompleted();
+                break;
+
+            case StoryNPCType.Bhaskara:
+                Debug.Log(
+                    "[NPC STORY] Sending Bhaskara interaction event."
+                );
+
+                storyManager.NotifyMerchantConversationStarted();
+                break;
+
+            default:
+                Debug.LogWarning(
+                    $"[NPC STORY] '{gameObject.name}' has Story NPC Type None."
+                );
+
+                EnableLegacyNextNPCs();
+                RestoreGeneralTeleport();
+                break;
+        }
+    }
+
+    private void EnableLegacyNextNPCs()
+    {
+        if (nextNPCsToUnlock == null)
+            return;
+
+        foreach (NPCInteraction nextNPC in nextNPCsToUnlock)
+        {
+            if (nextNPC != null)
+                nextNPC.EnableIndicator();
+        }
+    }
+
+    private void RestoreGeneralTeleport()
+    {
+        if (TeleportManager.Instance != null)
+            TeleportManager.Instance.EnableGroup("General");
     }
 }
