@@ -1,85 +1,95 @@
 using UnityEngine;
-using Oculus.Interaction.Locomotion;
 
+/// <summary>
+/// Compatibility wrapper for older Free Roam scripts.
+///
+/// Existing scripts can continue using:
+/// TeleportLockController.Instance.SetAllTeleportEnabled(...)
+///
+/// Internally, the calls are forwarded to the new TeleportManager.
+/// This component can be removed later after all old references
+/// have been migrated.
+/// </summary>
 public class TeleportLockController : MonoBehaviour
 {
     public static TeleportLockController Instance { get; private set; }
-
-    [Header("Hotspot Groups")]
-    [Tooltip("Hotspots used for the teleport tutorial.")]
-    public TeleportInteractable[] tutorialHotspots;
-
-    [Tooltip("All general free-roam teleport hotspots.")]
-    public TeleportInteractable[] generalHotspots;
 
     private void Awake()
     {
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject);
+            Debug.LogWarning(
+                "[TELEPORT COMPATIBILITY] Duplicate " +
+                "TeleportLockController found. Destroying duplicate."
+            );
+
+            Destroy(this);
             return;
         }
+
         Instance = this;
     }
 
     /// <summary>
-    /// Sets teleportation availability for tutorial hotspots.
+    /// Enables or disables the tutorial teleport group.
     /// </summary>
     public void SetTutorialHotspotsEnabled(bool enabled)
     {
-        SetHotspotsEnabled(tutorialHotspots, enabled);
+        if (!TryGetTeleportManager(out TeleportManager manager))
+            return;
+
+        if (enabled)
+            manager.EnableGroup("Tutorial");
+        else
+            manager.DisableGroup("Tutorial");
     }
 
     /// <summary>
-    /// Sets teleportation availability for general free-roam hotspots.
+    /// Enables or disables the general Free Roam teleport group.
     /// </summary>
     public void SetGeneralHotspotsEnabled(bool enabled)
     {
-        SetHotspotsEnabled(generalHotspots, enabled);
+        if (!TryGetTeleportManager(out TeleportManager manager))
+            return;
+
+        if (enabled)
+            manager.EnableGroup("General");
+        else
+            manager.DisableGroup("General");
     }
 
     /// <summary>
-    /// Sets teleportation availability for all hotspots.
+    /// Enables or disables every configured teleport group.
     /// </summary>
     public void SetAllTeleportEnabled(bool enabled)
     {
-        SetTutorialHotspotsEnabled(enabled);
-        SetGeneralHotspotsEnabled(enabled);
+        if (!TryGetTeleportManager(out TeleportManager manager))
+            return;
+
+        if (enabled)
+            manager.EnableAll();
+        else
+            manager.DisableAll();
     }
 
-    private void SetHotspotsEnabled(TeleportInteractable[] hotspots, bool enabled)
+    private bool TryGetTeleportManager(
+        out TeleportManager manager)
     {
-        if (hotspots == null) return;
+        manager = TeleportManager.Instance;
 
-        foreach (var hotspot in hotspots)
-        {
-            if (hotspot == null) continue;
+        if (manager != null)
+            return true;
 
-            // 1. Set the Meta SDK teleport interactable allowTeleport state
-            hotspot.AllowTeleport = enabled;
+        manager = FindFirstObjectByType<TeleportManager>();
 
-            // 2. Enable/disable the component itself to stop interaction update loops
-            hotspot.enabled = enabled;
+        if (manager != null)
+            return true;
 
-            // 3. Enable/disable collider components on the hotspot object
-            var colliders = hotspot.GetComponents<Collider>();
-            foreach (var col in colliders)
-            {
-                if (col != null)
-                {
-                    col.enabled = enabled;
-                }
-            }
+        Debug.LogError(
+            "[TELEPORT COMPATIBILITY] TeleportManager is missing " +
+            "from the scene."
+        );
 
-            // 4. Enable/disable all mesh renderers (on this object and children) to hide visuals
-            var renderers = hotspot.GetComponentsInChildren<MeshRenderer>(true);
-            foreach (var ren in renderers)
-            {
-                if (ren != null)
-                {
-                    ren.enabled = enabled;
-                }
-            }
-        }
+        return false;
     }
 }

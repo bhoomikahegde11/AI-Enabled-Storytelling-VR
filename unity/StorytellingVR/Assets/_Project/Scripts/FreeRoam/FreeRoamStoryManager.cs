@@ -1,0 +1,502 @@
+using System.Collections;
+using UnityEngine;
+
+public class FreeRoamStoryManager : MonoBehaviour
+{
+    public static FreeRoamStoryManager Instance { get; private set; }
+
+    public enum StoryStage
+    {
+        None,
+        Intro,
+        TeleportTutorial,
+        TalkToLocal,
+        TalkToForeigner,
+        VisitTrinketStall,
+        MeeraIntroduction,
+        InspectTrinkets,
+        InspectNotebook,
+        FindWork,
+        TalkToMerchant,
+        FollowMerchant,
+        EnterSpiceStall,
+        Complete
+    }
+
+    [Header("Current Story State")]
+    [SerializeField]
+    private StoryStage currentStage = StoryStage.None;
+
+    public StoryStage CurrentStage => currentStage;
+
+    [Header("System References")]
+    [SerializeField] private NarratorUIManager narrator;
+    [SerializeField] private ObjectiveUIManager objectiveUI;
+    [SerializeField] private TutorialPromptUIManager promptUI;
+    [SerializeField] private TeleportManager teleportManager;
+    [SerializeField] private NPCDirectionalIndicator directionalIndicator;
+
+    [Header("Story Targets")]
+    [SerializeField] private Transform localNPCTarget;
+    [SerializeField] private GameObject localNPCWorldIndicator;
+
+    [SerializeField] private Transform foreignNPCTarget;
+    [SerializeField] private GameObject foreignNPCWorldIndicator;
+
+    [SerializeField] private Transform trinketStallTarget;
+    [SerializeField] private GameObject trinketStallWorldIndicator;
+
+    [SerializeField] private Transform merchantTarget;
+    [SerializeField] private GameObject merchantWorldIndicator;
+
+    [Header("Story Actors")]
+    [SerializeField] private NPCInteraction localNPCInteraction;
+    [SerializeField] private NPCInteraction foreignNPCInteraction;
+    [SerializeField] private GameObject trinketSequenceRoot;
+    [SerializeField] private SpiceMerchantGuideSequence merchantSequence;
+
+    [Header("Startup")]
+    [SerializeField] private bool playIntroOnStart = true;
+    [SerializeField] private float startupDelay = 1f;
+
+    private Coroutine activeSequence;
+    private bool transitionInProgress;
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Debug.LogWarning(
+                "[FREE ROAM STORY] Duplicate manager found. " +
+                "Destroying duplicate component."
+            );
+
+            Destroy(this);
+            return;
+        }
+
+        Instance = this;
+    }
+
+    private void Start()
+    {
+        ResolveMissingReferences();
+        PrepareInitialState();
+
+        if (playIntroOnStart)
+            activeSequence = StartCoroutine(IntroSequence());
+    }
+
+    private void ResolveMissingReferences()
+    {
+        if (narrator == null)
+            narrator = NarratorUIManager.Instance;
+
+        if (objectiveUI == null)
+            objectiveUI = ObjectiveUIManager.Instance;
+
+        if (promptUI == null)
+            promptUI = TutorialPromptUIManager.Instance;
+
+        if (teleportManager == null)
+            teleportManager = TeleportManager.Instance;
+
+        if (directionalIndicator == null)
+        {
+            directionalIndicator =
+                FindFirstObjectByType<NPCDirectionalIndicator>();
+        }
+    }
+
+    private void PrepareInitialState()
+    {
+        SetStage(StoryStage.None);
+
+        directionalIndicator?.Hide();
+
+        if (trinketSequenceRoot != null)
+            trinketSequenceRoot.SetActive(false);
+
+        if (merchantSequence != null)
+            merchantSequence.gameObject.SetActive(false);
+
+        teleportManager?.DisableAll();
+    }
+
+    private IEnumerator IntroSequence()
+    {
+        transitionInProgress = true;
+
+        yield return new WaitForSecondsRealtime(startupDelay);
+
+        SetStage(StoryStage.Intro);
+
+        objectiveUI?.SetObjective("Listen");
+
+        yield return PlayNarration(
+            "Narrator",
+            "Welcome to Hampi Bazaar. Take a moment to observe the people around you.",
+            5f
+        );
+
+        yield return new WaitForSecondsRealtime(0.5f);
+
+        yield return PlayNarration(
+            "Narrator",
+            "This marketplace is alive with merchants, travelers, craftsmen, and pilgrims. For many here, this is simply another ordinary morning.",
+            7f
+        );
+
+        SetStage(StoryStage.TeleportTutorial);
+
+        promptUI?.ShowPrompt(
+            "Teleport Movement",
+            "Use the teleport arc to move around the market. Aim at a clear spot on the street and release to teleport."
+        );
+
+        objectiveUI?.SetObjective(
+            "Learn to move using teleport"
+        );
+
+        teleportManager?.EnableGroup("Tutorial");
+
+        transitionInProgress = false;
+        activeSequence = null;
+    }
+
+    public void NotifyTeleportTutorialCompleted()
+    {
+        if (!CanAdvanceFrom(StoryStage.TeleportTutorial))
+            return;
+
+        StartManagedSequence(
+            TeleportTutorialCompletedSequence()
+        );
+    }
+
+    private IEnumerator TeleportTutorialCompletedSequence()
+    {
+        teleportManager?.DisableAll();
+        promptUI?.HidePrompt();
+
+        objectiveUI?.CompleteObjective(
+            "Learn to move using teleport"
+        );
+
+        yield return new WaitForSecondsRealtime(1.5f);
+
+        SetStage(StoryStage.TalkToLocal);
+
+        objectiveUI?.SetObjective(
+            "Talk to the local resident"
+        );
+
+        yield return PlayNarration(
+            "Narrator",
+            "Good. Now that you can move through the bazaar, speak with someone nearby. A local resident may help you understand this place.",
+            6f
+        );
+
+        SetIndicator(
+            localNPCTarget,
+            localNPCWorldIndicator
+        );
+
+        localNPCInteraction?.EnableIndicator();
+
+        teleportManager?.EnableGroup("General");
+        Debug.Log("[FREE ROAM STORY] TeleportTutorialCompletedSequence finished.");
+    }
+
+    public void NotifyLocalNPCCompleted()
+    {
+        if (!CanAdvanceFrom(StoryStage.TalkToLocal))
+            return;
+
+        StartManagedSequence(
+            LocalNPCCompletedSequence()
+        );
+    }
+
+    private IEnumerator LocalNPCCompletedSequence()
+    {
+        HideIndicator();
+
+        SetStage(StoryStage.TalkToForeigner);
+
+        objectiveUI?.SetObjective(
+            "Talk to the foreign traveler"
+        );
+
+        yield return PlayNarration(
+            "Narrator",
+            "Hampi draws people from far beyond the empire. Speak with the traveler nearby and learn how far these trade routes reach.",
+            6f
+        );
+
+        SetIndicator(
+            foreignNPCTarget,
+            foreignNPCWorldIndicator
+        );
+
+        foreignNPCInteraction?.EnableIndicator();
+
+        teleportManager?.EnableGroup("General");
+
+        Debug.Log(
+            "[FREE ROAM STORY] Foreign NPC unlocked and General hotspots enabled."
+        );
+    }
+
+    public void NotifyForeignNPCCompleted()
+    {
+        if (!CanAdvanceFrom(StoryStage.TalkToForeigner))
+            return;
+
+        StartManagedSequence(
+            ForeignNPCCompletedSequence()
+        );
+    }
+
+    private IEnumerator ForeignNPCCompletedSequence()
+    {
+        HideIndicator();
+
+        SetStage(StoryStage.VisitTrinketStall);
+
+        objectiveUI?.SetObjective(
+            "Explore the trinket stall"
+        );
+
+        yield return PlayNarration(
+            "Narrator",
+            "The merchants here trade in more than spices and silk. There is a stall ahead filled with unusual objects. Perhaps something there may help explain how you arrived.",
+            7f
+        );
+
+        if (trinketSequenceRoot != null)
+            trinketSequenceRoot.SetActive(true);
+
+        teleportManager?.EnableGroup("TrinketPath");
+        teleportManager?.EnableGroup("General");
+
+        SetIndicator(
+            trinketStallTarget,
+            trinketStallWorldIndicator
+        );
+
+        Debug.Log(
+            "[FREE ROAM STORY] Trinket path and General hotspots enabled."
+        );
+    }
+
+    public void NotifyTrinketStallReached()
+    {
+        if (!CanAdvanceFrom(StoryStage.VisitTrinketStall))
+            return;
+
+        SetStage(StoryStage.MeeraIntroduction);
+
+        HideIndicator();
+        teleportManager?.DisableGroup("TrinketPath");
+        promptUI?.HidePrompt();
+
+        Debug.Log(
+            "[FREE ROAM STORY] Trinket stall reached."
+        );
+    }
+
+    public void NotifyNotebookConversationCompleted()
+    {
+        if (currentStage != StoryStage.InspectNotebook &&
+            currentStage != StoryStage.MeeraIntroduction)
+        {
+            return;
+        }
+
+        StartManagedSequence(
+            FindWorkSequence()
+        );
+    }
+
+    private IEnumerator FindWorkSequence()
+    {
+        HideIndicator();
+
+        SetStage(StoryStage.FindWork);
+
+        objectiveUI?.SetObjective(
+            "Find work in the bazaar"
+        );
+
+        yield return PlayNarration(
+            "Narrator",
+            "Without coin, the answers you seek remain beyond reach. But a city this busy always has work for someone willing to earn their place.",
+            7f
+        );
+
+        if (merchantSequence != null)
+            merchantSequence.gameObject.SetActive(true);
+
+        teleportManager?.EnableGroup("MerchantPath");
+
+        SetIndicator(
+            merchantTarget,
+            merchantWorldIndicator
+        );
+
+        SetStage(StoryStage.TalkToMerchant);
+    }
+
+    public void NotifyMerchantConversationStarted()
+    {
+        if (currentStage != StoryStage.TalkToMerchant)
+            return;
+
+        HideIndicator();
+    }
+
+    public void NotifyMerchantStartedWalking()
+    {
+        SetStage(StoryStage.FollowMerchant);
+
+        objectiveUI?.SetObjective(
+            "Follow the spice merchant"
+        );
+
+        teleportManager?.EnableGroup("MerchantPath");
+    }
+
+    public void NotifyMerchantReachedStall()
+    {
+        SetStage(StoryStage.EnterSpiceStall);
+
+        objectiveUI?.SetObjective(
+            "Enter the spice stall"
+        );
+
+        teleportManager?.EnableGroup("StallEntry");
+    }
+
+    public void NotifySpiceStallEntered()
+    {
+        SetStage(StoryStage.Complete);
+
+        HideIndicator();
+        teleportManager?.DisableAll();
+    }
+
+    private void StartManagedSequence(IEnumerator sequence)
+    {
+        if (transitionInProgress)
+        {
+            Debug.LogWarning(
+                "[FREE ROAM STORY] A story transition is already running."
+            );
+
+            return;
+        }
+
+        activeSequence = StartCoroutine(
+            ManagedSequence(sequence)
+        );
+    }
+
+    private IEnumerator ManagedSequence(IEnumerator sequence)
+    {
+        transitionInProgress = true;
+
+        Debug.Log("[FREE ROAM STORY] Managed sequence START");
+
+        yield return StartCoroutine(sequence);
+
+        Debug.Log("[FREE ROAM STORY] Managed sequence END");
+
+        transitionInProgress = false;
+
+        Debug.Log("[FREE ROAM STORY] Transition = FALSE");
+
+        activeSequence = null;
+    }
+
+    private IEnumerator PlayNarration(
+        string speaker,
+        string line,
+        float duration)
+    {
+        if (narrator != null)
+        {
+            yield return narrator.PlayNarration(
+                speaker,
+                line,
+                duration
+            );
+        }
+        else
+        {
+            Debug.Log($"[{speaker}] {line}");
+            yield return new WaitForSecondsRealtime(duration);
+        }
+    }
+
+    private void SetIndicator(
+        Transform target,
+        GameObject worldIndicator)
+    {
+        if (directionalIndicator == null ||
+            target == null)
+        {
+            return;
+        }
+
+        directionalIndicator.SetTarget(
+            target,
+            worldIndicator
+        );
+
+        directionalIndicator.Show();
+    }
+
+    private void HideIndicator()
+    {
+        directionalIndicator?.Hide();
+    }
+
+    private bool CanAdvanceFrom(StoryStage requiredStage)
+    {
+        Debug.Log(
+            $"[FREE ROAM STORY] CanAdvanceFrom({requiredStage}) " +
+            $"Current={currentStage} " +
+            $"Transition={transitionInProgress}"
+        );
+
+        if (transitionInProgress)
+        {
+            Debug.LogWarning(
+                "[FREE ROAM STORY] Transition still running."
+            );
+
+            return false;
+        }
+
+        if (currentStage != requiredStage)
+        {
+            Debug.LogWarning(
+                $"[FREE ROAM STORY] Wrong stage. Current={currentStage}"
+            );
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private void SetStage(StoryStage newStage)
+    {
+        currentStage = newStage;
+
+        Debug.Log(
+            $"[FREE ROAM STORY] Stage changed to {newStage}."
+        );
+    }
+}
