@@ -24,7 +24,7 @@ public class TutorialManager : MonoBehaviour
     [Tooltip("Audio source used for Rahim's dialogue.")]
     public AudioSource customerAudioSource;
 
-    [Tooltip("Audio source used for the stall owner's dialogue.")]
+    [Tooltip("Audio source used for the Bhaskara's dialogue.")]
     public AudioSource merchantAudioSource;
 
 
@@ -51,33 +51,33 @@ public class TutorialManager : MonoBehaviour
 
 
     //==================================================
-    // STALL OWNER AUDIO
+    // Bhaskara AUDIO
     //==================================================
 
-    [Header("Stall Owner - Tutorial Mentor Audio")]
+    [Header("Bhaskara - Tutorial Mentor Audio")]
 
-    [Tooltip("Stall owner introduces the idea of studying a trade before answering.")]
+    [Tooltip("Bhaskara introduces the idea of studying a trade before answering.")]
     public AudioClip merchantTeachTradeClip;
 
-    [Tooltip("Stall owner explains the Current Trade panel after the player opens it.")]
+    [Tooltip("Bhaskara explains the Current Trade panel after the player opens it.")]
     public AudioClip merchantExplainTradePanelClip;
 
-    [Tooltip("Stall owner explains cost price, earnings and reputation.")]
+    [Tooltip("Bhaskara explains cost price, earnings and reputation.")]
     public AudioClip merchantExplainNegotiationClip;
 
-    [Tooltip("Stall owner asks the player to deliberately offer 70 Varahas.")]
+    [Tooltip("Bhaskara asks the player to deliberately offer 70 Varahas.")]
     public AudioClip merchantAskHighPriceClip;
 
-    [Tooltip("Stall owner explains reputation and customer trust after the high price.")]
+    [Tooltip("Bhaskara explains reputation and customer trust after the high price.")]
     public AudioClip merchantHighPriceLessonClip;
 
-    [Tooltip("Stall owner concludes the tutorial after a successful fair trade.")]
+    [Tooltip("Bhaskara concludes the tutorial after a successful fair trade.")]
     public AudioClip merchantFairPriceEndingClip;
 
-    [Tooltip("Stall owner explains why the second offer is still too high.")]
+    [Tooltip("Bhaskara explains why the second offer is still too high.")]
     public AudioClip merchantStillTooHighLessonClip;
 
-    [Tooltip("Stall owner explains the danger of selling below value.")]
+    [Tooltip("Bhaskara explains the danger of selling below value.")]
     public AudioClip merchantLowProfitLessonClip;
 
     //==================================================
@@ -289,7 +289,7 @@ public class TutorialManager : MonoBehaviour
 
 
         //--------------------------------------------------
-        // STALL OWNER EXPLAINS TRADING
+        // Bhaskara EXPLAINS TRADING
         //--------------------------------------------------
 
         yield return StartCoroutine(
@@ -298,12 +298,12 @@ public class TutorialManager : MonoBehaviour
 
 
         //--------------------------------------------------
-        // STALL OWNER ASKS PLAYER TO TRY HIGH PRICE
+        // Bhaskara ASKS PLAYER TO TRY HIGH PRICE
         //--------------------------------------------------
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                "Bhaskara",
                 merchantAudioSource,
                 merchantAskHighPriceClip,
 
@@ -353,7 +353,7 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                "Bhaskara",
                 merchantAudioSource,
                 merchantTeachTradeClip,
 
@@ -382,7 +382,7 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                "Bhaskara",
                 merchantAudioSource,
                 merchantExplainTradePanelClip,
 
@@ -484,12 +484,12 @@ public class TutorialManager : MonoBehaviour
 
 
         //--------------------------------------------------
-        // STALL OWNER EXPLAINS THE CONSEQUENCE
+        // Bhaskara EXPLAINS THE CONSEQUENCE
         //--------------------------------------------------
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                "Bhaskara",
                 merchantAudioSource,
                 merchantHighPriceLessonClip,
 
@@ -588,12 +588,12 @@ public class TutorialManager : MonoBehaviour
 
 
         //--------------------------------------------------
-        // STALL OWNER CONCLUDES TUTORIAL
+        // Bhaskara CONCLUDES TUTORIAL
         //--------------------------------------------------
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                "Bhaskara",
                 merchantAudioSource,
                 merchantFairPriceEndingClip,
 
@@ -634,12 +634,12 @@ public class TutorialManager : MonoBehaviour
 
 
         //--------------------------------------------------
-        // STALL OWNER GIVES ADVICE
+        // Bhaskara GIVES ADVICE
         //--------------------------------------------------
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                "Bhaskara",
                 merchantAudioSource,
                 merchantStillTooHighLessonClip,
 
@@ -697,12 +697,12 @@ public class TutorialManager : MonoBehaviour
 
 
         //--------------------------------------------------
-        // STALL OWNER EXPLAINS LOW PROFIT
+        // Bhaskara EXPLAINS LOW PROFIT
         //--------------------------------------------------
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                "Bhaskara",
                 merchantAudioSource,
                 merchantLowProfitLessonClip,
 
@@ -798,7 +798,7 @@ public class TutorialManager : MonoBehaviour
     }
     IEnumerator MerchantExplainNegotiationSequence()
     {
-        string speaker = "Stall Owner";
+        string speaker = "Bhaskara";
 
         string[] lines =
         {

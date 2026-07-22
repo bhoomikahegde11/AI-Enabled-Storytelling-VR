@@ -112,6 +112,9 @@ public class CoinSceneManager : MonoBehaviour
 
         if (instructionPrompt != null)
         {
+            instructionPrompt.ShowWristRotate(
+                "Press the right grip button and rotate your wrist."
+            );
             instructionPrompt.ShowTrigger(
                 "Press right trigger to continue"
             );

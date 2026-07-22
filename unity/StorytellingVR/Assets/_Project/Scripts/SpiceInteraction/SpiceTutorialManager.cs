@@ -94,7 +94,7 @@ public class SpiceTutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner:",
+                "Bhaskara:",
                 Color.yellow,
                 merchantAudioSource,
                 merchantExplainOrderClip,
@@ -138,7 +138,7 @@ public class SpiceTutorialManager : MonoBehaviour
     {
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner:",
+                "Bhaskara:",
                 Color.yellow,
                 merchantAudioSource,
                 merchantMoveToSackClip,
@@ -188,7 +188,7 @@ public class SpiceTutorialManager : MonoBehaviour
     {
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner:",
+                "Bhaskara:",
                 Color.yellow,
                 merchantAudioSource,
                 merchantCarryBagClip,
@@ -222,7 +222,7 @@ public class SpiceTutorialManager : MonoBehaviour
     {
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner:",
+                "Bhaskara:",
                 Color.yellow,
                 merchantAudioSource,
                 merchantWrongSpiceClip,
@@ -254,7 +254,7 @@ public class SpiceTutorialManager : MonoBehaviour
     {
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner:",
+                "Bhaskara:",
                 Color.yellow,
                 merchantAudioSource,
                 merchantWrongBagClip,
@@ -290,7 +290,7 @@ public class SpiceTutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner:",
+                "Bhaskara:",
                 Color.yellow,
                 merchantAudioSource,
                 merchantCompletedClip,

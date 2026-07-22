@@ -1,66 +1,40 @@
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class InstructionPromptManager : MonoBehaviour
 {
-    [Header("UI")]
-    public GameObject panel;
-
-    public Image iconImage;
-    public TMP_Text instructionText;
-
-
-    [Header("Icons")]
-    public Sprite triggerIcon;
-    public Sprite wristRotateIcon;
-
-
     private void Awake()
     {
-        Hide();
+        if (PromptManager.Instance != null)
+            PromptManager.Instance.HidePrompt();
     }
-
 
     public void ShowTrigger(string message)
     {
-        ShowPrompt(
-            triggerIcon,
-            message
+        if (PromptManager.Instance == null)
+            return;
+
+        PromptManager.Instance.ShowPrompt(
+            message,
+            PromptManager.Instance.rightTriggerButton
         );
     }
-
 
     public void ShowWristRotate(string message)
     {
-        ShowPrompt(
-            wristRotateIcon,
-            message
+        if (PromptManager.Instance == null)
+            return;
+
+        PromptManager.Instance.ShowPrompt(
+            message,
+            PromptManager.Instance.gripButton
         );
     }
 
-
-    private void ShowPrompt(
-        Sprite icon,
-        string message
-    )
-    {
-        if (panel != null)
-            panel.SetActive(true);
-
-
-        if (iconImage != null)
-            iconImage.sprite = icon;
-
-
-        if (instructionText != null)
-            instructionText.text = message;
-    }
-
-
     public void Hide()
     {
-        if (panel != null)
-            panel.SetActive(false);
+        if (PromptManager.Instance == null)
+            return;
+
+        PromptManager.Instance.HidePrompt();
     }
 }

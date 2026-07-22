@@ -50,42 +50,18 @@ public class SpiceGuideTutorialPrompt : MonoBehaviour
     {
         PauseWorld();
 
-        yield return StartCoroutine(
-            ShowDialogueSequence(
-                "Bhaskara",
-                merchantAudioSource,
-                spiceGuideIntroClip,
-
-                new string[]
-                {
-                "Welcome to your workspace. The marketplace is moving fast today, and your success depends entirely on knowing the baseline worth of what is under your feet.",
-
-                "Look down. Pepper is the black gold of the empire, highly sought after by foreign traders. Turmeric is crucial for everyday meals and medicine. Cardamom is rare and fragrant, prized by temple kitchens. And Cinnamon travels long land routes, making it highly valuable."
-                },
-
-                new float[]
-                {
-                0f,
-                8.2f
-                }
-            )
-        );
+        if (guideController != null)
+            guideController.UnlockGuide();
 
         PromptManager.Instance.ShowPrompt(
             "Press X to view the Spice Cost Price List.",
             PromptManager.Instance.xButton
         );
 
-        EnableInput();
-
-        yield return new WaitUntil(() => isHolding);
+        // Give the player a few seconds to notice the prompt
+        yield return new WaitForSeconds(4f);
 
         PromptManager.Instance.HidePrompt();
-
-        DisableInput();
-
-        if (guideController != null)
-            guideController.UnlockGuide();
 
         ResumeWorld();
     }
@@ -113,16 +89,10 @@ public class SpiceGuideTutorialPrompt : MonoBehaviour
     private void OnHoldStarted(InputAction.CallbackContext context)
     {
         isHolding = true;
-
-        if (guideController != null)
-            guideController.ShowGuide();
     }
     private void OnHoldEnded(InputAction.CallbackContext context)
     {
         isHolding = false;
-
-        if (guideController != null)
-            guideController.HideGuide();
     }
     private void PauseWorld()
     {
