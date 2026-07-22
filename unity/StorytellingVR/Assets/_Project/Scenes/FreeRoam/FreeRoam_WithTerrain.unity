@@ -857,10 +857,14 @@ MonoBehaviour:
   narratorCanvas: {fileID: 787099019}
   speakerText: {fileID: 557835805}
   subtitleText: {fileID: 1325007776}
-  defaultDuration: 5
   continueInput: 0
-  lineAutoAdvanceDuration: 3.5
-  allowManualAdvance: 1
+  charactersPerSecond: 40
+  commaPause: 0.08
+  sentencePause: 0.16
+  waitForManualContinue: 1
+  autoAdvance: 1
+  autoAdvanceDelay: 3.5
+  allowEditorInput: 1
 --- !u!114 &23441726
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2099,7 +2103,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.24528301, g: 0.031238874, b: 0.031238874, a: 0.16470589}
+  m_Color: {r: 0.24528301, g: 0.031238874, b: 0.031238874, a: 0.2784314}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2107,7 +2111,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
+  m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4

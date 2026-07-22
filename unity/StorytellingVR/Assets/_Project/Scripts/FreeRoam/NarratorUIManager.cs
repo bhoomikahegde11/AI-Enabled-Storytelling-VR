@@ -40,6 +40,16 @@ public class NarratorUIManager : MonoBehaviour
     [Tooltip("While enabled, dialogue waits for a fresh button press after the complete line is visible.")]
     public bool waitForManualContinue = true;
 
+    [Header("Automatic Advance")]
+
+    [Tooltip("Automatically advances after the full line is visible.")]
+    public bool autoAdvance = true;
+
+    [Tooltip("How long a completed line stays visible before advancing automatically.")]
+    [Min(0f)]
+    public float autoAdvanceDelay = 3.5f;
+
+
     [Header("Editor Testing")]
     [Tooltip("In the Editor, Space or left mouse click acts as the continue input.")]
     public bool allowEditorInput = true;
@@ -248,20 +258,11 @@ public class NarratorUIManager : MonoBehaviour
         subtitleText.maxVisibleCharacters =
             totalCharacters;
 
-        if (!waitForManualContinue)
+        if (!waitForManualContinue && !autoAdvance)
             yield break;
 
-        /*
-         * Important debounce:
-         *
-         * If the player pressed the trigger to complete the text,
-         * they must release it before another press can advance.
-         *
-         * This prevents one trigger press from both:
-         * 1. Completing the line
-         * 2. Advancing the line
-         */
-
+        // If the trigger was used to reveal the whole line,
+        // require it to be released before it can advance.
         while (GetContinueButtonPressed())
         {
             previousPressed = true;
@@ -272,23 +273,41 @@ public class NarratorUIManager : MonoBehaviour
         previousPressed = false;
         updatePressedState?.Invoke(false);
 
-        bool continuePressed = false;
+        float completedLineElapsed = 0f;
+        bool advanceLine = false;
 
-        while (!continuePressed)
+        while (!advanceLine)
         {
             bool currentlyPressed =
                 GetContinueButtonPressed();
 
-            if (currentlyPressed && !previousPressed)
-                continuePressed = true;
+            bool freshPress =
+                currentlyPressed &&
+                !previousPressed;
+
+            if (waitForManualContinue && freshPress)
+            {
+                advanceLine = true;
+            }
 
             previousPressed = currentlyPressed;
             updatePressedState?.Invoke(previousPressed);
 
+            if (autoAdvance)
+            {
+                completedLineElapsed +=
+                    Time.unscaledDeltaTime;
+
+                if (completedLineElapsed >= autoAdvanceDelay)
+                {
+                    advanceLine = true;
+                }
+            }
+
             yield return null;
         }
 
-        // Wait for release before the next line starts.
+        // Prevent a held trigger from skipping the next line.
         while (GetContinueButtonPressed())
         {
             updatePressedState?.Invoke(true);

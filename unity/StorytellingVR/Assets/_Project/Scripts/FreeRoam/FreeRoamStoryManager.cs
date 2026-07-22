@@ -260,22 +260,46 @@ public class FreeRoamStoryManager : MonoBehaviour
 
     private IEnumerator ForeignNPCCompletedSequence()
     {
+        // Remove the foreign traveler's indicator immediately.
         HideIndicator();
+
+        Debug.Log(
+            "[FREE ROAM STORY] Foreign NPC completed. " +
+            "Beginning trinket stall introduction."
+        );
+
+        // Let the foreigner's conversation visually settle.
+        yield return new WaitForSecondsRealtime(0.8f);
+
+        // Meera calls from somewhere nearby.
+        // Her identity remains hidden for now.
+        yield return PlayNarration(
+            "???",
+            "Curiosities from near and far! Fine trinkets, rare keepsakes—come, take a look!",
+            5f
+        );
+
+        // Small pause between the distant call and narrator response.
+        yield return new WaitForSecondsRealtime(0.6f);
+
+        yield return PlayNarration(
+            "Narrator",
+            "That sounds like an interesting stall. Perhaps it is worth taking a closer look.",
+            6f
+        );
+
+        /*
+         * Only reveal the new task after the player has heard
+         * both the mysterious call and the narrator's response.
+         */
 
         SetStage(StoryStage.VisitTrinketStall);
 
         objectiveUI?.SetObjective(
-            "Explore the trinket stall"
+            "Visit the nearby trinket stall"
         );
 
-        yield return PlayNarration(
-            "Narrator",
-            "The merchants here trade in more than spices and silk. There is a stall ahead filled with unusual objects. Perhaps something there may help explain how you arrived.",
-            7f
-        );
 
-        if (trinketSequenceRoot != null)
-            trinketSequenceRoot.SetActive(true);
 
         teleportManager?.EnableGroup("TrinketPath");
         teleportManager?.EnableGroup("General");
@@ -286,7 +310,8 @@ public class FreeRoamStoryManager : MonoBehaviour
         );
 
         Debug.Log(
-            "[FREE ROAM STORY] Trinket path and General hotspots enabled."
+            "[FREE ROAM STORY] Trinket stall objective revealed. " +
+            "TrinketPath and General hotspots enabled."
         );
     }
 
