@@ -115,6 +115,8 @@ public class ModernStudyRoomIntroController : MonoBehaviour
     [SerializeField]
     private AudioSource _impactAudioSource;
     [SerializeField]
+    private AudioSource _clockAudioSource;
+    [SerializeField]
     private AudioClip _roomAmbienceClip;
     [SerializeField]
     private AudioClip _clockTickingClip;
@@ -130,6 +132,20 @@ public class ModernStudyRoomIntroController : MonoBehaviour
     private AudioClip _finalBlastClip;
     [SerializeField]
     private AudioClip _whiteoutRingingClip;
+    [Header("Audio Timing")]
+    [SerializeField]
+    private float _transitionAudioLeadTime = 1.5f;
+    [Header("Transition Lamp Flicker")]
+    [SerializeField]
+    private float _transitionFlickerStartIntensity = 0.7f;
+    [SerializeField]
+    private float _transitionFlickerMinimumIntensity = 0.05f;
+    [SerializeField]
+    private float _transitionFlickerMaximumIntensity = 1.8f;
+    [SerializeField]
+    private float _transitionFlickerSlowInterval = 0.18f;
+    [SerializeField]
+    private float _transitionFlickerFastInterval = 0.035f;
     [SerializeField]
     private CanvasGroup _bookInfluenceCanvasGroup;
     [SerializeField]
@@ -181,9 +197,17 @@ public class ModernStudyRoomIntroController : MonoBehaviour
     private Coroutine _roomAmbienceFadeCoroutine;
     private Coroutine _playerLoopFadeCoroutine;
     private Coroutine _notebookLoopFadeCoroutine;
+    private Coroutine _clockLoopFadeCoroutine;
     private float _roomBaseVolume = 0.35f;
+    private float _clockBaseVolume = 0.3f;
     private float _currentHapticInterval = 1.2f;
     private float _currentHapticAmplitude = 0.08f;
+    private bool _transitionAudioStarted;
+    private bool _loggedTransitionAudioLead;
+    private bool _loggedClockStarted;
+    private bool _finalBlastSequenceActive;
+    private bool _transitionCueActive;
+    private float _finalBlastNormalizedProgress;
     private readonly HashSet<string> _loggedWarnings = new HashSet<string>();
 
     public bool BlastComplete => _blastComplete;
@@ -221,6 +245,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         }
 
         StartRoomAmbience();
+        StartClockTicking();
     }
 
     private void OnDisable()
@@ -232,6 +257,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
 
         StopRepeatingHaptics();
         StopAllControllerVibration();
+        StopFloatingLampFlicker(true);
     }
 
     private void Update()
@@ -287,6 +313,11 @@ public class ModernStudyRoomIntroController : MonoBehaviour
 
         _hasStarted = true;
         _blastComplete = false;
+        _transitionAudioStarted = false;
+        _loggedTransitionAudioLead = false;
+        _transitionCueActive = false;
+        _finalBlastSequenceActive = false;
+        _finalBlastNormalizedProgress = 0f;
         Debug.Log("[INTRO] TimeTravelNotebook grabbed. Intro sequence started.", this);
         BeginPickupFeedback();
         StartCoroutine(RunIntroSequence());
@@ -424,9 +455,41 @@ public class ModernStudyRoomIntroController : MonoBehaviour
 
         while (_isFloatingSequenceActive)
         {
-            _lampLight.intensity = Random.Range(_floatingFlickerMinIntensity, _floatingFlickerMaxIntensity);
-            float delay = Random.Range(_floatingFlickerMinInterval, _floatingFlickerMaxInterval);
+            float targetIntensity;
+            float delay;
+
+            if (_finalBlastSequenceActive)
+            {
+                float progress = Mathf.Clamp01(_finalBlastNormalizedProgress);
+                float minIntensity = Mathf.Lerp(_transitionFlickerStartIntensity, _transitionFlickerMinimumIntensity, progress);
+                float maxIntensity = Mathf.Lerp(1f, _transitionFlickerMaximumIntensity, progress);
+                delay = Mathf.Lerp(_transitionFlickerSlowInterval, _transitionFlickerFastInterval, progress);
+
+                if (_transitionCueActive && Random.value < Mathf.Lerp(0.18f, 0.35f, progress))
+                {
+                    targetIntensity = Random.Range(0f, _transitionFlickerMinimumIntensity);
+                }
+                else
+                {
+                    targetIntensity = Random.Range(minIntensity, maxIntensity);
+                }
+            }
+            else
+            {
+                float subtleProgress = Mathf.Clamp01(_supernaturalBuildProgress);
+                float subtleMin = Mathf.Lerp(0.9f, _transitionFlickerStartIntensity, subtleProgress * 0.35f);
+                float subtleMax = Mathf.Lerp(1.05f, 1.2f, subtleProgress * 0.5f);
+                targetIntensity = Random.Range(subtleMin, subtleMax);
+                delay = Mathf.Lerp(_transitionFlickerSlowInterval, 0.08f, subtleProgress * 0.5f);
+            }
+
+            _lampLight.intensity = targetIntensity;
             yield return new WaitForSeconds(delay);
+        }
+
+        if (_lampLight != null)
+        {
+            _lampLight.intensity = 1f;
         }
 
         _floatingFlickerCoroutine = null;
@@ -469,6 +532,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         while (elapsed < _glowBuildDuration)
         {
             elapsed += Time.deltaTime;
+
             float normalizedProgress = Mathf.Clamp01(elapsed / _glowBuildDuration);
             float easedProgress = Mathf.SmoothStep(0f, 1f, normalizedProgress);
             _supernaturalBuildProgress = easedProgress;
@@ -503,10 +567,17 @@ public class ModernStudyRoomIntroController : MonoBehaviour
     private IEnumerator RunFinalEnergyBlast()
     {
         Debug.Log("[INTRO] Final notebook energy blast started.", this);
-        PlayClipOnSource(_impactAudioSource, _energyBuildClip, "energy build clip");
+        _finalBlastSequenceActive = true;
+        _transitionCueActive = false;
+        _finalBlastNormalizedProgress = 0f;
 
-        if (_blastBuildDuration <= 0f)
+        float safeBlastBuildDuration = Mathf.Max(0f, _blastBuildDuration);
+        float safeBlastHoldDuration = Mathf.Max(0f, _blastHoldDuration);
+        float safeTransitionLeadTime = Mathf.Max(0f, _transitionAudioLeadTime);
+
+        if (safeBlastBuildDuration <= 0f)
         {
+            StartTransitionAudio();
             UpdatePlayerFeedbackState(1f, true);
             SetNotebookEffectState(
                 _blastFinalLightColor,
@@ -518,16 +589,32 @@ public class ModernStudyRoomIntroController : MonoBehaviour
                 _blastMaximumLightRange);
             PlayBlastPeakFeedback();
             Debug.Log("[INTRO] Final notebook energy blast reached peak.", this);
+
+            if (safeBlastHoldDuration > 0f)
+            {
+                yield return new WaitForSeconds(safeBlastHoldDuration);
+            }
+
+            _finalBlastSequenceActive = false;
             yield return RunWhiteoutTransition();
             yield break;
         }
 
         float elapsed = 0f;
-        while (elapsed < _blastBuildDuration)
+        while (elapsed < safeBlastBuildDuration)
         {
             elapsed += Time.deltaTime;
-            float normalizedProgress = Mathf.Clamp01(elapsed / _blastBuildDuration);
+            float normalizedProgress = Mathf.Clamp01(elapsed / safeBlastBuildDuration);
             float acceleratedProgress = normalizedProgress * normalizedProgress * normalizedProgress;
+            _finalBlastNormalizedProgress = normalizedProgress;
+
+            float remainingBeforeWhiteout = (safeBlastBuildDuration - elapsed) + safeBlastHoldDuration;
+            if (!_transitionAudioStarted && remainingBeforeWhiteout <= safeTransitionLeadTime)
+            {
+                StartTransitionAudio();
+            }
+
+            UpdateClockDuringFinalBlast(normalizedProgress);
             UpdatePlayerFeedbackState(acceleratedProgress, true);
 
             SetNotebookEffectState(
@@ -550,8 +637,29 @@ public class ModernStudyRoomIntroController : MonoBehaviour
             _blastMaximumLightIntensity,
             _blastMaximumLightRange);
         UpdatePlayerFeedbackState(1f, true);
+        _finalBlastNormalizedProgress = 1f;
+        UpdateClockDuringFinalBlast(1f);
         PlayBlastPeakFeedback();
         Debug.Log("[INTRO] Final notebook energy blast reached peak.", this);
+
+        if (safeBlastHoldDuration > 0f)
+        {
+            float holdElapsed = 0f;
+            while (holdElapsed < safeBlastHoldDuration)
+            {
+                holdElapsed += Time.deltaTime;
+                float remainingBeforeWhiteout = safeBlastHoldDuration - holdElapsed;
+                if (!_transitionAudioStarted && remainingBeforeWhiteout <= safeTransitionLeadTime)
+                {
+                    StartTransitionAudio();
+                }
+
+                UpdateClockDuringFinalBlast(1f);
+                yield return null;
+            }
+        }
+
+        _finalBlastSequenceActive = false;
         yield return RunWhiteoutTransition();
     }
 
@@ -810,6 +918,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         ResolveAudioSourceByName(ref _notebookAudioSource, "IntroAudio_Notebook");
         ResolveAudioSourceByName(ref _playerAudioSource, "IntroAudio_Player");
         ResolveAudioSourceByName(ref _impactAudioSource, "IntroAudio_Impact");
+        ResolveAudioSourceByName(ref _clockAudioSource, "IntroAudio_Clock");
     }
 
     private void ResolveAudioSourceByName(ref AudioSource audioSource, string objectName)
@@ -832,10 +941,16 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         ConfigureAudioSource(_notebookAudioSource, true, false, 1f, 0.5f, 6f);
         ConfigureAudioSource(_playerAudioSource, false, false, 1f, 1f, 1f);
         ConfigureAudioSource(_impactAudioSource, false, false, 1f, 1f, 1f);
+        ConfigureAudioSource(_clockAudioSource, true, true, 0.3f, 0.5f, 5f);
 
         if (_roomAudioSource != null)
         {
             _roomBaseVolume = _roomAudioSource.volume;
+        }
+
+        if (_clockAudioSource != null)
+        {
+            _clockBaseVolume = _clockAudioSource.volume;
         }
     }
 
@@ -852,6 +967,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         audioSource.spatialBlend = isSpatial ? 1f : 0f;
         audioSource.minDistance = minDistance;
         audioSource.maxDistance = maxDistance;
+        audioSource.dopplerLevel = 0f;
     }
 
     private void StartRoomAmbience()
@@ -861,18 +977,39 @@ public class ModernStudyRoomIntroController : MonoBehaviour
             return;
         }
 
-        AudioClip ambienceClip = _roomAmbienceClip != null ? _roomAmbienceClip : _clockTickingClip;
-        if (ambienceClip == null)
+        if (_roomAmbienceClip == null)
         {
             return;
         }
 
-        _roomAudioSource.clip = ambienceClip;
+        _roomAudioSource.clip = _roomAmbienceClip;
         _roomAudioSource.loop = true;
         _roomAudioSource.volume = _roomBaseVolume;
         if (!_roomAudioSource.isPlaying)
         {
             _roomAudioSource.Play();
+        }
+    }
+
+    private void StartClockTicking()
+    {
+        if (_clockAudioSource == null || _clockTickingClip == null)
+        {
+            return;
+        }
+
+        _clockAudioSource.clip = _clockTickingClip;
+        _clockAudioSource.loop = true;
+        _clockAudioSource.volume = _clockBaseVolume;
+        if (!_clockAudioSource.isPlaying)
+        {
+            _clockAudioSource.Play();
+        }
+
+        if (!_loggedClockStarted)
+        {
+            _loggedClockStarted = true;
+            Debug.Log("[INTRO] Clock ticking started.", this);
         }
     }
 
@@ -933,6 +1070,24 @@ public class ModernStudyRoomIntroController : MonoBehaviour
     {
         StartHeartbeatLoop(0.15f);
         FadeRoomAmbience(0.22f, _floatStartDelay);
+    }
+
+    private void StartTransitionAudio()
+    {
+        if (_transitionAudioStarted)
+        {
+            return;
+        }
+
+        _transitionAudioStarted = true;
+        _transitionCueActive = true;
+        PlayClipOnSource(_impactAudioSource, _energyBuildClip, "energy build clip");
+
+        if (!_loggedTransitionAudioLead)
+        {
+            _loggedTransitionAudioLead = true;
+            Debug.Log("[INTRO] Hampi transition audio started 1.5 seconds before whiteout.", this);
+        }
     }
 
     private void StartFloatingFeedback()
@@ -1013,8 +1168,12 @@ public class ModernStudyRoomIntroController : MonoBehaviour
 
         StopRepeatingHaptics();
         StopAllControllerVibration();
+        _transitionCueActive = false;
+        _isFloatingSequenceActive = false;
+        StopFloatingLampFlicker(true);
         FadeLoopSource(_playerAudioSource, 0.2f, ref _playerLoopFadeCoroutine);
         FadeLoopSource(_notebookAudioSource, 0.2f, ref _notebookLoopFadeCoroutine);
+        FadeClockLoopSource(0.15f);
         PlayClipOnSource(_impactAudioSource != null ? _impactAudioSource : _playerAudioSource, _whiteoutRingingClip, "whiteout ringing clip");
     }
 
@@ -1109,6 +1268,11 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         coroutineHandle = StartCoroutine(FadeAudioSourceVolume(audioSource, 0f, duration, false));
     }
 
+    private void FadeClockLoopSource(float duration)
+    {
+        FadeLoopSource(_clockAudioSource, duration, ref _clockLoopFadeCoroutine);
+    }
+
     private IEnumerator FadeAudioSourceVolume(AudioSource audioSource, float targetVolume, float duration, bool keepPlaying)
     {
         if (audioSource == null)
@@ -1149,6 +1313,32 @@ public class ModernStudyRoomIntroController : MonoBehaviour
 
         Transform audioTarget = _notebookFloatAnchor != null ? _notebookFloatAnchor : _notebookTransform;
         _notebookAudioSource.transform.position = audioTarget.position;
+    }
+
+    private void UpdateClockDuringFinalBlast(float normalizedProgress)
+    {
+        if (_clockAudioSource == null)
+        {
+            return;
+        }
+
+        float progress = Mathf.Clamp01(normalizedProgress);
+        float targetVolume = Mathf.Lerp(_clockBaseVolume, 0.04f, progress);
+        _clockAudioSource.volume = targetVolume;
+    }
+
+    private void StopFloatingLampFlicker(bool restoreLampIntensity)
+    {
+        if (_floatingFlickerCoroutine != null)
+        {
+            StopCoroutine(_floatingFlickerCoroutine);
+            _floatingFlickerCoroutine = null;
+        }
+
+        if (restoreLampIntensity && _lampLight != null)
+        {
+            _lampLight.intensity = 1f;
+        }
     }
 
     private void UpdateBookInfluencePulse()
