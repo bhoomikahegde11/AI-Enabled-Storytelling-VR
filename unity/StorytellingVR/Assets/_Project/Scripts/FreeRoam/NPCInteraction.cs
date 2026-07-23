@@ -38,6 +38,10 @@ public class NPCInteraction : MonoBehaviour
     [SerializeField]
     private NPCDirectionalIndicator indicator;
 
+    [Header("Optional Dedicated Sequence")]
+    [SerializeField]
+    private MeeraSequenceController meeraSequenceController;
+
     [Header("Legacy Next NPCs")]
     [Tooltip(
         "Temporary legacy field. Leave empty when using FreeRoamStoryManager."
@@ -109,7 +113,18 @@ public class NPCInteraction : MonoBehaviour
 
     private void StartConversation()
     {
+        if (storyNPCType == StoryNPCType.Meera &&
+            meeraSequenceController != null)
+        {
+            StartDedicatedMeeraSequence();
+            return;
+        }
+
         if (dialogue == null ||
+            NarratorUIManager.Instance == null ||
+            NPCQuestionUIManager.Instance == null)
+
+            if (dialogue == null ||
             NarratorUIManager.Instance == null ||
             NPCQuestionUIManager.Instance == null)
         {
@@ -152,6 +167,40 @@ public class NPCInteraction : MonoBehaviour
 
         Debug.Log(
             $"[NPC] Conversation started for {storyNPCType}."
+        );
+    }
+
+    private void StartDedicatedMeeraSequence()
+    {
+        if (meeraSequenceController == null)
+        {
+            Debug.LogError(
+                "[NPC] Meera has no MeeraSequenceController assigned."
+            );
+
+            return;
+        }
+
+        inConversation = true;
+
+        if (talkPromptObject != null)
+            talkPromptObject.SetActive(false);
+
+        if (TeleportManager.Instance != null)
+            TeleportManager.Instance.DisableAll();
+
+        if (teleportSystem != null)
+            teleportSystem.SetActive(false);
+
+        if (indicator != null)
+            indicator.Hide();
+
+        SetLaserPointerEnabled(false);
+
+        meeraSequenceController.BeginSequence();
+
+        Debug.Log(
+            "[NPC] Dedicated Meera sequence requested."
         );
     }
 
