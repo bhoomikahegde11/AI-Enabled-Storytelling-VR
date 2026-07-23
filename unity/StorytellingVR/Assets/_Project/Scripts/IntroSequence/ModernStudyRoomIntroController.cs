@@ -1,7 +1,9 @@
 using System.Collections;
+using System.Collections.Generic;
 using Oculus.Interaction;
 using Oculus.Interaction.HandGrab;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class ModernStudyRoomIntroController : MonoBehaviour
 {
@@ -95,6 +97,48 @@ public class ModernStudyRoomIntroController : MonoBehaviour
     [SerializeField]
     private Color _blastFinalLightColor = new Color(1f, 0.92f, 0.75f, 1f);
 
+    [Header("Whiteout Transition")]
+    [SerializeField]
+    private CanvasGroup _whiteFadeCanvasGroup;
+    [SerializeField]
+    private float _whiteFadeDuration = 1.2f;
+    [SerializeField]
+    private float _whiteHoldDuration = 0.5f;
+
+    [Header("Player Feedback")]
+    [SerializeField]
+    private AudioSource _roomAudioSource;
+    [SerializeField]
+    private AudioSource _notebookAudioSource;
+    [SerializeField]
+    private AudioSource _playerAudioSource;
+    [SerializeField]
+    private AudioSource _impactAudioSource;
+    [SerializeField]
+    private AudioClip _roomAmbienceClip;
+    [SerializeField]
+    private AudioClip _clockTickingClip;
+    [SerializeField]
+    private AudioClip _notebookPickupClip;
+    [SerializeField]
+    private AudioClip _notebookHumLoopClip;
+    [SerializeField]
+    private AudioClip _heartbeatLoopClip;
+    [SerializeField]
+    private AudioClip _energyBuildClip;
+    [SerializeField]
+    private AudioClip _finalBlastClip;
+    [SerializeField]
+    private AudioClip _whiteoutRingingClip;
+    [SerializeField]
+    private CanvasGroup _bookInfluenceCanvasGroup;
+    [SerializeField]
+    private float _maximumInfluenceAlpha = 0.12f;
+    [SerializeField]
+    private float _influencePulseSpeedStart = 0.8f;
+    [SerializeField]
+    private float _influencePulseSpeedMaximum = 4f;
+
     [Header("Debug")]
     [SerializeField]
     private bool _enableEditorDebugTrigger = true;
@@ -122,6 +166,25 @@ public class ModernStudyRoomIntroController : MonoBehaviour
     private float _currentGlowLightIntensity;
     private float _currentGlowLightRange;
     private Color _currentEffectColor;
+    private bool _loggedWhiteFadeReady;
+    private bool _loggedPlayerInfluenceStarted;
+    private bool _loggedHeartbeatSyncStarted;
+    private bool _loggedInfluenceReachedMaximum;
+    private bool _loggedInfluenceStoppedForWhiteout;
+    private Image _bookInfluenceImage;
+    private float _bookInfluenceBaseAlpha;
+    private float _bookInfluencePulseSpeed;
+    private float _bookInfluenceImpulseAlpha;
+    private bool _bookInfluencePulseActive;
+    private Coroutine _bookInfluenceImpulseCoroutine;
+    private Coroutine _repeatHapticsCoroutine;
+    private Coroutine _roomAmbienceFadeCoroutine;
+    private Coroutine _playerLoopFadeCoroutine;
+    private Coroutine _notebookLoopFadeCoroutine;
+    private float _roomBaseVolume = 0.35f;
+    private float _currentHapticInterval = 1.2f;
+    private float _currentHapticAmplitude = 0.08f;
+    private readonly HashSet<string> _loggedWarnings = new HashSet<string>();
 
     public bool BlastComplete => _blastComplete;
 
@@ -137,17 +200,27 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         ResetNotebookEffectState();
         ResolveNotebookGlowLight();
         InitializeNotebookGlowLight();
+        InitializeWhiteFade();
+        InitializeBookInfluenceCanvas();
+        ResolveIntroAudioSources();
+        InitializeIntroAudioSources();
     }
 
     private void OnEnable()
     {
         ResolveNotebookGlowLight();
         InitializeNotebookGlowLight();
+        InitializeWhiteFade();
+        InitializeBookInfluenceCanvas();
+        ResolveIntroAudioSources();
+        InitializeIntroAudioSources();
 
         if (_timeTravelNotebookGrabbable != null)
         {
             _timeTravelNotebookGrabbable.WhenPointerEventRaised += HandleNotebookPointerEvent;
         }
+
+        StartRoomAmbience();
     }
 
     private void OnDisable()
@@ -156,6 +229,9 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         {
             _timeTravelNotebookGrabbable.WhenPointerEventRaised -= HandleNotebookPointerEvent;
         }
+
+        StopRepeatingHaptics();
+        StopAllControllerVibration();
     }
 
     private void Update()
@@ -164,6 +240,11 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         if (_enableEditorDebugTrigger && !_hasStarted && Input.GetKeyDown(KeyCode.Space))
         {
             StartIntroSequence();
+        }
+
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            ToggleWhiteFadeOverlayForEditor();
         }
 #endif
 
@@ -182,6 +263,9 @@ public class ModernStudyRoomIntroController : MonoBehaviour
             _notebookTransform.position = _hoverBasePosition + Vector3.up * hoverOffset + shakeOffset;
             _notebookTransform.rotation = _hoverBaseRotation * rotationShake;
         }
+
+        UpdateNotebookAudioPosition();
+        UpdateBookInfluencePulse();
     }
 
     private void HandleNotebookPointerEvent(PointerEvent pointerEvent)
@@ -204,12 +288,14 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         _hasStarted = true;
         _blastComplete = false;
         Debug.Log("[INTRO] TimeTravelNotebook grabbed. Intro sequence started.", this);
+        BeginPickupFeedback();
         StartCoroutine(RunIntroSequence());
     }
 
     private IEnumerator RunIntroSequence()
     {
         StartCoroutine(FlickerLamp());
+        StartDelayFeedback();
         yield return new WaitForSeconds(_floatStartDelay);
         yield return FloatNotebookToPlayer();
     }
@@ -262,6 +348,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
 
         _isFloatingSequenceActive = true;
         StartFloatingLampFlicker();
+        StartFloatingFeedback();
 
         DisableNotebookInteractions();
         float releaseWaitTime = 0f;
@@ -385,6 +472,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
             float normalizedProgress = Mathf.Clamp01(elapsed / _glowBuildDuration);
             float easedProgress = Mathf.SmoothStep(0f, 1f, normalizedProgress);
             _supernaturalBuildProgress = easedProgress;
+            UpdatePlayerFeedbackState(easedProgress, false);
 
             SetNotebookEffectState(
                 _glowColor,
@@ -398,6 +486,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         }
 
         _supernaturalBuildProgress = 1f;
+        UpdatePlayerFeedbackState(1f, false);
         SetNotebookEffectState(
             _glowColor,
             _maximumEmissionIntensity,
@@ -414,9 +503,11 @@ public class ModernStudyRoomIntroController : MonoBehaviour
     private IEnumerator RunFinalEnergyBlast()
     {
         Debug.Log("[INTRO] Final notebook energy blast started.", this);
+        PlayClipOnSource(_impactAudioSource, _energyBuildClip, "energy build clip");
 
         if (_blastBuildDuration <= 0f)
         {
+            UpdatePlayerFeedbackState(1f, true);
             SetNotebookEffectState(
                 _blastFinalLightColor,
                 _blastMaximumEmissionIntensity,
@@ -425,8 +516,9 @@ public class ModernStudyRoomIntroController : MonoBehaviour
                 _blastMaximumRotationShake,
                 _blastMaximumLightIntensity,
                 _blastMaximumLightRange);
+            PlayBlastPeakFeedback();
             Debug.Log("[INTRO] Final notebook energy blast reached peak.", this);
-            yield return HoldFinalBlastState();
+            yield return RunWhiteoutTransition();
             yield break;
         }
 
@@ -436,6 +528,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
             elapsed += Time.deltaTime;
             float normalizedProgress = Mathf.Clamp01(elapsed / _blastBuildDuration);
             float acceleratedProgress = normalizedProgress * normalizedProgress * normalizedProgress;
+            UpdatePlayerFeedbackState(acceleratedProgress, true);
 
             SetNotebookEffectState(
                 Color.Lerp(_glowColor, _blastFinalLightColor, acceleratedProgress),
@@ -456,17 +549,46 @@ public class ModernStudyRoomIntroController : MonoBehaviour
             _blastMaximumRotationShake,
             _blastMaximumLightIntensity,
             _blastMaximumLightRange);
+        UpdatePlayerFeedbackState(1f, true);
+        PlayBlastPeakFeedback();
         Debug.Log("[INTRO] Final notebook energy blast reached peak.", this);
-        yield return HoldFinalBlastState();
+        yield return RunWhiteoutTransition();
     }
 
-    private IEnumerator HoldFinalBlastState()
+    private IEnumerator RunWhiteoutTransition()
     {
-        if (_blastHoldDuration > 0f)
+        if (!TryPrepareWhiteFadeCanvas(true))
         {
-            yield return new WaitForSeconds(_blastHoldDuration);
+            _blastComplete = true;
+            yield break;
         }
 
+        BeginWhiteoutFeedback();
+        LogWhiteFadeValidation();
+        Debug.Log("[INTRO] Whiteout fade started.", this);
+
+        if (_whiteFadeDuration > 0f)
+        {
+            float elapsed = 0f;
+            while (elapsed < _whiteFadeDuration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / _whiteFadeDuration);
+                float easedT = Mathf.SmoothStep(0f, 1f, t);
+                _whiteFadeCanvasGroup.alpha = easedT;
+                yield return null;
+            }
+        }
+
+        _whiteFadeCanvasGroup.alpha = 1f;
+        Debug.Log("[INTRO] Whiteout reached full white.", this);
+
+        if (_whiteHoldDuration > 0f)
+        {
+            yield return new WaitForSeconds(_whiteHoldDuration);
+        }
+
+        Debug.Log("[INTRO] Whiteout hold complete.", this);
         _blastComplete = true;
         Debug.Log("[INTRO] Final notebook energy blast complete.", this);
     }
@@ -668,6 +790,629 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         _notebookGlowLight.color = _glowColor;
         LogNotebookGlowLightReady();
     }
+
+    private void InitializeWhiteFade()
+    {
+        if (_whiteFadeCanvasGroup == null)
+        {
+            return;
+        }
+
+        TryPrepareWhiteFadeCanvas(false);
+        _whiteFadeCanvasGroup.alpha = 0f;
+        _whiteFadeCanvasGroup.interactable = false;
+        _whiteFadeCanvasGroup.blocksRaycasts = false;
+    }
+
+    private void ResolveIntroAudioSources()
+    {
+        ResolveAudioSourceByName(ref _roomAudioSource, "IntroAudio_Room");
+        ResolveAudioSourceByName(ref _notebookAudioSource, "IntroAudio_Notebook");
+        ResolveAudioSourceByName(ref _playerAudioSource, "IntroAudio_Player");
+        ResolveAudioSourceByName(ref _impactAudioSource, "IntroAudio_Impact");
+    }
+
+    private void ResolveAudioSourceByName(ref AudioSource audioSource, string objectName)
+    {
+        if (audioSource != null)
+        {
+            return;
+        }
+
+        Transform child = transform.Find(objectName);
+        if (child != null)
+        {
+            audioSource = child.GetComponent<AudioSource>();
+        }
+    }
+
+    private void InitializeIntroAudioSources()
+    {
+        ConfigureAudioSource(_roomAudioSource, false, false, 0.35f, 1f, 1f);
+        ConfigureAudioSource(_notebookAudioSource, true, false, 1f, 0.5f, 6f);
+        ConfigureAudioSource(_playerAudioSource, false, false, 1f, 1f, 1f);
+        ConfigureAudioSource(_impactAudioSource, false, false, 1f, 1f, 1f);
+
+        if (_roomAudioSource != null)
+        {
+            _roomBaseVolume = _roomAudioSource.volume;
+        }
+    }
+
+    private void ConfigureAudioSource(AudioSource audioSource, bool isSpatial, bool loop, float volume, float minDistance, float maxDistance)
+    {
+        if (audioSource == null)
+        {
+            return;
+        }
+
+        audioSource.playOnAwake = false;
+        audioSource.loop = loop;
+        audioSource.volume = volume;
+        audioSource.spatialBlend = isSpatial ? 1f : 0f;
+        audioSource.minDistance = minDistance;
+        audioSource.maxDistance = maxDistance;
+    }
+
+    private void StartRoomAmbience()
+    {
+        if (_roomAudioSource == null)
+        {
+            return;
+        }
+
+        AudioClip ambienceClip = _roomAmbienceClip != null ? _roomAmbienceClip : _clockTickingClip;
+        if (ambienceClip == null)
+        {
+            return;
+        }
+
+        _roomAudioSource.clip = ambienceClip;
+        _roomAudioSource.loop = true;
+        _roomAudioSource.volume = _roomBaseVolume;
+        if (!_roomAudioSource.isPlaying)
+        {
+            _roomAudioSource.Play();
+        }
+    }
+
+    private void InitializeBookInfluenceCanvas()
+    {
+        ResolveBookInfluenceCanvas();
+
+        if (_bookInfluenceCanvasGroup == null)
+        {
+            return;
+        }
+
+        _bookInfluenceCanvasGroup.alpha = 0f;
+        _bookInfluenceCanvasGroup.interactable = false;
+        _bookInfluenceCanvasGroup.blocksRaycasts = false;
+
+        if (_bookInfluenceImage != null)
+        {
+            _bookInfluenceImage.enabled = true;
+        }
+    }
+
+    private void ResolveBookInfluenceCanvas()
+    {
+        if (_bookInfluenceCanvasGroup == null)
+        {
+            CanvasGroup[] groups = FindObjectsByType<CanvasGroup>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (CanvasGroup group in groups)
+            {
+                if (group != null && group.gameObject.name == "BookInfluenceCanvas")
+                {
+                    _bookInfluenceCanvasGroup = group;
+                    break;
+                }
+            }
+        }
+
+        if (_bookInfluenceCanvasGroup != null)
+        {
+            _bookInfluenceImage = _bookInfluenceCanvasGroup.GetComponentInChildren<Image>(true);
+        }
+    }
+
+    private void BeginPickupFeedback()
+    {
+        if (!_loggedPlayerInfluenceStarted)
+        {
+            _loggedPlayerInfluenceStarted = true;
+            Debug.Log("[INTRO] Player influence feedback started.", this);
+        }
+
+        PlayClipOnSource(_notebookAudioSource, _notebookPickupClip, "notebook pickup clip");
+        PlayHapticPulseOnConnectedControllers(0.16f, 0.45f, 0.06f);
+        TriggerInfluenceImpulse(0.04f, 0.3f);
+    }
+
+    private void StartDelayFeedback()
+    {
+        StartHeartbeatLoop(0.15f);
+        FadeRoomAmbience(0.22f, _floatStartDelay);
+    }
+
+    private void StartFloatingFeedback()
+    {
+        if (!_loggedHeartbeatSyncStarted)
+        {
+            _loggedHeartbeatSyncStarted = true;
+            Debug.Log("[INTRO] Notebook heartbeat synchronization started.", this);
+        }
+
+        StartNotebookHumLoop(0.12f);
+        _bookInfluencePulseActive = true;
+        _bookInfluenceBaseAlpha = 0.025f;
+        _bookInfluencePulseSpeed = _influencePulseSpeedStart;
+        _currentHapticInterval = 1.2f;
+        _currentHapticAmplitude = 0.08f;
+        StartRepeatingHaptics();
+    }
+
+    private void UpdatePlayerFeedbackState(float progress, bool isBlastPhase)
+    {
+        float clampedProgress = Mathf.Clamp01(progress);
+        float maxInfluence = Mathf.Min(0.18f, _maximumInfluenceAlpha);
+        _bookInfluencePulseActive = true;
+        _bookInfluencePulseSpeed = Mathf.Lerp(_influencePulseSpeedStart, _influencePulseSpeedMaximum, clampedProgress);
+        _bookInfluenceBaseAlpha = Mathf.Lerp(0.025f, maxInfluence, clampedProgress);
+
+        if (_playerAudioSource != null && _playerAudioSource.isPlaying)
+        {
+            float targetHeartbeatVolume = isBlastPhase
+                ? Mathf.Lerp(0.45f, 0.62f, clampedProgress)
+                : Mathf.Lerp(0.15f, 0.45f, clampedProgress);
+            _playerAudioSource.volume = targetHeartbeatVolume;
+        }
+
+        if (_notebookAudioSource != null && _notebookAudioSource.isPlaying && _notebookAudioSource.loop)
+        {
+            float targetHumVolume = isBlastPhase
+                ? Mathf.Lerp(0.45f, 0.7f, clampedProgress)
+                : Mathf.Lerp(0.12f, 0.45f, clampedProgress);
+            _notebookAudioSource.volume = targetHumVolume;
+        }
+
+        if (_roomAudioSource != null)
+        {
+            _roomAudioSource.volume = isBlastPhase
+                ? Mathf.Lerp(0.22f, 0.02f, clampedProgress)
+                : Mathf.Lerp(0.22f, 0.16f, clampedProgress);
+        }
+
+        _currentHapticInterval = isBlastPhase
+            ? Mathf.Lerp(0.5f, 0.16f, clampedProgress)
+            : Mathf.Lerp(1.2f, 0.5f, clampedProgress);
+        _currentHapticAmplitude = isBlastPhase
+            ? Mathf.Lerp(0.22f, 0.5f, clampedProgress)
+            : Mathf.Lerp(0.08f, 0.22f, clampedProgress);
+
+        if (clampedProgress >= 0.999f && !_loggedInfluenceReachedMaximum)
+        {
+            _loggedInfluenceReachedMaximum = true;
+            Debug.Log("[INTRO] Player influence reached maximum.", this);
+        }
+    }
+
+    private void BeginWhiteoutFeedback()
+    {
+        if (!_loggedInfluenceStoppedForWhiteout)
+        {
+            _loggedInfluenceStoppedForWhiteout = true;
+            Debug.Log("[INTRO] Player influence stopped for whiteout.", this);
+        }
+
+        _bookInfluencePulseActive = false;
+        if (_bookInfluenceCanvasGroup != null)
+        {
+            _bookInfluenceCanvasGroup.alpha = 0f;
+        }
+
+        StopRepeatingHaptics();
+        StopAllControllerVibration();
+        FadeLoopSource(_playerAudioSource, 0.2f, ref _playerLoopFadeCoroutine);
+        FadeLoopSource(_notebookAudioSource, 0.2f, ref _notebookLoopFadeCoroutine);
+        PlayClipOnSource(_impactAudioSource != null ? _impactAudioSource : _playerAudioSource, _whiteoutRingingClip, "whiteout ringing clip");
+    }
+
+    private void PlayBlastPeakFeedback()
+    {
+        PlayClipOnSource(_impactAudioSource, _finalBlastClip, "final blast clip");
+        PlayHapticPulseOnConnectedControllers(0.22f, 0.7f, 0.09f);
+    }
+
+    private void StartHeartbeatLoop(float volume)
+    {
+        if (_playerAudioSource == null)
+        {
+            return;
+        }
+
+        if (_heartbeatLoopClip == null)
+        {
+            WarnOnce("heartbeatLoopClip", "[INTRO] Heartbeat loop clip is missing.");
+            return;
+        }
+
+        _playerAudioSource.clip = _heartbeatLoopClip;
+        _playerAudioSource.loop = true;
+        _playerAudioSource.volume = volume;
+        if (!_playerAudioSource.isPlaying)
+        {
+            _playerAudioSource.Play();
+        }
+    }
+
+    private void StartNotebookHumLoop(float volume)
+    {
+        if (_notebookAudioSource == null)
+        {
+            return;
+        }
+
+        if (_notebookHumLoopClip == null)
+        {
+            WarnOnce("notebookHumLoopClip", "[INTRO] Notebook hum loop clip is missing.");
+            return;
+        }
+
+        _notebookAudioSource.clip = _notebookHumLoopClip;
+        _notebookAudioSource.loop = true;
+        _notebookAudioSource.volume = volume;
+        if (!_notebookAudioSource.isPlaying)
+        {
+            _notebookAudioSource.Play();
+        }
+    }
+
+    private void PlayClipOnSource(AudioSource audioSource, AudioClip clip, string warningKey)
+    {
+        if (audioSource == null)
+        {
+            return;
+        }
+
+        if (clip == null)
+        {
+            WarnOnce(warningKey, "[INTRO] " + warningKey + " is missing.");
+            return;
+        }
+
+        audioSource.PlayOneShot(clip);
+    }
+
+    private void FadeRoomAmbience(float targetVolume, float duration)
+    {
+        if (_roomAmbienceFadeCoroutine != null)
+        {
+            StopCoroutine(_roomAmbienceFadeCoroutine);
+        }
+
+        _roomAmbienceFadeCoroutine = StartCoroutine(FadeAudioSourceVolume(_roomAudioSource, targetVolume, duration, true));
+    }
+
+    private void FadeLoopSource(AudioSource audioSource, float duration, ref Coroutine coroutineHandle)
+    {
+        if (audioSource == null)
+        {
+            return;
+        }
+
+        if (coroutineHandle != null)
+        {
+            StopCoroutine(coroutineHandle);
+        }
+
+        coroutineHandle = StartCoroutine(FadeAudioSourceVolume(audioSource, 0f, duration, false));
+    }
+
+    private IEnumerator FadeAudioSourceVolume(AudioSource audioSource, float targetVolume, float duration, bool keepPlaying)
+    {
+        if (audioSource == null)
+        {
+            yield break;
+        }
+
+        float startVolume = audioSource.volume;
+        if (duration <= 0f)
+        {
+            audioSource.volume = targetVolume;
+        }
+        else
+        {
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                audioSource.volume = Mathf.Lerp(startVolume, targetVolume, Mathf.Clamp01(elapsed / duration));
+                yield return null;
+            }
+        }
+
+        audioSource.volume = targetVolume;
+        if (!keepPlaying && Mathf.Approximately(targetVolume, 0f))
+        {
+            audioSource.Stop();
+            audioSource.loop = false;
+        }
+    }
+
+    private void UpdateNotebookAudioPosition()
+    {
+        if (_notebookAudioSource == null || _notebookTransform == null)
+        {
+            return;
+        }
+
+        Transform audioTarget = _notebookFloatAnchor != null ? _notebookFloatAnchor : _notebookTransform;
+        _notebookAudioSource.transform.position = audioTarget.position;
+    }
+
+    private void UpdateBookInfluencePulse()
+    {
+        if (_bookInfluenceCanvasGroup == null)
+        {
+            return;
+        }
+
+        float pulseAlpha = 0f;
+        if (_bookInfluencePulseActive)
+        {
+            float wave = (Mathf.Sin(Time.time * _bookInfluencePulseSpeed) + 1f) * 0.5f;
+            pulseAlpha = wave * _bookInfluenceBaseAlpha;
+        }
+
+        float finalAlpha = Mathf.Clamp(Mathf.Max(pulseAlpha, _bookInfluenceImpulseAlpha), 0f, 0.18f);
+        _bookInfluenceCanvasGroup.alpha = finalAlpha;
+    }
+
+    private void TriggerInfluenceImpulse(float alpha, float duration)
+    {
+        if (_bookInfluenceCanvasGroup == null)
+        {
+            return;
+        }
+
+        if (_bookInfluenceImpulseCoroutine != null)
+        {
+            StopCoroutine(_bookInfluenceImpulseCoroutine);
+        }
+
+        _bookInfluenceImpulseCoroutine = StartCoroutine(InfluenceImpulseRoutine(Mathf.Min(alpha, 0.18f), duration));
+    }
+
+    private IEnumerator InfluenceImpulseRoutine(float alpha, float duration)
+    {
+        _bookInfluenceImpulseAlpha = alpha;
+        float elapsed = 0f;
+        float safeDuration = Mathf.Max(0.01f, duration);
+        while (elapsed < safeDuration)
+        {
+            elapsed += Time.deltaTime;
+            _bookInfluenceImpulseAlpha = Mathf.Lerp(alpha, 0f, Mathf.Clamp01(elapsed / safeDuration));
+            yield return null;
+        }
+
+        _bookInfluenceImpulseAlpha = 0f;
+        _bookInfluenceImpulseCoroutine = null;
+    }
+
+    private void StartRepeatingHaptics()
+    {
+        if (_repeatHapticsCoroutine != null)
+        {
+            return;
+        }
+
+        _repeatHapticsCoroutine = StartCoroutine(RepeatingHapticsRoutine());
+    }
+
+    private void StopRepeatingHaptics()
+    {
+        if (_repeatHapticsCoroutine != null)
+        {
+            StopCoroutine(_repeatHapticsCoroutine);
+            _repeatHapticsCoroutine = null;
+        }
+    }
+
+    private IEnumerator RepeatingHapticsRoutine()
+    {
+        while (_bookInfluencePulseActive)
+        {
+            PlayHapticPulseOnConnectedControllers(0.12f, _currentHapticAmplitude, 0.05f);
+            yield return new WaitForSeconds(Mathf.Max(0.08f, _currentHapticInterval));
+        }
+
+        _repeatHapticsCoroutine = null;
+    }
+
+    private void PlayHapticPulseOnConnectedControllers(float frequency, float amplitude, float duration)
+    {
+        StartCoroutine(HapticPulseRoutine(OVRInput.Controller.LTouch, frequency, amplitude, duration));
+        StartCoroutine(HapticPulseRoutine(OVRInput.Controller.RTouch, frequency, amplitude, duration));
+    }
+
+    private IEnumerator HapticPulseRoutine(OVRInput.Controller controller, float frequency, float amplitude, float duration)
+    {
+        if (!IsControllerConnected(controller))
+        {
+            yield break;
+        }
+
+        OVRInput.SetControllerVibration(frequency, Mathf.Clamp01(amplitude), controller);
+        yield return new WaitForSecondsRealtime(Mathf.Max(0.01f, duration));
+        OVRInput.SetControllerVibration(0f, 0f, controller);
+    }
+
+    private bool IsControllerConnected(OVRInput.Controller controller)
+    {
+        OVRInput.Controller connectedControllers = OVRInput.GetConnectedControllers();
+        return (connectedControllers & controller) != 0;
+    }
+
+    private void StopAllControllerVibration()
+    {
+        OVRInput.SetControllerVibration(0f, 0f, OVRInput.Controller.LTouch);
+        OVRInput.SetControllerVibration(0f, 0f, OVRInput.Controller.RTouch);
+    }
+
+    private void WarnOnce(string key, string message)
+    {
+        if (_loggedWarnings.Add(key))
+        {
+            Debug.LogWarning(message, this);
+        }
+    }
+
+    private bool TryPrepareWhiteFadeCanvas(bool logIssues)
+    {
+        ResolveWhiteFadeCanvasGroup(logIssues);
+
+        if (_whiteFadeCanvasGroup == null)
+        {
+            if (logIssues)
+            {
+                Debug.LogWarning("[INTRO] White fade canvas is missing. Cannot render whiteout.", this);
+            }
+
+            return false;
+        }
+
+        Canvas whiteFadeCanvas = _whiteFadeCanvasGroup.GetComponent<Canvas>();
+        Image whiteFadeImage = _whiteFadeCanvasGroup.GetComponentInChildren<Image>(true);
+
+        _whiteFadeCanvasGroup.gameObject.SetActive(true);
+        _whiteFadeCanvasGroup.enabled = true;
+        _whiteFadeCanvasGroup.interactable = false;
+        _whiteFadeCanvasGroup.blocksRaycasts = false;
+
+        if (whiteFadeCanvas != null)
+        {
+            whiteFadeCanvas.enabled = true;
+        }
+
+        if (whiteFadeImage != null)
+        {
+            whiteFadeImage.enabled = true;
+            whiteFadeImage.color = Color.white;
+        }
+
+        return true;
+    }
+
+    private void ResolveWhiteFadeCanvasGroup(bool logIssues)
+    {
+        if (_whiteFadeCanvasGroup != null)
+        {
+            LogWhiteFadeCanvasReady(_whiteFadeCanvasGroup);
+            return;
+        }
+
+        CanvasGroup[] canvasGroups = FindObjectsByType<CanvasGroup>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        CanvasGroup firstActiveMatch = null;
+        CanvasGroup firstInactiveMatch = null;
+        int matchCount = 0;
+
+        foreach (CanvasGroup canvasGroup in canvasGroups)
+        {
+            if (canvasGroup == null || canvasGroup.gameObject.name != "IntroWhiteFadeCanvas")
+            {
+                continue;
+            }
+
+            matchCount++;
+            if (canvasGroup.gameObject.activeInHierarchy && firstActiveMatch == null)
+            {
+                firstActiveMatch = canvasGroup;
+            }
+
+            if (firstInactiveMatch == null)
+            {
+                firstInactiveMatch = canvasGroup;
+            }
+        }
+
+        if (matchCount == 0)
+        {
+            return;
+        }
+
+        _whiteFadeCanvasGroup = firstActiveMatch != null ? firstActiveMatch : firstInactiveMatch;
+
+        if (matchCount > 1 && logIssues)
+        {
+            Debug.LogError("[INTRO] Multiple IntroWhiteFadeCanvas objects found. Using the first active one.", this);
+        }
+
+        LogWhiteFadeCanvasReady(_whiteFadeCanvasGroup);
+    }
+
+    private void LogWhiteFadeCanvasReady(CanvasGroup canvasGroup)
+    {
+        if (_loggedWhiteFadeReady || canvasGroup == null)
+        {
+            return;
+        }
+
+        _loggedWhiteFadeReady = true;
+        Debug.Log("[INTRO] White fade canvas ready: " + GetHierarchyPath(canvasGroup.transform), this);
+    }
+
+    private void LogWhiteFadeValidation()
+    {
+        if (_whiteFadeCanvasGroup == null)
+        {
+            return;
+        }
+
+        Canvas whiteFadeCanvas = _whiteFadeCanvasGroup.GetComponent<Canvas>();
+        Image whiteFadeImage = _whiteFadeCanvasGroup.GetComponentInChildren<Image>(true);
+        Camera fadeCamera = whiteFadeCanvas != null ? whiteFadeCanvas.worldCamera : null;
+        float imageAlpha = whiteFadeImage != null ? whiteFadeImage.color.a : -1f;
+
+        Debug.Log(
+            "[INTRO] White fade validation: " +
+            "canvasActive=" + _whiteFadeCanvasGroup.gameObject.activeInHierarchy +
+            ",canvasEnabled=" + (whiteFadeCanvas != null && whiteFadeCanvas.enabled) +
+            ",canvasGroupAlpha=" + _whiteFadeCanvasGroup.alpha +
+            ",imageEnabled=" + (whiteFadeImage != null && whiteFadeImage.enabled) +
+            ",imageAlpha=" + imageAlpha +
+            ",camera=" + (fadeCamera != null ? fadeCamera.gameObject.name : "null"),
+            this);
+    }
+
+    private static string GetHierarchyPath(Transform current)
+    {
+        if (current == null)
+        {
+            return string.Empty;
+        }
+
+        string path = current.name;
+        while (current.parent != null)
+        {
+            current = current.parent;
+            path = current.name + "/" + path;
+        }
+
+        return path;
+    }
+
+#if UNITY_EDITOR
+    private void ToggleWhiteFadeOverlayForEditor()
+    {
+        if (!TryPrepareWhiteFadeCanvas(true))
+        {
+            return;
+        }
+
+        _whiteFadeCanvasGroup.alpha = _whiteFadeCanvasGroup.alpha < 0.5f ? 1f : 0f;
+    }
+#endif
 
     private void ApplyNotebookGlowLight(Color lightColor, float intensity, float range)
     {
