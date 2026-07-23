@@ -52,8 +52,11 @@ public class FreeRoamStoryManager : MonoBehaviour
     [Header("Story Actors")]
     [SerializeField] private NPCInteraction localNPCInteraction;
     [SerializeField] private NPCInteraction foreignNPCInteraction;
+    [SerializeField] private NPCInteraction meeraNPCInteraction;    
     [SerializeField] private GameObject trinketSequenceRoot;
+
     [SerializeField] private SpiceMerchantGuideSequence merchantSequence;
+
 
     [Header("Startup")]
     [SerializeField] private bool playIntroOnStart = true;
@@ -260,37 +263,92 @@ public class FreeRoamStoryManager : MonoBehaviour
 
     private IEnumerator ForeignNPCCompletedSequence()
     {
+        // Remove the foreign traveler's indicator immediately.
         HideIndicator();
+
+        Debug.Log(
+            "[FREE ROAM STORY] Foreign NPC completed. " +
+            "Beginning trinket stall introduction."
+        );
+
+        // Let the foreigner's conversation visually settle.
+        yield return new WaitForSecondsRealtime(0.8f);
+
+        // Meera calls from somewhere nearby.
+        // Her identity remains hidden for now.
+        yield return PlayNarration(
+            "???",
+            "Curiosities from near and far! Fine trinkets, rare keepsakes—come, take a look!",
+            5f
+        );
+
+        // Small pause between the distant call and narrator response.
+        yield return new WaitForSecondsRealtime(0.6f);
+
+        yield return PlayNarration(
+            "Narrator",
+            "That sounds like an interesting stall. Perhaps it is worth taking a closer look.",
+            6f
+        );
+
+        /*
+         * Only reveal the new task after the player has heard
+         * both the mysterious call and the narrator's response.
+         */
 
         SetStage(StoryStage.VisitTrinketStall);
 
         objectiveUI?.SetObjective(
-            "Explore the trinket stall"
+            "Visit the nearby trinket stall"
         );
 
-        yield return PlayNarration(
-            "Narrator",
-            "The merchants here trade in more than spices and silk. There is a stall ahead filled with unusual objects. Perhaps something there may help explain how you arrived.",
-            7f
-        );
 
-        if (trinketSequenceRoot != null)
-            trinketSequenceRoot.SetActive(true);
 
         teleportManager?.EnableGroup("TrinketPath");
         teleportManager?.EnableGroup("General");
 
         SetIndicator(
-            trinketStallTarget,
-            trinketStallWorldIndicator
-        );
+    trinketStallTarget,
+    trinketStallWorldIndicator
+);
+
+        // Unlock X interaction on Meera.
+        meeraNPCInteraction?.EnableIndicator();
 
         Debug.Log(
-            "[FREE ROAM STORY] Trinket path and General hotspots enabled."
+            "[FREE ROAM STORY] Trinket stall objective revealed. " +
+            "Meera interaction, TrinketPath and General hotspots enabled."
         );
     }
 
     public void NotifyTrinketStallReached()
+    {
+        Debug.Log(
+            "[FREE ROAM STORY] Trinket stall arrival trigger reached."
+        );
+
+        /*
+         * Reaching the stall should not immediately start the
+         * Meera introduction. The player must still press X.
+         *
+         * Therefore, for now, this method only confirms arrival
+         * and hides the route-specific indicator if desired.
+         */
+
+        if (currentStage != StoryStage.VisitTrinketStall)
+            return;
+
+        promptUI?.ShowPrompt(
+            "Talk to the stall owner",
+            "Move closer to the stall owner and press X to speak."
+        );
+
+        Debug.Log(
+            "[FREE ROAM STORY] Waiting for the player to interact with Meera."
+        );
+    }
+
+    public void NotifyMeeraInteractionStarted()
     {
         if (!CanAdvanceFrom(StoryStage.VisitTrinketStall))
             return;
@@ -298,11 +356,45 @@ public class FreeRoamStoryManager : MonoBehaviour
         SetStage(StoryStage.MeeraIntroduction);
 
         HideIndicator();
-        teleportManager?.DisableGroup("TrinketPath");
+
+        meeraNPCInteraction?.DisableIndicator();
+
+        teleportManager?.DisableAll();
+
         promptUI?.HidePrompt();
 
+        objectiveUI?.SetObjective(
+            "Listen to the stall owner"
+        );
+
         Debug.Log(
-            "[FREE ROAM STORY] Trinket stall reached."
+            "[FREE ROAM STORY] Meera introduction started."
+        );
+    }
+
+    public void NotifyMeeraIntroductionCompleted()
+    {
+        if (currentStage != StoryStage.MeeraIntroduction)
+        {
+            Debug.LogWarning(
+                "[FREE ROAM STORY] Cannot complete Meera introduction. " +
+                $"Current stage is {currentStage}."
+            );
+
+            return;
+        }
+
+        SetStage(StoryStage.InspectTrinkets);
+
+        objectiveUI?.SetObjective(
+            "Inspect the objects on Meera's stall"
+        );
+
+        teleportManager?.EnableGroup("General");
+
+        Debug.Log(
+            "[FREE ROAM STORY] Meera introduction complete. " +
+            "Inspection stage started."
         );
     }
 
@@ -370,7 +462,6 @@ public class FreeRoamStoryManager : MonoBehaviour
     public void NotifyMerchantReachedStall()
     {
         SetStage(StoryStage.EnterSpiceStall);
-
         objectiveUI?.SetObjective(
             "Enter the spice stall"
         );
