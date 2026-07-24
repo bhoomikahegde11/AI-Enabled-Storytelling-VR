@@ -10,27 +10,55 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
         Right
     }
 
+    private enum RayTargetType
+    {
+        None,
+        Button,
+        InspectableItem
+    }
+
+    private struct RayTarget
+    {
+        public RayTargetType targetType;
+        public GameObject targetObject;
+        public Button button;
+        public MeeraInspectableItem inspectableItem;
+        public RaycastHit hitInfo;
+
+        public bool HasTarget =>
+            targetType != RayTargetType.None &&
+            targetObject != null;
+    }
 
     [Header("Controller")]
     [SerializeField]
     private ControllerHand controllerHand =
         ControllerHand.Right;
 
-    [SerializeField] private float triggerThreshold = 0.75f;
+    [SerializeField]
+    private float triggerThreshold = 0.75f;
 
     [Header("Ray")]
-    [SerializeField] private float maxDistance = 8f;
-    [SerializeField] private float rayWidth = 0.01f;
+    [SerializeField]
+    private float maxDistance = 8f;
+
+    [SerializeField]
+    private float rayWidth = 0.01f;
 
     [SerializeField]
     private Color idleColor =
         new Color(1f, 0.95f, 0.6f, 0.9f);
 
-    [SerializeField] private Color hoverColor = Color.white;
+    [SerializeField]
+    private Color hoverColor = Color.white;
 
     private EventSystem eventSystem;
     private LineRenderer lineRenderer;
-    private GameObject currentHoverObject;
+
+    // UI hover is kept separate because inspectable objects
+    // do not use Unity pointer enter/exit events.
+    private GameObject currentHoverButtonObject;
+
     private bool wasTriggerPressed;
 
     private OVRInput.Controller OvrController =>
@@ -39,7 +67,9 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
             : OVRInput.Controller.RTouch;
 
     private int PointerId =>
-        controllerHand == ControllerHand.Left ? -101 : -102;
+        controllerHand == ControllerHand.Left
+            ? -101
+            : -102;
 
     private void Awake()
     {
@@ -59,10 +89,10 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
         if (lineRenderer != null)
             lineRenderer.enabled = false;
 
-        ClearHover();
+        ClearButtonHover();
 
-        // If trigger is still held from advancing dialogue,
-        // do not treat it as an immediate question click.
+        // Prevent a trigger that is already being held from
+        // immediately clicking something when the ray enables.
         wasTriggerPressed =
             OVRInput.Get(
                 OVRInput.Axis1D.PrimaryIndexTrigger,
@@ -77,37 +107,37 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
         if (!IsControllerConnected())
         {
             HideLine();
-            ClearHover();
+            ClearButtonHover();
             return;
         }
 
         Vector3 origin = transform.position;
         Vector3 direction = transform.forward;
 
-        Button hitButton = FindButtonHit(
-            origin,
-            direction,
-            out RaycastHit hitInfo
-        );
+        RayTarget rayTarget =
+            FindClosestInteractiveTarget(origin, direction);
 
-        GameObject hoverTarget =
-            hitButton != null ? hitButton.gameObject : null;
+        UpdateButtonHover(rayTarget);
 
-        UpdateHoverTarget(hoverTarget);
+        Vector3 lineEnd =
+            rayTarget.HasTarget
+                ? rayTarget.hitInfo.point
+                : origin + direction * maxDistance;
 
         UpdateLine(
             origin,
-            hitButton != null ? hitInfo.point : origin,
-            hoverTarget != null
+            lineEnd,
+            rayTarget.HasTarget
         );
 
-        HandleTriggerPress(hoverTarget);
+        HandleTriggerPress(rayTarget);
     }
 
     private void OnDisable()
     {
         HideLine();
-        ClearHover();
+        ClearButtonHover();
+
         wasTriggerPressed = false;
     }
 
@@ -116,7 +146,9 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
         OVRInput.Controller connectedControllers =
             OVRInput.GetConnectedControllers();
 
-        return (connectedControllers & OvrController) == OvrController;
+        return
+            (connectedControllers & OvrController) ==
+            OvrController;
     }
 
     private void EnsureLineRenderer()
@@ -128,18 +160,35 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
 
         lineObject.transform.SetParent(transform, false);
 
-        lineRenderer = lineObject.AddComponent<LineRenderer>();
+        lineRenderer =
+            lineObject.AddComponent<LineRenderer>();
+
         lineRenderer.useWorldSpace = true;
         lineRenderer.positionCount = 2;
         lineRenderer.startWidth = rayWidth;
         lineRenderer.endWidth = rayWidth;
+
         lineRenderer.shadowCastingMode =
             UnityEngine.Rendering.ShadowCastingMode.Off;
+
         lineRenderer.receiveShadows = false;
         lineRenderer.alignment = LineAlignment.View;
         lineRenderer.numCapVertices = 4;
-        lineRenderer.material =
-            new Material(Shader.Find("Sprites/Default"));
+
+        Shader shader = Shader.Find("Sprites/Default");
+
+        if (shader != null)
+        {
+            lineRenderer.material =
+                new Material(shader);
+        }
+        else
+        {
+            Debug.LogWarning(
+                "[VR LASER] Sprites/Default shader was not found."
+            );
+        }
+
         lineRenderer.startColor = idleColor;
         lineRenderer.endColor = idleColor;
         lineRenderer.enabled = false;
@@ -147,8 +196,6 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
 
     private void EnsureButtonColliders()
     {
-        
-
         Button[] buttons =
             Object.FindObjectsByType<Button>(
                 FindObjectsInactive.Include,
@@ -167,13 +214,19 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
                 button.GetComponent<BoxCollider>();
 
             if (boxCollider == null)
+            {
                 boxCollider =
                     button.gameObject.AddComponent<BoxCollider>();
+            }
 
             Rect rect = rectTransform.rect;
 
             boxCollider.center =
-                new Vector3(rect.center.x, rect.center.y, 0f);
+                new Vector3(
+                    rect.center.x,
+                    rect.center.y,
+                    0f
+                );
 
             boxCollider.size =
                 new Vector3(
@@ -184,15 +237,17 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
 
             boxCollider.isTrigger = true;
         }
-
     }
 
-    private Button FindButtonHit(
+    private RayTarget FindClosestInteractiveTarget(
         Vector3 origin,
-        Vector3 direction,
-        out RaycastHit closestHit)
+        Vector3 direction
+    )
     {
-        closestHit = default;
+        RayTarget result = new RayTarget
+        {
+            targetType = RayTargetType.None
+        };
 
         RaycastHit[] hits = Physics.RaycastAll(
             origin,
@@ -213,50 +268,95 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
             Button button =
                 hit.collider.GetComponentInParent<Button>();
 
-            if (button == null ||
-                !button.isActiveAndEnabled ||
-                !button.interactable)
+            if (button != null &&
+                button.isActiveAndEnabled &&
+                button.interactable)
             {
-                continue;
+                result.targetType =
+                    RayTargetType.Button;
+
+                result.targetObject =
+                    button.gameObject;
+
+                result.button = button;
+                result.inspectableItem = null;
+                result.hitInfo = hit;
+
+                return result;
             }
 
-            closestHit = hit;
-            return button;
+            MeeraInspectableItem inspectableItem =
+                hit.collider.GetComponentInParent<
+                    MeeraInspectableItem
+                >();
+
+            if (inspectableItem != null &&
+                inspectableItem.isActiveAndEnabled)
+            {
+                result.targetType =
+                    RayTargetType.InspectableItem;
+
+                result.targetObject =
+                    inspectableItem.gameObject;
+
+                result.button = null;
+                result.inspectableItem =
+                    inspectableItem;
+
+                result.hitInfo = hit;
+
+                return result;
+            }
         }
 
-        return null;
+        return result;
     }
 
-    private void UpdateHoverTarget(GameObject newHoverObject)
+    private void UpdateButtonHover(RayTarget rayTarget)
     {
-        if (currentHoverObject == newHoverObject)
+        GameObject newHoverButton = null;
+
+        if (rayTarget.targetType ==
+            RayTargetType.Button)
+        {
+            newHoverButton =
+                rayTarget.targetObject;
+        }
+
+        if (currentHoverButtonObject ==
+            newHoverButton)
+        {
             return;
+        }
 
         PointerEventData eventData =
             CreatePointerEventData();
 
-        if (currentHoverObject != null)
+        if (currentHoverButtonObject != null)
         {
             ExecuteEvents.ExecuteHierarchy(
-                currentHoverObject,
+                currentHoverButtonObject,
                 eventData,
                 ExecuteEvents.pointerExitHandler
             );
         }
 
-        currentHoverObject = newHoverObject;
+        currentHoverButtonObject =
+            newHoverButton;
 
-        if (currentHoverObject != null)
+        if (currentHoverButtonObject != null)
         {
             ExecuteEvents.ExecuteHierarchy(
-                currentHoverObject,
+                currentHoverButtonObject,
                 eventData,
                 ExecuteEvents.pointerEnterHandler
             );
         }
     }
 
-    private void HandleTriggerPress(GameObject hoverTarget)
+    private void HandleTriggerPress(
+        RayTarget rayTarget
+    )
     {
         bool isTriggerPressed =
             OVRInput.Get(
@@ -264,21 +364,63 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
                 OvrController
             ) >= triggerThreshold;
 
-        if (isTriggerPressed &&
-            !wasTriggerPressed &&
-            hoverTarget != null)
-        {
-            PointerEventData eventData =
-                CreatePointerEventData();
+        bool triggerPressedThisFrame =
+            isTriggerPressed &&
+            !wasTriggerPressed;
 
-            ExecuteEvents.ExecuteHierarchy(
-                hoverTarget,
-                eventData,
-                ExecuteEvents.pointerClickHandler
-            );
+        if (triggerPressedThisFrame &&
+            rayTarget.HasTarget)
+        {
+            switch (rayTarget.targetType)
+            {
+                case RayTargetType.Button:
+                    ClickButton(
+                        rayTarget.targetObject
+                    );
+                    break;
+
+                case RayTargetType.InspectableItem:
+                    InspectItem(
+                        rayTarget.inspectableItem
+                    );
+                    break;
+            }
         }
 
-        wasTriggerPressed = isTriggerPressed;
+        wasTriggerPressed =
+            isTriggerPressed;
+    }
+
+    private void ClickButton(
+        GameObject buttonObject
+    )
+    {
+        if (buttonObject == null)
+            return;
+
+        PointerEventData eventData =
+            CreatePointerEventData();
+
+        ExecuteEvents.ExecuteHierarchy(
+            buttonObject,
+            eventData,
+            ExecuteEvents.pointerClickHandler
+        );
+    }
+
+    private void InspectItem(
+        MeeraInspectableItem inspectableItem
+    )
+    {
+        if (inspectableItem == null)
+            return;
+
+        Debug.Log(
+            $"[VR LASER] Trigger clicked inspectable item: " +
+            $"{inspectableItem.ItemDisplayName}"
+        );
+
+        inspectableItem.TryInspect();
     }
 
     private PointerEventData CreatePointerEventData()
@@ -288,7 +430,9 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
 
         return new PointerEventData(eventSystem)
         {
-            button = PointerEventData.InputButton.Left,
+            button =
+                PointerEventData.InputButton.Left,
+
             pointerId = PointerId
         };
     }
@@ -296,18 +440,23 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
     private void UpdateLine(
         Vector3 start,
         Vector3 end,
-        bool isHoveringButton)
+        bool hasInteractiveTarget
+    )
     {
         if (lineRenderer == null)
             return;
 
-        lineRenderer.enabled = isHoveringButton;
+        // Keeps the laser hidden unless it is pointing
+        // at a valid button or inspectable object.
+        lineRenderer.enabled =
+            hasInteractiveTarget;
 
-        if (!isHoveringButton)
+        if (!hasInteractiveTarget)
             return;
 
         lineRenderer.startColor = hoverColor;
         lineRenderer.endColor = hoverColor;
+
         lineRenderer.SetPosition(0, start);
         lineRenderer.SetPosition(1, end);
     }
@@ -318,17 +467,17 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
             lineRenderer.enabled = false;
     }
 
-    private void ClearHover()
+    private void ClearButtonHover()
     {
-        if (currentHoverObject == null)
+        if (currentHoverButtonObject == null)
             return;
 
         ExecuteEvents.ExecuteHierarchy(
-            currentHoverObject,
+            currentHoverButtonObject,
             CreatePointerEventData(),
             ExecuteEvents.pointerExitHandler
         );
 
-        currentHoverObject = null;
+        currentHoverButtonObject = null;
     }
 }

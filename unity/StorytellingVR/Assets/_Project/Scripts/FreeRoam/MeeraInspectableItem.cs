@@ -96,4 +96,5 @@ public class MeeraInspectableItem : MonoBehaviour
         if (glowObject != null)
             glowObject.SetActive(false);
     }
+    
 }

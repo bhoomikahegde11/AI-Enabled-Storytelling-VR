@@ -21500,6 +21500,7 @@ GameObject:
   - component: {fileID: 475207830}
   - component: {fileID: 475207829}
   - component: {fileID: 475207832}
+  - component: {fileID: 475207833}
   m_Layer: 3
   m_Name: ObjectivePrompts
   m_TagString: Untagged
@@ -21619,6 +21620,24 @@ MonoBehaviour:
   overlapMask: 0
   compositionMode: 1
   _overlayEnabled: 1
+--- !u!114 &475207833
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 475207827}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5be80c065e6e0c4294cf1ce132659d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SubtitleFollower
+  head: {fileID: 1388768017}
+  distance: 1.8
+  heightOffset: -0.25
+  recenterAngle: 20
+  moveSpeed: 12
+  rotateSpeed: 8
 --- !u!1 &477803987
 GameObject:
   m_ObjectHideFlags: 0
@@ -26645,6 +26664,7 @@ GameObject:
   - component: {fileID: 645361638}
   - component: {fileID: 645361637}
   - component: {fileID: 645361640}
+  - component: {fileID: 645361641}
   m_Layer: 3
   m_Name: TutorialPrompts
   m_TagString: Untagged
@@ -26766,6 +26786,24 @@ MonoBehaviour:
   overlapMask: 0
   compositionMode: 1
   _overlayEnabled: 1
+--- !u!114 &645361641
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 645361635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5be80c065e6e0c4294cf1ce132659d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SubtitleFollower
+  head: {fileID: 1388768017}
+  distance: 1.8
+  heightOffset: -0.25
+  recenterAngle: 20
+  moveSpeed: 12
+  rotateSpeed: 8
 --- !u!1 &646646651
 GameObject:
   m_ObjectHideFlags: 0
@@ -39648,6 +39686,7 @@ GameObject:
   - component: {fileID: 787099023}
   - component: {fileID: 787099022}
   - component: {fileID: 787099021}
+  - component: {fileID: 787099025}
   m_Layer: 3
   m_Name: 'SubtitleCanvas '
   m_TagString: Untagged
@@ -39766,6 +39805,24 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
+--- !u!114 &787099025
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 787099019}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5be80c065e6e0c4294cf1ce132659d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SubtitleFollower
+  head: {fileID: 1388768017}
+  distance: 1.8
+  heightOffset: -0.25
+  recenterAngle: 20
+  moveSpeed: 12
+  rotateSpeed: 8
 --- !u!1 &787973051
 GameObject:
   m_ObjectHideFlags: 0
@@ -44939,7 +44996,7 @@ PrefabInstance:
     - target: {fileID: 8632148399385171212, guid: 5223ea9674c02394a81932bc6791646c, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 2100000, guid: 1bc453e98e42a774db1a5451c436044f, type: 2}
     - target: {fileID: 8764052524096828343, guid: 5223ea9674c02394a81932bc6791646c, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 18
