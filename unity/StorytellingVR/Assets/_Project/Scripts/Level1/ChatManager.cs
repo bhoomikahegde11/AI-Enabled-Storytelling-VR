@@ -460,6 +460,17 @@ public void OnVoiceInput(string spokenText)
 
         localGameState.UpdateActiveTradeOffer(brainResult.updatedOffer);
         negotiationStateManager.SetLastOffer(brainResult.updatedOffer);
+        if (trade != null)
+        {
+            trade.lastSpeaker = TradeSpeaker.NPC;
+            trade.lastNpcQuestion = brainResult.replyText;
+            if (trade.npcOfferHistory.Count > 0)
+            {
+                trade.npcOfferHistory[trade.npcOfferHistory.Count - 1].sourceText = brainResult.replyText;
+                trade.npcOfferHistory[trade.npcOfferHistory.Count - 1].wasAccepted = brainResult.isAccepted;
+                trade.npcOfferHistory[trade.npcOfferHistory.Count - 1].wasRejected = brainResult.walkedAway;
+            }
+        }
 
         if (feedbackManager != null)
         {

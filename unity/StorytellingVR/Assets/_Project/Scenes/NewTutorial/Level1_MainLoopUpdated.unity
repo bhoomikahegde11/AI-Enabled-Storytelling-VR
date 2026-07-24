@@ -10542,6 +10542,7 @@ MonoBehaviour:
   reputationFillImage: {fileID: 0}
   reputationRankText: {fileID: 0}
   reputationDeltaText: {fileID: 0}
+  reputationPanelTransform: {fileID: 0}
   varahaAmountText: {fileID: 0}
   varahaLabelText: {fileID: 0}
   moneyPanelTransform: {fileID: 0}
@@ -11281,6 +11282,7 @@ MonoBehaviour:
   reputationFillImage: {fileID: 660516987}
   reputationRankText: {fileID: 1067428671}
   reputationDeltaText: {fileID: 1410641460}
+  reputationPanelTransform: {fileID: 0}
   varahaAmountText: {fileID: 1784137538}
   varahaLabelText: {fileID: 226439664}
   moneyPanelTransform: {fileID: 231631739}
@@ -18420,8 +18422,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 73e6157f4cb5478b901ca6d125d1d2fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Level1DebugForceAccept
-  debugModeEnabled: 0
-  bypassScoopFulfillmentForTesting: 0
+  debugModeEnabled: 1
+  bypassScoopFulfillmentForTesting: 1
   enableKeyboardDebugShortcuts: 0
   enableKeyboardVoiceShortcut: 0
   enableKeyboardResetShortcut: 0

@@ -118,7 +118,6 @@ public static class InputNormalizer
             .Replace("gold", "varaha")
             .Replace("$", " varaha ")
             .Replace("rs.", " varaha ")
-            .Replace("rs", " varaha ")
             .Replace("my friend", " ")
             .Replace("are eager for", "i give")
             .Replace("are eager", "i give")
@@ -165,10 +164,6 @@ public static class InputNormalizer
         {
             string rawWord = words[i];
             string word = NormalizeWord(rawWord);
-            if (word == "for" && IsSafeForToFour(words, i, awaitingPrice))
-            {
-                word = "four";
-            }
 
             if (TryNormalizeDigitBridge(words, ref i, awaitingPrice, out string bridgedNumber))
             {
@@ -188,54 +183,14 @@ public static class InputNormalizer
         return normalized.ToString();
     }
 
-    private static bool IsSafeForToFour(string[] words, int index, bool awaitingPrice)
+    private static bool LooksLikeSpokenNumberStart(string word)
     {
-        string previous = index > 0 ? NormalizeWord(words[index - 1]) : string.Empty;
-        string next = index + 1 < words.Length ? NormalizeWord(words[index + 1]) : string.Empty;
-        string nextNext = index + 2 < words.Length ? NormalizeWord(words[index + 2]) : string.Empty;
-
-        if (LooksLikeSpokenNumberStart(next) || LooksLikeSpokenNumberStart(nextNext))
+        if (string.IsNullOrWhiteSpace(word))
         {
             return false;
         }
 
-        bool priceContext =
-            awaitingPrice ||
-            previous == "pay" ||
-            previous == "offer" ||
-            previous == "price" ||
-            previous == "make" ||
-            previous == "okay" ||
-            previous == "ok" ||
-            previous == "yes" ||
-            previous == "fine" ||
-            previous == "deal" ||
-            previous == "at" ||
-            next == "varaha" ||
-            next == "varahas" ||
-            next == "price" ||
-            next == "offer";
-
-        bool quantityContext =
-            next == "bag" ||
-            next == "bags" ||
-            next == "palam" ||
-            next == "palams" ||
-            next == "seer" ||
-            next == "seers" ||
-            next == "veesai" ||
-            next == "viss" ||
-            next == "kg" ||
-            next == "kgs" ||
-            next == "gram" ||
-            next == "grams";
-
-        return priceContext || quantityContext;
-    }
-
-    private static bool LooksLikeSpokenNumberStart(string word)
-    {
-        if (string.IsNullOrWhiteSpace(word))
+        if (word == "and" || word == "or")
         {
             return false;
         }
@@ -293,6 +248,8 @@ public static class InputNormalizer
                 return "quantity";
             case "tree":
                 return "three";
+            case "rs":
+                return "varaha";
             default:
                 return word;
         }
@@ -302,7 +259,7 @@ public static class InputNormalizer
     {
         normalizedNumber = null;
         string current = NormalizeWord(words[index]);
-        if (!Contains(NumberWords, current))
+        if (!Contains(NumberWords, current) || current == "and" || current == "or")
         {
             return false;
         }
@@ -401,6 +358,7 @@ public static class InputNormalizer
 
     private static bool IsNumberSequence(string[] words, int start, int end)
     {
+        bool hasSubstantiveNumber = false;
         for (int i = start; i <= end; i++)
         {
             string word = NormalizeWord(words[i]);
@@ -413,8 +371,13 @@ public static class InputNormalizer
             {
                 return false;
             }
+
+            if (word != "and")
+            {
+                hasSubstantiveNumber = true;
+            }
         }
-        return true;
+        return hasSubstantiveNumber;
     }
 
     private static bool IsNearContext(string[] words, int start, int end)
@@ -599,7 +562,7 @@ public static class InputNormalizer
             case "eighty": return 80;
             case "ninety": return 90;
             case "hundred": return 100;
-            default: return 0;
+            default: return -1;
         }
     }
 
