@@ -1,6 +1,6 @@
 {
     "global_metrics": {
-        "reputation": 45,
+        "reputation": 50,
         "total_varahas": 100,
         "completed_levels": []
     },
@@ -27,7 +27,7 @@
         "total_varahas_earned": 0,
         "total_deals_made": 0
     },
-    "current_scene": "Level1_MainLoopUpdated",
-    "progression_index": 1,
+    "current_scene": "NewSpiceScene",
+    "progression_index": 2,
     "intro_completed": true
 }

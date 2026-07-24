@@ -151,6 +151,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   scenes:
   - ModernStudyRoom
+  - FreeRoam_WithTerrain
+  - NewSpiceScene
+  - NewTransactionTutorial
+  - NewCoinScene
+  - SpicesInteraction
   - Level1_MainLoopUpdated
   fader: {fileID: 1819468858}
 --- !u!114 &40321877
