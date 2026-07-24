@@ -32,11 +32,16 @@ public class LocalProfileData
     public GlobalMetricsData global_metrics = new GlobalMetricsData();
     public List<InventoryEntry> inventory = new List<InventoryEntry>();
     public ShiftStatsData shift_stats = new ShiftStatsData();
+    public string current_scene = LocalSaveManager.DefaultCurrentSceneName;
+    public int progression_index = LocalSaveManager.DefaultProgressionIndex;
+    public bool intro_completed = true;
 }
 
 public class LocalSaveManager
 {
     public const string ProfileFileName = "level1_player_profile.json";
+    public const string DefaultCurrentSceneName = GameManager.DefaultGameplaySceneName;
+    public const int DefaultProgressionIndex = 1;
 
     private readonly string savePath;
     public string SavePath => savePath;
@@ -48,6 +53,8 @@ public class LocalSaveManager
 
     public LocalProfileData LoadProfile(MarketManager marketManager)
     {
+        MarketManager resolvedMarketManager = marketManager ?? new MarketManager();
+
         if (File.Exists(savePath))
         {
             try
@@ -56,7 +63,7 @@ public class LocalSaveManager
                 LocalProfileData data = JsonUtility.FromJson<LocalProfileData>(json);
                 if (data != null)
                 {
-                    EnsureDefaults(data, marketManager);
+                    EnsureDefaults(data, resolvedMarketManager);
                     return data;
                 }
             }
@@ -66,9 +73,14 @@ public class LocalSaveManager
             }
         }
 
-        LocalProfileData defaults = CreateDefaultProfile(marketManager);
+        LocalProfileData defaults = CreateDefaultProfile(resolvedMarketManager);
         SaveProfile(defaults);
         return defaults;
+    }
+
+    public LocalProfileData LoadProfile()
+    {
+        return LoadProfile(new MarketManager());
     }
 
     public void SaveProfile(LocalProfileData profile)
@@ -78,6 +90,7 @@ public class LocalSaveManager
             Directory.CreateDirectory(GetActiveSaveDirectory());
             string json = JsonUtility.ToJson(profile, true);
             File.WriteAllText(savePath, json);
+            Debug.Log($"[SAVE] Saved progression current_scene={profile.current_scene}, progression_index={profile.progression_index}, intro_completed={profile.intro_completed}");
         }
         catch (Exception ex)
         {
@@ -130,6 +143,11 @@ public class LocalSaveManager
         return DeleteProfileAtPath(GetActiveSavePath());
     }
 
+    public static bool ActiveProfileExists()
+    {
+        return File.Exists(GetActiveSavePath());
+    }
+
     private static bool DeleteProfileAtPath(string path)
     {
         try
@@ -160,7 +178,10 @@ public class LocalSaveManager
                 completed_levels = new List<string>()
             },
             inventory = marketManager.CreateDefaultInventoryEntries(),
-            shift_stats = new ShiftStatsData()
+            shift_stats = new ShiftStatsData(),
+            current_scene = DefaultCurrentSceneName,
+            progression_index = DefaultProgressionIndex,
+            intro_completed = true
         };
     }
 
@@ -184,6 +205,32 @@ public class LocalSaveManager
         if (profile.inventory == null)
         {
             profile.inventory = new List<InventoryEntry>();
+        }
+
+        if (string.IsNullOrWhiteSpace(profile.current_scene))
+        {
+            profile.current_scene = DefaultCurrentSceneName;
+        }
+
+        if (profile.progression_index < 0)
+        {
+            profile.progression_index = DefaultProgressionIndex;
+        }
+
+        int resolvedProgressionIndex = profile.progression_index;
+        if (string.Equals(profile.current_scene, GameManager.DefaultIntroSceneName, StringComparison.Ordinal))
+        {
+            resolvedProgressionIndex = 0;
+        }
+        else if (string.Equals(profile.current_scene, GameManager.DefaultGameplaySceneName, StringComparison.Ordinal))
+        {
+            resolvedProgressionIndex = DefaultProgressionIndex;
+        }
+
+        profile.progression_index = resolvedProgressionIndex;
+        if (resolvedProgressionIndex >= DefaultProgressionIndex)
+        {
+            profile.intro_completed = true;
         }
 
         foreach (InventoryEntry defaultEntry in marketManager.CreateDefaultInventoryEntries())

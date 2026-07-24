@@ -699,6 +699,12 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         Debug.Log("[INTRO] Whiteout hold complete.", this);
         _blastComplete = true;
         Debug.Log("[INTRO] Final notebook energy blast complete.", this);
+
+        if (GameManager.Instance != null)
+        {
+            Debug.Log("[INTRO] Requesting next scene from GameManager after whiteout.", this);
+            GameManager.Instance.LoadNextScene();
+        }
     }
 
     private void ResetNotebookEffectState()

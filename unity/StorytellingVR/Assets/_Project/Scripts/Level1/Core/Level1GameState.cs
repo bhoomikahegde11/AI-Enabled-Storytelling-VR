@@ -247,6 +247,7 @@ public class Level1GameState : MonoBehaviour
     public void SaveProfileToDisk()
     {
         EnsureInitialized();
+        RefreshProgressionFieldsFromDisk();
         localSaveManager.SaveProfile(profile);
     }
 
@@ -431,8 +432,27 @@ public class Level1GameState : MonoBehaviour
             lastDealReferencePrice = finalPrice;
         }
 
+        RefreshProgressionFieldsFromDisk();
         localSaveManager.SaveProfile(profile);
         activeTrade = null;
         return outcome;
+    }
+
+    private void RefreshProgressionFieldsFromDisk()
+    {
+        if (profile == null || localSaveManager == null)
+        {
+            return;
+        }
+
+        LocalProfileData diskProfile = localSaveManager.LoadProfile(marketManager);
+        if (diskProfile == null)
+        {
+            return;
+        }
+
+        profile.current_scene = diskProfile.current_scene;
+        profile.progression_index = diskProfile.progression_index;
+        profile.intro_completed = diskProfile.intro_completed;
     }
 }
