@@ -8278,7 +8278,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5dbd49c7677f154bba67fd019069185, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MarketSpawner
-  npcPrefab: {fileID: 7632564849704470384, guid: 791b49d738c7c4b4baf1f61787cbcad7, type: 3}
+  adultPrefabs:
+  - {fileID: 5193887577578046154, guid: 7183a5ce63651ca42ba4c2ff1778b6c4, type: 3}
+  childPrefabs:
+  - {fileID: 5903585735567328463, guid: 1b903b101e14af040b2f95de5ae843a4, type: 3}
+  - {fileID: 556098998139225926, guid: 2220ce4b918df2d44b783a03c501c5a5, type: 3}
+  cartPrefabs: []
   leftSpawn: {fileID: 1649508376}
   rightSpawn: {fileID: 436392362}
   leftTarget: {fileID: 1966559372}

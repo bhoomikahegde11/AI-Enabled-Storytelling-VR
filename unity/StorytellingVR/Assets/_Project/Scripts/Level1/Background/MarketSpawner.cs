@@ -4,7 +4,9 @@ using System.Collections.Generic;
 
 public class MarketSpawner : MonoBehaviour
 {
-    public GameObject npcPrefab;
+    public GameObject[] adultPrefabs;
+    public GameObject[] childPrefabs;
+    public GameObject[] cartPrefabs;
 
     public Transform leftSpawn;
     public Transform rightSpawn;
@@ -26,28 +28,44 @@ public class MarketSpawner : MonoBehaviour
 
     IEnumerator SpawnLoop()
     {
-        while (!Level1GameState.Instance.MarketDayStarted && !Level1GameState.Instance.MarketDayEnded)
-        {
-            yield return null;
-        }
-
-        while (!Level1GameState.Instance.MarketDayEnded)
+        while (true)
         {
             if (activeNPCs < maxNPCs)
             {
                 SpawnNPC();
             }
 
-            yield return new WaitForSeconds(
-                Random.Range(6f, 12f)
-            );
+            yield return new WaitForSeconds(Random.Range(6f, 12f));
         }
-
-        Debug.Log("[MARKET SPAWNER] Market day ended. Background spawning stopped.");
     }
 
     void SpawnNPC()
     {
+        Debug.Log("SpawnNPC called");
+        // Decide what type of NPC to spawn
+        float random = Random.value;
+        
+        GameObject prefab;
+
+        if (random < 0.65f)          // 65% Adults
+        {
+            prefab = adultPrefabs[
+                Random.Range(0, adultPrefabs.Length)
+            ];
+        }
+        else if (random < 0.90f)     // 25% Children
+        {
+            prefab = childPrefabs[
+                Random.Range(0, childPrefabs.Length)
+            ];
+        }
+        else                         // 10% Bullock Cart
+        {
+            prefab = cartPrefabs[
+                Random.Range(0, cartPrefabs.Length)
+            ];
+        }
+
         bool fromLeft = Random.value > 0.5f;
 
         Transform spawn =
@@ -71,15 +89,19 @@ public class MarketSpawner : MonoBehaviour
         }
 
         GameObject npc = Instantiate(
-            npcPrefab,
+            prefab,
             spawn.position,
             Quaternion.identity
         );
 
         activeNPCs++;
+        NPCWalker walker = npc.GetComponent<NPCWalker>();
+        bool visitsStall = false;
 
-        bool visitsStall = Random.value < 0.7f;
-
+        if (walker.npcType == NPCType.Adult)
+        {
+            visitsStall = Random.value < 0.7f;
+        }
         Vector3 firstDestination;
         Quaternion stallRotation = Quaternion.identity;
         StallPoint chosenStall = null;

@@ -3,6 +3,7 @@ using System.Collections;
 
 public class NPCWalker : MonoBehaviour
 {
+    public NPCType npcType = NPCType.Adult;
     private Vector3 target;
     private Vector3 exitTarget;
     private StallPoint myStall;

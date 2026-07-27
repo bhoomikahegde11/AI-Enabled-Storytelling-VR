@@ -1,0 +1,149 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &826059539513555479
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -6.467237
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.24000001
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 13.083
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.66879
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.74345136
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -96.053
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      propertyPath: m_Name
+      value: Meshy_AI_Little_Dancer_in_Trad_biped_Animation_Running_withSkin
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5212757558587055991}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8191744980322180961}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1832429798917719692}
+  m_SourcePrefab: {fileID: 100100000, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+--- !u!1 &556098998139225926 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 50427a974ff777943bbdf02160348db2, type: 3}
+  m_PrefabInstance: {fileID: 826059539513555479}
+  m_PrefabAsset: {fileID: 0}
+--- !u!136 &5212757558587055991
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 556098998139225926}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Height: 2.0795705
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.539785, z: -0}
+--- !u!114 &8191744980322180961
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 556098998139225926}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d0865aa8f9e69d45becb73317afb770, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NPCWalker
+  npcType: 1
+  moveSpeed: 0.85
+  turnSpeed: 5
+--- !u!95 &1832429798917719692
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 556098998139225926}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 881a0dfd22afc4d4184f7b860555e312, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
