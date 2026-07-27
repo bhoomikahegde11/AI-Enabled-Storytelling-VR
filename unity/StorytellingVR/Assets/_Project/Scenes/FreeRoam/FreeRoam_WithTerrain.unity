@@ -1016,7 +1016,9 @@ MonoBehaviour:
   foreignNPCInteraction: {fileID: 1891705896}
   meeraNPCInteraction: {fileID: 565354011}
   trinketSequenceRoot: {fileID: 0}
-  merchantSequence: {fileID: 0}
+  meeraSubtitlePosition: {fileID: 1470283461}
+  merchantSubtitlePosition: {fileID: 1318130386}
+  merchantSequence: {fileID: 2785884384067090456}
   playIntroOnStart: 1
   startupDelay: 1
 --- !u!114 &23441730
@@ -18783,6 +18785,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 314340340}
+  - component: {fileID: 314340341}
   m_Layer: 0
   m_Name: Foreign_NPC_Traveller
   m_TagString: Untagged
@@ -18809,8 +18812,23 @@ Transform:
   - {fileID: 1179890194}
   - {fileID: 1168444595}
   - {fileID: 1885820583}
+  - {fileID: 1384855019}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 71.204, z: 0}
+--- !u!114 &314340341
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 314340339}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dc356b2aa6e6a44a8138c81d858126f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NPCSubtitlePositionController
+  subtitleFollower: {fileID: 787099025}
+  subtitleAnchor: {fileID: 1384855019}
 --- !u!1 &315462760
 GameObject:
   m_ObjectHideFlags: 0
@@ -25462,6 +25480,7 @@ MonoBehaviour:
   availableOnStart: 0
   indicator: {fileID: 23441728}
   meeraSequenceController: {fileID: 1470283460}
+  subtitlePositionController: {fileID: 0}
   nextNPCsToUnlock: []
 --- !u!65 &565354012
 BoxCollider:
@@ -26648,6 +26667,7 @@ MonoBehaviour:
   availableOnStart: 0
   indicator: {fileID: 23441728}
   meeraSequenceController: {fileID: 0}
+  subtitlePositionController: {fileID: 0}
   nextNPCsToUnlock: []
 --- !u!1 &605785208
 GameObject:
@@ -28986,6 +29006,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1188587556}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &698323774
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 698323775}
+  m_Layer: 0
+  m_Name: LocalSubtitleAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 7250588514170254948, guid: 0000000000000000d000000000000000, type: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &698323775
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 698323774}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.9758994, z: -0, w: -0.21822119}
+  m_LocalPosition: {x: -110.030014, y: -5.36, z: 10.470001}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1782827222}
+  m_LocalEulerAnglesHint: {x: 0, y: 205.209, z: 0}
 --- !u!1 &700038587
 GameObject:
   m_ObjectHideFlags: 0
@@ -44986,6 +45037,7 @@ MonoBehaviour:
   availableOnStart: 0
   indicator: {fileID: 0}
   meeraSequenceController: {fileID: 0}
+  subtitlePositionController: {fileID: 0}
   nextNPCsToUnlock: []
 --- !u!1 &968706905
 GameObject:
@@ -53342,6 +53394,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1318130385}
+  - component: {fileID: 1318130386}
   m_Layer: 0
   m_Name: NPC_SpiceMerchant_Bhaskara
   m_TagString: Untagged
@@ -53365,8 +53418,23 @@ Transform:
   - {fileID: 1696210017}
   - {fileID: 1800384221}
   - {fileID: 1131694249}
+  - {fileID: 2046576163}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1318130386
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1318130384}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dc356b2aa6e6a44a8138c81d858126f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NPCSubtitlePositionController
+  subtitleFollower: {fileID: 787099025}
+  subtitleAnchor: {fileID: 2046576163}
 --- !u!1 &1319363512
 GameObject:
   m_ObjectHideFlags: 0
@@ -54408,6 +54476,37 @@ SkinnedMeshRenderer:
     m_Center: {x: 0, y: 0, z: 0.0076827}
     m_Extent: {x: 0.0090530785, y: 0.00905308, z: 0.022541326}
   m_DirtyAABB: 0
+--- !u!1 &1384855018
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1384855019}
+  m_Layer: 0
+  m_Name: ForeignSubtitleAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 7250588514170254948, guid: 0000000000000000d000000000000000, type: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1384855019
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1384855018}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0.9294639, z: -0, w: 0.36891314}
+  m_LocalPosition: {x: -109.98, y: -5.65, z: 10.46}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 314340340}
+  m_LocalEulerAnglesHint: {x: 0, y: -136.703, z: 0}
 --- !u!1 &1385356322
 GameObject:
   m_ObjectHideFlags: 0
@@ -56939,6 +57038,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1470283459}
   - component: {fileID: 1470283460}
+  - component: {fileID: 1470283461}
   m_Layer: 0
   m_Name: NPC_Meera_TrinketStoreOwner
   m_TagString: Untagged
@@ -56985,12 +57085,27 @@ MonoBehaviour:
   meeraInteraction: {fileID: 0}
   meeraAnimator: {fileID: 0}
   sequenceObjectsRoot: {fileID: 0}
+  subtitlePositionController: {fileID: 0}
   speakerName: Meera
   greetingLine: Ah, so my call caught your attention. Come closer, traveller. There
     may be something here that interests you.
   inspectionInvitation: Take your time and look around. Every object on this stall
     has a story of its own.
   pauseBetweenLines: 0.5
+--- !u!114 &1470283461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1470283458}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dc356b2aa6e6a44a8138c81d858126f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NPCSubtitlePositionController
+  subtitleFollower: {fileID: 787099025}
+  subtitleAnchor: {fileID: 722178513}
 --- !u!1 &1472136977
 GameObject:
   m_ObjectHideFlags: 0
@@ -57364,6 +57479,7 @@ MonoBehaviour:
   meeraInteraction: {fileID: 565354011}
   meeraAnimator: {fileID: 0}
   sequenceObjectsRoot: {fileID: 0}
+  subtitlePositionController: {fileID: 1470283461}
   speakerName: Meera
   greetingLine: Ah, so my call caught your attention. Come closer, traveller. There
     may be something here that interests you.
@@ -70251,6 +70367,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1782827222}
+  - component: {fileID: 1782827223}
   m_Layer: 0
   m_Name: Local_NPC_Narasappa
   m_TagString: Untagged
@@ -70276,8 +70393,23 @@ Transform:
   - {fileID: 140073571}
   - {fileID: 1377369174}
   - {fileID: 1339826592}
+  - {fileID: 698323775}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1782827223
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1782827221}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dc356b2aa6e6a44a8138c81d858126f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NPCSubtitlePositionController
+  subtitleFollower: {fileID: 787099025}
+  subtitleAnchor: {fileID: 698323775}
 --- !u!1 &1796421940
 GameObject:
   m_ObjectHideFlags: 0
@@ -72866,6 +72998,7 @@ MonoBehaviour:
   availableOnStart: 0
   indicator: {fileID: 23441728}
   meeraSequenceController: {fileID: 0}
+  subtitlePositionController: {fileID: 0}
   nextNPCsToUnlock:
   - {fileID: 0}
 --- !u!65 &1891705897
@@ -76452,6 +76585,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 543450652243207448}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2046576162
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2046576163}
+  m_Layer: 0
+  m_Name: MErchantSubtitleAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 7250588514170254948, guid: 0000000000000000d000000000000000, type: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2046576163
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2046576162}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0.39213854, z: -0, w: 0.91990626}
+  m_LocalPosition: {x: -0.52199936, y: 0.612, z: 0.4239998}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1318130385}
+  m_LocalEulerAnglesHint: {x: 0, y: -46.175, z: 0}
 --- !u!1 &2048596705
 GameObject:
   m_ObjectHideFlags: 0

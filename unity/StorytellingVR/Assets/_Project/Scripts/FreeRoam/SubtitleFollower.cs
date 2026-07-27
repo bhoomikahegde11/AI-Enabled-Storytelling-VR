@@ -188,6 +188,27 @@ public class SubtitleFollower : MonoBehaviour
         );
     }
 
+    public void UseFixedModeAt(Transform newAnchor)
+    {
+        if (newAnchor == null)
+        {
+            Debug.LogWarning(
+                "[SUBTITLE FOLLOWER] Cannot use fixed mode. Anchor is null."
+            );
+
+            return;
+        }
+
+        fixedAnchor = newAnchor;
+
+        currentMode =
+            SubtitlePositionMode.FixedAnchor;
+
+        Debug.Log(
+            $"[SUBTITLE FOLLOWER] Fixed to {newAnchor.name}."
+        );
+    }
+
     public void UseFollowMode()
     {
         currentMode =
@@ -198,26 +219,6 @@ public class SubtitleFollower : MonoBehaviour
 
         Debug.Log(
             "[SUBTITLE FOLLOWER] Follow mode enabled."
-        );
-    }
-
-    public void UseFixedMode()
-    {
-        if (fixedAnchor == null)
-        {
-            Debug.LogWarning(
-                "[SUBTITLE FOLLOWER] Cannot use fixed mode. " +
-                "Fixed Anchor is missing."
-            );
-
-            return;
-        }
-
-        currentMode =
-            SubtitlePositionMode.FixedAnchor;
-
-        Debug.Log(
-            "[SUBTITLE FOLLOWER] Fixed mode enabled."
         );
     }
 
