@@ -123,7 +123,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NPCWalker
   npcType: 1
-  moveSpeed: 0.85
+  moveSpeed: 1.5
   turnSpeed: 5
 --- !u!95 &1832429798917719692
 Animator:

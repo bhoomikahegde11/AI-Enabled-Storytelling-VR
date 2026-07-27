@@ -3677,7 +3677,7 @@ Transform:
   m_GameObject: {fileID: 436392361}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 58.7, y: 0, z: 7.199999}
+  m_LocalPosition: {x: 58.7, y: 0, z: -0.1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -8279,7 +8279,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MarketSpawner
   adultPrefabs:
-  - {fileID: 5193887577578046154, guid: 7183a5ce63651ca42ba4c2ff1778b6c4, type: 3}
+  - {fileID: 6196088842396132735, guid: c6a62ac4cd205a3448b3fe7c795d37df, type: 3}
   childPrefabs:
   - {fileID: 5903585735567328463, guid: 1b903b101e14af040b2f95de5ae843a4, type: 3}
   - {fileID: 556098998139225926, guid: 2220ce4b918df2d44b783a03c501c5a5, type: 3}

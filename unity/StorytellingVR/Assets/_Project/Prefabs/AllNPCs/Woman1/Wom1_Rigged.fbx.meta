@@ -1,9 +1,14 @@
 fileFormatVersion: 2
-guid: a330a699c15cd674dad08e7e60c043ad
+guid: 9d0769642712ef64e88c2daae8c181bb
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: texture_0
+    second: {fileID: 2800000, guid: e9ef47b86a190c54aa2790b0d50f990e, type: 3}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -94,7 +99,7 @@ ModelImporter:
     globalScale: 1
     rootMotionBoneName: 
     hasTranslationDoF: 0
-    hasExtraRoot: 0
+    hasExtraRoot: 1
     skeletonHasParents: 1
   lastHumanDescriptionAvatarSource: {instanceID: 0}
   autoGenerateAvatarMappingIfUnspecified: 1
