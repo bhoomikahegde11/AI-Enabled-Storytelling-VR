@@ -80689,6 +80689,11 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!95 &2165624929818091899 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: f148b6addfc553e45ad57930114e34b3, type: 3}
+  m_PrefabInstance: {fileID: 8008054437436186865}
+  m_PrefabAsset: {fileID: 0}
 --- !u!33 &2349926924897749653
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -80777,18 +80782,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SpiceMerchantGuideSequence
   merchant: {fileID: 0}
   merchantObjectName: SpiceMerchantGuide
-  stallDestination: {fileID: 0}
+  stallDestination: {fileID: 1059929817}
   guideStopSpot: {fileID: 5450654367833230035}
   stallEntryHotspot: {fileID: 0}
   fallbackTalkPrompt: {fileID: 0}
   teleportSystem: {fileID: 0}
-  merchantAgent: {fileID: 0}
+  merchantAgent: {fileID: 1822538184728924892}
   walkSpeed: 1.4
   stoppingDistance: 0.35
   hotspotClearanceDistance: 1.6
   turnSpeed: 8
   maxWalkTime: 20
-  merchantAnimator: {fileID: 0}
+  merchantAnimator: {fileID: 2165624929818091899}
   freezeAnimatorUntilMovement: 1
   disableAnimatorRootMotion: 1
   walkingBool: isWalking
@@ -82266,7 +82271,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 67898118c0a2e024885acbf1cb2e5284, type: 2}
     - target: {fileID: 5866666021909216657, guid: f148b6addfc553e45ad57930114e34b3, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5866666021909216657, guid: f148b6addfc553e45ad57930114e34b3, type: 3}
       propertyPath: m_Controller
@@ -82503,7 +82508,7 @@ Transform:
   m_GameObject: {fileID: 6451472541284216160}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
