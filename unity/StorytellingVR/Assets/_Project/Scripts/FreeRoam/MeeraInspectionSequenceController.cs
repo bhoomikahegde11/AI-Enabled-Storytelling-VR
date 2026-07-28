@@ -143,11 +143,26 @@ public class MeeraInspectionSequenceController : MonoBehaviour
     {
         Debug.Log($"[MEERA] {meeraLine}");
 
-        onMeeraLineRequested?.Invoke(meeraLine);
+        NarratorUIManager narrator =
+            NarratorUIManager.Instance;
 
-        yield return new WaitForSeconds(
-            normalItemDialogueDuration
-        );
+        if (narrator != null)
+        {
+            yield return narrator.PlayNarration(
+                "Meera",
+                meeraLine
+            );
+        }
+        else
+        {
+            Debug.LogWarning(
+                "[MEERA INSPECTION] NarratorUIManager.Instance is missing."
+            );
+
+            yield return new WaitForSecondsRealtime(
+                normalItemDialogueDuration
+            );
+        }
     }
 
     private IEnumerator PlayBookSequence()
@@ -164,28 +179,45 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         string narratorLine =
             "Some objects appear to belong to more than one time.";
 
+        NarratorUIManager narrator =
+            NarratorUIManager.Instance;
+
+        if (narrator == null)
+        {
+            Debug.LogError(
+                "[MEERA INSPECTION] NarratorUIManager.Instance is missing."
+            );
+
+            yield break;
+        }
+
         Debug.Log($"[PLAYER THOUGHT] {playerThought}");
 
-        onPlayerThoughtRequested?.Invoke(playerThought);
+        yield return narrator.PlayNarration(
+            "You",
+            playerThought
+        );
 
-        yield return new WaitForSeconds(
+        yield return new WaitForSecondsRealtime(
             pauseBetweenBookLines
         );
 
         Debug.Log($"[MEERA] {meeraLine}");
 
-        onMeeraLineRequested?.Invoke(meeraLine);
+        yield return narrator.PlayNarration(
+            "Meera",
+            meeraLine
+        );
 
-        yield return new WaitForSeconds(
-            bookDialogueDuration
+        yield return new WaitForSecondsRealtime(
+            pauseBetweenBookLines
         );
 
         Debug.Log($"[NARRATOR] {narratorLine}");
 
-        onNarratorLineRequested?.Invoke(narratorLine);
-
-        yield return new WaitForSeconds(
-            pauseBetweenBookLines
+        yield return narrator.PlayNarration(
+            "Narrator",
+            narratorLine
         );
     }
 

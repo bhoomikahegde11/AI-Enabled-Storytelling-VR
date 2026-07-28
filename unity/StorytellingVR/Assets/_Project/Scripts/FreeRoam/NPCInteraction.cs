@@ -42,6 +42,9 @@ public class NPCInteraction : MonoBehaviour
     [SerializeField]
     private MeeraSequenceController meeraSequenceController;
 
+    [SerializeField]
+    private NPCSubtitlePositionController subtitlePositionController;
+
     [Header("Legacy Next NPCs")]
     [Tooltip(
         "Temporary legacy field. Leave empty when using FreeRoamStoryManager."

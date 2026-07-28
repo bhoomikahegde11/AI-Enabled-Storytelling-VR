@@ -35,6 +35,8 @@ public class FreeRoamStoryManager : MonoBehaviour
     [SerializeField] private TutorialPromptUIManager promptUI;
     [SerializeField] private TeleportManager teleportManager;
     [SerializeField] private NPCDirectionalIndicator directionalIndicator;
+    [SerializeField]
+    private MeeraInspectionSequenceController meeraInspectionSequenceController;
 
     [Header("Story Targets")]
     [SerializeField] private Transform localNPCTarget;
@@ -385,6 +387,17 @@ public class FreeRoamStoryManager : MonoBehaviour
         }
 
         SetStage(StoryStage.InspectTrinkets);
+
+        if (meeraInspectionSequenceController != null)
+        {
+            meeraInspectionSequenceController.BeginInspectionSequence();
+        }
+        else
+        {
+            Debug.LogError(
+                "[FREE ROAM STORY] MeeraInspectionSequenceController is not assigned."
+            );
+        }
 
         objectiveUI?.SetObjective(
             "Inspect the objects on Meera's stall"
