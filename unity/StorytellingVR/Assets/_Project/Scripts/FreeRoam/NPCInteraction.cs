@@ -163,8 +163,6 @@ public class NPCInteraction : MonoBehaviour
         if (indicator != null)
             indicator.Hide();
 
-        SetLaserPointerEnabled(false);
-
         conversationRoutine =
             StartCoroutine(ConversationFlowRoutine());
 
@@ -197,8 +195,6 @@ public class NPCInteraction : MonoBehaviour
 
         if (indicator != null)
             indicator.Hide();
-
-        SetLaserPointerEnabled(false);
 
         meeraSequenceController.BeginSequence();
 
@@ -328,16 +324,7 @@ public class NPCInteraction : MonoBehaviour
             indicator.Hide();
     }
 
-    private void SetLaserPointerEnabled(bool enabled)
-    {
-        NPCDialogueVRLaserPointer laser =
-            Object.FindAnyObjectByType<NPCDialogueVRLaserPointer>(
-                FindObjectsInactive.Include
-            );
 
-        if (laser != null)
-            laser.enabled = enabled;
-    }
 
     private void BeginClosingDialogue()
     {
@@ -348,8 +335,6 @@ public class NPCInteraction : MonoBehaviour
 
         if (NPCQuestionUIManager.Instance != null)
             NPCQuestionUIManager.Instance.Close();
-
-        SetLaserPointerEnabled(false);
 
         StartCoroutine(ClosingConversationRoutine());
 
@@ -363,7 +348,6 @@ public class NPCInteraction : MonoBehaviour
 
     private IEnumerator ClosingConversationRoutine()
     {
-        SetLaserPointerEnabled(false);
 
         if (!string.IsNullOrWhiteSpace(dialogue.closingDialogue))
         {
@@ -385,8 +369,6 @@ public class NPCInteraction : MonoBehaviour
 
         if (NPCQuestionUIManager.Instance != null)
             NPCQuestionUIManager.Instance.Close();
-
-        SetLaserPointerEnabled(false);
 
         if (teleportSystem != null)
             teleportSystem.SetActive(true);

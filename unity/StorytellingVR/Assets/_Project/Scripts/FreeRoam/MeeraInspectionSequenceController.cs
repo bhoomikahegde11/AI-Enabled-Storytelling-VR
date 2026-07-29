@@ -10,18 +10,59 @@ public class MeeraInspectionSequenceController : MonoBehaviour
     }
 
     [Header("Inspectable Items")]
-    [SerializeField] private MeeraInspectableItem lampOrVase;
-    [SerializeField] private MeeraInspectableItem foreignTrinket;
-    [SerializeField] private MeeraInspectableItem book;
+    [SerializeField]
+    private MeeraInspectableItem lampOrVase;
+
+    [SerializeField]
+    private MeeraInspectableItem foreignTrinket;
+
+    [SerializeField]
+    private MeeraInspectableItem book;
+
+    [Header("Meta XR Inspection Ray")]
+    [Tooltip(
+        "Assign the Meta XR Building Block GameObject whose activation " +
+        "shows or hides the controller ray."
+    )]
+    [SerializeField]
+    private GameObject inspectionRayRoot;
+
+    [Header("Book Interaction")]
+    [Tooltip(
+        "Drag the RayInteractable component from the book interaction object."
+    )]
+    [SerializeField]
+    private Behaviour lampRayInteractable;
+
+    [SerializeField]
+    private Behaviour compassRayInteractable;
+
+    [SerializeField]
+    private Behaviour bookRayInteractable;
+
+    [Header("Compass Highlight")]
+    [Tooltip(
+        "Assign the point light that turns on when the compass is selected."
+    )]
+    [SerializeField]
+    private Light compassPointLight;
 
     [Header("Sequence Settings")]
-    [SerializeField] private bool inspectionSequenceActive;
-    [SerializeField] private bool requireOtherItemsBeforeBook = true;
+    [SerializeField]
+    private bool inspectionSequenceActive;
+
+    [SerializeField]
+    private bool requireOtherItemsBeforeBook = true;
 
     [Header("Temporary Dialogue Timing")]
-    [SerializeField] private float normalItemDialogueDuration = 4f;
-    [SerializeField] private float bookDialogueDuration = 5f;
-    [SerializeField] private float pauseBetweenBookLines = 0.75f;
+    [SerializeField]
+    private float normalItemDialogueDuration = 4f;
+
+    [SerializeField]
+    private float bookDialogueDuration = 5f;
+
+    [SerializeField]
+    private float pauseBetweenBookLines = 0.75f;
 
     [Header("Dialogue Events")]
     public StringEvent onMeeraLineRequested;
@@ -34,27 +75,108 @@ public class MeeraInspectionSequenceController : MonoBehaviour
 
     private bool inspectionBusy;
     private bool sequenceCompleted;
+    private bool inspectionSequenceStarted = false;
 
-    public bool InspectionSequenceActive => inspectionSequenceActive;
-    public bool InspectionBusy => inspectionBusy;
-    public bool SequenceCompleted => sequenceCompleted;
+    public bool InspectionSequenceActive =>
+        inspectionSequenceActive;
+
+    public bool InspectionBusy =>
+        inspectionBusy;
+
+    public bool SequenceCompleted =>
+        sequenceCompleted;
+
+    private void Awake()
+    {
+        lampRayInteractable = GetActualInteractable(lampRayInteractable, lampOrVase);
+        compassRayInteractable = GetActualInteractable(compassRayInteractable, foreignTrinket);
+
+        SetItemInteraction(lampRayInteractable, lampOrVase, false);
+        SetItemInteraction(compassRayInteractable, foreignTrinket, false);
+
+        Debug.Log("[MEERA INSPECTION] Initial lamp interaction locked.");
+        Debug.Log("[MEERA INSPECTION] Initial compass interaction locked.");
+    }
+
+    private void OnEnable()
+    {
+        if (!inspectionSequenceStarted)
+        {
+            SetItemInteraction(lampRayInteractable, lampOrVase, false);
+            SetItemInteraction(compassRayInteractable, foreignTrinket, false);
+            StartCoroutine(EnforceInitialInteractionLock());
+        }
+    }
+
+    private IEnumerator EnforceInitialInteractionLock()
+    {
+        yield return null;
+
+        if (!inspectionSequenceStarted)
+        {
+            SetItemInteraction(lampRayInteractable, lampOrVase, false);
+            SetItemInteraction(compassRayInteractable, foreignTrinket, false);
+        }
+    }
+
+    private void Start()
+    {
+        /*
+         * Before Meera interaction: do not change the ray’s normal scene state.
+         */
+
+        /*
+         * The book must not be hoverable or selectable yet.
+         */
+        SetBookInteraction(false);
+
+        /*
+         * Make sure the compass light does not begin enabled.
+         */
+        SetCompassLight(false);
+    }
 
     public void BeginInspectionSequence()
     {
         if (inspectionSequenceActive || sequenceCompleted)
             return;
 
+        inspectionSequenceStarted = true;
         inspectionSequenceActive = true;
         inspectionBusy = false;
 
+        /*
+         * Meera has now prompted the player to inspect.
+         * Show the Meta XR ray and enable interactables.
+         */
+        SetInspectionRay(true);
+        SetItemInteraction(lampRayInteractable, lampOrVase, true);
+        SetItemInteraction(compassRayInteractable, foreignTrinket, true);
+        
+        Debug.Log("[MEERA INSPECTION] Inspection started; lamp and compass unlocked.");
+
+        /*
+         * Keep the book non-interactable until the lamp
+         * and compass have both been inspected.
+         */
+        SetBookInteraction(
+            !requireOtherItemsBeforeBook ||
+            OtherItemsHaveBeenInspected()
+        );
+
+        SetCompassLight(false);
+
         Debug.Log(
-            "[MEERA INSPECTION] Inspection sequence started."
+            "[MEERA INSPECTION] Inspection sequence started. " +
+            "Inspection ray enabled."
         );
 
         onInspectionSequenceStarted?.Invoke();
     }
 
-    public void RequestInspection(MeeraInspectableItem item)
+    public void RequestInspection(
+        MeeraInspectableItem item
+    )
     {
         if (!inspectionSequenceActive)
         {
@@ -78,23 +200,28 @@ public class MeeraInspectionSequenceController : MonoBehaviour
             return;
 
         if (item.ItemType ==
-                MeeraInspectableItem.InspectableItemType.Book &&
+                MeeraInspectableItem
+                    .InspectableItemType.Book &&
             requireOtherItemsBeforeBook &&
             !OtherItemsHaveBeenInspected())
         {
+            /*
+             * This is a backup check.
+             * Normally the book RayInteractable is already disabled.
+             */
             Debug.Log(
                 "[MEERA INSPECTION] The book is not available yet. " +
                 "Inspect the other two objects first."
             );
 
-            onPlayerThoughtRequested?.Invoke(
-                "I should examine the other objects first."
-            );
+            SetBookInteraction(false);
 
             return;
         }
 
-        StartCoroutine(InspectItemSequence(item));
+        StartCoroutine(
+            InspectItemSequence(item)
+        );
     }
 
     private IEnumerator InspectItemSequence(
@@ -103,32 +230,63 @@ public class MeeraInspectionSequenceController : MonoBehaviour
     {
         inspectionBusy = true;
 
+        /*
+         * Hide the ray while dialogue is playing.
+         */
+        SetInspectionRay(false);
+
+        // Temporarily disable this item's interaction to prevent double triggers
+        if (item == lampOrVase) SetItemInteraction(lampRayInteractable, lampOrVase, false);
+        else if (item == foreignTrinket) SetItemInteraction(compassRayInteractable, foreignTrinket, false);
+
         item.PlaySelectionFeedback();
 
         Debug.Log(
-            $"[MEERA INSPECTION] Inspecting {item.ItemDisplayName}."
+            $"[MEERA INSPECTION] Inspecting " +
+            $"{item.ItemDisplayName}."
         );
 
         switch (item.ItemType)
         {
-            case MeeraInspectableItem.InspectableItemType.LampOrVase:
+            case MeeraInspectableItem
+                .InspectableItemType.LampOrVase:
+
                 yield return PlayNormalItemSequence(
                     "This was made by craftsmen from a settlement " +
                     "near the kingdom. Objects like this are used " +
                     "both in homes and during ceremonies."
                 );
+
                 break;
 
-            case MeeraInspectableItem.InspectableItemType.ForeignTrinket:
+            case MeeraInspectableItem
+                .InspectableItemType.ForeignTrinket:
+
+                /*
+                 * The existing selection feedback may already turn
+                 * the compass light on. We explicitly ensure it is on.
+                 */
+                SetCompassLight(true);
+
                 yield return PlayNormalItemSequence(
                     "A foreign trader brought this through the western " +
                     "ports. Its material and decoration are unlike the " +
                     "objects made by our local craftsmen."
                 );
+
+                /*
+                 * Turn it off immediately after Meera finishes
+                 * discussing the compass.
+                 */
+                SetCompassLight(false);
+
                 break;
 
-            case MeeraInspectableItem.InspectableItemType.Book:
+            case MeeraInspectableItem
+                .InspectableItemType.Book:
+
                 yield return PlayBookSequence();
+
                 break;
         }
 
@@ -136,10 +294,39 @@ public class MeeraInspectionSequenceController : MonoBehaviour
 
         inspectionBusy = false;
 
+        /*
+         * After each normal item, check whether the book can now
+         * become interactable.
+         */
+        bool bookUnlocked =
+            !requireOtherItemsBeforeBook ||
+            OtherItemsHaveBeenInspected();
+
+        SetBookInteraction(bookUnlocked);
+
+        /*
+         * End of sequence logic for this item
+         */
+        if (item.HasBeenInspected)
+        {
+            if (item == lampOrVase) SetItemInteraction(lampRayInteractable, lampOrVase, false);
+            else if (item == foreignTrinket) SetItemInteraction(compassRayInteractable, foreignTrinket, false);
+        }
+
         CheckForSequenceCompletion();
+
+        /*
+         * Only restore the ray if the full sequence is not finished.
+         */
+        if (!sequenceCompleted)
+        {
+            SetInspectionRay(true);
+        }
     }
 
-    private IEnumerator PlayNormalItemSequence(string meeraLine)
+    private IEnumerator PlayNormalItemSequence(
+        string meeraLine
+    )
     {
         Debug.Log($"[MEERA] {meeraLine}");
 
@@ -156,7 +343,8 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         else
         {
             Debug.LogWarning(
-                "[MEERA INSPECTION] NarratorUIManager.Instance is missing."
+                "[MEERA INSPECTION] " +
+                "NarratorUIManager.Instance is missing."
             );
 
             yield return new WaitForSecondsRealtime(
@@ -185,13 +373,20 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         if (narrator == null)
         {
             Debug.LogError(
-                "[MEERA INSPECTION] NarratorUIManager.Instance is missing."
+                "[MEERA INSPECTION] " +
+                "NarratorUIManager.Instance is missing."
+            );
+
+            yield return new WaitForSecondsRealtime(
+                bookDialogueDuration
             );
 
             yield break;
         }
 
-        Debug.Log($"[PLAYER THOUGHT] {playerThought}");
+        Debug.Log(
+            $"[PLAYER THOUGHT] {playerThought}"
+        );
 
         yield return narrator.PlayNarration(
             "You",
@@ -213,7 +408,9 @@ public class MeeraInspectionSequenceController : MonoBehaviour
             pauseBetweenBookLines
         );
 
-        Debug.Log($"[NARRATOR] {narratorLine}");
+        Debug.Log(
+            $"[NARRATOR] {narratorLine}"
+        );
 
         yield return narrator.PlayNarration(
             "Narrator",
@@ -231,7 +428,8 @@ public class MeeraInspectionSequenceController : MonoBehaviour
             foreignTrinket != null &&
             foreignTrinket.HasBeenInspected;
 
-        return firstItemComplete && secondItemComplete;
+        return firstItemComplete &&
+               secondItemComplete;
     }
 
     private void CheckForSequenceCompletion()
@@ -258,8 +456,13 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         sequenceCompleted = true;
         inspectionSequenceActive = false;
 
+        SetInspectionRay(false);
+        SetBookInteraction(false);
+        SetCompassLight(false);
+
         Debug.Log(
-            "[MEERA INSPECTION] All three objects inspected."
+            "[MEERA INSPECTION] All three objects inspected. " +
+            "Inspection ray disabled for question canvas."
         );
 
         onAllItemsInspected?.Invoke();
@@ -277,11 +480,96 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         foreignTrinket?.ResetInspection();
         book?.ResetInspection();
 
+        SetInspectionRay(false);
+        SetBookInteraction(false);
+        SetCompassLight(false);
+
         Debug.Log(
             "[MEERA INSPECTION] Sequence reset."
         );
-
-
     }
 
+    public void SetInspectionRay(bool enabled)
+    {
+        if (inspectionRayRoot == null)
+        {
+            Debug.LogWarning(
+                "[MEERA INSPECTION] Inspection Ray Root is not assigned."
+            );
+
+            return;
+        }
+
+        inspectionRayRoot.SetActive(enabled);
+
+        Debug.Log(
+            $"[MEERA INSPECTION] Meta inspection ray active: {enabled}."
+        );
+    }
+
+    private Behaviour GetActualInteractable(Behaviour serializedRef, MeeraInspectableItem item)
+    {
+        if (serializedRef != null)
+        {
+            Component c = serializedRef.GetComponent("RayInteractable");
+            if (c != null && c is Behaviour b) return b;
+            return serializedRef;
+        }
+
+        if (item != null)
+        {
+            Component[] comps = item.GetComponentsInChildren<Component>(true);
+            foreach (Component c in comps)
+            {
+                if (c.GetType().Name == "RayInteractable")
+                {
+                    return c as Behaviour;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void SetItemInteraction(Behaviour serializedRef, MeeraInspectableItem item, bool enabled)
+    {
+        Behaviour actualInteractable = GetActualInteractable(serializedRef, item);
+        if (actualInteractable != null)
+        {
+            actualInteractable.enabled = enabled;
+            Debug.Log($"[MEERA INSPECTION] Item {item?.ItemDisplayName} RayInteractable enabled: {enabled}.");
+        }
+    }
+
+    private void SetBookInteraction(bool enabled)
+    {
+        if (bookRayInteractable == null)
+        {
+            Debug.LogWarning(
+                "[MEERA INSPECTION] Book RayInteractable is not assigned."
+            );
+
+            return;
+        }
+
+        Behaviour actualInteractable = bookRayInteractable;
+        Component rayInteractable = bookRayInteractable.GetComponent("RayInteractable");
+        if (rayInteractable != null && rayInteractable is Behaviour b)
+        {
+            actualInteractable = b;
+        }
+
+        actualInteractable.enabled = enabled;
+
+        Debug.Log(
+            $"[MEERA INSPECTION] Book RayInteractable enabled: {enabled}."
+        );
+    }
+
+    private void SetCompassLight(bool enabled)
+    {
+        if (compassPointLight == null)
+            return;
+
+        compassPointLight.enabled = enabled;
+    }
 }
