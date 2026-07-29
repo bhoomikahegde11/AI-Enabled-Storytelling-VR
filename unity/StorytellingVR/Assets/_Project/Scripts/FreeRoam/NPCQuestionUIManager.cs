@@ -219,6 +219,49 @@ public class NPCQuestionUIManager : MonoBehaviour
             );
         }
 
+        // --- Meera Notebook Sequence Interception ---
+        bool isNotebookQuestion = question.question != null &&
+            question.question.IndexOf("notebook", System.StringComparison.OrdinalIgnoreCase) >= 0 &&
+            question.question.IndexOf("how much", System.StringComparison.OrdinalIgnoreCase) >= 0;
+
+        if (isNotebookQuestion)
+        {
+            SetCanvasVisible(false);
+
+            if (NarratorUIManager.Instance != null)
+            {
+                yield return NarratorUIManager.Instance.PlayNarrationLineByLine(
+                    "Player",
+                    "...I don't have any money."
+                );
+
+                yield return NarratorUIManager.Instance.PlayNarrationLineByLine(
+                    "Narrator",
+                    "For now, the notebook would have to remain where it was."
+                );
+
+                yield return NarratorUIManager.Instance.PlayNarrationLineByLine(
+                    "Meera",
+                    "Then come back when you have the money."
+                );
+            }
+
+            answerRoutine = null;
+
+            if (npcAtStart != null)
+            {
+                npcAtStart.CompleteSpecialConversation();
+            }
+
+            if (currentNPC != null)
+            {
+                ClearConversationState();
+            }
+
+            yield break;
+        }
+        // --------------------------------------------
+
         // This answer coroutine has now genuinely finished.
         answerRoutine = null;
 

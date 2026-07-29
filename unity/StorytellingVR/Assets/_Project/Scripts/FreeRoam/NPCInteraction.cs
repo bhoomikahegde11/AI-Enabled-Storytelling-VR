@@ -34,6 +34,10 @@ public class NPCInteraction : MonoBehaviour
     [SerializeField]
     private bool availableOnStart;
 
+    [Header("Conversation Access")]
+    [SerializeField]
+    private bool conversationUnlocked = true;
+
     [Header("Indicator")]
     [SerializeField]
     private NPCDirectionalIndicator indicator;
@@ -58,6 +62,7 @@ public class NPCInteraction : MonoBehaviour
     private bool conversationCompleted;
     private bool buttonHeld;
     private bool interactionUnlocked;
+    private bool questionConversationStarted;
 
     private Coroutine conversationRoutine;
 
@@ -94,6 +99,7 @@ public class NPCInteraction : MonoBehaviour
             if (!inConversation)
             {
                 if (interactionUnlocked &&
+                    conversationUnlocked &&
                     !conversationCompleted)
                 {
                     StartConversation();
@@ -124,10 +130,6 @@ public class NPCInteraction : MonoBehaviour
         }
 
         if (dialogue == null ||
-            NarratorUIManager.Instance == null ||
-            NPCQuestionUIManager.Instance == null)
-
-            if (dialogue == null ||
             NarratorUIManager.Instance == null ||
             NPCQuestionUIManager.Instance == null)
         {
@@ -318,6 +320,99 @@ public class NPCInteraction : MonoBehaviour
         );
     }
 
+    /// <summary>
+    /// Called programmatically to unlock the conversation gate
+    /// and immediately start the standard conversation flow.
+    /// Used by MeeraInspectionSequenceController after inspection.
+    /// </summary>
+    public void UnlockAndStartConversation()
+    {
+        if (conversationCompleted)
+        {
+            Debug.Log(
+                "[NPC] UnlockAndStartConversation skipped; " +
+                "conversation already completed."
+            );
+
+            return;
+        }
+
+        if (questionConversationStarted)
+        {
+            Debug.Log(
+                "[NPC] UnlockAndStartConversation skipped; " +
+                "question conversation already started."
+            );
+
+            return;
+        }
+
+        questionConversationStarted = true;
+        conversationUnlocked = true;
+
+        StartQuestionConversation();
+    }
+
+    /// <summary>
+    /// Starts the standard conversation flow (opening dialogue
+    /// then question canvas) without going through the dedicated
+    /// Meera sequence, even if this NPC is of type Meera.
+    /// </summary>
+    private void StartQuestionConversation()
+    {
+        if (dialogue == null ||
+            NPCQuestionUIManager.Instance == null)
+        {
+            Debug.LogError(
+                "[NPC] Cannot start question conversation. " +
+                "Dialogue or manager reference is missing."
+            );
+
+            return;
+        }
+
+        if (questionCanvasView == null)
+        {
+            Debug.LogError(
+                $"[NPC] {gameObject.name} has no " +
+                "NPCQuestionCanvasView assigned."
+            );
+
+            return;
+        }
+
+        inConversation = true;
+
+        if (talkPromptObject != null)
+            talkPromptObject.SetActive(false);
+
+        if (indicator != null)
+            indicator.Hide();
+
+        if (string.IsNullOrWhiteSpace(dialogue.openingDialogue) ||
+            NarratorUIManager.Instance == null)
+        {
+            NPCQuestionUIManager.Instance.Open(
+                dialogue,
+                this,
+                questionCanvasView
+            );
+
+            Debug.Log(
+                "[NPC] Question conversation started (no opening dialogue)."
+            );
+        }
+        else
+        {
+            conversationRoutine =
+                StartCoroutine(ConversationFlowRoutine());
+
+            Debug.Log(
+                "[NPC] Question conversation started (with opening dialogue)."
+            );
+        }
+    }
+
     public void DisableIndicator()
     {
         if (indicator != null)
@@ -358,6 +453,16 @@ public class NPCInteraction : MonoBehaviour
                 );
         }
 
+        CompleteConversation();
+    }
+
+    /// <summary>
+    /// Safely completes a special out-of-bounds conversation (like Meera's 
+    /// notebook sequence) using the standard internal cleanup logic.
+    /// </summary>
+    public void CompleteSpecialConversation()
+    {
+        Debug.Log($"[NPC] Special conversation completion triggered for {gameObject.name}.");
         CompleteConversation();
     }
 

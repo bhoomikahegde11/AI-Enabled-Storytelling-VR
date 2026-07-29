@@ -73,6 +73,14 @@ public class MeeraInspectionSequenceController : MonoBehaviour
     public UnityEvent onInspectionSequenceStarted;
     public UnityEvent onAllItemsInspected;
 
+    [Header("Post-Inspection Question Flow")]
+    [Tooltip(
+        "Assign Meera's NPCInteraction component to open " +
+        "her question canvas after inspection completes."
+    )]
+    [SerializeField]
+    private NPCInteraction meeraNPCInteraction;
+
     private bool inspectionBusy;
     private bool sequenceCompleted;
     private bool inspectionSequenceStarted = false;
@@ -466,6 +474,8 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         );
 
         onAllItemsInspected?.Invoke();
+
+        StartCoroutine(PostInspectionQuestionFlow());
     }
 
     public void ResetInspectionSequence()
@@ -571,5 +581,47 @@ public class MeeraInspectionSequenceController : MonoBehaviour
             return;
 
         compassPointLight.enabled = enabled;
+    }
+
+    private IEnumerator PostInspectionQuestionFlow()
+    {
+        string buyPrompt =
+            "Would you like to buy anything?";
+
+        NarratorUIManager narrator =
+            NarratorUIManager.Instance;
+
+        Debug.Log(
+            $"[MEERA INSPECTION] Post-inspection prompt: {buyPrompt}"
+        );
+
+        if (narrator != null)
+        {
+            yield return narrator.PlayNarration(
+                "Meera",
+                buyPrompt
+            );
+        }
+        else
+        {
+            yield return new WaitForSecondsRealtime(3f);
+        }
+
+        if (meeraNPCInteraction != null)
+        {
+            Debug.Log(
+                "[MEERA INSPECTION] Opening Meera question canvas " +
+                "via UnlockAndStartConversation."
+            );
+
+            meeraNPCInteraction.UnlockAndStartConversation();
+        }
+        else
+        {
+            Debug.LogError(
+                "[MEERA INSPECTION] meeraNPCInteraction is not assigned. " +
+                "Cannot open the question canvas."
+            );
+        }
     }
 }
