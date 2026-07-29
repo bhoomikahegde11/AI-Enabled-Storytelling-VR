@@ -403,8 +403,6 @@ public class FreeRoamStoryManager : MonoBehaviour
             "Inspect the objects on Meera's stall"
         );
 
-        teleportManager?.EnableGroup("General");
-
         Debug.Log(
             "[FREE ROAM STORY] Meera introduction complete. " +
             "Inspection stage started."
@@ -413,12 +411,20 @@ public class FreeRoamStoryManager : MonoBehaviour
 
     public void NotifyNotebookConversationCompleted()
     {
-        if (currentStage != StoryStage.InspectNotebook &&
+        Debug.Log(
+            $"[MEERA HANDOFF] NotifyNotebookConversationCompleted entered. " +
+            $"Object={gameObject.name}, active={gameObject.activeInHierarchy}, " +
+            $"enabled={enabled}, stage={currentStage}, transitionRunning={transitionInProgress}"
+        );
+
+        if (currentStage != StoryStage.InspectTrinkets &&
             currentStage != StoryStage.MeeraIntroduction)
         {
+            Debug.Log($"[MEERA HANDOFF] Aborted: expected InspectTrinkets or MeeraIntroduction but stage was {currentStage}.");
             return;
         }
 
+        Debug.Log("[MEERA HANDOFF] Starting FindWorkSequence.");
         StartManagedSequence(
             FindWorkSequence()
         );
@@ -426,29 +432,59 @@ public class FreeRoamStoryManager : MonoBehaviour
 
     private IEnumerator FindWorkSequence()
     {
+        Debug.Log("[FIND WORK] Sequence entered.");
+        
         HideIndicator();
 
+        Debug.Log("[FIND WORK] Setting stage to FindWork.");
         SetStage(StoryStage.FindWork);
 
-        objectiveUI?.SetObjective(
-            "Find work in the bazaar"
-        );
+        Debug.Log("[FIND WORK] Setting objective.");
+        if (objectiveUI != null)
+            objectiveUI.SetObjective("Find work in the bazaar");
+        else
+            Debug.LogWarning("[FIND WORK] objectiveUI is null!");
 
+        Debug.Log("[FIND WORK] Starting narrator transition.");
         yield return PlayNarration(
             "Narrator",
             "Without coin, the answers you seek remain beyond reach. But a city this busy always has work for someone willing to earn their place.",
             7f
         );
 
+        Debug.Log("[FIND WORK] Waiting 7 seconds completed.");
+
+        Debug.Log("[FIND WORK] Activating merchant sequence object.");
         if (merchantSequence != null)
             merchantSequence.gameObject.SetActive(true);
+        else
+            Debug.LogWarning("[FIND WORK] merchantSequence is null!");
 
-        teleportManager?.EnableGroup("MerchantPath");
+        Debug.Log("[FIND WORK] Enabling teleport groups.");
+        if (teleportManager != null)
+        {
+            teleportManager.EnableGroup("General");
+            teleportManager.EnableGroup("MerchantPath");
+        }
+        else
+        {
+            Debug.LogWarning("[FIND WORK] teleportManager is null!");
+        }
 
-        SetIndicator(
-            merchantTarget,
-            merchantWorldIndicator
-        );
+        Debug.Log("[FIND WORK] Showing merchant indicator.");
+        if (merchantTarget != null)
+        {
+            SetIndicator(
+                merchantTarget,
+                merchantWorldIndicator
+            );
+        }
+        else
+        {
+            Debug.LogWarning("[FIND WORK] merchantTarget is null!");
+        }
+
+        Debug.Log("[FIND WORK] Sequence completed.");
 
         SetStage(StoryStage.TalkToMerchant);
     }

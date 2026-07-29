@@ -147,6 +147,12 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
     {
         sequenceStarted = true;
 
+        if (FreeRoamStoryManager.Instance != null)
+            FreeRoamStoryManager.Instance.NotifyMerchantConversationStarted();
+
+        if (merchantAnimator != null && freezeAnimatorUntilMovement)
+            merchantAnimator.speed = defaultAnimatorSpeed;
+
         HideTalkPrompt();
         SetWalking(false);
 
@@ -187,6 +193,9 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         if (teleportSystem != null)
             teleportSystem.SetActive(true);
 
+        if (FreeRoamStoryManager.Instance != null)
+            FreeRoamStoryManager.Instance.NotifyMerchantStartedWalking();
+
         // Merchant walks to stall
         yield return MoveMerchantToStall();
 
@@ -194,12 +203,8 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         if (stallEntryHotspot != null)
             stallEntryHotspot.SetActive(true);
 
-        if (ObjectiveUIManager.Instance != null)
-        {
-            ObjectiveUIManager.Instance.SetObjective(
-                "Follow the spice merchant"
-            );
-        }
+        if (FreeRoamStoryManager.Instance != null)
+            FreeRoamStoryManager.Instance.NotifyMerchantReachedStall();
 
         sequenceComplete = true;
     }

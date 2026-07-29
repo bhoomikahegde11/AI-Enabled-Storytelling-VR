@@ -540,7 +540,9 @@ public class NPCInteraction : MonoBehaviour
                     "[NPC STORY] Sending Meera completed event."
                 );
 
+                Debug.Log($"[MEERA HANDOFF] About to call NotifyNotebookConversationCompleted. Manager={storyManager}");
                 storyManager.NotifyNotebookConversationCompleted();
+                Debug.Log("[MEERA HANDOFF] Returned from NotifyNotebookConversationCompleted.");
                 break;
 
             case StoryNPCType.Bhaskara:
