@@ -73,7 +73,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
 
     private float defaultAnimatorSpeed = 1f;
 
-    private void Start()
+    private void Awake()
     {
         ResolveMissingReferences();
 
