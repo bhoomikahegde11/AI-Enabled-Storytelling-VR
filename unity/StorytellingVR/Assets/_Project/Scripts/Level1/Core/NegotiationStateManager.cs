@@ -325,6 +325,11 @@ public class NegotiationStateManager
         int detectedNumber = -1;
         string numberReason = "no number parsing attempted";
         bool hasActiveOffer = trade != null && trade.npcOffer > 0;
+        bool rawContainsQuestionMark = playerText != null && playerText.Contains("?");
+        string rawLowerText = (playerText ?? string.Empty).ToLowerInvariant();
+        string rawSemanticText = BuildSemanticRawText(rawLowerText);
+        string text = string.Empty;
+        string[] tokens = Array.Empty<string>();
         result.expectedReplyState = CurrentExpectedReplyState;
 
         void SetMeta(ParseReason parseReason, ParseConfidence confidence, bool needsClarification = false)
@@ -336,7 +341,9 @@ public class NegotiationStateManager
 
         NegotiationInput Finish(string reason, int detectedNumber = -1)
         {
+            FinalizeNegotiationInput(result, playerText, text, tokens, trade, rawContainsQuestionMark, detectedNumber);
             ApplyStateSafetyGates(result, hasActiveOffer, ref reason);
+            FinalizeNegotiationInput(result, playerText, text, tokens, trade, rawContainsQuestionMark, detectedNumber);
             Level1DebugForceAccept.LogParser("[NEGOTIATION UNDERSTANDING] raw=" + playerText +
                                              " | normalized=" + result.normalizedText +
                                              " | primaryIntent=" + result.intent +
@@ -380,11 +387,11 @@ public class NegotiationStateManager
 
         string itemKey = trade != null ? (trade.spiceKey ?? string.Empty).ToLowerInvariant() : string.Empty;
         string itemDisplay = trade != null ? (trade.spiceDisplayName ?? string.Empty).ToLowerInvariant() : string.Empty;
-        string text = InputNormalizer.Normalize(playerText, hasActiveOffer);
-        string[] tokens = InputNormalizer.Tokenize(playerText, hasActiveOffer);
+        text = InputNormalizer.Normalize(playerText, hasActiveOffer);
+        tokens = InputNormalizer.Tokenize(playerText, hasActiveOffer);
         LastNormalizedInput = text;
         result.normalizedText = text;
-        PopulateSemanticFlags(result, text, tokens);
+        PopulateSemanticFlags(result, rawSemanticText, text, tokens);
 
         bool hasTradeNumber = TryParseTradeNumber(text, tokens, out detectedNumber, out numberReason);
 
@@ -409,7 +416,16 @@ public class NegotiationStateManager
             return Finish(terminalReason, detectedNumber);
         }
 
-        if (IsPureAcceptance(text, tokens) && hasActiveOffer && !HasCounterPriceAttachedToAcceptance(text, tokens))
+        if (MatchesSoftRejectPhrase(text, tokens, trade, hasTradeNumber, detectedNumber))
+        {
+            result.intent = NegotiationIntent.REJECT;
+            result.hasHardRejection = false;
+            result.terminalAction = false;
+            SetMeta(ParseReason.SoftRejection, ParseConfidence.Medium);
+            return Finish("explicit soft rejection phrase");
+        }
+
+        if (IsPureAcceptance(rawLowerText, text, tokens) && hasActiveOffer && !HasCounterPriceAttachedToAcceptance(text, tokens))
         {
             result.hasExplicitAcceptance = true;
             result.intent = NegotiationIntent.ACCEPT;
@@ -430,7 +446,36 @@ public class NegotiationStateManager
             return Finish("pure rejection without new price");
         }
 
-        if (TryResolveContextualAcceptance(text, tokens, trade, hasTradeNumber, detectedNumber, result, out string acceptanceReason))
+        if (TryParseHistoricalReferenceOnly(rawSemanticText, text, result, out string historicalReason))
+        {
+            SetMeta(ParseReason.AmbiguousAcceptOrCounter, ParseConfidence.Low, true);
+            return Finish(historicalReason, detectedNumber);
+        }
+
+        if (TryParseExplicitTradeQuestion(rawSemanticText, text, tokens, trade, hasTradeNumber, detectedNumber, result, out string questionReason))
+        {
+            if (result.intent == NegotiationIntent.ITEM_QUERY)
+            {
+                SetMeta(ParseReason.ItemQuery, ParseConfidence.Medium);
+            }
+            else if (result.intent == NegotiationIntent.QUANTITY_QUERY)
+            {
+                SetMeta(ParseReason.QuantityQuery, ParseConfidence.Medium);
+            }
+            else
+            {
+                SetMeta(ParseReason.BuyerBudgetQuery, ParseConfidence.Medium);
+            }
+            return Finish(questionReason, detectedNumber);
+        }
+
+        if (TryParseExplicitPriceCriticism(rawSemanticText, text, trade, hasTradeNumber, detectedNumber, result, out string criticismReason))
+        {
+            SetMeta(result.intent == NegotiationIntent.BARGAIN ? ParseReason.BargainLanguage : ParseReason.SoftRejection, ParseConfidence.Medium);
+            return Finish(criticismReason, detectedNumber);
+        }
+
+        if (TryResolveContextualAcceptance(rawSemanticText, text, tokens, trade, hasTradeNumber, detectedNumber, rawContainsQuestionMark, result, out string acceptanceReason))
         {
             SetMeta(ParseReason.PureAcceptance, ParseConfidence.High);
             return Finish(acceptanceReason, detectedNumber);
@@ -673,42 +718,17 @@ public class NegotiationStateManager
         result.secondaryIntents.Add(intent);
     }
 
-    private static void PopulateSemanticFlags(NegotiationInput result, string text, string[] tokens)
+    private static void PopulateSemanticFlags(NegotiationInput result, string rawText, string text, string[] tokens)
     {
         if (result == null)
         {
             return;
         }
 
-        result.asksItem = ContainsAnyPhrase(text,
-            "what item",
-            "which spice",
-            "what spice",
-            "what are you buying",
-            "what do you want",
-            "what do want",
-            "what are you looking for",
-            "what are looking for",
-            "what would you like",
-            "what would like",
-            "what do you need",
-            "what do need",
-            "tell me what you need",
-            "tell me what need",
-            "are you here to buy something",
-            "you want");
-        result.asksCurrentOffer = ContainsAnyPhrase(text,
-            "how much will you pay",
-            "what can you offer",
-            "your offer",
-            "your budget",
-            "your price",
-            "what will you give",
-            "what price",
-            "what cost",
-            "what are you offering");
-        result.asksQuantity = ContainsAnyPhrase(text, "how many", "what quantity", "what amount", "how much quantity");
-        result.asksReason = ContainsAnyPhrase(text, "why so low", "why low", "why is your offer low", "explain why", "why that price");
+        result.asksItem = MatchesItemQuery(rawText, text);
+        result.asksCurrentOffer = MatchesPriceQuestion(rawText, text);
+        result.asksQuantity = MatchesQuantityQuestion(rawText, text);
+        result.asksReason = MatchesPricePressureQuestion(rawText, text);
         result.tradeOpeningQuery = ContainsAnyPhrase(text,
             "how can i help you",
             "how i help",
@@ -734,7 +754,7 @@ public class NegotiationStateManager
             return false;
         }
 
-        if (TryParseHistoricalReferenceOnly(text, result, out reason))
+        if (TryParseHistoricalReferenceOnly(string.Empty, text, result, out reason))
         {
             return true;
         }
@@ -749,7 +769,7 @@ public class NegotiationStateManager
             return true;
         }
 
-        if (TryParseStructuredBargain(text, result, out reason))
+        if (TryParseStructuredBargain(text, tokens, trade, hasTradeNumber, result, out reason))
         {
             return true;
         }
@@ -757,7 +777,7 @@ public class NegotiationStateManager
         return false;
     }
 
-    private bool TryParseHistoricalReferenceOnly(string text, NegotiationInput result, out string reason)
+    private bool TryParseHistoricalReferenceOnly(string rawText, string text, NegotiationInput result, out string reason)
     {
         reason = string.Empty;
         MatchCollection matches = Regex.Matches(text, @"\b\d+\b");
@@ -766,8 +786,48 @@ public class NegotiationStateManager
             return false;
         }
 
-        bool referencesHistory = ContainsAnyPhrase(text, "you said", "you offered", "earlier", "before", "first you offered", "then you said");
-        bool hasActionCue = ContainsAnyPhrase(text, "i want", "give me", "make it", "accept", "deal", "fine at", "can you do", "what about", "come down to", "leave it at", "keep it at", "hold it at", "settle it at");
+        bool referencesHistory = MatchesHistoricalPriceReference(rawText, text);
+        bool hasActionCue = ContainsAnyPhrase(text,
+            "what item",
+            "i want",
+            "give me",
+            "give",
+            "make it",
+            "accept",
+            "deal",
+            "fine at",
+            "can you do",
+            "what about",
+            "come down to",
+            "leave it at",
+            "keep it at",
+            "hold it at",
+            "settle it at",
+            "settle at",
+            "meet at",
+            "i need",
+            "i can do",
+            "i do",
+            "i will take",
+            "i would accept",
+            "i can agree",
+            "agree to",
+            "my final",
+            "final price",
+            "make that",
+            "put it at",
+            "price is") ||
+            MatchesAnyPattern(text,
+                @"\bgive\s+\d+\b",
+                @"\bmeet(?: me| you)?\s+at\s+\d+\b",
+                @"\b(?:my\s+)?price\s+is\s+\d+\b",
+                @"\bi\s+do\s+\d+\b",
+                @"\b(?:i\s+)?accept\s+\d+\b",
+                @"\b(?:i\s+)?agree\s+to\s+\d+\b",
+                @"\b\d+\s+is\s+final\b",
+                @"\b\d+\s+is\s+final price\b",
+                @"\b\d+\s+is\s+my\s+final\b",
+                @"\b\d+\s+is\s+my\s+final price\b");
         bool saidEarlierOnly = ContainsAnyPhrase(text, "i said") && ContainsAnyPhrase(text, "earlier", "before") && !ContainsAnyPhrase(text, "not", "make it", "give me", "i want", "settle at", "come down to");
         if (saidEarlierOnly)
         {
@@ -794,14 +854,155 @@ public class NegotiationStateManager
         return true;
     }
 
-    private bool TryResolveContextualAcceptance(string text, string[] tokens, LocalTradeState trade, bool hasTradeNumber, int detectedNumber, NegotiationInput result, out string reason)
+    private bool TryParseExplicitTradeQuestion(string rawText, string text, string[] tokens, LocalTradeState trade, bool hasTradeNumber, int detectedNumber, NegotiationInput result, out string reason)
+    {
+        reason = string.Empty;
+        if (result == null)
+        {
+            return false;
+        }
+
+        bool asksItem = MatchesItemQuery(rawText, text);
+        bool asksPrice = MatchesPriceQuestion(rawText, text);
+        bool asksQuantity = MatchesQuantityQuestion(rawText, text);
+        bool asksPressure = MatchesPricePressureQuestion(rawText, text);
+
+        if (!asksItem && !asksPrice && !asksQuantity && !asksPressure)
+        {
+            return false;
+        }
+
+        if (asksPrice || asksPressure)
+        {
+            bool asksBudgetOrCapability =
+                ContainsAnyPhrase(text,
+                    "can you pay",
+                    "how much can you pay",
+                    "what is your budget",
+                    "your budget",
+                    "what can you afford",
+                    "maximum you can give",
+                    "what is your highest offer") ||
+                ContainsAnyPhrase(rawText,
+                    "can you pay",
+                    "how much can you pay",
+                    "what is your budget",
+                    "your budget",
+                    "what can you afford",
+                    "maximum you can give",
+                    "what is your highest offer");
+
+            result.intent = asksPressure
+                ? NegotiationIntent.QUERY_BUYER_BUDGET
+                : asksBudgetOrCapability
+                    ? NegotiationIntent.QUERY_BUYER_BUDGET
+                    : NegotiationIntent.PRICE_QUERY;
+            if (asksItem)
+            {
+                AddSecondaryIntent(result, NegotiationIntent.ITEM_QUERY);
+            }
+            if (asksQuantity)
+            {
+                AddSecondaryIntent(result, NegotiationIntent.QUANTITY_QUERY);
+            }
+            if (detectedNumber > 0 && !result.referencedPrices.Contains(detectedNumber))
+            {
+                result.referencedPrices.Add(detectedNumber);
+            }
+            result.asksCurrentOffer = true;
+            result.asksReason = asksPressure;
+            result.evidence = asksPressure
+                ? "explicit price-pressure question"
+                : asksBudgetOrCapability
+                    ? "explicit buyer-budget/capability question"
+                : asksItem || asksQuantity
+                    ? "multi-intent trade question"
+                    : "explicit price / buyer-offer question";
+            reason = asksPressure
+                ? "price-pressure question recognized before acceptance/counter fallback"
+                : asksBudgetOrCapability
+                    ? "buyer budget/capability question recognized before numeric fallback"
+                : asksItem || asksQuantity
+                    ? "multi-intent trade question recognized before numeric fallback"
+                    : "price / buyer-offer question recognized before numeric fallback";
+            return true;
+        }
+
+        if (asksItem && asksQuantity)
+        {
+            result.intent = NegotiationIntent.ITEM_QUERY;
+            AddSecondaryIntent(result, NegotiationIntent.QUANTITY_QUERY);
+            result.evidence = "combined item-and-quantity question";
+            reason = "multi-intent item/quantity query";
+            return true;
+        }
+
+        if (asksItem)
+        {
+            result.intent = NegotiationIntent.ITEM_QUERY;
+            result.evidence = "explicit item question";
+            reason = "item question recognized";
+            return true;
+        }
+
+        result.intent = NegotiationIntent.QUANTITY_QUERY;
+        result.evidence = "explicit quantity question";
+        reason = "quantity question recognized";
+        return true;
+    }
+
+    private bool TryParseExplicitPriceCriticism(string rawText, string text, LocalTradeState trade, bool hasTradeNumber, int detectedNumber, NegotiationInput result, out string reason)
+    {
+        reason = string.Empty;
+        if (result == null || !MatchesExplicitPriceRejectionOrCriticism(rawText, text))
+        {
+            return false;
+        }
+
+        int referencedPrice = detectedNumber > 0 ? detectedNumber : (trade != null ? trade.npcOffer : -1);
+        if (referencedPrice > 0 && !result.referencedPrices.Contains(referencedPrice))
+        {
+            result.referencedPrices.Add(referencedPrice);
+        }
+
+        result.rejectsCurrentOffer = trade != null && referencedPrice > 0 && trade.npcOffer == referencedPrice;
+        result.rejectedPrice = referencedPrice > 0 ? referencedPrice : result.rejectedPrice;
+
+        bool bargainLikeCriticism = ContainsAnyPhrase(text,
+            "needs improvement",
+            "too low",
+            "too high",
+            "too much",
+            "not enough",
+            "bad price",
+            "unfair");
+
+        result.intent = bargainLikeCriticism ? NegotiationIntent.BARGAIN : NegotiationIntent.REJECT;
+        result.evidence = bargainLikeCriticism
+            ? "explicit criticism of referenced price without acceptance"
+            : "explicit refusal of referenced price";
+        reason = bargainLikeCriticism
+            ? "price criticism blocks exact-price acceptance"
+            : "price refusal blocks exact-price acceptance";
+        return true;
+    }
+
+    private bool TryResolveContextualAcceptance(string rawText, string text, string[] tokens, LocalTradeState trade, bool hasTradeNumber, int detectedNumber, bool rawContainsQuestionMark, NegotiationInput result, out string reason)
     {
         reason = "contextual acceptance not resolved";
         int currentNpcOffer = trade != null ? trade.npcOffer : -1;
         int tradeNumberCount = CountTradeNumbers(tokens);
+        bool negatedAcceptanceCue = ContainsNegatedAcceptanceCue(text);
+        int acceptanceReferencedPrice = detectedNumber;
+        bool hasAcceptanceReferencedPrice = TryExtractExplicitAcceptancePrice(text, out int explicitAcceptancePrice);
+        if (hasAcceptanceReferencedPrice)
+        {
+            acceptanceReferencedPrice = explicitAcceptancePrice;
+        }
         bool affirmative =
-            ContainsAnyToken(tokens, "yes", "yeah", "okay", "ok", "fine", "deal", "agreed", "accepted", "accept") ||
-            ContainsAnyPhrase(text, "sounds good", "seems fair", "is fine", "is okay", "is good", "will do", "is acceptable", "works for me", "that works", "i will take it") ||
+            !negatedAcceptanceCue &&
+            (ContainsAnyToken(tokens, "yes", "yeah", "okay", "ok", "fine", "deal", "agreed", "accepted", "accept", "agree", "alright", "sure") ||
+            ContainsAnyPhrase(text, "sounds good", "seems fair", "is fine", "is okay", "is good", "will do", "is acceptable", "works for me", "that works", "i will take it", "fair enough", "go ahead", "very well", "let us do it", "that will work", "agreed then", "fine by me", "okay then", "we have a deal", "you have a deal") ||
             MatchesAnyPattern(text,
                 @"^\d+\s+works$",
                 @"^\d+\s+is\s+okay$",
@@ -810,12 +1011,26 @@ public class NegotiationStateManager
                 @"^\d+\s+sounds\s+good$",
                 @"^\d+\s+seems\s+fair$",
                 @"^\d+\s+will\s+do$",
-                @"^\d+\s+is\s+acceptable$");
+                @"^\d+\s+is\s+acceptable$",
+                @"^\d+\s+then$")) ||
+            Regex.IsMatch(text, @"\blet us settle at\s+\d+\b") ||
+            Regex.IsMatch(text, @"\bwe can do\s+\d+\b");
         bool rejectionCue =
+            MatchesExplicitPriceRejectionOrCriticism(rawText, text) ||
             ContainsAnyPhrase(text, "too low", "too high", "not interested", "no deal", "reject", "not enough") ||
             Regex.IsMatch(text, @"\bnot\s+" + currentNpcOffer + @"\b");
         bool historicalCue =
-            ContainsAnyPhrase(text, "you said", "you offered", "earlier", "before", "previously", "first", "then");
+            MatchesHistoricalPriceReference(rawText, text) &&
+            !ContainsAnyPhrase(text, "i accept", "i agree", "deal", "works", "will do", "is fine", "is acceptable");
+        bool samePriceSettlementCue =
+            acceptanceReferencedPrice > 0 &&
+            currentNpcOffer > 0 &&
+            acceptanceReferencedPrice == currentNpcOffer &&
+            !negatedAcceptanceCue &&
+            (Regex.IsMatch(text, @"^\d+\s+then$") ||
+             Regex.IsMatch(text, @"\balright\s+\d+\s+then\b") ||
+             Regex.IsMatch(text, @"\blet us settle at\s+\d+\b") ||
+             Regex.IsMatch(text, @"\bwe can do\s+\d+\b"));
         bool contradictoryCounterCue =
             ContainsAnyPhrase(text,
                 "make it",
@@ -825,16 +1040,22 @@ public class NegotiationStateManager
                 "only at",
                 "what about",
                 "can you do",
+                "sweeten deal",
+                "sweeten the deal",
                 "leave it at",
+                "leave amount at",
+                "leave value at",
+                "leave rate at",
                 "leave price at",
                 "leave offer at",
                 "keep it at",
                 "hold it at",
                 "settle at",
                 "come down to") ||
+            MatchesDealImprovementBargain(text) ||
             Regex.IsMatch(text, @"\byes\b.*\bif\b");
-        bool questionCue = ContainsQuestionSignal(text);
-        bool priceMatches = hasTradeNumber && detectedNumber > 0 && currentNpcOffer > 0 && detectedNumber == currentNpcOffer;
+        bool questionCue = rawContainsQuestionMark || ContainsQuestionSignal(text) || MatchesRawQuestionedPrice(rawText);
+        bool priceMatches = acceptanceReferencedPrice > 0 && currentNpcOffer > 0 && acceptanceReferencedPrice == currentNpcOffer;
         bool bareExactCurrentOffer = currentNpcOffer > 0 &&
                                      hasTradeNumber &&
                                      tradeNumberCount == 1 &&
@@ -849,12 +1070,12 @@ public class NegotiationStateManager
                         CurrentExpectedReplyState == ExpectedReplyState.ExpectAcceptOrCounter &&
                         !rejectionCue &&
                         !historicalCue &&
-                        !contradictoryCounterCue &&
+                        (!contradictoryCounterCue || samePriceSettlementCue) &&
                         !questionCue &&
-                        ((affirmative && (priceMatches || !hasTradeNumber)) || bareExactCurrentOffer);
+                        ((affirmative && (priceMatches || !hasTradeNumber)) || bareExactCurrentOffer || samePriceSettlementCue);
 
         Level1DebugForceAccept.LogParser("[ACCEPTANCE RESOLUTION] affirmative=" + affirmative +
-                                         " | referencedPrice=" + (hasTradeNumber ? detectedNumber : -1) +
+                                         " | referencedPrice=" + acceptanceReferencedPrice +
                                          " | currentNpcOffer=" + currentNpcOffer +
                                          " | priceMatches=" + priceMatches +
                                          " | contradictoryCounterCue=" + contradictoryCounterCue +
@@ -877,8 +1098,16 @@ public class NegotiationStateManager
         {
             result.referencedPrices.Add(currentNpcOffer);
         }
-        result.evidence = bareExactCurrentOffer ? "bare exact current npc offer accepted" : "affirmative acceptance of current npc offer";
-        reason = bareExactCurrentOffer ? "contextual bare exact-price acceptance of current npc offer" : "contextual acceptance of current npc offer";
+        result.evidence = bareExactCurrentOffer
+            ? "bare exact current npc offer accepted"
+            : samePriceSettlementCue
+                ? "same-price settlement phrasing accepted as current npc offer"
+                : "affirmative acceptance of current npc offer";
+        reason = bareExactCurrentOffer
+            ? "contextual bare exact-price acceptance of current npc offer"
+            : samePriceSettlementCue
+                ? "same-price settlement phrase accepted as current npc offer"
+                : "contextual acceptance of current npc offer";
         return true;
     }
 
@@ -891,28 +1120,59 @@ public class NegotiationStateManager
             return false;
         }
 
-        Match acceptAtPriceMatch = Regex.Match(text, @"\b(?:i accept|accept|accepted)\b.*?\b(?:at|for)\s+(\d+)\b");
-        if (acceptAtPriceMatch.Success && int.TryParse(acceptAtPriceMatch.Groups[1].Value, out int acceptedPrice))
+        bool hasExplicitAcceptanceLanguage =
+            ContainsAnyPhrase(text,
+                "i accept",
+                "accept",
+                "accepted",
+                "i agree",
+                "agree",
+                "agreed",
+                "i will accept",
+                "i can agree",
+                "i will take") ||
+            Regex.IsMatch(text, @"\b(?:accept|accepted|agree|agreed|take)\b.*\b\d+\b");
+
+        if (hasExplicitAcceptanceLanguage && TryExtractExplicitAcceptancePrice(text, out int acceptedPrice))
         {
-            result.intent = NegotiationIntent.ACCEPT;
-            result.hasExplicitAcceptance = true;
-            result.hasSellerPrice = true;
-            result.sellerPrice = acceptedPrice;
-            result.acceptanceTarget = acceptedPrice;
-            result.evidence = "explicit acceptance tied to price";
-            reason = "structured acceptance at specific price";
+            bool matchesCurrentOffer = trade != null && trade.npcOffer > 0 && acceptedPrice == trade.npcOffer;
+            if (matchesCurrentOffer && !ContainsNegatedAcceptanceCue(text))
+            {
+                result.intent = NegotiationIntent.ACCEPT;
+                result.hasExplicitAcceptance = true;
+                result.acceptanceTarget = trade.npcOffer;
+                AddReferencedPricesExcluding(text, result);
+                result.evidence = "explicit acceptance tied to current npc offer";
+                reason = "structured acceptance at current npc offer";
+            }
+            else
+            {
+                result.intent = NegotiationIntent.COUNTER;
+                result.hasSellerPrice = true;
+                result.sellerPrice = acceptedPrice;
+                AddReferencedPricesExcluding(text, result, acceptedPrice);
+                result.evidence = "acceptance language attached to different explicit price";
+                reason = "different priced acceptance language treated as counter-offer";
+            }
             return true;
         }
 
-        if ((ContainsAnyPhrase(text, "i accept", "accept your offer", "i accept your offer") || Regex.IsMatch(text, @"\baccept\b.*\b\d+\b")) &&
+        if ((ContainsAnyPhrase(text, "i accept", "accept your offer", "i accept your offer", "i agree", "agreed", "agree") || Regex.IsMatch(text, @"\b(?:accept|agree|agreed)\b.*\b\d+\b")) &&
             TryParseTradeNumber(text, text.Split((char[])null, StringSplitOptions.RemoveEmptyEntries), out int referencedOffer, out _))
         {
-            result.intent = NegotiationIntent.ACCEPT;
-            result.hasExplicitAcceptance = true;
-            result.acceptanceTarget = referencedOffer;
+            bool matchesCurrentOffer = trade != null && trade.npcOffer > 0 && referencedOffer == trade.npcOffer;
+            result.intent = matchesCurrentOffer ? NegotiationIntent.ACCEPT : NegotiationIntent.COUNTER;
+            result.hasExplicitAcceptance = matchesCurrentOffer;
+            result.acceptanceTarget = matchesCurrentOffer ? referencedOffer : -1;
+            result.hasSellerPrice = !matchesCurrentOffer;
+            result.sellerPrice = matchesCurrentOffer ? -1 : referencedOffer;
             result.referencedPrices.Add(referencedOffer);
-            result.evidence = "acceptance references earlier npc offer";
-            reason = "structured acceptance referencing earlier offer";
+            result.evidence = matchesCurrentOffer
+                ? "acceptance references current npc offer"
+                : "acceptance language references different explicit price";
+            reason = matchesCurrentOffer
+                ? "structured acceptance referencing current offer"
+                : "different priced acceptance reference treated as counter-offer";
             return true;
         }
 
@@ -937,7 +1197,14 @@ public class NegotiationStateManager
             return false;
         }
 
-        if (IsQuantityContext(text, tokens, trade))
+        bool explicitLeavePriceSetting = ContainsAnyPhrase(
+            text,
+            "leave amount at",
+            "leave price at",
+            "leave value at",
+            "leave rate at");
+
+        if (!explicitLeavePriceSetting && IsQuantityContext(text, tokens, trade))
         {
             return false;
         }
@@ -981,11 +1248,40 @@ public class NegotiationStateManager
             }
         }
 
-        Match correctionMatch = Regex.Match(text, @"\bnot\s+(\d+)\b.*?\b(?:i said|instead|but|make it|give me)\s+(\d+)\b");
-        if (correctionMatch.Success)
+        Match correctionMatch = Regex.Match(text, @"\bnot\s+(\d+)\b.*?\b(?:i said|instead|but|make it|give me|use)\s+(\d+)\b");
+        Match simpleNotCorrectionMatch = Regex.Match(text, @"\bnot\s+(\d+)\b[\s,;:-]+(\d+)\b");
+        Match replaceWithMatch = Regex.Match(text, @"\b(?:replace|change(?: my offer)? from)\s+(\d+)\s+(?:with|to)\s+(\d+)\b");
+        Match sorryCorrectionMatch = Regex.Match(text, @"\b(\d+)\b[\s,;:-]+(?:sorry|actually|rather|instead|i mean|mean)\s+(\d+)\b");
+        Match mistakenCorrectionMatch = Regex.Match(text, @"\b(?:i said|said)\s+(\d+)\s+(?:by mistake|wrong)\b.*?\b(\d+)\b");
+        Match wrongUseCorrectionMatch = Regex.Match(text, @"\b(\d+)\s+was\s+wrong\b.*?\b(?:use|make it|i want)\s+(\d+)\b");
+        Match scratchForgetCorrectionMatch = Regex.Match(text, @"\b(?:scratch|forget)\s+(\d+)\b.*?\b(?:use|make it|i want)\s+(\d+)\b");
+        Match insteadOfCorrectionMatch = Regex.Match(text, @"\b(?:make it|use|i want)\s+(\d+)\b.*?\binstead of\s+(\d+)\b");
+
+        if (correctionMatch.Success || simpleNotCorrectionMatch.Success || replaceWithMatch.Success || sorryCorrectionMatch.Success || mistakenCorrectionMatch.Success || wrongUseCorrectionMatch.Success || scratchForgetCorrectionMatch.Success || insteadOfCorrectionMatch.Success)
         {
             result.correctionDetected = true;
-            if (int.TryParse(correctionMatch.Groups[1].Value, out int rejectedPrice))
+            Match effectiveCorrectionMatch = correctionMatch.Success
+                ? correctionMatch
+                : simpleNotCorrectionMatch.Success
+                    ? simpleNotCorrectionMatch
+                    : replaceWithMatch.Success
+                        ? replaceWithMatch
+                        : sorryCorrectionMatch.Success
+                            ? sorryCorrectionMatch
+                            : mistakenCorrectionMatch.Success
+                                ? mistakenCorrectionMatch
+                                : wrongUseCorrectionMatch.Success
+                                    ? wrongUseCorrectionMatch
+                                    : scratchForgetCorrectionMatch.Success
+                                        ? scratchForgetCorrectionMatch
+                                        : insteadOfCorrectionMatch;
+
+            bool groupsAreReversed = effectiveCorrectionMatch == insteadOfCorrectionMatch;
+
+            string rejectedValue = groupsAreReversed ? effectiveCorrectionMatch.Groups[2].Value : effectiveCorrectionMatch.Groups[1].Value;
+            string correctedValue = groupsAreReversed ? effectiveCorrectionMatch.Groups[1].Value : effectiveCorrectionMatch.Groups[2].Value;
+
+            if (int.TryParse(rejectedValue, out int rejectedPrice))
             {
                 result.rejectedPrice = rejectedPrice;
                 result.rejectsCurrentOffer = trade != null && trade.npcOffer == rejectedPrice;
@@ -994,28 +1290,61 @@ public class NegotiationStateManager
                     result.referencedPrices.Add(rejectedPrice);
                 }
             }
-            if (int.TryParse(correctionMatch.Groups[2].Value, out int correctedPrice))
+            if (int.TryParse(correctedValue, out int correctedPrice))
             {
                 chosenPrice = correctedPrice;
-                cueReason = "correction pattern not X -> Y";
+                bestScore = Mathf.Max(bestScore, 1000);
+                cueReason = "correction pattern selected corrected price";
+            }
+        }
+
+        if (TryResolveRepeatedNegatedPrices(text, out List<int> negatedReferences, out int survivingPrice))
+        {
+            for (int i = 0; i < negatedReferences.Count; i++)
+            {
+                int reference = negatedReferences[i];
+                if (!result.referencedPrices.Contains(reference))
+                {
+                    result.referencedPrices.Add(reference);
+                }
+            }
+
+            if (survivingPrice > 0)
+            {
+                chosenPrice = survivingPrice;
+                cueReason = "repeated negated prices followed by surviving final price";
+            }
+        }
+
+        for (int i = result.referencedPrices.Count - 1; i >= 0; i--)
+        {
+            if (result.referencedPrices[i] == chosenPrice)
+            {
+                result.referencedPrices.RemoveAt(i);
             }
         }
 
         if (actionablePrices.Count > 1)
         {
-            int distinctCount = 0;
-            int lastValue = int.MinValue;
+            HashSet<int> distinctValues = new HashSet<int>();
+            int competingActionableCount = 0;
             for (int i = 0; i < actionablePrices.Count; i++)
             {
                 StructuredPriceCandidate candidate = actionablePrices[i];
-                if (candidate.value != lastValue)
+                distinctValues.Add(candidate.value);
+                bool candidateIsCompetingActionable =
+                    candidate.value != chosenPrice &&
+                    !candidate.rejectionCue &&
+                    !candidate.historicalCue &&
+                    (candidate.actionCue || candidate.finalityCue || candidate.acceptanceCue || candidate.correctionCue) &&
+                    candidate.score >= bestScore - 25;
+                if (candidateIsCompetingActionable)
                 {
-                    distinctCount++;
-                    lastValue = candidate.value;
+                    competingActionableCount++;
                 }
             }
 
-            if (distinctCount > 1 && bestScore < 120)
+            if (distinctValues.Count > 1 && competingActionableCount > 0 && bestScore < 150)
             {
                 result.intent = NegotiationIntent.CLARIFICATION;
                 result.needsClarification = true;
@@ -1075,11 +1404,11 @@ public class NegotiationStateManager
         }
 
         bool isUltimatum = ContainsAnyPhrase(text,
-            "final price",
             "take it or leave it",
             "let us stop arguing",
             "and take it",
-            "that is my final price");
+            "that is my final price",
+            "this is my final price");
         bool isAcceptanceWithPrice = ContainsAnyPhrase(text, "deal at", "fine at", "accept at", "accepted at") ||
                                      Regex.IsMatch(text, @"\b(?:deal|fine|okay|ok|accepted)\b.*\b\d+\b");
 
@@ -1131,9 +1460,13 @@ public class NegotiationStateManager
         public int clauseIndex;
         public int tokenPosition;
         public bool actionCue;
+        public bool finalityCue;
+        public bool acceptanceCue;
         public bool rejectionCue;
         public bool historicalCue;
         public bool correctionCue;
+        public bool directionalSourceCue;
+        public bool directionalDestinationCue;
         public int score;
         public string cue;
     }
@@ -1149,9 +1482,24 @@ public class NegotiationStateManager
                 continue;
             }
 
-            string beforeWindow = JoinTokenWindow(tokens, Mathf.Max(0, i - 4), i - 1);
+            string beforeWindow = JoinTokenWindow(tokens, Mathf.Max(0, i - 5), i - 1);
             string afterWindow = JoinTokenWindow(tokens, i + 1, Mathf.Min(tokens.Length - 1, i + 3));
             int clauseIndex = CountClausesBeforeToken(tokens, i);
+            bool hasBeforeNumberFinalityCue =
+                WindowEndsWith(beforeWindow, "final") ||
+                WindowEndsWith(beforeWindow, "final price") ||
+                WindowEndsWith(beforeWindow, "final price is") ||
+                WindowEndsWith(beforeWindow, "final offer") ||
+                WindowEndsWith(beforeWindow, "my final is") ||
+                WindowEndsWith(beforeWindow, "my final price") ||
+                WindowEndsWith(beforeWindow, "my final price is") ||
+                WindowEndsWith(beforeWindow, "bottom line") ||
+                WindowEndsWith(beforeWindow, "bottom line is");
+            bool hasAfterNumberFinalityCue =
+                WindowStartsWith(afterWindow, "is final") ||
+                WindowStartsWith(afterWindow, "is final price") ||
+                WindowStartsWith(afterWindow, "is my final") ||
+                WindowStartsWith(afterWindow, "is my final price");
 
             bool hasActionCue =
                 WindowEndsWith(beforeWindow, "make it") ||
@@ -1162,25 +1510,82 @@ public class NegotiationStateManager
                 WindowEndsWith(beforeWindow, "want") ||
                 WindowEndsWith(beforeWindow, "my price is") ||
                 WindowEndsWith(beforeWindow, "price is") ||
+                WindowEndsWith(beforeWindow, "i accept") ||
+                WindowEndsWith(beforeWindow, "i agree to") ||
+                WindowEndsWith(beforeWindow, "agree to") ||
+                hasBeforeNumberFinalityCue ||
+                hasAfterNumberFinalityCue ||
+                WindowEndsWith(beforeWindow, "final offer") ||
+                WindowEndsWith(beforeWindow, "my final is") ||
+                WindowEndsWith(beforeWindow, "bottom line") ||
                 WindowEndsWith(beforeWindow, "settle at") ||
                 WindowEndsWith(beforeWindow, "settle it at") ||
                 WindowEndsWith(beforeWindow, "i can do") ||
                 WindowEndsWith(beforeWindow, "can do") ||
+                WindowEndsWith(beforeWindow, "i do") ||
                 WindowEndsWith(beforeWindow, "i can accept at") ||
                 WindowEndsWith(beforeWindow, "accept at") ||
+                WindowEndsWith(beforeWindow, "i would accept") ||
+                WindowEndsWith(beforeWindow, "would accept") ||
+                WindowEndsWith(beforeWindow, "i can agree at") ||
+                WindowEndsWith(beforeWindow, "can agree at") ||
+                WindowEndsWith(beforeWindow, "i will agree at") ||
+                WindowEndsWith(beforeWindow, "will agree at") ||
+                WindowEndsWith(beforeWindow, "i will take") ||
+                WindowEndsWith(beforeWindow, "take") ||
+                WindowEndsWith(beforeWindow, "i need") ||
+                WindowEndsWith(beforeWindow, "need") ||
                 WindowEndsWith(beforeWindow, "come down to") ||
+                WindowEndsWith(beforeWindow, "lower it to") ||
+                WindowEndsWith(beforeWindow, "reduce it to") ||
+                WindowEndsWith(beforeWindow, "reduce my ask to") ||
+                WindowEndsWith(beforeWindow, "meet you at") ||
+                WindowEndsWith(beforeWindow, "meet at") ||
+                WindowEndsWith(beforeWindow, "compromise at") ||
+                WindowEndsWith(beforeWindow, "lowest is") ||
                 WindowEndsWith(beforeWindow, "raise it to") ||
                 WindowEndsWith(beforeWindow, "offer me") ||
                 WindowEndsWith(beforeWindow, "i said") ||
                 WindowEndsWith(beforeWindow, "said") ||
                 WindowEndsWith(beforeWindow, "leave it at") ||
+                WindowEndsWith(beforeWindow, "leave amount at") ||
+                WindowEndsWith(beforeWindow, "leave value at") ||
+                WindowEndsWith(beforeWindow, "leave rate at") ||
                 WindowEndsWith(beforeWindow, "leave price at") ||
                 WindowEndsWith(beforeWindow, "leave offer at") ||
                 WindowEndsWith(beforeWindow, "leave my price at") ||
                 WindowEndsWith(beforeWindow, "keep it at") ||
                 WindowEndsWith(beforeWindow, "keep price at") ||
                 WindowEndsWith(beforeWindow, "hold it at") ||
-                WindowEndsWith(beforeWindow, "hold price at");
+                WindowEndsWith(beforeWindow, "hold price at") ||
+                WindowEndsWith(beforeWindow, "make that") ||
+                WindowEndsWith(beforeWindow, "put it at") ||
+                WindowEndsWith(beforeWindow, "set it at") ||
+                WindowEndsWith(beforeWindow, "go with");
+
+            bool hasFinalityCue =
+                hasBeforeNumberFinalityCue ||
+                hasAfterNumberFinalityCue ||
+                WindowEndsWith(beforeWindow, "lowest is") ||
+                WindowContains(afterWindow, "final") ||
+                WindowContains(afterWindow, "lowest") ||
+                WindowContains(afterWindow, "only");
+
+            bool hasAcceptanceCue =
+                WindowEndsWith(beforeWindow, "i accept") ||
+                WindowEndsWith(beforeWindow, "i agree to") ||
+                WindowEndsWith(beforeWindow, "agree to") ||
+                WindowEndsWith(beforeWindow, "i would accept") ||
+                WindowEndsWith(beforeWindow, "would accept") ||
+                WindowEndsWith(beforeWindow, "i will agree at") ||
+                WindowEndsWith(beforeWindow, "will agree at") ||
+                WindowEndsWith(beforeWindow, "i can agree at") ||
+                WindowEndsWith(beforeWindow, "can agree at") ||
+                WindowEndsWith(beforeWindow, "i will take") ||
+                WindowEndsWith(beforeWindow, "take") ||
+                WindowContains(afterWindow, "works") ||
+                WindowContains(afterWindow, "fine") ||
+                WindowContains(afterWindow, "acceptable");
 
             bool hasRejectionCue =
                 WindowEndsWith(beforeWindow, "no deal at") ||
@@ -1191,16 +1596,35 @@ public class NegotiationStateManager
                 WindowEndsWith(beforeWindow, "can t do") ||
                 WindowEndsWith(beforeWindow, "cant do") ||
                 WindowContains(afterWindow, "too low") ||
-                WindowContains(afterWindow, "too high");
+                WindowContains(afterWindow, "too high") ||
+                WindowStartsWith(afterWindow, "is low") ||
+                WindowStartsWith(afterWindow, "is too low");
 
             bool hasHistoricalCue =
+                WindowEndsWith(beforeWindow, "your") ||
                 WindowContains(beforeWindow, "you offered") ||
                 WindowContains(beforeWindow, "you said") ||
+                WindowContains(beforeWindow, "offered") ||
+                WindowContains(beforeWindow, "said") ||
+                WindowContains(beforeWindow, "your last offer was") ||
+                WindowContains(beforeWindow, "you started at") ||
+                WindowContains(beforeWindow, "moved from") ||
+                WindowContains(beforeWindow, "we discussed") ||
                 WindowContains(beforeWindow, "earlier") ||
                 WindowContains(beforeWindow, "previously") ||
                 WindowContains(beforeWindow, "before") ||
                 WindowContains(beforeWindow, "first") ||
                 WindowContains(beforeWindow, "then said") ||
+                WindowContains(beforeWindow, "wanted") ||
+                WindowContains(beforeWindow, "asked") ||
+                WindowContains(beforeWindow, "preferred") ||
+                WindowContains(beforeWindow, "hoping for") ||
+                WindowContains(beforeWindow, "considered") ||
+                WindowContains(beforeWindow, "original price") ||
+                WindowContains(beforeWindow, "started at") ||
+                WindowContains(beforeWindow, "was my price") ||
+                WindowContains(beforeWindow, "opening was") ||
+                WindowContains(beforeWindow, "your last was") ||
                 WindowContains(afterWindow, "earlier");
 
             bool hasCorrectionCue =
@@ -1209,12 +1633,45 @@ public class NegotiationStateManager
                 WindowEndsWith(beforeWindow, "give") ||
                 WindowEndsWith(beforeWindow, "i said") ||
                 WindowEndsWith(beforeWindow, "said") ||
-                WindowEndsWith(beforeWindow, "not");
+                WindowEndsWith(beforeWindow, "not") ||
+                WindowEndsWith(beforeWindow, "sorry") ||
+                WindowEndsWith(beforeWindow, "i mean") ||
+                WindowEndsWith(beforeWindow, "mean") ||
+                WindowEndsWith(beforeWindow, "rather") ||
+                WindowEndsWith(beforeWindow, "actually") ||
+                WindowEndsWith(beforeWindow, "instead") ||
+                WindowEndsWith(beforeWindow, "wrong") ||
+                WindowEndsWith(beforeWindow, "by mistake") ||
+                WindowEndsWith(beforeWindow, "replace") ||
+                WindowEndsWith(beforeWindow, "from");
+
+            bool directionalSourceCue =
+                WindowEndsWith(beforeWindow, "from") ||
+                WindowEndsWith(beforeWindow, "started at") ||
+                WindowEndsWith(beforeWindow, "opening was") ||
+                WindowEndsWith(beforeWindow, "first price was");
+
+            bool directionalDestinationCue =
+                (i > 0 && tokens[i - 1] == "to" && WindowContains(beforeWindow, "from")) ||
+                WindowEndsWith(beforeWindow, "reduce it to") ||
+                WindowEndsWith(beforeWindow, "reduce my ask to") ||
+                WindowEndsWith(beforeWindow, "come down to") ||
+                WindowEndsWith(beforeWindow, "lower it to") ||
+                WindowEndsWith(beforeWindow, "move to") ||
+                WindowEndsWith(beforeWindow, "change to");
 
             int score = 0;
             if (hasActionCue)
             {
                 score += 140;
+            }
+            if (hasFinalityCue)
+            {
+                score += 95;
+            }
+            if (hasAcceptanceCue)
+            {
+                score += 40;
             }
             if (WindowEndsWith(beforeWindow, "at") || WindowEndsWith(beforeWindow, "for"))
             {
@@ -1228,6 +1685,14 @@ public class NegotiationStateManager
             {
                 score += 35;
             }
+            if (directionalDestinationCue)
+            {
+                score += 85;
+            }
+            if (directionalSourceCue)
+            {
+                score -= 55;
+            }
             if (hasRejectionCue && !hasActionCue)
             {
                 score -= 95;
@@ -1240,7 +1705,30 @@ public class NegotiationStateManager
             {
                 score -= 70;
             }
-            score += clauseIndex * 8;
+            if (hasHistoricalCue && (hasActionCue || hasFinalityCue || hasAcceptanceCue))
+            {
+                score -= 15;
+            }
+            if (clauseIndex > 0 && (hasActionCue || hasFinalityCue || hasAcceptanceCue || hasCorrectionCue))
+            {
+                score += clauseIndex * 24;
+            }
+            else
+            {
+                score += clauseIndex * 8;
+            }
+            if (i > 0 && (tokens[i - 1] == "but" || tokens[i - 1] == "however" || tokens[i - 1] == "instead" || tokens[i - 1] == "actually" || tokens[i - 1] == "rather" || tokens[i - 1] == "now"))
+            {
+                score += 45;
+            }
+            if (i > 1 && (tokens[i - 2] == "but" || tokens[i - 2] == "however" || tokens[i - 2] == "instead"))
+            {
+                score += 30;
+            }
+            if (WindowContains(beforeWindow, "now") && (hasActionCue || hasFinalityCue || hasAcceptanceCue))
+            {
+                score += 55;
+            }
 
             StructuredPriceCandidate candidate = new StructuredPriceCandidate
             {
@@ -1248,20 +1736,28 @@ public class NegotiationStateManager
                 clauseIndex = clauseIndex,
                 tokenPosition = i,
                 actionCue = hasActionCue,
+                finalityCue = hasFinalityCue,
+                acceptanceCue = hasAcceptanceCue,
                 rejectionCue = hasRejectionCue,
                 historicalCue = hasHistoricalCue,
                 correctionCue = hasCorrectionCue,
+                directionalSourceCue = directionalSourceCue,
+                directionalDestinationCue = directionalDestinationCue,
                 score = score,
-                cue = "candidate score=" + score + " | actionCue=" + hasActionCue + " | rejectionCue=" + hasRejectionCue + " | historicalCue=" + hasHistoricalCue + " | correctionCue=" + hasCorrectionCue
+                cue = "candidate score=" + score + " | actionCue=" + hasActionCue + " | finalityCue=" + hasFinalityCue + " | acceptanceCue=" + hasAcceptanceCue + " | rejectionCue=" + hasRejectionCue + " | historicalCue=" + hasHistoricalCue + " | correctionCue=" + hasCorrectionCue + " | directionalSourceCue=" + directionalSourceCue + " | directionalDestinationCue=" + directionalDestinationCue
             };
             candidates.Add(candidate);
             Level1DebugForceAccept.LogParser("[PRICE CANDIDATE] value=" + candidate.value +
                                              " | position=" + candidate.tokenPosition +
                                              " | clauseIndex=" + candidate.clauseIndex +
                                              " | actionCue=" + candidate.actionCue +
+                                             " | finalityCue=" + candidate.finalityCue +
+                                             " | acceptanceCue=" + candidate.acceptanceCue +
                                              " | rejectionCue=" + candidate.rejectionCue +
                                              " | historicalCue=" + candidate.historicalCue +
                                              " | correctionCue=" + candidate.correctionCue +
+                                             " | directionalSourceCue=" + candidate.directionalSourceCue +
+                                             " | directionalDestinationCue=" + candidate.directionalDestinationCue +
                                              " | score=" + candidate.score);
         }
 
@@ -1319,19 +1815,112 @@ public class NegotiationStateManager
         return !string.IsNullOrEmpty(window) && window.EndsWith(phrase, StringComparison.Ordinal);
     }
 
-    private bool TryParseStructuredBargain(string text, NegotiationInput result, out string reason)
+    private static bool WindowStartsWith(string window, string phrase)
+    {
+        return !string.IsNullOrEmpty(window) && window.StartsWith(phrase, StringComparison.Ordinal);
+    }
+
+    private bool TryParseStructuredBargain(string text, string[] tokens, LocalTradeState trade, bool hasTradeNumber, NegotiationInput result, out string reason)
     {
         reason = string.Empty;
-        if (ContainsAnyPhrase(text,
-            "i am not saying no",
-            "im not saying no",
-            "i cannot accept that",
-            "that will not do",
-            "perhaps we can meet somewhere between",
-            "you must improve the price",
-            "improve the offer",
-            "raise it",
-            "raise your offer"))
+        if (result == null)
+        {
+            return false;
+        }
+
+        if (hasTradeNumber || HasDigits(text))
+        {
+            return false;
+        }
+
+        if (TryDetectExplicitTerminalIntent(text, tokens ?? Array.Empty<string>(), trade, false, -1, out _, out _, out _))
+        {
+            return false;
+        }
+
+        if (IsPureAcceptance(text, text, tokens ?? Array.Empty<string>()) || IsPureRejection(text, tokens ?? Array.Empty<string>()))
+        {
+            return false;
+        }
+
+        bool isSoftBargain =
+            MatchesDealImprovementBargain(text) ||
+            ContainsAnyPhrase(text,
+                "i am not saying no",
+                "im not saying no",
+                "i cannot accept that",
+                "that will not do",
+                "perhaps we can meet somewhere between",
+                "you must improve the price",
+                "improve the offer",
+                "raise it",
+                "raise your offer",
+                "can you do better",
+                "offer me more",
+                "that is too little",
+                "come up a bit",
+                "give me a fairer price",
+                "you can do better than that",
+                "a little more",
+                "meet me halfway",
+                "make it worth my while",
+                "close the gap",
+                "try again",
+                "that offer needs work",
+                "give me something better",
+                "move higher",
+                "we are too far apart",
+                "come closer to my price",
+                "sweeten the deal",
+                "offer a fair amount",
+                "give fairer price",
+                "sweeten deal",
+                "offer fair amount",
+                "you need to improve",
+                "offer more",
+                "little more",
+                "do better",
+                "do better than that",
+                "come up bit",
+                "meet halfway",
+                "close gap",
+                "give something better",
+                "need to improve") ||
+            MatchesAnyPattern(text,
+                @"\b(?:improve|improve the)\s+offer\b",
+                @"\bcan you do better\b",
+                @"\boffer me more\b",
+                @"\bthat is too little\b",
+                @"\bcome up a bit\b",
+                @"\bgive me (?:a )?fair(?:er)? price\b",
+                @"\byou can do better than that\b",
+                @"\ba little more\b",
+                @"\bmeet me halfway\b",
+                @"\bmake it worth my while\b",
+                @"\bclose the gap\b",
+                @"\btry again\b",
+                @"\bthat offer needs work\b",
+                @"\bgive me something better\b",
+                @"\bmove higher\b",
+                @"\bwe are too far apart\b",
+                @"\bcome closer to my price\b",
+                @"\bsweeten the deal\b",
+                @"\boffer a fair amount\b",
+                @"\bgive fairer price\b",
+                @"\bsweeten deal\b",
+                @"\boffer fair amount\b",
+                @"\byou need to improve\b",
+                @"\boffer more\b",
+                @"\blittle more\b",
+                @"\bdo better\b",
+                @"\bdo better than that\b",
+                @"\bcome up bit\b",
+                @"\bmeet halfway\b",
+                @"\bclose gap\b",
+                @"\bgive something better\b",
+                @"\bneed to improve\b");
+
+        if (isSoftBargain)
         {
             result.intent = NegotiationIntent.BARGAIN;
             result.rejectsCurrentOffer = true;
@@ -1341,6 +1930,27 @@ public class NegotiationStateManager
         }
 
         return false;
+    }
+
+    private static bool MatchesDealImprovementBargain(string text)
+    {
+        return ContainsAnyPhrase(text,
+                   "make deal better",
+                   "improve deal",
+                   "give better deal",
+                   "make this deal better",
+                   "make deal fairer",
+                   "give fairer deal",
+                   "can improve deal",
+                   "need to improve deal") ||
+               MatchesAnyPattern(text,
+                   @"\bmake(?: this)? deal better\b",
+                   @"\bimprove deal\b",
+                   @"\bgive (?:me )?better deal\b",
+                   @"\bmake deal fairer\b",
+                   @"\bgive (?:me )?fairer deal\b",
+                   @"\bcan(?: you)? improve deal\b",
+                   @"\bneed to improve deal\b");
     }
 
     private static NegotiationTactic DetectNegotiationTactic(string text, string[] tokens)
@@ -1402,7 +2012,21 @@ public class NegotiationStateManager
                 "no go away",
                 "please leave",
                 "leave me",
-                "get lost"))
+                "get lost",
+                "get out",
+                "move along",
+                "i do not want to talk",
+                "leave my stall",
+                "be gone",
+                "walk away",
+                "get away from here",
+                "go bother someone else",
+                "out of my stall"))
+        {
+            return true;
+        }
+
+        if (ContainsAnyPhrase(text, "enough go", "leave alone"))
         {
             return true;
         }
@@ -1412,7 +2036,7 @@ public class NegotiationStateManager
             return true;
         }
 
-        if (ContainsAnyToken(tokens, "leave") && !ContainsAnyPhrase(text, "leave it at", "leave the price at", "leave it", "leave price"))
+        if (ContainsAnyToken(tokens, "leave") && !ContainsAnyPhrase(text, "leave it at", "leave the price at", "leave it", "leave price", "leave amount at", "leave value at", "leave rate at"))
         {
             return ContainsAnyToken(tokens, "please", "just", "now", "away", "me") || text == "leave";
         }
@@ -1436,10 +2060,10 @@ public class NegotiationStateManager
     private static bool MatchesHardRejectPhrase(string text, string[] tokens)
     {
         if (ContainsAnyPhrase(text,
-                "no deal",
                 "forget it",
                 "cancel the trade",
                 "cancel trade",
+                "cancel deal",
                 "i do not want to sell",
                 "i don't want to sell",
                 "i dont want to sell",
@@ -1447,8 +2071,17 @@ public class NegotiationStateManager
                 "no sale",
                 "we are done",
                 "end this",
+                "end negotiation",
+                "negotiation is over",
+                "stop bargaining",
+                "forget whole thing",
+                "nothing more to discuss",
+                "i am finished",
+                "i finished",
+                "i am walking away",
+                "there will be no trade",
+                "there be no trade",
                 "i changed my mind",
-                "not interested",
                 "i do not want to sell this anymore",
                 "i don't want to sell this anymore",
                 "i dont want to sell this anymore"))
@@ -1456,9 +2089,53 @@ public class NegotiationStateManager
             return true;
         }
 
+        if (ContainsPhrase(text, "no deal") && !ContainsAnyPhrase(text, "no deal at that price", "no deal at that amount"))
+        {
+            return true;
+        }
+
+        if (ContainsPhrase(text, "not interested") && !ContainsAnyPhrase(text, "not interested at that amount", "not interested at that price"))
+        {
+            return true;
+        }
+
         return tokens.Length >= 2 &&
                ContainsAnyToken(tokens, "done") &&
                ContainsAnyToken(tokens, "stop", "okay", "ok", "we", "are");
+    }
+
+    private bool MatchesSoftRejectPhrase(string text, string[] tokens, LocalTradeState trade, bool hasTradeNumber, int detectedNumber)
+    {
+        if (HasReplacementOfferAttachedToRejection(text, tokens, trade, hasTradeNumber, detectedNumber))
+        {
+            return false;
+        }
+
+        if (ContainsAnyPhrase(text,
+                "no thanks",
+                "not good enough",
+                "too low",
+                "too high",
+                "cannot take that",
+                "can t take that",
+                "cant take that",
+                "that will not work",
+                "that not work",
+                "unacceptable",
+                "reject that offer",
+                "no deal at that price",
+                "not interested at that amount",
+                "need better",
+                "cannot agree",
+                "can t agree",
+                "cant agree",
+                "price is impossible",
+                "pass on that offer"))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private bool TryParseTradeNumber(string text, string[] tokens, out int detectedNumber, out string reason)
@@ -1677,19 +2354,38 @@ public class NegotiationStateManager
             "twenty", "thirty", "forty", "fourty", "fifty", "sixty", "seventy", "eighty", "ninety");
     }
 
-    private bool IsPureAcceptance(string text, string[] tokens)
+    private bool IsPureAcceptance(string rawText, string text, string[] tokens)
     {
-        if (HasCounterPriceAttachedToAcceptance(text, tokens) || ContainsQuestionSignal(text))
+        if (HasCounterPriceAttachedToAcceptance(text, tokens) ||
+            HasDigits(rawText) ||
+            ContainsQuestionSignal(text) ||
+            (!string.IsNullOrWhiteSpace(rawText) && rawText.Contains("?")) ||
+            ContainsNegatedAcceptanceCue(rawText) ||
+            ContainsNegatedAcceptanceCue(text))
         {
             return false;
         }
 
-        if (ContainsAnyPhrase(text, "i accept", "sounds good", "that works"))
+        if (ContainsAnyPhrase(rawText,
+                "works for me",
+                "works for us",
+                "alright then",
+                "very well",
+                "i will take it",
+                "that will work",
+                "agreed then",
+                "fair enough",
+                "go ahead",
+                "let us do it",
+                "we have a deal",
+                "you have a deal") ||
+            ContainsAnyPhrase(text, "i accept", "sounds good", "that works", "i take it", "that work"))
         {
             return true;
         }
 
-        if (ContainsAnyPhrase(text, "sounds fine", "that deal sounds fine", "not bad deal"))
+        if (ContainsAnyPhrase(rawText, "sounds fine", "sounds reasonable", "fine by me", "okay then") ||
+            ContainsAnyPhrase(text, "sounds fine", "that deal sounds fine", "not bad deal"))
         {
             return true;
         }
@@ -1785,8 +2481,10 @@ public class NegotiationStateManager
             return true;
         }
 
-        if (ContainsAnyPhrase(text, "i want", "give me", "need", "take") &&
-            !ContainsAnyToken(tokens, "varaha", "varahas", "price", "offer", "pay"))
+        if (ContainsAnyPhrase(text, "i want", "want", "give me", "give", "need", "take") &&
+            !ContainsAnyToken(tokens, "varaha", "varahas", "price", "offer", "pay") &&
+            CurrentExpectedReplyState != ExpectedReplyState.ExpectOfferPrice &&
+            CurrentExpectedReplyState != ExpectedReplyState.ExpectAcceptOrCounter)
         {
             return trade != null;
         }
@@ -1972,6 +2670,104 @@ public class NegotiationStateManager
         }
     }
 
+    private void FinalizeNegotiationInput(NegotiationInput result, string rawInput, string normalizedText, string[] tokens, LocalTradeState trade, bool rawContainsQuestionMark, int detectedNumber)
+    {
+        if (result == null)
+        {
+            return;
+        }
+
+        normalizedText = normalizedText ?? result.normalizedText ?? string.Empty;
+        tokens = tokens ?? Array.Empty<string>();
+
+        if (ShouldDowngradeToPriceConfirmationQuery(result, rawInput, normalizedText, tokens, trade, rawContainsQuestionMark, detectedNumber))
+        {
+            int referencedPrice = result.hasSellerPrice && result.sellerPrice > 0
+                ? result.sellerPrice
+                : detectedNumber;
+
+            result.intent = NegotiationIntent.PRICE_QUERY;
+            result.hasExplicitAcceptance = false;
+            result.hasSellerPrice = false;
+            result.sellerPrice = -1;
+            result.acceptanceTarget = -1;
+            result.needsClarification = false;
+            result.terminalAction = false;
+            result.clarificationKind = ClarificationKind.None;
+            if (referencedPrice > 0 && !result.referencedPrices.Contains(referencedPrice))
+            {
+                result.referencedPrices.Add(referencedPrice);
+            }
+            if (result.parseReason == ParseReason.PriceOfferParsed || result.parseReason == ParseReason.PureAcceptance)
+            {
+                result.parseReason = ParseReason.PriceQuery;
+            }
+            if (result.parseConfidence == ParseConfidence.Low)
+            {
+                result.parseConfidence = ParseConfidence.Medium;
+            }
+            if (string.IsNullOrWhiteSpace(result.evidence))
+            {
+                result.evidence = "price confirmation question downgraded to non-committing query";
+            }
+        }
+
+        switch (result.intent)
+        {
+            case NegotiationIntent.ACCEPT:
+                if (result.acceptanceTarget <= 0 && trade != null && trade.npcOffer > 0)
+                {
+                    result.acceptanceTarget = trade.npcOffer;
+                }
+                result.hasSellerPrice = false;
+                result.sellerPrice = -1;
+                result.needsClarification = false;
+                result.terminalAction = false;
+                break;
+
+            case NegotiationIntent.COUNTER:
+                result.acceptanceTarget = -1;
+                result.hasExplicitAcceptance = false;
+                result.needsClarification = false;
+                result.terminalAction = false;
+                if (result.sellerPrice > 0)
+                {
+                    result.hasSellerPrice = true;
+                }
+                else
+                {
+                    result.hasSellerPrice = false;
+                    result.sellerPrice = -1;
+                }
+                break;
+
+            case NegotiationIntent.CLARIFICATION:
+                result.hasExplicitAcceptance = false;
+                result.hasSellerPrice = false;
+                result.sellerPrice = -1;
+                result.acceptanceTarget = -1;
+                result.needsClarification = true;
+                result.terminalAction = false;
+                break;
+
+            case NegotiationIntent.PRICE_QUERY:
+            case NegotiationIntent.ITEM_QUERY:
+            case NegotiationIntent.QUANTITY_QUERY:
+            case NegotiationIntent.QUERY_BUYER_BUDGET:
+            case NegotiationIntent.CONFUSED:
+            case NegotiationIntent.GREETING:
+            case NegotiationIntent.SOCIAL:
+            case NegotiationIntent.GENERAL_DIALOGUE:
+            case NegotiationIntent.CONTINUE:
+                result.hasExplicitAcceptance = false;
+                result.hasSellerPrice = false;
+                result.sellerPrice = -1;
+                result.acceptanceTarget = -1;
+                result.terminalAction = false;
+                break;
+        }
+    }
+
     private static void BlockToClarification(NegotiationInput result, ParseReason parseReason, string debugReason, ref string reason)
     {
         result.intent = parseReason == ParseReason.FulfillmentExpected ? NegotiationIntent.CLARIFICATION : NegotiationIntent.CLARIFICATION;
@@ -2033,6 +2829,59 @@ public class NegotiationStateManager
                intent == NegotiationIntent.BARGAIN ||
                intent == NegotiationIntent.CLARIFICATION ||
                intent == NegotiationIntent.CONFUSED;
+    }
+
+    private static bool ShouldDowngradeToPriceConfirmationQuery(NegotiationInput result, string rawInput, string text, string[] tokens, LocalTradeState trade, bool rawContainsQuestionMark, int detectedNumber)
+    {
+        if (result == null)
+        {
+            return false;
+        }
+
+        if (result.intent != NegotiationIntent.COUNTER && result.intent != NegotiationIntent.ACCEPT)
+        {
+            return false;
+        }
+
+        if (!rawContainsQuestionMark && !ContainsAnyPhrase(text,
+                "was it",
+                "did you say",
+                "you mean",
+                "are you offering",
+                "is your offer",
+                "was your offer",
+                "are we at"))
+        {
+            return false;
+        }
+
+        if (IsCounterProposalQuestion(text))
+        {
+            return false;
+        }
+
+        int referencedPrice = result.hasSellerPrice && result.sellerPrice > 0
+            ? result.sellerPrice
+            : detectedNumber;
+        if (referencedPrice <= 0)
+        {
+            return false;
+        }
+
+        bool currentOfferMention = trade != null && trade.npcOffer > 0 && referencedPrice == trade.npcOffer;
+        bool exactQuestionRepeat = Regex.IsMatch(text, @"^\d+$") || Regex.IsMatch(text, @"^\d+\s+right$");
+        bool confirmationPhrase =
+            ContainsAnyPhrase(text,
+                "was it",
+                "did you say",
+                "you mean",
+                "are you offering",
+                "is your offer",
+                "was your offer",
+                "are we at") ||
+            Regex.IsMatch(text, @"^\d+\s+right$");
+
+        return currentOfferMention || exactQuestionRepeat || confirmationPhrase;
     }
 
     private static bool IsNegotiationIntent(NegotiationIntent intent)
@@ -2282,11 +3131,363 @@ public class NegotiationStateManager
         return false;
     }
 
+    private static bool TryExtractExplicitAcceptancePrice(string text, out int acceptedPrice)
+    {
+        acceptedPrice = -1;
+        MatchCollection matches = Regex.Matches(
+            text,
+            @"(?:\b(?:i accept|accept|accepted|i agree|agree|agreed)\b(?:\s+your)?(?:\s+offer)?(?:\s+(?:at|to|for))?\s+(\d+)\b)|(?:\b(\d+)\s+(?:then|it is|agreed|works|is\s+(?:fine|okay|ok|good|acceptable)|sounds\s+(?:good|fine|reasonable)|seems\s+fair|will\s+do)\b)");
+
+        for (int i = matches.Count - 1; i >= 0; i--)
+        {
+            Match match = matches[i];
+            for (int groupIndex = 1; groupIndex < match.Groups.Count; groupIndex++)
+            {
+                if (int.TryParse(match.Groups[groupIndex].Value, out acceptedPrice) && acceptedPrice > 0)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static string BuildSemanticRawText(string rawText)
+    {
+        if (string.IsNullOrWhiteSpace(rawText))
+        {
+            return string.Empty;
+        }
+
+        string cleaned = Regex.Replace(rawText.ToLowerInvariant(), @"[^\w\s]", " ");
+        cleaned = Regex.Replace(cleaned, @"\s+", " ").Trim();
+        return cleaned;
+    }
+
+    private static bool MatchesRawQuestionedPrice(string rawText)
+    {
+        return ContainsAnyPhrase(rawText,
+            "can you do",
+            "could you do",
+            "would you do",
+            "can we make it",
+            "could we settle at",
+            "can you pay",
+            "are you offering",
+            "are we at",
+            "did you say",
+            "is it",
+            "was it",
+            "you mean",
+            "why only");
+    }
+
+    private static bool MatchesExplicitPriceRejectionOrCriticism(string rawText, string text)
+    {
+        return ContainsAnyPhrase(text,
+                   "does not work",
+                   "is a bad price",
+                   "is bad price",
+                   "is impossible",
+                   "is not fine",
+                   "is terrible",
+                   "is too much",
+                   "is unacceptable",
+                   "is unfair",
+                   "needs improvement",
+                   "will not do",
+                   "i cannot accept",
+                   "i refuse",
+                   "i will not take",
+                   "i not take",
+                   "anything but",
+                   "definitely not",
+                   "do not settle at") ||
+               ContainsAnyPhrase(rawText,
+                   "does not work",
+                   "is a bad price",
+                   "is impossible",
+                   "is not fine",
+                   "is terrible",
+                   "is too much",
+                   "is unacceptable",
+                   "is unfair",
+                   "needs improvement",
+                   "will not do",
+                   "i cannot accept",
+                   "i refuse",
+                   "i will not take",
+                   "anything but",
+                   "definitely not",
+                   "do not settle at");
+    }
+
+    private static bool MatchesHistoricalPriceReference(string rawText, string text)
+    {
+        return ContainsAnyPhrase(text,
+                   "you said",
+                   "you offered",
+                   "earlier",
+                   "before",
+                   "first you offered",
+                   "first offered",
+                   "then you said",
+                   "previously offered",
+                   "last offer was",
+                   "started at",
+                   "mentioned earlier",
+                   "i remember",
+                   "we discussed",
+                   "mentioned",
+                   "previous offer was",
+                   "your previous offer was") ||
+               ContainsAnyPhrase(rawText,
+                   "you said",
+                   "you offered",
+                   "first you offered",
+                   "first offered",
+                   "last offer was",
+                   "i remember",
+                   "we discussed",
+                   "you mentioned",
+                   "previous offer was",
+                   "your previous offer was");
+    }
+
+    private static bool MatchesItemQuery(string rawText, string text)
+    {
+        return ContainsAnyPhrase(text,
+                   "what item",
+                   "which item",
+                   "which spice",
+                   "what spice",
+                   "what are you buying",
+                   "what do you want",
+                   "what do want",
+                   "what are you looking for",
+                   "what are looking for",
+                   "what would you like",
+                   "what would like",
+                   "what do you need",
+                   "what do need",
+                   "what item are you after",
+                   "do want cloves",
+                   "do want pepper",
+                   "are buying spices",
+                   "which goods",
+                   "which product",
+                   "what should i prepare",
+                   "tell item",
+                   "cloves or pepper") ||
+               ContainsAnyPhrase(rawText,
+                   "which item",
+                   "which spice",
+                   "what spice do you want",
+                   "what do you want",
+                   "what are you buying",
+                   "what are you looking for",
+                   "what do you need",
+                   "what item are you after",
+                   "do you want cloves",
+                   "do you want pepper",
+                   "are you buying spices",
+                   "which goods",
+                   "which product",
+                   "what should i prepare",
+                   "tell me the item",
+                   "cloves or pepper");
+    }
+
+    private static bool MatchesPriceQuestion(string rawText, string text)
+    {
+        return ContainsAnyPhrase(text,
+                   "how much",
+                   "what price",
+                   "what offer",
+                   "what is your offer",
+                   "what will you offer",
+                   "what will you pay",
+                   "how many varahas",
+                   "your price",
+                   "what are you offering",
+                   "what is the current offer",
+                   "repeat your offer",
+                   "how much did you say",
+                   "what was your last offer",
+                   "is that your final offer",
+                   "what is the best you can do",
+                   "what is your highest offer",
+                   "what did you offer before",
+                   "what are we at now",
+                   "what amount are you proposing",
+                   "how much for the spices",
+                   "what is your buying price",
+                   "tell me your offer again",
+                   "can you pay") ||
+               ContainsAnyPhrase(rawText,
+                   "how much",
+                   "what price",
+                   "what offer",
+                   "what is your offer",
+                   "what will you offer",
+                   "what will you pay",
+                   "how many varahas",
+                   "your price",
+                   "what are you offering",
+                   "what is the current offer",
+                   "repeat your offer",
+                   "how much did you say",
+                   "what was your last offer",
+                   "is that your final offer",
+                   "what is the best you can do",
+                   "what is your highest offer",
+                   "what did you offer before",
+                   "what are we at now",
+                   "what amount are you proposing",
+                   "how much for the spices",
+                   "what is your buying price",
+                   "tell me your offer again",
+                   "can you pay");
+    }
+
+    private static bool MatchesQuantityQuestion(string rawText, string text)
+    {
+        bool priceLikeAmount = ContainsAnyPhrase(text, "how many varahas", "what amount are you proposing") ||
+                               ContainsAnyPhrase(rawText, "how many varahas", "what amount are you proposing");
+        if (priceLikeAmount)
+        {
+            return false;
+        }
+
+        return ContainsAnyPhrase(text, "how many", "what quantity", "how much quantity", "what amount of", "how many sacks", "how many units") ||
+               ContainsAnyPhrase(rawText, "how many", "what quantity", "how much quantity", "what amount of", "how many sacks", "how many units");
+    }
+
+    private static bool MatchesPricePressureQuestion(string rawText, string text)
+    {
+        return ContainsAnyPhrase(text,
+                   "can you improve your offer",
+                   "why only",
+                   "why is your offer so low",
+                   "how did you decide that price",
+                   "are you firm on that",
+                   "is that all",
+                   "can you offer more") ||
+               ContainsAnyPhrase(rawText,
+                   "can you improve your offer",
+                   "why only",
+                   "why is your offer so low",
+                   "how did you decide that price",
+                   "are you firm on that",
+                   "is that all",
+                   "can you offer more");
+    }
+
+    private static void AddReferencedPricesExcluding(string text, NegotiationInput result, params int[] excludedValues)
+    {
+        if (result == null || string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
+        HashSet<int> excluded = new HashSet<int>();
+        if (excludedValues != null)
+        {
+            for (int i = 0; i < excludedValues.Length; i++)
+            {
+                if (excludedValues[i] > 0)
+                {
+                    excluded.Add(excludedValues[i]);
+                }
+            }
+        }
+
+        MatchCollection matches = Regex.Matches(text, @"\b\d+\b");
+        for (int i = 0; i < matches.Count; i++)
+        {
+            if (!int.TryParse(matches[i].Value, out int referencedPrice) ||
+                referencedPrice <= 0 ||
+                excluded.Contains(referencedPrice) ||
+                result.referencedPrices.Contains(referencedPrice))
+            {
+                continue;
+            }
+
+            result.referencedPrices.Add(referencedPrice);
+        }
+    }
+
+    private static bool TryResolveRepeatedNegatedPrices(string text, out List<int> negatedReferences, out int survivingPrice)
+    {
+        negatedReferences = new List<int>();
+        survivingPrice = -1;
+
+        MatchCollection negatedMatches = Regex.Matches(text, @"\b(?:not|nor)\s+(\d+)\b");
+        if (negatedMatches.Count < 2)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < negatedMatches.Count; i++)
+        {
+            if (int.TryParse(negatedMatches[i].Groups[1].Value, out int negatedValue) && !negatedReferences.Contains(negatedValue))
+            {
+                negatedReferences.Add(negatedValue);
+            }
+        }
+
+        Match finalBareMatch = Regex.Match(text, @"\b(?:not\s+\d+\b(?:\s*(?:,|or|and))?\s*){2,}(\d+)\b$");
+        if (!finalBareMatch.Success)
+        {
+            finalBareMatch = Regex.Match(text, @"\bneither\s+\d+\s+nor\s+\d+\b.*?\b(\d+)\b$");
+        }
+
+        if (!finalBareMatch.Success || !int.TryParse(finalBareMatch.Groups[1].Value, out survivingPrice))
+        {
+            survivingPrice = -1;
+            return false;
+        }
+
+        return survivingPrice > 0 && !negatedReferences.Contains(survivingPrice);
+    }
+
     private static bool HasAcceptBlockers(string text)
     {
         return ContainsQuestionSignal(text) ||
                ContainsAny(text, HostileWords) ||
                text.Contains("?");
+    }
+
+    private static bool ContainsNegatedAcceptanceCue(string text)
+    {
+        return ContainsAnyPhrase(text,
+                   "do not agree",
+                   "do not accept",
+                   "cannot agree",
+                   "can t agree",
+                   "cant agree",
+                   "not fair enough",
+                   "will not work",
+                   "will not take it",
+                   "cannot accept",
+                   "does not work",
+                   "not fine",
+                   "not okay",
+                   "not good",
+                   "not acceptable") ||
+               Regex.IsMatch(text, @"\bnot\s+\d+\b");
+    }
+
+    private static bool IsCounterProposalQuestion(string text)
+    {
+        return ContainsAnyPhrase(text,
+            "what about",
+            "how about",
+            "can you do",
+            "would you do",
+            "could we make it",
+            "why not");
     }
 
     private static bool ContainsQuestionSignal(string text)

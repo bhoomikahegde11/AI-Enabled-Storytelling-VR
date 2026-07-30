@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 public static class InputNormalizer
@@ -9,7 +10,7 @@ public static class InputNormalizer
         "varaha", "varahas", "price", "prices", "offer", "offers", "pay", "paying", "sell", "selling", "buy", "buying",
         "cost", "costs", "palam", "palams", "seer", "seers", "veesai", "viss", "manangu", "maund", "maunds", "bahar", "bahars",
         "candy", "candies", "kg", "kgs", "kilogram", "kilograms", "g", "gm", "gram", "grams", "quantity", "amount", "weight",
-        "bag", "bags",
+        "bag", "bags", "sack", "sacks",
         "pepper", "cardamom", "cinnamon", "clove", "turmeric", "deal", "agree", "accept", "take", "give", "want", "budget"
     };
     private static readonly string[] NumberWords =
@@ -125,6 +126,9 @@ public static class InputNormalizer
             .Replace("a eager", "i give")
             .Replace("okay then", "okay")
             .Replace("all right", "okay");
+
+        text = Regex.Replace(text, @"\byou\s+give\s+(\d+)\s+i\s+(want|need)\s+(\d+)\b", "earlier $1 i $2 $3");
+        text = Regex.Replace(text, @"\byou\s+(\d+)\s+me\s+(\d+)\b", "earlier $1 i want $2");
 
         StringBuilder cleaned = new StringBuilder(text.Length);
         foreach (char c in text)
@@ -463,7 +467,7 @@ public static class InputNormalizer
             {
                 return "140";
             }
-            if (ParseDigitWord(first) > 0 && ParseNumberToken(second) >= 10)
+            if (second != "hundred" && ParseDigitWord(first) > 0 && ParseNumberToken(second) >= 10)
             {
                 return ((ParseDigitWord(first) * 100) + ParseNumberToken(second)).ToString();
             }
