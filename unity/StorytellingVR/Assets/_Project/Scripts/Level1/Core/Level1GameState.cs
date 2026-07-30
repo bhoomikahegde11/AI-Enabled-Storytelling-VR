@@ -1,6 +1,53 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+
+public enum NegotiationTactic
+{
+    NONE,
+    PRICE_ANCHOR,
+    CONSISTENCY_CHALLENGE,
+    APPEAL_TO_FAIRNESS,
+    QUALITY_ARGUMENT,
+    URGENCY,
+    RELUCTANT_CONCESSION,
+    SPLIT_DIFFERENCE,
+    FINAL_OFFER,
+    THREAT_TO_LEAVE,
+    FRIENDLY_SMALL_TALK
+}
+
+public enum ClarificationKind
+{
+    None,
+    EmptyTranscript,
+    UnrecognizedSpeech,
+    MissingPrice,
+    MissingQuantity,
+    AmbiguousAcceptOrCounter,
+    HistoricalPriceOnly,
+    MultipleActionablePrices,
+    FulfillmentExpected
+}
+
+public enum TradeSpeaker
+{
+    None,
+    Player,
+    NPC
+}
+
+public class TradeOfferRecord
+{
+    public TradeSpeaker speaker;
+    public int value;
+    public int turnIndex;
+    public bool wasAccepted;
+    public bool wasRejected;
+    public bool wasCountered;
+    public string sourceText;
+}
 
 public class LocalTradeState
 {
@@ -46,6 +93,15 @@ public class LocalTradeState
     public float buyerDesperation;
     public bool priceIntroduced;
     public bool budgetRevealed;
+    public int turnIndex;
+    public int currentPlayerAsk;
+    public int lastAcceptedCandidate;
+    public int lastRejectedOffer;
+    public TradeSpeaker lastSpeaker;
+    public string lastNpcQuestion;
+    public string unresolvedClarification;
+    public List<TradeOfferRecord> npcOfferHistory = new List<TradeOfferRecord>();
+    public List<TradeOfferRecord> playerOfferHistory = new List<TradeOfferRecord>();
 }
 
 public class Level1GameState : MonoBehaviour
@@ -381,6 +437,17 @@ public class Level1GameState : MonoBehaviour
 
         activeTrade.previousNpcOffer = activeTrade.npcOffer;
         activeTrade.npcOffer = Mathf.Max(0, npcOffer);
+        activeTrade.lastSpeaker = TradeSpeaker.NPC;
+        if (activeTrade.npcOffer > 0)
+        {
+            activeTrade.npcOfferHistory.Add(new TradeOfferRecord
+            {
+                speaker = TradeSpeaker.NPC,
+                value = activeTrade.npcOffer,
+                turnIndex = activeTrade.turnIndex,
+                sourceText = "npc offer updated"
+            });
+        }
     }
 
     public void UpdateActiveTradeQuantity(int quantityGrams)

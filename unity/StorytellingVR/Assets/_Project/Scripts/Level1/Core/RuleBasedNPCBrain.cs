@@ -74,12 +74,27 @@ public class RuleBasedNPCBrain
 
         switch (input.intent)
         {
+            case NegotiationIntent.DISMISS:
+                LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY", "player explicitly dismissed customer");
+                return WalkAway(result, trade, "Very well. I will take my business elsewhere.", "WALK_AWAY");
+
             case NegotiationIntent.GREETING:
                 result.replyText = GetGreetingLine(buyerName, buyerOrigin, personality, quantity, spiceDescriptor);
                 return SyncState(result, trade);
 
             case NegotiationIntent.ITEM_QUERY:
-                result.replyText = GetItemQueryLine(trade, spiceDescriptor);
+                if (input.asksCurrentOffer)
+                {
+                    result.replyText = $"You ask well. I seek {quantity} of {spiceDescriptor}, and I am offering {currentOffer} varahas.";
+                }
+                else if (input.tradeOpeningQuery)
+                {
+                    result.replyText = $"I seek {quantity} of {spiceDescriptor}. Tell me your price, merchant.";
+                }
+                else
+                {
+                    result.replyText = GetItemQueryLine(trade, spiceDescriptor);
+                }
                 return SyncState(result, trade);
 
             case NegotiationIntent.QUANTITY_QUERY:
@@ -128,11 +143,8 @@ public class RuleBasedNPCBrain
                     trade.hardRejectCount++;
                     trade.rejectionCount++;
                     AdjustEmotion(trade, 0.14f, -0.06f);
-                    if (trade.rejectionCount >= GetMaxRejections(personality, trade))
-                    {
-                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY", "hard rejection exhausted buyer patience");
-                        return WalkAway(result, trade, GetWalkAwayLine(buyerName, personality), "WALK_AWAY");
-                    }
+                    LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY", "player explicitly ended the trade");
+                    return WalkAway(result, trade, "Very well. We shall not trade today.", "WALK_AWAY");
                 }
                 else
                 {
@@ -391,7 +403,18 @@ public class RuleBasedNPCBrain
                 return SyncState(result, trade);
 
             case NegotiationIntent.PRICE_QUERY:
-                result.replyText = $"I am offering {currentOffer} varahas for {quantity} of {spiceDescriptor}.";
+                if (input.asksItem)
+                {
+                    result.replyText = $"I seek {quantity} of {spiceDescriptor}, and I am offering {currentOffer} varahas.";
+                }
+                else if (input.asksReason)
+                {
+                    result.replyText = $"My offer is {currentOffer} varahas because I must still carry the {spiceDescriptor} onward and sell at a profit.";
+                }
+                else
+                {
+                    result.replyText = $"I am offering {currentOffer} varahas for {quantity} of {spiceDescriptor}.";
+                }
                 return SyncState(result, trade);
 
             case NegotiationIntent.CLARIFICATION:
@@ -479,11 +502,33 @@ public class RuleBasedNPCBrain
             return;
         }
 
+        trade.turnIndex++;
+        trade.lastSpeaker = TradeSpeaker.Player;
         trade.lastNormalizedPlayerInput = input.normalizedText;
         trade.lastIntentName = input.intent.ToString();
+        trade.unresolvedClarification = input.needsClarification ? input.clarificationKind.ToString() : string.Empty;
+        if (input.rejectsCurrentOffer)
+        {
+            trade.lastRejectedOffer = trade.npcOffer;
+        }
+        if (input.acceptanceTarget > 0)
+        {
+            trade.lastAcceptedCandidate = input.acceptanceTarget;
+        }
         if (input.hasSellerPrice)
         {
             trade.lastSellerPrice = input.sellerPrice;
+            trade.currentPlayerAsk = input.sellerPrice;
+            trade.playerOfferHistory.Add(new TradeOfferRecord
+            {
+                speaker = TradeSpeaker.Player,
+                value = input.sellerPrice,
+                turnIndex = trade.turnIndex,
+                wasAccepted = input.intent == NegotiationIntent.ACCEPT,
+                wasRejected = input.intent == NegotiationIntent.REJECT,
+                wasCountered = input.intent == NegotiationIntent.COUNTER || input.intent == NegotiationIntent.PRICE || input.intent == NegotiationIntent.ULTIMATUM,
+                sourceText = input.normalizedText
+            });
         }
     }
 
@@ -663,6 +708,26 @@ public class RuleBasedNPCBrain
             if (input.parseReason == ParseReason.FulfillmentExpected)
             {
                 return "Our bargain is already set. Bring the goods I asked for to complete the trade.";
+            }
+
+            if (input.parseReason == ParseReason.EmptyTranscript)
+            {
+                return "The market is noisy. I heard nothing clearly. Say your price again.";
+            }
+
+            if (input.parseReason == ParseReason.UnrecognizedSpeech)
+            {
+                return "The market is busy and your words were unclear. Say it again plainly.";
+            }
+
+            if (input.clarificationKind == ClarificationKind.MultipleActionablePrices && input.referencedPrices.Count >= 2)
+            {
+                return $"You mentioned {input.referencedPrices[0]} and {input.referencedPrices[input.referencedPrices.Count - 1]}. Which is your final price?";
+            }
+
+            if (input.clarificationKind == ClarificationKind.HistoricalPriceOnly && input.referencedPrices.Count > 0)
+            {
+                return $"You referred to my earlier offer of {input.referencedPrices[input.referencedPrices.Count - 1]} varahas. Do you want that price again, or are you naming a new one?";
             }
 
             if (input.parseReason == ParseReason.MissingQuantity || input.expectedReplyState == ExpectedReplyState.ExpectQuantity)

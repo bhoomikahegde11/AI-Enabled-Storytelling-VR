@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 public static class InputNormalizer
@@ -9,7 +10,7 @@ public static class InputNormalizer
         "varaha", "varahas", "price", "prices", "offer", "offers", "pay", "paying", "sell", "selling", "buy", "buying",
         "cost", "costs", "palam", "palams", "seer", "seers", "veesai", "viss", "manangu", "maund", "maunds", "bahar", "bahars",
         "candy", "candies", "kg", "kgs", "kilogram", "kilograms", "g", "gm", "gram", "grams", "quantity", "amount", "weight",
-        "bag", "bags",
+        "bag", "bags", "sack", "sacks",
         "pepper", "cardamom", "cinnamon", "clove", "turmeric", "deal", "agree", "accept", "take", "give", "want", "budget"
     };
     private static readonly string[] NumberWords =
@@ -118,7 +119,6 @@ public static class InputNormalizer
             .Replace("gold", "varaha")
             .Replace("$", " varaha ")
             .Replace("rs.", " varaha ")
-            .Replace("rs", " varaha ")
             .Replace("my friend", " ")
             .Replace("are eager for", "i give")
             .Replace("are eager", "i give")
@@ -126,6 +126,9 @@ public static class InputNormalizer
             .Replace("a eager", "i give")
             .Replace("okay then", "okay")
             .Replace("all right", "okay");
+
+        text = Regex.Replace(text, @"\byou\s+give\s+(\d+)\s+i\s+(want|need)\s+(\d+)\b", "earlier $1 i $2 $3");
+        text = Regex.Replace(text, @"\byou\s+(\d+)\s+me\s+(\d+)\b", "earlier $1 i want $2");
 
         StringBuilder cleaned = new StringBuilder(text.Length);
         foreach (char c in text)
@@ -165,10 +168,6 @@ public static class InputNormalizer
         {
             string rawWord = words[i];
             string word = NormalizeWord(rawWord);
-            if (word == "for" && IsSafeForToFour(words, i, awaitingPrice))
-            {
-                word = "four";
-            }
 
             if (TryNormalizeDigitBridge(words, ref i, awaitingPrice, out string bridgedNumber))
             {
@@ -188,54 +187,14 @@ public static class InputNormalizer
         return normalized.ToString();
     }
 
-    private static bool IsSafeForToFour(string[] words, int index, bool awaitingPrice)
+    private static bool LooksLikeSpokenNumberStart(string word)
     {
-        string previous = index > 0 ? NormalizeWord(words[index - 1]) : string.Empty;
-        string next = index + 1 < words.Length ? NormalizeWord(words[index + 1]) : string.Empty;
-        string nextNext = index + 2 < words.Length ? NormalizeWord(words[index + 2]) : string.Empty;
-
-        if (LooksLikeSpokenNumberStart(next) || LooksLikeSpokenNumberStart(nextNext))
+        if (string.IsNullOrWhiteSpace(word))
         {
             return false;
         }
 
-        bool priceContext =
-            awaitingPrice ||
-            previous == "pay" ||
-            previous == "offer" ||
-            previous == "price" ||
-            previous == "make" ||
-            previous == "okay" ||
-            previous == "ok" ||
-            previous == "yes" ||
-            previous == "fine" ||
-            previous == "deal" ||
-            previous == "at" ||
-            next == "varaha" ||
-            next == "varahas" ||
-            next == "price" ||
-            next == "offer";
-
-        bool quantityContext =
-            next == "bag" ||
-            next == "bags" ||
-            next == "palam" ||
-            next == "palams" ||
-            next == "seer" ||
-            next == "seers" ||
-            next == "veesai" ||
-            next == "viss" ||
-            next == "kg" ||
-            next == "kgs" ||
-            next == "gram" ||
-            next == "grams";
-
-        return priceContext || quantityContext;
-    }
-
-    private static bool LooksLikeSpokenNumberStart(string word)
-    {
-        if (string.IsNullOrWhiteSpace(word))
+        if (word == "and" || word == "or")
         {
             return false;
         }
@@ -293,6 +252,8 @@ public static class InputNormalizer
                 return "quantity";
             case "tree":
                 return "three";
+            case "rs":
+                return "varaha";
             default:
                 return word;
         }
@@ -302,7 +263,7 @@ public static class InputNormalizer
     {
         normalizedNumber = null;
         string current = NormalizeWord(words[index]);
-        if (!Contains(NumberWords, current))
+        if (!Contains(NumberWords, current) || current == "and" || current == "or")
         {
             return false;
         }
@@ -401,6 +362,7 @@ public static class InputNormalizer
 
     private static bool IsNumberSequence(string[] words, int start, int end)
     {
+        bool hasSubstantiveNumber = false;
         for (int i = start; i <= end; i++)
         {
             string word = NormalizeWord(words[i]);
@@ -413,8 +375,13 @@ public static class InputNormalizer
             {
                 return false;
             }
+
+            if (word != "and")
+            {
+                hasSubstantiveNumber = true;
+            }
         }
-        return true;
+        return hasSubstantiveNumber;
     }
 
     private static bool IsNearContext(string[] words, int start, int end)
@@ -500,7 +467,7 @@ public static class InputNormalizer
             {
                 return "140";
             }
-            if (ParseDigitWord(first) > 0 && ParseNumberToken(second) >= 10)
+            if (second != "hundred" && ParseDigitWord(first) > 0 && ParseNumberToken(second) >= 10)
             {
                 return ((ParseDigitWord(first) * 100) + ParseNumberToken(second)).ToString();
             }
@@ -599,7 +566,7 @@ public static class InputNormalizer
             case "eighty": return 80;
             case "ninety": return 90;
             case "hundred": return 100;
-            default: return 0;
+            default: return -1;
         }
     }
 
