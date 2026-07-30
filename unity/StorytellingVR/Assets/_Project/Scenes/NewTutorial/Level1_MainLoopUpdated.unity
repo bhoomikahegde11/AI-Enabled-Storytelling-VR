@@ -1375,7 +1375,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Level1GameState
   debugForceCharacterId: 
-  marketDayDurationSeconds: 30
+  marketDayDurationSeconds: 130
 --- !u!1 &185621568
 GameObject:
   m_ObjectHideFlags: 0
