@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: 3e5399bd195de7649b874f58c1b9f8a3, type: 2}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 4e154bf235e41704bbd6bbc6fd6c63f6, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -1375,7 +1375,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Level1GameState
   debugForceCharacterId: 
-  marketDayDurationSeconds: 300
+  marketDayDurationSeconds: 30
 --- !u!1 &185621568
 GameObject:
   m_ObjectHideFlags: 0
@@ -13960,18 +13960,62 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8d2b8bfed8ca4b249a95d5db69f96e21, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MarketDayLightingController
+  daySkyboxMaterial: {fileID: 2100000, guid: 4e154bf235e41704bbd6bbc6fd6c63f6, type: 2}
+  atmosphereProgressCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   dayLightColor: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
-  nightLightColor: {r: 1, g: 0.62, b: 0.34, a: 1}
+  eveningLightColor: {r: 1, g: 0.72, b: 0.5, a: 1}
   dayLightIntensity: 1
-  nightLightIntensity: 0.45
-  dayRotation: {x: 50, y: -30, z: 0}
-  nightRotation: {x: 18, y: -95, z: 0}
-  dayAmbientColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
-  nightAmbientColor: {r: 0.42, g: 0.24, b: 0.16, a: 1}
+  eveningLightIntensity: 0.68
+  dayLightEuler: {x: 45, y: 90, z: 0}
+  eveningLightEuler: {x: 18, y: 110, z: 0}
+  dayShadowStrength: 1
+  eveningShadowStrength: 0.78
+  daySkyTint: {r: 0.9669811, g: 0.993809, b: 1, a: 0.88402414}
+  eveningSkyTint: {r: 1, g: 0.6297556, b: 0.3726415, a: 0.92}
+  daySkyExposure: 0.54
+  eveningSkyExposure: 0.58
+  daySkyRotation: 150
+  eveningSkyRotation: 150
+  dayAmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
+  eveningAmbientSkyColor: {r: 0.33, g: 0.26, b: 0.22, a: 1}
+  dayAmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
+  eveningAmbientEquatorColor: {r: 0.24, g: 0.19, b: 0.16, a: 1}
+  dayAmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
+  eveningAmbientGroundColor: {r: 0.11, g: 0.085, b: 0.065, a: 1}
   dayAmbientIntensity: 1
-  nightAmbientIntensity: 0.55
+  eveningAmbientIntensity: 0.72
+  enableAtmosphericFog: 0
+  dayFogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  eveningFogColor: {r: 0.78, g: 0.62, b: 0.52, a: 1}
+  dayFogDensity: 0.01
+  eveningFogDensity: 0.014
   dayBackgroundTint: {r: 1, g: 1, b: 1, a: 1}
   eveningBackgroundTint: {r: 1, g: 0.78, b: 0.6, a: 1}
+  usePreviewProgress: 0
+  previewNormalizedProgress: 0
 --- !u!1001 &1640086614
 PrefabInstance:
   m_ObjectHideFlags: 0
