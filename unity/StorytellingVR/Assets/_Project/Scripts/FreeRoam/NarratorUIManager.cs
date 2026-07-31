@@ -56,10 +56,6 @@ public class NarratorUIManager : MonoBehaviour
 
     private Coroutine currentRoutine;
 
-    private NPCDialogueVRLaserPointer cachedLaserPointer;
-    private bool previousLaserEnabledState;
-    private bool laserStateCaptured;
-
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -320,7 +316,6 @@ public class NarratorUIManager : MonoBehaviour
     private void BeginDialoguePresentation()
     {
         ShowCanvas();
-        CaptureAndDisableLaserPointer();
 
         if (subtitleText != null)
         {
@@ -339,7 +334,6 @@ public class NarratorUIManager : MonoBehaviour
                 int.MaxValue;
         }
 
-        RestoreLaserPointer();
         HideNarrator();
     }
 
@@ -362,8 +356,6 @@ public class NarratorUIManager : MonoBehaviour
             StopCoroutine(currentRoutine);
             currentRoutine = null;
         }
-
-        RestoreLaserPointer();
 
         if (subtitleText != null)
         {
@@ -435,39 +427,5 @@ public class NarratorUIManager : MonoBehaviour
         }
 
         return false;
-    }
-
-    private void CaptureAndDisableLaserPointer()
-    {
-        cachedLaserPointer =
-            Object.FindAnyObjectByType<
-                NPCDialogueVRLaserPointer
-            >(
-                FindObjectsInactive.Include
-            );
-
-        if (cachedLaserPointer == null)
-            return;
-
-        previousLaserEnabledState =
-            cachedLaserPointer.enabled;
-
-        laserStateCaptured = true;
-        cachedLaserPointer.enabled = false;
-    }
-
-    private void RestoreLaserPointer()
-    {
-        if (!laserStateCaptured)
-            return;
-
-        if (cachedLaserPointer != null)
-        {
-            cachedLaserPointer.enabled =
-                previousLaserEnabledState;
-        }
-
-        cachedLaserPointer = null;
-        laserStateCaptured = false;
     }
 }
