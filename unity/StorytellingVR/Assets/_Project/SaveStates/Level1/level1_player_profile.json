@@ -27,7 +27,7 @@
         "total_varahas_earned": 0,
         "total_deals_made": 0
     },
-    "current_scene": "NewSpiceScene",
-    "progression_index": 2,
+    "current_scene": "Level1_MainLoopUpdated",
+    "progression_index": 6,
     "intro_completed": true
 }
