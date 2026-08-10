@@ -131,7 +131,19 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
             merchantAgent = merchant.GetComponent<NavMeshAgent>();
 
         if (merchantAnimator == null && merchant != null)
-            merchantAnimator = merchant.GetComponentInChildren<Animator>();
+        {
+            Animator[] animators = merchant.GetComponentsInChildren<Animator>(false);
+            foreach (var anim in animators)
+            {
+                if (anim.runtimeAnimatorController != null)
+                {
+                    merchantAnimator = anim;
+                    break;
+                }
+            }
+            if (merchantAnimator == null)
+                merchantAnimator = merchant.GetComponentInChildren<Animator>();
+        }
     }
 
     private void Update()
@@ -196,7 +208,19 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
 
         if (merchantAnimator != null)
         {
+            Debug.Log(
+                $"[MERCHANT ANIM] Starting walk. Animator={merchantAnimator}, " +
+                $"enabled={merchantAnimator?.enabled}, " +
+                $"controller={merchantAnimator?.runtimeAnimatorController}, " +
+                $"parameter={walkingBool}"
+            );
+
             merchantAnimator.SetBool(walkingBool, true);
+
+            Debug.Log(
+                $"[MERCHANT ANIM] isWalking after SetBool: " +
+                $"{merchantAnimator.GetBool(walkingBool)}"
+            );
         }
 
         // Allow player to follow merchant
@@ -350,6 +374,10 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         
         if (merchantAnimator != null)
         {
+            Debug.Log(
+                $"[MERCHANT ANIM] Arrived. isWalking before reset: " +
+                $"{merchantAnimator.GetBool(walkingBool)}"
+            );
             merchantAnimator.SetBool(walkingBool, false);
         }
     }
