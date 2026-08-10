@@ -84,6 +84,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
     private bool inspectionBusy;
     private bool sequenceCompleted;
     private bool inspectionSequenceStarted = false;
+    private bool firstItemInspected = false;
 
     public bool InspectionSequenceActive =>
         inspectionSequenceActive;
@@ -174,6 +175,8 @@ public class MeeraInspectionSequenceController : MonoBehaviour
 
         SetCompassLight(false);
 
+        ShowInspectionPrompt();
+
         Debug.Log(
             "[MEERA INSPECTION] Inspection sequence started. " +
             "Inspection ray enabled."
@@ -236,6 +239,9 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         MeeraInspectableItem item
     )
     {
+        firstItemInspected = true;
+        HideInspectionPrompt();
+
         inspectionBusy = true;
 
         /*
@@ -482,6 +488,9 @@ public class MeeraInspectionSequenceController : MonoBehaviour
     {
         StopAllCoroutines();
 
+        HideInspectionPrompt();
+        firstItemInspected = false;
+
         inspectionSequenceActive = false;
         inspectionBusy = false;
         sequenceCompleted = false;
@@ -497,6 +506,29 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         Debug.Log(
             "[MEERA INSPECTION] Sequence reset."
         );
+    }
+
+    private void ShowInspectionPrompt()
+    {
+        if (firstItemInspected)
+            return;
+
+        if (TutorialPromptUIManager.Instance != null)
+        {
+            TutorialPromptUIManager.Instance.ShowPrompt(
+                "Inspect",
+                "Aim the RIGHT RAY at an object and press the RIGHT TRIGGER to inspect it.",
+                this
+            );
+        }
+    }
+
+    private void HideInspectionPrompt()
+    {
+        if (TutorialPromptUIManager.Instance != null)
+        {
+            TutorialPromptUIManager.Instance.HidePrompt(this);
+        }
     }
 
     public void SetInspectionRay(bool enabled)

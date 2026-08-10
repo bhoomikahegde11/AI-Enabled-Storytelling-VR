@@ -35,8 +35,8 @@ public class FreeRoamIntroFlow : MonoBehaviour
 
         // Show the movement tutorial prompt
         TutorialPromptUIManager.Instance.ShowPrompt(
-            "Teleport Movement",
-            "Use the teleport arc to move around the market. Aim at a clear spot on the street and release to teleport."
+            "Teleport",
+            "Use the RIGHT JOYSTICK to aim at a hotspot, then release it to teleport."
         );
 
         ObjectiveUIManager.Instance.SetObjective("Learn to move using teleport");
