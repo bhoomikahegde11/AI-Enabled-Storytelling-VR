@@ -162,7 +162,6 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
             merchantAnimator.speed = defaultAnimatorSpeed;
 
         HideTalkPrompt();
-        SetWalking(false);
 
         if (teleportSystem != null)
             teleportSystem.SetActive(false);
@@ -189,13 +188,16 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         );
 
         // Merchant signals player to follow
-        TriggerAnimation(signalTrigger);
 
         yield return Say(
             merchantName,
-            followLine,
-            followLineDuration
+            followLine
         );
+
+        if (merchantAnimator != null)
+        {
+            merchantAnimator.SetBool(walkingBool, true);
+        }
 
         // Allow player to follow merchant
         if (teleportSystem != null)
@@ -249,9 +251,6 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         string text,
         float duration = -1f)
     {
-        SetTalking(true);
-        TriggerAnimation(talkingTrigger);
-
         if (NarratorUIManager.Instance != null)
         {
             yield return NarratorUIManager.Instance.PlayNarration(
@@ -265,8 +264,6 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
             yield return new WaitForSecondsRealtime(2f);
         }
 
-        SetTalking(false);
-
         if (lineGap > 0f)
         {
             yield return new WaitForSecondsRealtime(lineGap);
@@ -279,8 +276,6 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
             yield break;
 
         Vector3 stopPosition = GetMerchantStopPosition();
-
-        SetWalking(true);
 
         if (merchantAgent != null
             && merchantAgent.enabled
@@ -352,7 +347,11 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         );
 
         FaceStall();
-        SetWalking(false);
+        
+        if (merchantAnimator != null)
+        {
+            merchantAnimator.SetBool(walkingBool, false);
+        }
     }
 
     private Vector3 GetMerchantStopPosition()
@@ -560,12 +559,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         if (merchantAnimator == null)
             return;
 
-        defaultAnimatorSpeed = merchantAnimator.speed;
-
-        if (disableAnimatorRootMotion)
-            merchantAnimator.applyRootMotion = false;
-
-        if (freezeAnimatorUntilMovement)
-            merchantAnimator.speed = 0f;
+        merchantAnimator.enabled = true;
+        merchantAnimator.SetBool(walkingBool, false);
     }
 }
