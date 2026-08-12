@@ -226,6 +226,11 @@ public class GameManager : MonoBehaviour
     {
         isLoading = true;
 
+        if (Level1GameState.ExistingInstance != null)
+        {
+            Level1GameState.ExistingInstance.SaveProfileToDisk();
+        }
+
         int targetIndex = GetProgressionIndex(targetSceneName);
         if (targetIndex >= 0)
         {

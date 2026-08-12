@@ -19,11 +19,12 @@ public class NPCGazeController : MonoBehaviour
     private float currentWeight = 0f;
     private Transform headBone;
     private Quaternion initialHeadRotation;
+    private Transform preferredRigRoot;
+    private Animator preferredAnimator;
+    private bool restrictToPreferredRig;
 
     private void Start()
     {
-        animator = GetComponent<Animator>();
-        
         // Auto-discover Main Camera as the VR player's head target
         if (playerTarget == null)
         {
@@ -45,17 +46,7 @@ public class NPCGazeController : MonoBehaviour
             }
         }
 
-        // Search recursively for the head bone of the humanoid mesh
-        headBone = FindChildRecursive(transform, "head");
-        if (headBone != null)
-        {
-            initialHeadRotation = headBone.localRotation;
-            Debug.Log($"[NPCGaze] Auto-discovered head bone: {headBone.name}");
-        }
-        else
-        {
-            Debug.LogWarning("[NPCGaze] Could not find head bone recursively. Falling back to whole-body orientation or OnAnimatorIK.");
-        }
+        RefreshRigBindings();
 
         // Default gaze state: Look at player
         activeTarget = playerTarget;
@@ -93,6 +84,43 @@ public class NPCGazeController : MonoBehaviour
         Debug.Log("[NPCGaze] Gaze disabled");
     }
 
+    public void RefreshRigBindings()
+    {
+        animator = preferredAnimator;
+        if (animator == null)
+        {
+            animator = GetComponent<Animator>();
+            if (animator == null)
+            {
+                animator = GetComponentInChildren<Animator>(true);
+            }
+        }
+
+        Transform searchRoot = preferredRigRoot != null ? preferredRigRoot : transform;
+        headBone = FindChildRecursive(searchRoot, "head");
+        if (headBone != null)
+        {
+            initialHeadRotation = headBone.localRotation;
+            Debug.Log($"[NPCGaze] Auto-discovered head bone: {GetHierarchyPath(headBone)}");
+        }
+        else if (!restrictToPreferredRig)
+        {
+            Debug.LogWarning("[NPCGaze] Could not find head bone recursively. Falling back to whole-body orientation or OnAnimatorIK.");
+        }
+    }
+
+    public void SetRigBindingSource(Transform rigRoot, Animator rigAnimator, bool restrictToRigRoot)
+    {
+        preferredRigRoot = rigRoot;
+        preferredAnimator = rigAnimator;
+        restrictToPreferredRig = restrictToRigRoot;
+    }
+
+    public string GetHeadBindingPath()
+    {
+        return headBone != null ? GetHierarchyPath(headBone) : "<none>";
+    }
+
     private void Update()
     {
         float targetWeight = (activeTarget != null) ? gazeWeight : 0f;
@@ -102,7 +130,7 @@ public class NPCGazeController : MonoBehaviour
     // Official Unity IK gaze system (works perfectly if IK Pass is enabled on animator layer)
     private void OnAnimatorIK(int layerIndex)
     {
-        if (animator == null) return;
+        if (animator == null || !animator.isActiveAndEnabled || animator.runtimeAnimatorController == null) return;
 
         if (activeTarget != null)
         {
@@ -136,5 +164,23 @@ public class NPCGazeController : MonoBehaviour
                 }
             }
         }
+    }
+
+    private static string GetHierarchyPath(Transform target)
+    {
+        if (target == null)
+        {
+            return "<null>";
+        }
+
+        string path = target.name;
+        Transform current = target.parent;
+        while (current != null)
+        {
+            path = current.name + "/" + path;
+            current = current.parent;
+        }
+
+        return path;
     }
 }

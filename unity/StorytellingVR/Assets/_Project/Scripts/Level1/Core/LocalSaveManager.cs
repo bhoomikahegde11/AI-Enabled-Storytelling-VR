@@ -35,6 +35,8 @@ public class LocalProfileData
     public string current_scene = LocalSaveManager.DefaultCurrentSceneName;
     public int progression_index = LocalSaveManager.DefaultProgressionIndex;
     public bool intro_completed = true;
+    public float remainingMarketDaySeconds;
+    public bool hasSavedMarketDayTimer;
 }
 
 public class LocalSaveManager
@@ -85,16 +87,40 @@ public class LocalSaveManager
 
     public void SaveProfile(LocalProfileData profile)
     {
+        string tempPath = savePath + ".tmp";
+
         try
         {
             Directory.CreateDirectory(GetActiveSaveDirectory());
             string json = JsonUtility.ToJson(profile, true);
-            File.WriteAllText(savePath, json);
+            File.WriteAllText(tempPath, json);
+
+            if (File.Exists(savePath))
+            {
+                File.Replace(tempPath, savePath, null);
+            }
+            else
+            {
+                File.Move(tempPath, savePath);
+            }
+
             Debug.Log($"[SAVE] Saved progression current_scene={profile.current_scene}, progression_index={profile.progression_index}, intro_completed={profile.intro_completed}");
         }
         catch (Exception ex)
         {
             Debug.LogError("[LocalSaveManager] Failed to save profile: " + ex.Message);
+
+            try
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
+            catch (Exception cleanupException)
+            {
+                Debug.LogWarning("[LocalSaveManager] Failed to clean up temp save file: " + cleanupException.Message);
+            }
         }
     }
 
@@ -181,7 +207,9 @@ public class LocalSaveManager
             shift_stats = new ShiftStatsData(),
             current_scene = DefaultCurrentSceneName,
             progression_index = DefaultProgressionIndex,
-            intro_completed = true
+            intro_completed = true,
+            remainingMarketDaySeconds = 0f,
+            hasSavedMarketDayTimer = false
         };
     }
 
@@ -215,6 +243,12 @@ public class LocalSaveManager
         if (profile.progression_index < 0)
         {
             profile.progression_index = DefaultProgressionIndex;
+        }
+
+        if (float.IsNaN(profile.remainingMarketDaySeconds) || float.IsInfinity(profile.remainingMarketDaySeconds))
+        {
+            profile.remainingMarketDaySeconds = 0f;
+            profile.hasSavedMarketDayTimer = false;
         }
 
         int resolvedProgressionIndex = profile.progression_index;
