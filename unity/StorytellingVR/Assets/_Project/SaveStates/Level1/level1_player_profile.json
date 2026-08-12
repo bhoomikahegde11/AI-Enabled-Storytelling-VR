@@ -29,5 +29,7 @@
     },
     "current_scene": "Level1_MainLoopUpdated",
     "progression_index": 1,
-    "intro_completed": true
+    "intro_completed": true,
+    "remainingMarketDaySeconds": 720.0,
+    "hasSavedMarketDayTimer": true
 }
