@@ -155,8 +155,8 @@ public class FreeRoamStoryManager : MonoBehaviour
         SetStage(StoryStage.TeleportTutorial);
 
         promptUI?.ShowPrompt(
-            "Teleport Movement",
-            "Use the teleport arc to move around the market. Aim at a clear spot on the street and release to teleport."
+            "Teleport",
+            "Use the RIGHT JOYSTICK to aim at a hotspot, then release it to teleport."
         );
 
         objectiveUI?.SetObjective(
@@ -339,11 +339,6 @@ public class FreeRoamStoryManager : MonoBehaviour
 
         if (currentStage != StoryStage.VisitTrinketStall)
             return;
-
-        promptUI?.ShowPrompt(
-            "Talk to the stall owner",
-            "Move closer to the stall owner and press X to speak."
-        );
 
         Debug.Log(
             "[FREE ROAM STORY] Waiting for the player to interact with Meera."

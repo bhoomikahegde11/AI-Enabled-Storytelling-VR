@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Skybox_DayToEveningBlend
+  m_Shader: {fileID: 4800000, guid: b7a08b34c2ff4f9eb83ee486b89be6c5, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _DayTex:
+        m_Texture: {fileID: 8900000, guid: 99af420a4ccafa74abdc47436d8b0685, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EveningBackTex:
+        m_Texture: {fileID: 2800000, guid: 4e52cbaf92b83a94cb86bed75ed34652, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EveningDownTex:
+        m_Texture: {fileID: 2800000, guid: 3de85f3af41435a4c8f9d237bc1f19ec, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EveningFrontTex:
+        m_Texture: {fileID: 2800000, guid: b915aaf1fa7dbd54a9e60e42712933a9, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EveningLeftTex:
+        m_Texture: {fileID: 2800000, guid: 7f0373fb8ec72a142898c7984aada4b9, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EveningRightTex:
+        m_Texture: {fileID: 2800000, guid: f5760fc943c5eb643a2291630888f6a1, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EveningUpTex:
+        m_Texture: {fileID: 2800000, guid: 47d70ba0d1c1c3e4ab451b6bc37b0ebe, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Blend: 0
+    - _DayExposure: 0.95
+    - _DayRotation: 0
+    - _EveningExposure: 0.95
+    - _EveningRotation: 0
+    m_Colors:
+    - _DayTint: {r: 0.49826992, g: 0.5139482, b: 0.5294118, a: 1}
+    - _EveningTint: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

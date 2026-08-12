@@ -54,6 +54,9 @@ public class NarratorUIManager : MonoBehaviour
     [Tooltip("In the Editor, Space or left mouse click acts as the continue input.")]
     public bool allowEditorInput = true;
 
+    private static bool continueTutorialTaught = false;
+    private bool isShowingContinueTutorial = false;
+
     private Coroutine currentRoutine;
 
     private void Awake()
@@ -269,6 +272,11 @@ public class NarratorUIManager : MonoBehaviour
         previousPressed = false;
         updatePressedState?.Invoke(false);
 
+        if (waitForManualContinue && !continueTutorialTaught)
+        {
+            ShowContinueTutorialPrompt();
+        }
+
         float completedLineElapsed = 0f;
         bool advanceLine = false;
 
@@ -284,6 +292,12 @@ public class NarratorUIManager : MonoBehaviour
             if (waitForManualContinue && freshPress)
             {
                 advanceLine = true;
+
+                if (isShowingContinueTutorial)
+                {
+                    continueTutorialTaught = true;
+                    HideContinueTutorialPrompt();
+                }
             }
 
             previousPressed = currentlyPressed;
@@ -302,6 +316,8 @@ public class NarratorUIManager : MonoBehaviour
 
             yield return null;
         }
+
+        HideContinueTutorialPrompt();
 
         // Prevent a held trigger from skipping the next line.
         while (GetContinueButtonPressed())
@@ -327,6 +343,8 @@ public class NarratorUIManager : MonoBehaviour
 
     private void EndDialoguePresentation()
     {
+        HideContinueTutorialPrompt();
+
         if (subtitleText != null)
         {
             subtitleText.text = string.Empty;
@@ -351,6 +369,8 @@ public class NarratorUIManager : MonoBehaviour
 
     private void StopCurrentRoutine()
     {
+        HideContinueTutorialPrompt();
+
         if (currentRoutine != null)
         {
             StopCoroutine(currentRoutine);
@@ -365,6 +385,36 @@ public class NarratorUIManager : MonoBehaviour
         }
 
         HideNarrator();
+    }
+
+    private void ShowContinueTutorialPrompt()
+    {
+        if (continueTutorialTaught || isShowingContinueTutorial)
+            return;
+
+        isShowingContinueTutorial = true;
+
+        if (TutorialPromptUIManager.Instance != null)
+        {
+            TutorialPromptUIManager.Instance.ShowPrompt(
+                "Continue Dialogue",
+                "Press the RIGHT TRIGGER to continue.",
+                this
+            );
+        }
+    }
+
+    private void HideContinueTutorialPrompt()
+    {
+        if (!isShowingContinueTutorial)
+            return;
+
+        isShowingContinueTutorial = false;
+
+        if (TutorialPromptUIManager.Instance != null)
+        {
+            TutorialPromptUIManager.Instance.HidePrompt(this);
+        }
     }
 
     private bool GetContinueButtonPressed()

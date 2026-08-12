@@ -10,6 +10,8 @@ public class TutorialPromptUIManager : MonoBehaviour
     public TMP_Text promptTitleText;
     public TMP_Text promptBodyText;
 
+    private object currentOwner = null;
+
     private void Awake()
     {
         Instance = this;
@@ -20,17 +22,33 @@ public class TutorialPromptUIManager : MonoBehaviour
         HidePrompt();
     }
 
-    public void ShowPrompt(string title, string body)
+    public void ShowPrompt(string title, string body, object owner = null)
     {
-        promptCanvas.SetActive(true);
+        currentOwner = owner;
 
-        promptTitleText.text = title;
-        promptBodyText.text = body;
+        if (promptCanvas != null)
+            promptCanvas.SetActive(true);
+
+        if (promptTitleText != null)
+            promptTitleText.text = title;
+
+        if (promptBodyText != null)
+            promptBodyText.text = body;
     }
 
-    public void HidePrompt()
+    public void HidePrompt(object owner = null)
     {
+        if (owner != null && currentOwner != null && currentOwner != owner)
+            return;
+
+        currentOwner = null;
+
         if (promptCanvas != null)
             promptCanvas.SetActive(false);
+    }
+
+    public bool IsCurrentOwner(object owner)
+    {
+        return currentOwner != null && currentOwner == owner;
     }
 }

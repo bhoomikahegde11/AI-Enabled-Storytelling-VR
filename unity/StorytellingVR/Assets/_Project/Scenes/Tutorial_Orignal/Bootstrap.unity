@@ -149,15 +149,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1be4528c21d6463429bb2b1af729e2f0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
+  bootstrapSceneName: Bootstrap
+  mainMenuSceneName: MainMenu_Optimized
   scenes:
-  - MainMenu_Optimized
+  - ModernStudyRoom
   - FreeRoam_WithTerrain
   - NewSpiceScene
   - NewTransactionTutorial
   - NewCoinScene
   - SpicesInteraction
-  - Level1_MainLoopUpdated
   fader: {fileID: 1819468858}
+  enableDeveloperSceneSkip: 1
+  developerSkipKey: 289
 --- !u!114 &40321877
 MonoBehaviour:
   m_ObjectHideFlags: 0

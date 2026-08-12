@@ -1,6 +1,53 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+
+public enum NegotiationTactic
+{
+    NONE,
+    PRICE_ANCHOR,
+    CONSISTENCY_CHALLENGE,
+    APPEAL_TO_FAIRNESS,
+    QUALITY_ARGUMENT,
+    URGENCY,
+    RELUCTANT_CONCESSION,
+    SPLIT_DIFFERENCE,
+    FINAL_OFFER,
+    THREAT_TO_LEAVE,
+    FRIENDLY_SMALL_TALK
+}
+
+public enum ClarificationKind
+{
+    None,
+    EmptyTranscript,
+    UnrecognizedSpeech,
+    MissingPrice,
+    MissingQuantity,
+    AmbiguousAcceptOrCounter,
+    HistoricalPriceOnly,
+    MultipleActionablePrices,
+    FulfillmentExpected
+}
+
+public enum TradeSpeaker
+{
+    None,
+    Player,
+    NPC
+}
+
+public class TradeOfferRecord
+{
+    public TradeSpeaker speaker;
+    public int value;
+    public int turnIndex;
+    public bool wasAccepted;
+    public bool wasRejected;
+    public bool wasCountered;
+    public string sourceText;
+}
 
 public class LocalTradeState
 {
@@ -46,6 +93,15 @@ public class LocalTradeState
     public float buyerDesperation;
     public bool priceIntroduced;
     public bool budgetRevealed;
+    public int turnIndex;
+    public int currentPlayerAsk;
+    public int lastAcceptedCandidate;
+    public int lastRejectedOffer;
+    public TradeSpeaker lastSpeaker;
+    public string lastNpcQuestion;
+    public string unresolvedClarification;
+    public List<TradeOfferRecord> npcOfferHistory = new List<TradeOfferRecord>();
+    public List<TradeOfferRecord> playerOfferHistory = new List<TradeOfferRecord>();
 }
 
 public class Level1GameState : MonoBehaviour
@@ -53,6 +109,7 @@ public class Level1GameState : MonoBehaviour
     private static Level1GameState instance;
     private const float DefaultMarketDayDurationSeconds = 720f;
     private const float MinimumMarketDayDurationSeconds = 30f;
+    private const float TimerAutosaveIntervalSeconds = 5f;
 
     #if UNITY_EDITOR
     [Header("Editor Debug")]
@@ -90,6 +147,7 @@ public class Level1GameState : MonoBehaviour
     private float marketDayStartedAt = -1f;
     private float marketDayRemainingSeconds = DefaultMarketDayDurationSeconds;
     private int lastLoggedRemainingWholeSecond = -1;
+    private float timerAutosaveElapsed;
 
     public int CurrentMoney => playerState.CurrentVarahas;
     public int CurrentReputation => playerState.CurrentReputation;
@@ -145,26 +203,21 @@ public class Level1GameState : MonoBehaviour
     {
         EnsureInitialized();
 
-        if (MarketDayStarted && !MarketDayEnded)
+        if (MarketDayStarted || MarketDayEnded)
         {
             return;
         }
-
-        MarketDayStarted = true;
-        MarketDayEnded = false;
-        marketDayStartedAt = Time.time;
-        marketDayRemainingSeconds = MarketDayDurationSeconds;
-        lastLoggedRemainingWholeSecond = -1;
 
         if (marketDayTimerCoroutine != null)
         {
             StopCoroutine(marketDayTimerCoroutine);
         }
 
-        Debug.Log($"[MARKET DAY] Market day started. Duration={FormatMarketDayTime(Mathf.CeilToInt(MarketDayDurationSeconds))} ({Mathf.CeilToInt(MarketDayDurationSeconds)}s)");
-        MarketDayStartedEvent?.Invoke();
-        MarketDayTickEvent?.Invoke(marketDayRemainingSeconds);
-        marketDayTimerCoroutine = StartCoroutine(MarketDayTimerRoutine());
+        float restoredRemainingSeconds = profile != null && profile.hasSavedMarketDayTimer
+            ? Mathf.Clamp(profile.remainingMarketDaySeconds, 0f, MarketDayDurationSeconds)
+            : MarketDayDurationSeconds;
+
+        ApplyMarketDayState(restoredRemainingSeconds, broadcastState: true);
     }
 
     public void EndMarketDay()
@@ -176,6 +229,7 @@ public class Level1GameState : MonoBehaviour
 
         MarketDayEnded = true;
         marketDayRemainingSeconds = 0f;
+        timerAutosaveElapsed = 0f;
 
         if (marketDayTimerCoroutine != null)
         {
@@ -184,6 +238,7 @@ public class Level1GameState : MonoBehaviour
         }
 
         Debug.Log("[MARKET DAY] Market day ended.");
+        PersistMarketDayProgress();
         MarketDayTickEvent?.Invoke(marketDayRemainingSeconds);
         MarketDayEndedEvent?.Invoke();
     }
@@ -195,6 +250,7 @@ public class Level1GameState : MonoBehaviour
             float elapsed = Mathf.Max(0f, Time.time - marketDayStartedAt);
             float remaining = Mathf.Clamp(MarketDayDurationSeconds - elapsed, 0f, MarketDayDurationSeconds);
             marketDayRemainingSeconds = remaining;
+            timerAutosaveElapsed += Time.deltaTime;
 
             int remainingWholeSeconds = Mathf.CeilToInt(remaining);
             if (remainingWholeSeconds != lastLoggedRemainingWholeSecond)
@@ -206,6 +262,11 @@ public class Level1GameState : MonoBehaviour
                 {
                     Debug.Log($"[MARKET DAY] Remaining time: {FormatMarketDayTime(remainingWholeSeconds)}");
                 }
+            }
+
+            if (timerAutosaveElapsed >= TimerAutosaveIntervalSeconds)
+            {
+                PersistMarketDayProgress();
             }
 
             if (remaining <= 0f)
@@ -247,7 +308,10 @@ public class Level1GameState : MonoBehaviour
     public void SaveProfileToDisk()
     {
         EnsureInitialized();
+        RefreshProgressionFieldsFromDisk();
+        SyncMarketDayTimerToProfile();
         localSaveManager.SaveProfile(profile);
+        timerAutosaveElapsed = 0f;
     }
 
     public void ReloadProfileFromDisk()
@@ -259,6 +323,8 @@ public class Level1GameState : MonoBehaviour
         activeTrade = null;
         activeEvent = null;
         lastDealReferencePrice = 0;
+        StopMarketDayTimerRoutine();
+        ApplyLoadedMarketDayStateWithoutStartingRoutine();
     }
 
     public void ResetProfileToDefaults()
@@ -380,6 +446,17 @@ public class Level1GameState : MonoBehaviour
 
         activeTrade.previousNpcOffer = activeTrade.npcOffer;
         activeTrade.npcOffer = Mathf.Max(0, npcOffer);
+        activeTrade.lastSpeaker = TradeSpeaker.NPC;
+        if (activeTrade.npcOffer > 0)
+        {
+            activeTrade.npcOfferHistory.Add(new TradeOfferRecord
+            {
+                speaker = TradeSpeaker.NPC,
+                value = activeTrade.npcOffer,
+                turnIndex = activeTrade.turnIndex,
+                sourceText = "npc offer updated"
+            });
+        }
     }
 
     public void UpdateActiveTradeQuantity(int quantityGrams)
@@ -431,8 +508,127 @@ public class Level1GameState : MonoBehaviour
             lastDealReferencePrice = finalPrice;
         }
 
-        localSaveManager.SaveProfile(profile);
+        SaveProfileToDisk();
         activeTrade = null;
         return outcome;
+    }
+
+    private void OnApplicationPause(bool pauseStatus)
+    {
+        if (pauseStatus)
+        {
+            SaveProfileToDisk();
+        }
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus)
+        {
+            SaveProfileToDisk();
+        }
+    }
+
+    private void RefreshProgressionFieldsFromDisk()
+    {
+        if (profile == null || localSaveManager == null)
+        {
+            return;
+        }
+
+        LocalProfileData diskProfile = localSaveManager.LoadProfile(marketManager);
+        if (diskProfile == null)
+        {
+            return;
+        }
+
+        profile.current_scene = diskProfile.current_scene;
+        profile.progression_index = diskProfile.progression_index;
+        profile.intro_completed = diskProfile.intro_completed;
+    }
+
+    private void ApplyLoadedMarketDayStateWithoutStartingRoutine()
+    {
+        float restoredRemainingSeconds = profile != null && profile.hasSavedMarketDayTimer
+            ? Mathf.Clamp(profile.remainingMarketDaySeconds, 0f, MarketDayDurationSeconds)
+            : MarketDayDurationSeconds;
+
+        marketDayRemainingSeconds = restoredRemainingSeconds;
+        marketDayStartedAt = -1f;
+        timerAutosaveElapsed = 0f;
+        lastLoggedRemainingWholeSecond = Mathf.CeilToInt(restoredRemainingSeconds);
+        MarketDayStarted = false;
+        MarketDayEnded = profile != null && profile.hasSavedMarketDayTimer && restoredRemainingSeconds <= 0f;
+    }
+
+    private void ApplyMarketDayState(float restoredRemainingSeconds, bool broadcastState)
+    {
+        float clampedRemainingSeconds = Mathf.Clamp(restoredRemainingSeconds, 0f, MarketDayDurationSeconds);
+        marketDayRemainingSeconds = clampedRemainingSeconds;
+        timerAutosaveElapsed = 0f;
+        lastLoggedRemainingWholeSecond = Mathf.CeilToInt(clampedRemainingSeconds);
+
+        if (clampedRemainingSeconds <= 0f)
+        {
+            MarketDayStarted = false;
+            MarketDayEnded = true;
+            marketDayStartedAt = -1f;
+            PersistMarketDayProgress();
+
+            if (broadcastState)
+            {
+                MarketDayTickEvent?.Invoke(marketDayRemainingSeconds);
+                MarketDayEndedEvent?.Invoke();
+            }
+
+            Debug.Log("[MARKET DAY] Restored market day in ended state.");
+            return;
+        }
+
+        MarketDayStarted = true;
+        MarketDayEnded = false;
+        marketDayStartedAt = Time.time - (MarketDayDurationSeconds - clampedRemainingSeconds);
+
+        Debug.Log($"[MARKET DAY] Market day started. Duration={FormatMarketDayTime(Mathf.CeilToInt(clampedRemainingSeconds))} ({Mathf.CeilToInt(clampedRemainingSeconds)}s)");
+
+        if (broadcastState)
+        {
+            MarketDayStartedEvent?.Invoke();
+            MarketDayTickEvent?.Invoke(marketDayRemainingSeconds);
+        }
+
+        marketDayTimerCoroutine = StartCoroutine(MarketDayTimerRoutine());
+    }
+
+    private void SyncMarketDayTimerToProfile()
+    {
+        if (profile == null)
+        {
+            return;
+        }
+
+        profile.remainingMarketDaySeconds = Mathf.Clamp(marketDayRemainingSeconds, 0f, MarketDayDurationSeconds);
+        profile.hasSavedMarketDayTimer = true;
+    }
+
+    private void PersistMarketDayProgress()
+    {
+        if (!initialized || localSaveManager == null || profile == null)
+        {
+            return;
+        }
+
+        SaveProfileToDisk();
+    }
+
+    private void StopMarketDayTimerRoutine()
+    {
+        if (marketDayTimerCoroutine == null)
+        {
+            return;
+        }
+
+        StopCoroutine(marketDayTimerCoroutine);
+        marketDayTimerCoroutine = null;
     }
 }

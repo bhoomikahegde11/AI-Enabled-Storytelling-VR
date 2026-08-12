@@ -1,7 +1,7 @@
 {
     "global_metrics": {
-        "reputation": 45,
-        "total_varahas": 100,
+        "reputation": 57,
+        "total_varahas": 603,
         "completed_levels": []
     },
     "inventory": [
@@ -11,11 +11,11 @@
         },
         {
             "spiceKey": "clove",
-            "grams": 8000
+            "grams": 0
         },
         {
             "spiceKey": "cinnamon",
-            "grams": 12000
+            "grams": 7800
         },
         {
             "spiceKey": "cardamom",
@@ -26,5 +26,8 @@
         "shifts_completed": 0,
         "total_varahas_earned": 0,
         "total_deals_made": 0
-    }
+    },
+    "current_scene": "Level1_MainLoopUpdated",
+    "progression_index": 1,
+    "intro_completed": true
 }

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -7,6 +8,9 @@ public class MarketplaceManager : MonoBehaviour
     [Header("NPC Settings")]
     [Tooltip("The active NPC GameObject in the scene (e.g., BuyerNPC).")]
     public GameObject buyerNPC;
+    [SerializeField] private Transform modelAnchor;
+    [SerializeField] private GameObject placeholderVisualRoot;
+    [SerializeField] private List<DialogueCharacterProfile> characterProfiles = new List<DialogueCharacterProfile>();
 
     [Header("Movement Points")]
     [Tooltip("Point where the customer starts (e.g., BuyerSpawnPoint).")]
@@ -37,13 +41,40 @@ public class MarketplaceManager : MonoBehaviour
     private bool showDebugLogs = true;
 
     private NavMeshAgent navMeshAgent;
+    private static readonly string[] OriginalPlaceholderVisualObjectNames =
+    {
+        "AvatarBody",
+        "AvatarEyelashes",
+        "AvatarHead",
+        "AvatarLeftCornea",
+        "AvatarLeftEyeball",
+        "AvatarRightCornea",
+        "AvatarRightEyeball",
+        "AvatarTeethLower",
+        "AvatarTeethUpper",
+        "haircut",
+        "outfit"
+    };
+
+    private Animator rootAnimator;
     private Animator animator;
+    private GameObject activeCharacterModelInstance;
+    private Animator activeCharacterAnimator;
+    private readonly List<GameObject> originalPlaceholderVisualObjects = new List<GameObject>();
+    private readonly List<Renderer> originalPlaceholderRenderers = new List<Renderer>();
+    private readonly List<Renderer> originalPlaceholderHipsRenderers = new List<Renderer>();
+    private LocalGeneratedTradeSession preparedLocalSession;
+    private int nextRuntimeSessionId = 1;
+    private int activeVisualSessionId = -1;
+    private string activeCharacterId = string.Empty;
     private bool isTransitioning = false;
     private bool negotiationWasAccepted = false;
     private Coroutine negotiationIdleCoroutine;
     private Coroutine nextCustomerCountdownCoroutine;
     private Coroutine marketDayStartupCoroutine;
     private bool isAwaitingPlayerInput;
+    private bool isOriginalPlaceholderVisible = true;
+    private bool keepsHipsActive = true;
     private float playerIdleStartedAt;
     private int reminderStage;
     private int firstReminderSeconds;
@@ -69,6 +100,7 @@ public class MarketplaceManager : MonoBehaviour
     {
         Level1DebugForceAccept.LogVerbose("[SCENE FLOW] " + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name + " loaded");
         Level1GameState.Instance.EnsureInitialized();
+        EnsureCharacterProfilesInitialized();
 
         // 1. Auto-discover references if they are not manually dragged in Inspector
         if (buyerNPC == null)
@@ -122,7 +154,11 @@ public class MarketplaceManager : MonoBehaviour
         }
         navMeshAgent.speed = movementSpeed;
 
-        animator = buyerNPC.GetComponent<Animator>();
+        rootAnimator = buyerNPC.GetComponent<Animator>() ?? buyerNPC.GetComponentInChildren<Animator>(true);
+        animator = rootAnimator;
+        activeCharacterAnimator = rootAnimator;
+        CacheOriginalPlaceholderRenderers();
+        SetOriginalPlaceholderVisible(true);
 
         // Auto-mount NPCGazeController if not present
         NPCGazeController gazeController = buyerNPC.GetComponent<NPCGazeController>();
@@ -156,6 +192,16 @@ public class MarketplaceManager : MonoBehaviour
         marketDayStartupCoroutine = StartCoroutine(WaitForMarketDayThenStartLifecycle());
     }
 
+    private void OnValidate()
+    {
+        EnsureCharacterProfilesInitialized();
+    }
+
+    private void OnDestroy()
+    {
+        ClearInstantiatedCharacterModel();
+    }
+
     /// <summary>
     /// Teleports and resets the active NPC safely back to the SpawnPoint.
     /// </summary>
@@ -185,6 +231,112 @@ public class MarketplaceManager : MonoBehaviour
         }
     }
 
+    public Animator GetActiveNpcAnimator()
+    {
+        if (activeCharacterAnimator != null)
+        {
+            return activeCharacterAnimator;
+        }
+
+        if (rootAnimator == null && buyerNPC != null)
+        {
+            rootAnimator = buyerNPC.GetComponent<Animator>() ?? buyerNPC.GetComponentInChildren<Animator>(true);
+        }
+
+        animator = rootAnimator;
+        activeCharacterAnimator = rootAnimator;
+        return animator;
+    }
+
+    public static bool CanDriveAnimator(Animator targetAnimator)
+    {
+        return targetAnimator != null &&
+               targetAnimator.isActiveAndEnabled &&
+               targetAnimator.runtimeAnimatorController != null;
+    }
+
+    public NPCGazeController GetBuyerNpcGazeController()
+    {
+        return buyerNPC != null ? buyerNPC.GetComponent<NPCGazeController>() : null;
+    }
+
+    public bool TryConsumePreparedLocalSession(out LocalGeneratedTradeSession session)
+    {
+        session = preparedLocalSession;
+        preparedLocalSession = null;
+        return session != null;
+    }
+
+    public void AssignCharacterVisualForSession(LocalGeneratedTradeSession session, string lifecycleStage)
+    {
+        if (session == null)
+        {
+            return;
+        }
+
+        if (session.runtimeSessionId == 0)
+        {
+            session.runtimeSessionId = nextRuntimeSessionId++;
+        }
+
+        if (session.runtimeSessionId == activeVisualSessionId)
+        {
+            return;
+        }
+
+        activeVisualSessionId = session.runtimeSessionId;
+        activeCharacterId = session.characterId ?? string.Empty;
+        ClearInstantiatedCharacterModel();
+
+        if (!TryGetCharacterProfile(session.characterId, out DialogueCharacterProfile characterProfile))
+        {
+            SetOriginalPlaceholderVisible(true);
+            Debug.LogWarning("[MarketplaceManager] No character profile found for visual assignment. Character ID='" + session.characterId + "'.");
+            RefreshNpcRigBindings();
+            return;
+        }
+
+        string modelName = characterProfile.modelPrefab != null ? characterProfile.modelPrefab.name : "<none>";
+        Debug.Log("[MARKET NPC] Assigning model | characterId=" + characterProfile.characterId +
+                  " | displayName=" + characterProfile.displayName +
+                  " | modelPrefab=" + modelName +
+                  " | lifecycleStage=" + lifecycleStage);
+
+        if (characterProfile.modelPrefab == null)
+        {
+            SetOriginalPlaceholderVisible(true);
+            Debug.LogWarning("[MarketplaceManager] No modelPrefab assigned for character '" + characterProfile.displayName + "' (" + characterProfile.characterId + ").");
+            RefreshNpcRigBindings();
+            return;
+        }
+
+        if (modelAnchor == null)
+        {
+            SetOriginalPlaceholderVisible(true);
+            Debug.LogWarning("[MarketplaceManager] modelAnchor is not assigned. Cannot attach custom visual model for character '" + characterProfile.displayName + "' (" + characterProfile.characterId + ").");
+            RefreshNpcRigBindings();
+            return;
+        }
+
+        SetOriginalPlaceholderVisible(false);
+
+        activeCharacterModelInstance = Instantiate(characterProfile.modelPrefab, modelAnchor, false);
+        ApplyCharacterVisualOffsets(activeCharacterModelInstance.transform, characterProfile);
+        StabilizeInstantiatedVisual(activeCharacterModelInstance);
+        ApplyCharacterVisualOffsets(activeCharacterModelInstance.transform, characterProfile);
+
+        activeCharacterAnimator = activeCharacterModelInstance.GetComponent<Animator>() ?? activeCharacterModelInstance.GetComponentInChildren<Animator>(true);
+        if (activeCharacterAnimator != null)
+        {
+            activeCharacterAnimator.applyRootMotion = false;
+        }
+        animator = activeCharacterAnimator != null ? activeCharacterAnimator : rootAnimator;
+
+        RefreshNpcRigBindings();
+        LogActiveVisualDiagnostics("post-assignment");
+        ValidateNpcVisualState("post-assignment");
+    }
+
     /// <summary>
     /// Coroutine that drives the complete sequential walk-trade lifecycle.
     /// </summary>
@@ -194,6 +346,8 @@ public class MarketplaceManager : MonoBehaviour
         {
             yield break;
         }
+
+        PrepareIncomingCustomerLifecycle();
 
         StopNextCustomerCountdown();
 
@@ -232,12 +386,13 @@ public class MarketplaceManager : MonoBehaviour
         // 3. NPC Arrived at Stall - Orient smoothly
         buyerNPC.transform.rotation = tradePoint.rotation;
         Level1DebugForceAccept.LogVerbose("[MarketplaceManager] NPC reached TradePoint. Triggering browsing behavior.");
+        EnsureOriginalPlaceholderHiddenIfNeeded();
+        ValidateNpcVisualState("arrival");
 
         // Cache animator
         if (animator == null)
         {
-            animator = buyerNPC.GetComponent<Animator>();
-            if (animator == null) animator = buyerNPC.GetComponentInChildren<Animator>();
+            animator = GetActiveNpcAnimator();
         }
 
         // 4. Make NPC look at spices using NPCGazeController
@@ -261,8 +416,10 @@ public class MarketplaceManager : MonoBehaviour
 
         if (chatManager != null && chatManager.feedbackManager != null)
         {
-            chatManager.feedbackManager.StartNPCThinking(animator, chatManager.npcText, false);
+            chatManager.feedbackManager.StartNPCThinking(GetActiveNpcAnimator(), chatManager.npcText, false);
         }
+
+        ValidateNpcVisualState("conversation-start");
 
         // 5. Start backend request in parallel
         if (chatManager != null)
@@ -332,15 +489,10 @@ public class MarketplaceManager : MonoBehaviour
         // Play outcome animation (Agree/Reject) after TTS speech completes
         if (chatManager != null && chatManager.feedbackManager != null)
         {
-            if (animator == null && buyerNPC != null)
-            {
-                animator = buyerNPC.GetComponent<Animator>();
-                if (animator == null) animator = buyerNPC.GetComponentInChildren<Animator>();
-            }
-
+            animator = GetActiveNpcAnimator();
             chatManager.feedbackManager.StopNPCThinking(animator);
 
-            if (animator != null)
+            if (CanDriveAnimator(animator))
             {
                 if (negotiationWasAccepted)
                 {
@@ -490,7 +642,9 @@ public class MarketplaceManager : MonoBehaviour
 
     private void SetWalkingAnimation(bool isWalking)
     {
-        if (animator == null) return;
+        EnsureOriginalPlaceholderHiddenIfNeeded();
+        animator = GetActiveNpcAnimator();
+        if (!CanDriveAnimator(animator)) return;
         
         animator.SetBool("isWalking", isWalking);
 
@@ -499,6 +653,7 @@ public class MarketplaceManager : MonoBehaviour
             animator.SetBool("isThinking", false);
             animator.SetBool("isTalking", false);
         }
+        EnsureOriginalPlaceholderHiddenIfNeeded();
     }
 
     public void BeginNegotiationTimer(int buyerPatience)
@@ -727,5 +882,445 @@ public class MarketplaceManager : MonoBehaviour
         Level1DebugForceAccept.LogTrade($"[MARKET LOOP] Respect={reputation:0.0}, selected next customer gap={selectedGap:0.0}s");
 
         return selectedGap;
+    }
+
+    private void EnsureCharacterProfilesInitialized()
+    {
+        if (characterProfiles == null)
+        {
+            characterProfiles = new List<DialogueCharacterProfile>();
+        }
+
+        List<DialogueCharacterProfile> defaults = DialogueCharacterRegistry.CreateDefaultProfiles();
+        if (characterProfiles.Count == 0)
+        {
+            characterProfiles.AddRange(defaults);
+            return;
+        }
+
+        foreach (DialogueCharacterProfile defaultProfile in defaults)
+        {
+            bool alreadyPresent = false;
+            for (int i = 0; i < characterProfiles.Count; i++)
+            {
+                if (string.Equals(characterProfiles[i].characterId, defaultProfile.characterId, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    alreadyPresent = true;
+                    if (string.IsNullOrWhiteSpace(characterProfiles[i].displayName))
+                    {
+                        characterProfiles[i].displayName = defaultProfile.displayName;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(characterProfiles[i].buyerOrigin))
+                    {
+                        characterProfiles[i].buyerOrigin = defaultProfile.buyerOrigin;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(characterProfiles[i].buyerPersonality))
+                    {
+                        characterProfiles[i].buyerPersonality = defaultProfile.buyerPersonality;
+                    }
+
+                    if (characterProfiles[i].modelLocalScale == Vector3.zero)
+                    {
+                        characterProfiles[i].modelLocalScale = Vector3.one;
+                    }
+
+                    break;
+                }
+            }
+
+            if (!alreadyPresent)
+            {
+                characterProfiles.Add(defaultProfile);
+            }
+        }
+    }
+
+    private bool TryGetCharacterProfile(string characterId, out DialogueCharacterProfile characterProfile)
+    {
+        EnsureCharacterProfilesInitialized();
+
+        for (int i = 0; i < characterProfiles.Count; i++)
+        {
+            DialogueCharacterProfile candidate = characterProfiles[i];
+            if (candidate != null && string.Equals(candidate.characterId, characterId, System.StringComparison.OrdinalIgnoreCase))
+            {
+                characterProfile = candidate;
+                return true;
+            }
+        }
+
+        characterProfile = null;
+        return false;
+    }
+
+    private void ClearInstantiatedCharacterModel()
+    {
+        if (activeCharacterModelInstance == null)
+        {
+            activeCharacterAnimator = rootAnimator;
+            animator = rootAnimator;
+            return;
+        }
+
+        activeCharacterModelInstance.SetActive(false);
+        Destroy(activeCharacterModelInstance);
+        activeCharacterModelInstance = null;
+        activeCharacterAnimator = rootAnimator;
+        animator = rootAnimator;
+        RefreshNpcRigBindings();
+    }
+
+    private void SetOriginalPlaceholderVisible(bool visible)
+    {
+        if (activeCharacterModelInstance != null && visible)
+        {
+            visible = false;
+        }
+
+        bool stateChanged = isOriginalPlaceholderVisible != visible;
+
+        int toggledVisualObjects = 0;
+        for (int i = 0; i < originalPlaceholderVisualObjects.Count; i++)
+        {
+            GameObject visualObject = originalPlaceholderVisualObjects[i];
+            if (visualObject == null)
+            {
+                continue;
+            }
+
+            if (visualObject.activeSelf != visible)
+            {
+                visualObject.SetActive(visible);
+                toggledVisualObjects++;
+            }
+        }
+
+        int toggledRenderers = 0;
+        for (int i = 0; i < originalPlaceholderRenderers.Count; i++)
+        {
+            Renderer renderer = originalPlaceholderRenderers[i];
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            if (renderer.enabled != visible)
+            {
+                renderer.enabled = visible;
+                toggledRenderers++;
+            }
+        }
+
+        for (int i = 0; i < originalPlaceholderHipsRenderers.Count; i++)
+        {
+            Renderer renderer = originalPlaceholderHipsRenderers[i];
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            if (renderer.enabled != visible)
+            {
+                renderer.enabled = visible;
+                toggledRenderers++;
+            }
+        }
+
+        isOriginalPlaceholderVisible = visible;
+        if (stateChanged || toggledVisualObjects > 0 || toggledRenderers > 0)
+        {
+            Debug.Log("[MARKET NPC] Original placeholder visible=" + visible +
+                      " | toggledVisualObjects=" + toggledVisualObjects +
+                      " | toggledRenderers=" + toggledRenderers +
+                      " | activeCustomModel=" + (activeCharacterModelInstance != null ? activeCharacterModelInstance.name : "<none>") +
+                      " | modelAnchorHasRuntimeChild=" + (modelAnchor != null && modelAnchor.childCount > 0));
+        }
+    }
+
+    private void RefreshNpcRigBindings()
+    {
+        NPCGazeController gazeController = GetBuyerNpcGazeController();
+        if (gazeController != null)
+        {
+            Transform preferredRigRoot = activeCharacterModelInstance != null ? activeCharacterModelInstance.transform : buyerNPC.transform;
+            Animator preferredAnimator = activeCharacterModelInstance != null ? activeCharacterAnimator : rootAnimator;
+            gazeController.SetRigBindingSource(preferredRigRoot, preferredAnimator, activeCharacterModelInstance != null);
+            gazeController.RefreshRigBindings();
+        }
+    }
+
+    private void CacheOriginalPlaceholderRenderers()
+    {
+        originalPlaceholderVisualObjects.Clear();
+        originalPlaceholderRenderers.Clear();
+        originalPlaceholderHipsRenderers.Clear();
+
+        if (buyerNPC == null)
+        {
+            return;
+        }
+
+        for (int rootIndex = 0; rootIndex < OriginalPlaceholderVisualObjectNames.Length; rootIndex++)
+        {
+            Transform placeholderRoot = buyerNPC.transform.Find(OriginalPlaceholderVisualObjectNames[rootIndex]);
+            if (placeholderRoot == null)
+            {
+                continue;
+            }
+
+            if (!originalPlaceholderVisualObjects.Contains(placeholderRoot.gameObject))
+            {
+                originalPlaceholderVisualObjects.Add(placeholderRoot.gameObject);
+            }
+
+            Renderer[] renderers = placeholderRoot.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                if (modelAnchor != null && renderer.transform.IsChildOf(modelAnchor))
+                {
+                    continue;
+                }
+
+                if (!originalPlaceholderRenderers.Contains(renderer))
+                {
+                    originalPlaceholderRenderers.Add(renderer);
+                }
+            }
+        }
+
+        Transform hipsRoot = buyerNPC.transform.Find("Hips");
+        keepsHipsActive = hipsRoot != null;
+        if (hipsRoot != null)
+        {
+            Renderer[] hipsRenderers = hipsRoot.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < hipsRenderers.Length; i++)
+            {
+                Renderer renderer = hipsRenderers[i];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                if (modelAnchor != null && renderer.transform.IsChildOf(modelAnchor))
+                {
+                    continue;
+                }
+
+                if (!originalPlaceholderHipsRenderers.Contains(renderer))
+                {
+                    originalPlaceholderHipsRenderers.Add(renderer);
+                }
+            }
+        }
+
+        Debug.Log("[MARKET NPC] Cached original placeholder renderers at startup: " + (originalPlaceholderRenderers.Count + originalPlaceholderHipsRenderers.Count));
+    }
+
+    private void EnsureOriginalPlaceholderHiddenIfNeeded()
+    {
+        if (activeCharacterModelInstance != null)
+        {
+            SetOriginalPlaceholderVisible(false);
+        }
+    }
+
+    private void LogActiveVisualDiagnostics(string stage)
+    {
+        NPCGazeController gazeController = GetBuyerNpcGazeController();
+        string animatorName = activeCharacterAnimator != null ? activeCharacterAnimator.name : "<none>";
+        bool hasController = activeCharacterAnimator != null && activeCharacterAnimator.runtimeAnimatorController != null;
+        string headBindingPath = gazeController != null ? gazeController.GetHeadBindingPath() : "<none>";
+
+        Debug.Log("[MARKET NPC] Visual diagnostics | stage=" + stage +
+                  " | customModelInstance=" + (activeCharacterModelInstance != null ? activeCharacterModelInstance.name : "<none>") +
+                  " | deactivatedOriginalVisualObjects=" + originalPlaceholderVisualObjects.Count +
+                  " | hipsDeactivated=" + (!keepsHipsActive) +
+                  " | activeAnimator=" + animatorName +
+                  " | activeAnimatorHasController=" + hasController +
+                  " | gazeHeadBindingPath=" + headBindingPath +
+                  " | activeOriginalRenderersOutsideModelAnchor=" + CountActiveOriginalRenderersOutsideModelAnchor());
+    }
+
+    private void ValidateNpcVisualState(string stage)
+    {
+        if (activeCharacterModelInstance == null || buyerNPC == null)
+        {
+            return;
+        }
+
+        List<string> activeOriginalRenderers = new List<string>();
+        CollectActiveOriginalRenderers(activeOriginalRenderers, originalPlaceholderVisualObjects);
+        CollectActiveOriginalRenderers(activeOriginalRenderers, originalPlaceholderHipsRenderers);
+
+        if (activeOriginalRenderers.Count > 0)
+        {
+            Debug.LogWarning("[MARKET NPC] ValidateNpcVisualState failed at " + stage +
+                             ". Enabled original avatar renderers still active: " +
+                             string.Join(", ", activeOriginalRenderers));
+        }
+    }
+
+    private void CollectActiveOriginalRenderers(List<string> results, List<GameObject> visualObjects)
+    {
+        for (int i = 0; i < visualObjects.Count; i++)
+        {
+            GameObject visualObject = visualObjects[i];
+            if (visualObject == null || !visualObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            Renderer[] renderers = visualObject.GetComponentsInChildren<Renderer>(true);
+            for (int rendererIndex = 0; rendererIndex < renderers.Length; rendererIndex++)
+            {
+                Renderer renderer = renderers[rendererIndex];
+                if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                if (modelAnchor != null && renderer.transform.IsChildOf(modelAnchor))
+                {
+                    continue;
+                }
+
+                results.Add(GetHierarchyPath(renderer.transform));
+            }
+        }
+    }
+
+    private void CollectActiveOriginalRenderers(List<string> results, List<Renderer> renderers)
+    {
+        for (int i = 0; i < renderers.Count; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            if (modelAnchor != null && renderer.transform.IsChildOf(modelAnchor))
+            {
+                continue;
+            }
+
+            results.Add(GetHierarchyPath(renderer.transform));
+        }
+    }
+
+    private int CountActiveOriginalRenderersOutsideModelAnchor()
+    {
+        List<string> activeOriginalRenderers = new List<string>();
+        CollectActiveOriginalRenderers(activeOriginalRenderers, originalPlaceholderVisualObjects);
+        CollectActiveOriginalRenderers(activeOriginalRenderers, originalPlaceholderHipsRenderers);
+        return activeOriginalRenderers.Count;
+    }
+
+    private static string GetHierarchyPath(Transform target)
+    {
+        if (target == null)
+        {
+            return "<null>";
+        }
+
+        string path = target.name;
+        Transform current = target.parent;
+        while (current != null)
+        {
+            path = current.name + "/" + path;
+            current = current.parent;
+        }
+
+        return path;
+    }
+
+    private void PrepareIncomingCustomerLifecycle()
+    {
+        if (chatManager == null || !chatManager.useLocalSessionGeneration)
+        {
+            preparedLocalSession = null;
+            return;
+        }
+
+        Level1GameState.Instance.PrepareForNewCustomer();
+        preparedLocalSession = Level1GameState.Instance.GenerateLocalSession();
+        preparedLocalSession.runtimeSessionId = nextRuntimeSessionId++;
+        AssignCharacterVisualForSession(preparedLocalSession, "incoming-customer");
+    }
+
+    private static void ApplyCharacterVisualOffsets(Transform visualTransform, DialogueCharacterProfile profile)
+    {
+        if (visualTransform == null || profile == null)
+        {
+            return;
+        }
+
+        visualTransform.localPosition = profile.modelLocalPosition;
+        visualTransform.localRotation = Quaternion.Euler(profile.modelLocalEulerAngles);
+        visualTransform.localScale = profile.modelLocalScale == Vector3.zero
+            ? Vector3.one
+            : profile.modelLocalScale;
+    }
+
+    private void StabilizeInstantiatedVisual(GameObject visualRoot)
+    {
+        if (visualRoot == null)
+        {
+            return;
+        }
+
+        NavMeshAgent[] childAgents = visualRoot.GetComponentsInChildren<NavMeshAgent>(true);
+        for (int i = 0; i < childAgents.Length; i++)
+        {
+            childAgents[i].enabled = false;
+        }
+
+        CharacterController[] childCharacterControllers = visualRoot.GetComponentsInChildren<CharacterController>(true);
+        for (int i = 0; i < childCharacterControllers.Length; i++)
+        {
+            childCharacterControllers[i].enabled = false;
+        }
+
+        Collider[] colliders = visualRoot.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            colliders[i].enabled = false;
+        }
+
+        Rigidbody[] rigidbodies = visualRoot.GetComponentsInChildren<Rigidbody>(true);
+        for (int i = 0; i < rigidbodies.Length; i++)
+        {
+            Rigidbody body = rigidbodies[i];
+            body.linearVelocity = Vector3.zero;
+            body.angularVelocity = Vector3.zero;
+            body.isKinematic = true;
+            body.useGravity = false;
+        }
+
+        NPCWalker[] npcWalkers = visualRoot.GetComponentsInChildren<NPCWalker>(true);
+        for (int i = 0; i < npcWalkers.Length; i++)
+        {
+            npcWalkers[i].enabled = false;
+        }
+
+        AudioSource[] audioSources = visualRoot.GetComponentsInChildren<AudioSource>(true);
+        for (int i = 0; i < audioSources.Length; i++)
+        {
+            audioSources[i].enabled = false;
+        }
+
+        Animator[] animators = visualRoot.GetComponentsInChildren<Animator>(true);
+        for (int i = 0; i < animators.Length; i++)
+        {
+            animators[i].applyRootMotion = false;
+        }
     }
 }

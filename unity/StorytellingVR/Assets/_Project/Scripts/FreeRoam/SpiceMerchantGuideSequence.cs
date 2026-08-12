@@ -61,8 +61,8 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
     [SerializeField] private float lineGap = 0.25f;
 
     [Header("Prompt Text")]
-    [SerializeField] private string talkPromptTitle = "Talk";
-    [SerializeField] private string talkPromptBody = "Press X to talk";
+    [SerializeField] private string talkPromptTitle = "Interact";
+    [SerializeField] private string talkPromptBody = "Press X to interact.";
 
     private bool playerInside;
     private bool buttonHeld;
@@ -108,12 +108,20 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         if (stallDestination == null && stallEntryHotspot != null)
             stallDestination = stallEntryHotspot.transform;
 
-        if (guideStopSpot == null)
+        if (merchant != null)
         {
-            GameObject stopSpot = GameObject.Find("SpiceGuideStopSpot");
-
+            Transform stopSpot = merchant.transform.Find("GuideStopSpot");
             if (stopSpot != null)
                 guideStopSpot = stopSpot.transform;
+        }
+
+        if (stallEntryHotspot != null)
+        {
+            StallEntryTrigger trigger = stallEntryHotspot.GetComponent<StallEntryTrigger>();
+            if (trigger != null && trigger.promptCanvas != null)
+            {
+                trigger.promptCanvas.SetActive(false);
+            }
         }
     }
 
@@ -123,7 +131,19 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
             merchantAgent = merchant.GetComponent<NavMeshAgent>();
 
         if (merchantAnimator == null && merchant != null)
-            merchantAnimator = merchant.GetComponentInChildren<Animator>();
+        {
+            Animator[] animators = merchant.GetComponentsInChildren<Animator>(false);
+            foreach (var anim in animators)
+            {
+                if (anim.runtimeAnimatorController != null)
+                {
+                    merchantAnimator = anim;
+                    break;
+                }
+            }
+            if (merchantAnimator == null)
+                merchantAnimator = merchant.GetComponentInChildren<Animator>();
+        }
     }
 
     private void Update()
@@ -154,7 +174,6 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
             merchantAnimator.speed = defaultAnimatorSpeed;
 
         HideTalkPrompt();
-        SetWalking(false);
 
         if (teleportSystem != null)
             teleportSystem.SetActive(false);
@@ -181,13 +200,28 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         );
 
         // Merchant signals player to follow
-        TriggerAnimation(signalTrigger);
 
         yield return Say(
             merchantName,
-            followLine,
-            followLineDuration
+            followLine
         );
+
+        if (merchantAnimator != null)
+        {
+            Debug.Log(
+                $"[MERCHANT ANIM] Starting walk. Animator={merchantAnimator}, " +
+                $"enabled={merchantAnimator?.enabled}, " +
+                $"controller={merchantAnimator?.runtimeAnimatorController}, " +
+                $"parameter={walkingBool}"
+            );
+
+            merchantAnimator.SetBool(walkingBool, true);
+
+            Debug.Log(
+                $"[MERCHANT ANIM] isWalking after SetBool: " +
+                $"{merchantAnimator.GetBool(walkingBool)}"
+            );
+        }
 
         // Allow player to follow merchant
         if (teleportSystem != null)
@@ -239,27 +273,25 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
     private IEnumerator Say(
         string speaker,
         string text,
-        float duration)
+        float duration = -1f)
     {
-        SetTalking(true);
-        TriggerAnimation(talkingTrigger);
-
         if (NarratorUIManager.Instance != null)
         {
-            NarratorUIManager.Instance.ShowNarration(
+            yield return NarratorUIManager.Instance.PlayNarration(
                 speaker,
-                text,
-                duration
+                text
             );
         }
         else
         {
             Debug.Log($"[{speaker}] {text}");
+            yield return new WaitForSecondsRealtime(2f);
         }
 
-        yield return new WaitForSeconds(duration + lineGap);
-
-        SetTalking(false);
+        if (lineGap > 0f)
+        {
+            yield return new WaitForSecondsRealtime(lineGap);
+        }
     }
 
     private IEnumerator MoveMerchantToStall()
@@ -268,8 +300,6 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
             yield break;
 
         Vector3 stopPosition = GetMerchantStopPosition();
-
-        SetWalking(true);
 
         if (merchantAgent != null
             && merchantAgent.enabled
@@ -341,7 +371,15 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         );
 
         FaceStall();
-        SetWalking(false);
+        
+        if (merchantAnimator != null)
+        {
+            Debug.Log(
+                $"[MERCHANT ANIM] Arrived. isWalking before reset: " +
+                $"{merchantAnimator.GetBool(walkingBool)}"
+            );
+            merchantAnimator.SetBool(walkingBool, false);
+        }
     }
 
     private Vector3 GetMerchantStopPosition()
@@ -409,11 +447,12 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
 
     private void ShowTalkPrompt()
     {
-        if (TutorialPromptUIManager.Instance != null)
+        if (playerInside && !sequenceStarted)
         {
             TutorialPromptUIManager.Instance.ShowPrompt(
                 talkPromptTitle,
-                talkPromptBody
+                talkPromptBody,
+                this
             );
 
             return;
@@ -426,7 +465,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
     private void HideTalkPrompt()
     {
         if (TutorialPromptUIManager.Instance != null)
-            TutorialPromptUIManager.Instance.HidePrompt();
+            TutorialPromptUIManager.Instance.HidePrompt(this);
 
         if (fallbackTalkPrompt != null)
             fallbackTalkPrompt.SetActive(false);
@@ -548,12 +587,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         if (merchantAnimator == null)
             return;
 
-        defaultAnimatorSpeed = merchantAnimator.speed;
-
-        if (disableAnimatorRootMotion)
-            merchantAnimator.applyRootMotion = false;
-
-        if (freezeAnimatorUntilMovement)
-            merchantAnimator.speed = 0f;
+        merchantAnimator.enabled = true;
+        merchantAnimator.SetBool(walkingBool, false);
     }
 }

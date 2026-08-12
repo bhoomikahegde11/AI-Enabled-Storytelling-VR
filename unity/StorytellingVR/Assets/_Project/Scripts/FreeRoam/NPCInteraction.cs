@@ -70,9 +70,6 @@ public class NPCInteraction : MonoBehaviour
     {
         interactionUnlocked = availableOnStart;
 
-        if (talkPromptObject != null)
-            talkPromptObject.SetActive(false);
-
         if (indicator != null)
         {
             if (interactionUnlocked)
@@ -153,8 +150,7 @@ public class NPCInteraction : MonoBehaviour
 
         inConversation = true;
 
-        if (talkPromptObject != null)
-            talkPromptObject.SetActive(false);
+        HideInteractionPrompt();
 
         if (TeleportManager.Instance != null)
             TeleportManager.Instance.DisableAll();
@@ -186,8 +182,7 @@ public class NPCInteraction : MonoBehaviour
 
         inConversation = true;
 
-        if (talkPromptObject != null)
-            talkPromptObject.SetActive(false);
+        HideInteractionPrompt();
 
         if (TeleportManager.Instance != null)
             TeleportManager.Instance.DisableAll();
@@ -259,11 +254,11 @@ public class NPCInteraction : MonoBehaviour
         playerNearby = true;
 
         if (interactionUnlocked &&
+            conversationUnlocked &&
             !inConversation &&
-            !conversationCompleted &&
-            talkPromptObject != null)
+            !conversationCompleted)
         {
-            talkPromptObject.SetActive(true);
+            ShowInteractionPrompt();
         }
     }
 
@@ -274,8 +269,7 @@ public class NPCInteraction : MonoBehaviour
 
         playerNearby = false;
 
-        if (talkPromptObject != null)
-            talkPromptObject.SetActive(false);
+        HideInteractionPrompt();
     }
 
     private bool IsPlayer(Collider other)
@@ -309,10 +303,10 @@ public class NPCInteraction : MonoBehaviour
             indicator.Show();
 
         if (playerNearby &&
-            !inConversation &&
-            talkPromptObject != null)
+            conversationUnlocked &&
+            !inConversation)
         {
-            talkPromptObject.SetActive(true);
+            ShowInteractionPrompt();
         }
 
         Debug.Log(
@@ -383,8 +377,7 @@ public class NPCInteraction : MonoBehaviour
 
         inConversation = true;
 
-        if (talkPromptObject != null)
-            talkPromptObject.SetActive(false);
+        HideInteractionPrompt();
 
         if (indicator != null)
             indicator.Hide();
@@ -417,6 +410,8 @@ public class NPCInteraction : MonoBehaviour
     {
         if (indicator != null)
             indicator.Hide();
+
+        HideInteractionPrompt();
     }
 
 
@@ -478,8 +473,7 @@ public class NPCInteraction : MonoBehaviour
         if (teleportSystem != null)
             teleportSystem.SetActive(true);
 
-        if (talkPromptObject != null)
-            talkPromptObject.SetActive(false);
+        HideInteractionPrompt();
 
         if (indicator != null)
             indicator.Hide();
@@ -489,6 +483,26 @@ public class NPCInteraction : MonoBehaviour
         Debug.Log(
             $"[NPC] Conversation fully completed for {storyNPCType}."
         );
+    }
+
+    private void ShowInteractionPrompt()
+    {
+        if (TutorialPromptUIManager.Instance != null)
+        {
+            TutorialPromptUIManager.Instance.ShowPrompt(
+                "Interact",
+                "Press X to interact.",
+                this
+            );
+        }
+    }
+
+    private void HideInteractionPrompt()
+    {
+        if (TutorialPromptUIManager.Instance != null)
+        {
+            TutorialPromptUIManager.Instance.HidePrompt(this);
+        }
     }
 
     private void NotifyStoryManager()

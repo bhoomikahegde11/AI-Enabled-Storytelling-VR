@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class MenuSceneButton : MonoBehaviour
 {
@@ -18,18 +17,8 @@ public class MenuSceneButton : MonoBehaviour
         }
 
         PlayMenuClick();
-
-        if (GameManager.Instance != null)
-        {
-            Debug.Log($"{nameof(MenuSceneButton)} on '{gameObject.name}' advancing with GameManager scene flow.");
-            GameManager.Instance.LoadNextScene();
-            return;
-        }
-
-        Debug.LogError($"{nameof(MenuSceneButton)} on '{gameObject.name}' could not find GameManager.Instance. Falling back to direct scene load only if sceneName is set.");
-
-        if (!string.IsNullOrWhiteSpace(sceneName))
-            LoadSceneInternal();
+        Debug.Log($"{nameof(MenuSceneButton)} on '{gameObject.name}' advancing with GameManager scene flow.");
+        GameManager.Instance.LoadNextScene();
     }
 
     public void LoadScene()
@@ -52,9 +41,8 @@ public class MenuSceneButton : MonoBehaviour
             return;
         }
 
-        Debug.Log($"{nameof(MenuSceneButton)} on '{gameObject.name}' loading scene '{sceneName}'.");
-
-        SceneManager.LoadScene(sceneName);
+        Debug.Log($"{nameof(MenuSceneButton)} on '{gameObject.name}' requesting GameManager load scene '{sceneName}'.");
+        GameManager.Instance.LoadSceneByName(sceneName);
     }
 
     private void QuitGameInternal()

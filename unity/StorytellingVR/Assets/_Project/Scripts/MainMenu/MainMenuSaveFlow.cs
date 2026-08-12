@@ -1,7 +1,5 @@
-using System.IO;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class MainMenuSaveFlow : MonoBehaviour
@@ -9,8 +7,6 @@ public class MainMenuSaveFlow : MonoBehaviour
     public const string SaveNameKey = "MainMenu.SelectedSaveName";
     public const string CharacterNameKey = "MainMenu.SelectedCharacterName";
     public const string GenderKey = "MainMenu.SelectedGender";
-
-    private const string DefaultGameplaySceneName = "Level1_MainLoopUpdated";
 
     [Header("Panels")]
     [SerializeField] private GameObject mainMenuRoot;
@@ -23,9 +19,6 @@ public class MainMenuSaveFlow : MonoBehaviour
     [SerializeField] private Toggle maleToggle;
     [SerializeField] private Toggle femaleToggle;
     [SerializeField] private TMP_Dropdown genderDropdown;
-
-    [Header("Fallback")]
-    [SerializeField] private string fallbackGameplaySceneName = DefaultGameplaySceneName;
 
     private void Awake()
     {
@@ -54,7 +47,8 @@ public class MainMenuSaveFlow : MonoBehaviour
     {
         PlayMenuClick();
         SaveCurrentFieldValuesToPrefs();
-        StartGameplay();
+        CloseSaveSelect();
+        GameManager.Instance.ContinueJourney();
     }
 
     public void OpenNewSave()
@@ -82,62 +76,8 @@ public class MainMenuSaveFlow : MonoBehaviour
     {
         PlayMenuClick();
         SaveCurrentFieldValuesToPrefs();
-        ClearExistingLevel1SaveForNewJourney();
-        StartGameplay();
-    }
-
-    private void SaveCurrentFieldValuesToPrefs()
-    {
-        string saveName = SanitizeValue(saveNameInput != null ? saveNameInput.text : string.Empty, "Save 1");
-        string characterName = SanitizeValue(characterNameInput != null ? characterNameInput.text : string.Empty, "Merchant");
-        string gender = GetSelectedGender();
-
-        PlayerPrefs.SetString(SaveNameKey, saveName);
-        PlayerPrefs.SetString(CharacterNameKey, characterName);
-        PlayerPrefs.SetString(GenderKey, gender);
-        PlayerPrefs.Save();
-
-        Debug.Log($"[MainMenuSaveFlow] Stored temporary save selection. Save='{saveName}', Character='{characterName}', Gender='{gender}'.");
-    }
-
-    private void PopulateFieldsFromPrefs()
-    {
-        if (saveNameInput != null)
-        {
-            saveNameInput.text = PlayerPrefs.GetString(SaveNameKey, saveNameInput.text);
-        }
-
-        if (characterNameInput != null)
-        {
-            characterNameInput.text = PlayerPrefs.GetString(CharacterNameKey, characterNameInput.text);
-        }
-
-        string savedGender = PlayerPrefs.GetString(GenderKey, string.Empty);
-        if (!string.IsNullOrWhiteSpace(savedGender))
-        {
-            ApplySavedGender(savedGender);
-        }
-    }
-
-    private void StartGameplay()
-    {
         CloseSaveSelect();
-
-        if (GameManager.Instance != null)
-        {
-            Debug.Log("[MainMenuSaveFlow] Starting gameplay through GameManager.LoadNextScene().");
-            GameManager.Instance.LoadNextScene();
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(fallbackGameplaySceneName))
-        {
-            Debug.LogError("[MainMenuSaveFlow] Cannot start gameplay because GameManager is missing and fallbackGameplaySceneName is empty.");
-            return;
-        }
-
-        Debug.LogWarning($"[MainMenuSaveFlow] GameManager.Instance is missing. Falling back to direct scene load '{fallbackGameplaySceneName}'.");
-        SceneManager.LoadScene(fallbackGameplaySceneName);
+        GameManager.Instance.StartNewJourney();
     }
 
     private string GetSelectedGender()
@@ -210,47 +150,36 @@ public class MainMenuSaveFlow : MonoBehaviour
         return string.IsNullOrWhiteSpace(rawValue) ? fallback : rawValue.Trim();
     }
 
-    private void ClearExistingLevel1SaveForNewJourney()
+    private void SaveCurrentFieldValuesToPrefs()
     {
-        bool deletedAny = LocalSaveManager.DeleteActiveProfile();
+        string saveName = SanitizeValue(saveNameInput != null ? saveNameInput.text : string.Empty, "Save 1");
+        string characterName = SanitizeValue(characterNameInput != null ? characterNameInput.text : string.Empty, "Merchant");
+        string gender = GetSelectedGender();
 
-        string legacyPersistentPath = Path.Combine(Application.persistentDataPath, LocalSaveManager.ProfileFileName);
-        deletedAny |= DeleteSaveFileIfPresent(legacyPersistentPath);
+        PlayerPrefs.SetString(SaveNameKey, saveName);
+        PlayerPrefs.SetString(CharacterNameKey, characterName);
+        PlayerPrefs.SetString(GenderKey, gender);
+        PlayerPrefs.Save();
 
-        #if UNITY_EDITOR
-        string editorSavePath = Path.Combine(Application.dataPath, "_Project", "SaveStates", "Level1", LocalSaveManager.ProfileFileName);
-        if (!string.Equals(editorSavePath, legacyPersistentPath, System.StringComparison.OrdinalIgnoreCase))
-        {
-            deletedAny |= DeleteSaveFileIfPresent(editorSavePath);
-        }
-        #endif
-
-        if (deletedAny)
-        {
-            Debug.Log("[MainMenuSaveFlow] Cleared existing Level 1 profile before starting New Journey.");
-        }
-        else
-        {
-            Debug.Log("[MainMenuSaveFlow] No existing Level 1 profile found to clear before starting New Journey.");
-        }
+        Debug.Log($"[MainMenuSaveFlow] Stored temporary save selection. Save='{saveName}', Character='{characterName}', Gender='{gender}'.");
     }
 
-    private static bool DeleteSaveFileIfPresent(string path)
+    private void PopulateFieldsFromPrefs()
     {
-        try
+        if (saveNameInput != null)
         {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-            {
-                return false;
-            }
-
-            File.Delete(path);
-            return true;
+            saveNameInput.text = PlayerPrefs.GetString(SaveNameKey, saveNameInput.text);
         }
-        catch (System.Exception ex)
+
+        if (characterNameInput != null)
         {
-            Debug.LogWarning($"[MainMenuSaveFlow] Failed to delete save file '{path}': {ex.Message}");
-            return false;
+            characterNameInput.text = PlayerPrefs.GetString(CharacterNameKey, characterNameInput.text);
+        }
+
+        string savedGender = PlayerPrefs.GetString(GenderKey, string.Empty);
+        if (!string.IsNullOrWhiteSpace(savedGender))
+        {
+            ApplySavedGender(savedGender);
         }
     }
 

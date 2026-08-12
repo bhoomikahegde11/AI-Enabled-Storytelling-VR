@@ -178,7 +178,7 @@ public class AudioManager : MonoBehaviour
     private IEnumerator MonitorAudioPlayback(float duration)
     {
         Animator animator = GetNPCAnimator();
-        if (animator != null)
+        if (MarketplaceManager.CanDriveAnimator(animator))
         {
             animator.SetBool("isTalking", true);
             Debug.Log("[ANIM] Talking ON");
@@ -202,7 +202,7 @@ public class AudioManager : MonoBehaviour
     private void ResetTalkingParameter()
     {
         Animator animator = GetNPCAnimator();
-        if (animator != null)
+        if (MarketplaceManager.CanDriveAnimator(animator))
         {
             animator.SetBool("isTalking", false);
             Debug.Log("[ANIM] Talking OFF");
@@ -212,9 +212,9 @@ public class AudioManager : MonoBehaviour
     private Animator GetNPCAnimator()
     {
         MarketplaceManager mm = FindFirstObjectByType<MarketplaceManager>();
-        if (mm != null && mm.buyerNPC != null)
+        if (mm != null)
         {
-            return mm.buyerNPC.GetComponent<Animator>() ?? mm.buyerNPC.GetComponentInChildren<Animator>();
+            return mm.GetActiveNpcAnimator();
         }
         return null;
     }

@@ -128,11 +128,18 @@ public class ChatManager : MonoBehaviour
         hasPlayedGreetingForCurrentCustomer = false;
         sessionOutcomeResolved = false;
         pendingFulfillment = null;
+        LocalGeneratedTradeSession preparedLocalSession = null;
+        bool hasPreparedLocalSession = useLocalSessionGeneration &&
+            marketplaceManager != null &&
+            marketplaceManager.TryConsumePreparedLocalSession(out preparedLocalSession);
         if (OrderManager.Instance != null)
         {
             OrderManager.Instance.CancelMarketplaceFulfillment();
         }
-        Level1GameState.Instance.PrepareForNewCustomer();
+        if (!hasPreparedLocalSession)
+        {
+            Level1GameState.Instance.PrepareForNewCustomer();
+        }
         negotiationStateManager.ResetState(0);
         negotiationStateManager.SetExpectedReplyState(ExpectedReplyState.ExpectOfferPrice, "new customer session");
         if (api != null)
@@ -145,11 +152,14 @@ public class ChatManager : MonoBehaviour
 
         if (useLocalSessionGeneration)
         {
-            LocalGeneratedTradeSession localSession = Level1GameState.Instance.GenerateLocalSession();
+            LocalGeneratedTradeSession localSession = hasPreparedLocalSession
+                ? preparedLocalSession
+                : Level1GameState.Instance.GenerateLocalSession();
             negotiationStateManager.ResetState(localSession.startingOffer, localSession.buyerPatience);
             if (marketplaceManager != null)
             {
                 marketplaceManager.BeginNegotiationTimer(localSession.buyerPatience);
+                marketplaceManager.AssignCharacterVisualForSession(localSession, hasPreparedLocalSession ? "conversation-start-safety" : "conversation-start-fallback");
             }
 
             if (api != null)
@@ -160,7 +170,7 @@ public class ChatManager : MonoBehaviour
                 api.currentSpiceQuantity = localSession.quantityLabel;
             }
 
-            string currentCustomerCharacterId = DialogueCharacterRegistry.NormalizeCharacterId(localSession.buyerName);
+            string currentCustomerCharacterId = localSession.characterId;
             bool isRepeatCustomer = !string.IsNullOrWhiteSpace(currentCustomerCharacterId) &&
                 currentCustomerCharacterId == lastCustomerCharacterId;
             string greetingReply = dialogueTableResponseProvider.GetGreeting(
@@ -358,15 +368,7 @@ public void OnVoiceInput(string spokenText)
         Level1DebugForceAccept.LogVerbose($"[THINK] Request Sent: {text}");
 
         // 1. Trigger the thinking behavior if feedbackManager is assigned
-        Animator npcAnim = null;
-        if (marketplaceManager != null && marketplaceManager.buyerNPC != null)
-        {
-            npcAnim = marketplaceManager.buyerNPC.GetComponent<Animator>();
-            if (npcAnim == null)
-            {
-                npcAnim = marketplaceManager.buyerNPC.GetComponentInChildren<Animator>();
-            }
-        }
+        Animator npcAnim = marketplaceManager != null ? marketplaceManager.GetActiveNpcAnimator() : null;
 
         if (feedbackManager != null)
         {
@@ -460,6 +462,17 @@ public void OnVoiceInput(string spokenText)
 
         localGameState.UpdateActiveTradeOffer(brainResult.updatedOffer);
         negotiationStateManager.SetLastOffer(brainResult.updatedOffer);
+        if (trade != null)
+        {
+            trade.lastSpeaker = TradeSpeaker.NPC;
+            trade.lastNpcQuestion = brainResult.replyText;
+            if (trade.npcOfferHistory.Count > 0)
+            {
+                trade.npcOfferHistory[trade.npcOfferHistory.Count - 1].sourceText = brainResult.replyText;
+                trade.npcOfferHistory[trade.npcOfferHistory.Count - 1].wasAccepted = brainResult.isAccepted;
+                trade.npcOfferHistory[trade.npcOfferHistory.Count - 1].wasRejected = brainResult.walkedAway;
+            }
+        }
 
         if (feedbackManager != null)
         {
@@ -741,15 +754,7 @@ public void OnVoiceInput(string spokenText)
         }
 
         // 1. Stop thinking animations
-        Animator npcAnim = null;
-        if (marketplaceManager != null && marketplaceManager.buyerNPC != null)
-        {
-            npcAnim = marketplaceManager.buyerNPC.GetComponent<Animator>();
-            if (npcAnim == null)
-            {
-                npcAnim = marketplaceManager.buyerNPC.GetComponentInChildren<Animator>();
-            }
-        }
+        Animator npcAnim = marketplaceManager != null ? marketplaceManager.GetActiveNpcAnimator() : null;
 
         if (feedbackManager != null)
         {
@@ -763,7 +768,7 @@ public void OnVoiceInput(string spokenText)
             {
                 npcText.text = "The market is too noisy, could you repeat that?";
             }
-            if (npcAnim != null)
+            if (MarketplaceManager.CanDriveAnimator(npcAnim))
             {
                 npcAnim.SetBool("isTalking", false);
                 Debug.Log("[ANIM] Talking OFF");
@@ -876,10 +881,12 @@ public void OnVoiceInput(string spokenText)
         {
             feedbackManager.StopNPCThinking(npcAnim);
         }
-        else if (npcAnim != null)
+        else if (MarketplaceManager.CanDriveAnimator(npcAnim))
         {
             npcAnim.SetBool("isThinking", false);
-            NPCGazeController gaze = npcAnim.GetComponent<NPCGazeController>();
+            NPCGazeController gaze = marketplaceManager != null
+                ? marketplaceManager.GetBuyerNpcGazeController()
+                : npcAnim.GetComponentInParent<NPCGazeController>();
             if (gaze != null)
             {
                 gaze.LookAtPlayer();
@@ -1315,13 +1322,9 @@ public void OnVoiceInput(string spokenText)
         CleanupPendingTtsSubtitleWait();
 
         Animator npcAnim = null;
-        if (marketplaceManager != null && marketplaceManager.buyerNPC != null)
+        if (marketplaceManager != null)
         {
-            npcAnim = marketplaceManager.buyerNPC.GetComponent<Animator>();
-            if (npcAnim == null)
-            {
-                npcAnim = marketplaceManager.buyerNPC.GetComponentInChildren<Animator>();
-            }
+            npcAnim = marketplaceManager.GetActiveNpcAnimator();
         }
 
         if (feedbackManager != null)
