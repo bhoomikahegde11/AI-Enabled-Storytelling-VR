@@ -108,7 +108,7 @@ public class Level1GameState : MonoBehaviour
 {
     private static Level1GameState instance;
     private const float DefaultMarketDayDurationSeconds = 720f;
-    private const float MinimumMarketDayDurationSeconds = 30f;
+    private const float MinimumMarketDayDurationSeconds = 2000f;
     private const float TimerAutosaveIntervalSeconds = 5f;
 
     #if UNITY_EDITOR
