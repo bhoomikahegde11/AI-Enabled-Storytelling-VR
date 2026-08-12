@@ -152,7 +152,7 @@ MonoBehaviour:
   bootstrapSceneName: Bootstrap
   mainMenuSceneName: MainMenu_Optimized
   scenes:
-  - ModernStudyRoom
+  - MainMenu_Optimized
   - Level1_MainLoopUpdated
   fader: {fileID: 1819468858}
   enableDeveloperSceneSkip: 1
