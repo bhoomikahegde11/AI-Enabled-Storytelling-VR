@@ -86,11 +86,11 @@ public class BazaarFeedbackManager : MonoBehaviour
         NPCGazeController gaze = null;
         if (animator != null)
         {
-            gaze = animator.GetComponent<NPCGazeController>();
+            gaze = animator.GetComponentInParent<NPCGazeController>() ?? animator.GetComponent<NPCGazeController>();
         }
 
         // --- IMMEDIATELY: Play Thinking animation once ---
-        if (animator != null)
+        if (MarketplaceManager.CanDriveAnimator(animator))
         {
             animator.SetBool("isThinking", true);
             animator.SetBool("isTalking", false);
@@ -127,7 +127,7 @@ public class BazaarFeedbackManager : MonoBehaviour
             {
                 case 1:
                     // 1. Idle breathing
-                    if (animator != null)
+                    if (MarketplaceManager.CanDriveAnimator(animator))
                     {
                         animator.SetBool("isThinking", false);
                         if (showDebugLogs)
@@ -143,7 +143,7 @@ public class BazaarFeedbackManager : MonoBehaviour
 
                 case 2:
                     // 2. Thinking animation
-                    if (animator != null)
+                    if (MarketplaceManager.CanDriveAnimator(animator))
                     {
                         animator.SetBool("isThinking", true);
                         if (showDebugLogs)
@@ -194,7 +194,7 @@ public class BazaarFeedbackManager : MonoBehaviour
             thinkingCoroutine = null;
         }
 
-        if (npcAnimator != null)
+        if (MarketplaceManager.CanDriveAnimator(npcAnimator))
         {
             npcAnimator.SetBool("isThinking", false);
             if (showDebugLogs)
@@ -203,7 +203,7 @@ public class BazaarFeedbackManager : MonoBehaviour
             }
 
             // Return gaze target to player immediately on response
-            NPCGazeController gazeController = npcAnimator.GetComponent<NPCGazeController>();
+            NPCGazeController gazeController = npcAnimator.GetComponentInParent<NPCGazeController>() ?? npcAnimator.GetComponent<NPCGazeController>();
             if (gazeController != null)
             {
                 gazeController.LookAtPlayer();

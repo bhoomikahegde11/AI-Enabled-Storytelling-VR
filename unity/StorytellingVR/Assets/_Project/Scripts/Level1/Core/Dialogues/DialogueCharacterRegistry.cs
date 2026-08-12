@@ -2,12 +2,17 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+[Serializable]
 public class DialogueCharacterProfile
 {
     public string characterId;
     public string displayName;
     public string buyerOrigin;
     public string buyerPersonality;
+    public GameObject modelPrefab;
+    public Vector3 modelLocalPosition;
+    public Vector3 modelLocalEulerAngles;
+    public Vector3 modelLocalScale = Vector3.one;
 
     public DialogueCharacterProfile(string characterId, string displayName, string buyerOrigin, string buyerPersonality)
     {
@@ -15,6 +20,7 @@ public class DialogueCharacterProfile
         this.displayName = displayName;
         this.buyerOrigin = buyerOrigin;
         this.buyerPersonality = buyerPersonality;
+        modelLocalScale = Vector3.one;
     }
 }
 
@@ -34,15 +40,7 @@ public class DialogueCharacterRegistry
         CharacterDialogueSet siddharthChetti = SiddharthChettiDialogue.Create();
         CharacterDialogueSet fatherPenteado = FatherPenteadoDialogue.Create();
 
-        supportedProfiles = new List<DialogueCharacterProfile>
-        {
-            new DialogueCharacterProfile("abdul_rahman", "Abdul Rahman", "Arab Caravan Trader", "Friendly"),
-            new DialogueCharacterProfile("francisco_de_almeida", "Francisco de Almeida", "Portuguese Trade Agent", "Strict"),
-            new DialogueCharacterProfile("lakshmi_amma", "Lakshmi Amma", "Local Household Buyer", "Friendly"),
-            new DialogueCharacterProfile("chinnamma_naik", "Chinnamma Naik", "Vijayanagara Wholesale Spice Buyer", "Strict"),
-            new DialogueCharacterProfile("saraswati_chetti", "Saraswati Chetti", "Local Vijayanagara Retail Shop Owner", "Friendly"),
-            new DialogueCharacterProfile("father_penteado", "Father Penteado", "Jesuit Missionary", "Normal")
-        };
+        supportedProfiles = CreateDefaultProfiles();
 
         GenericSet = new CharacterDialogueSet(
             "generic",
@@ -98,6 +96,19 @@ public class DialogueCharacterRegistry
         }
 
         return GetRandomRegisteredCharacter();
+    }
+
+    public static List<DialogueCharacterProfile> CreateDefaultProfiles()
+    {
+        return new List<DialogueCharacterProfile>
+        {
+            new DialogueCharacterProfile("abdul_rahman", "Abdul Rahman", "Arab Caravan Trader", "Friendly"),
+            new DialogueCharacterProfile("francisco_de_almeida", "Francisco de Almeida", "Portuguese Trade Agent", "Strict"),
+            new DialogueCharacterProfile("lakshmi_amma", "Lakshmi Amma", "Local Household Buyer", "Friendly"),
+            new DialogueCharacterProfile("chinnamma_naik", "Chinnamma Naik", "Vijayanagara Wholesale Spice Buyer", "Strict"),
+            new DialogueCharacterProfile("saraswati_chetti", "Saraswati Chetti", "Local Vijayanagara Retail Shop Owner", "Friendly"),
+            new DialogueCharacterProfile("father_penteado", "Father Penteado", "Jesuit Missionary", "Normal")
+        };
     }
 
     // Add new customer characters by creating a CharacterDialogueSet and registering it in DialogueCharacterRegistry.

@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class LocalGeneratedTradeSession
 {
+    public int runtimeSessionId;
+    public string characterId;
     public string greetingText;
     public string buyerName;
     public string buyerOrigin;
@@ -67,6 +69,7 @@ public class LocalTradeSessionGenerator
 
         return new LocalGeneratedTradeSession
         {
+            characterId = selectedCharacter != null ? selectedCharacter.characterId : "abdul_rahman",
             buyerName = buyerName,
             buyerOrigin = buyerOrigin,
             buyerPersonality = buyerPersonality,
