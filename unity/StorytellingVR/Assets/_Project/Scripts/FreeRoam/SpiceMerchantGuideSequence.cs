@@ -271,10 +271,16 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
     }
 
     private IEnumerator Say(
-        string speaker,
-        string text,
-        float duration = -1f)
+    string speaker,
+    string text,
+    float duration = -1f)
     {
+        // Only animate when the MERCHANT is speaking
+        if (speaker == merchantName)
+        {
+            SetTalking(true);
+        }
+
         if (NarratorUIManager.Instance != null)
         {
             yield return NarratorUIManager.Instance.PlayNarration(
@@ -291,6 +297,12 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         if (lineGap > 0f)
         {
             yield return new WaitForSecondsRealtime(lineGap);
+        }
+
+        // Return to idle after merchant finishes speaking
+        if (speaker == merchantName)
+        {
+            SetTalking(false);
         }
     }
 

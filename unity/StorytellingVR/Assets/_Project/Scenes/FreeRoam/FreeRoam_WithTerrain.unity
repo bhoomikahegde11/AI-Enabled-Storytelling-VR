@@ -27818,7 +27818,7 @@ PrefabInstance:
       objectReference: {fileID: 9100000, guid: a4b97c2f70e8b2b4480a7e5e98fbc340, type: 2}
     - target: {fileID: 5866666021909216657, guid: 6128c3269ff777b4aa708f5a8c96597d, type: 3}
       propertyPath: m_ApplyRootMotion
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -52442,6 +52442,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1901164402}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!95 &1241709723 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: 6128c3269ff777b4aa708f5a8c96597d, type: 3}
+  m_PrefabInstance: {fileID: 645281000}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1242450178
 GameObject:
   m_ObjectHideFlags: 0
@@ -81255,7 +81260,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ec1c244eb5d64c1b84c4a3ff3533cad5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpiceMerchantGuideSequence
-  merchant: {fileID: 0}
+  merchant: {fileID: 645281001}
   merchantObjectName: SpiceMerchantGuide
   stallDestination: {fileID: 1059929817}
   guideStopSpot: {fileID: 5450654367833230035}
@@ -81268,11 +81273,11 @@ MonoBehaviour:
   hotspotClearanceDistance: 1.6
   turnSpeed: 8
   maxWalkTime: 20
-  merchantAnimator: {fileID: 0}
+  merchantAnimator: {fileID: 1241709723}
   freezeAnimatorUntilMovement: 1
   disableAnimatorRootMotion: 1
   walkingBool: isWalking
-  talkingBool: isTalking
+  talkingBool: IsTalking
   walkingStateName: Walk
   idleStateName: 
   talkingTrigger: 
