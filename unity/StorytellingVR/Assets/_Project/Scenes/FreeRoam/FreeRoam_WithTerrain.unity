@@ -25656,6 +25656,7 @@ MonoBehaviour:
   meeraSequenceController: {fileID: 1470283460}
   subtitlePositionController: {fileID: 0}
   nextNPCsToUnlock: []
+  npcAnimator: {fileID: 0}
 --- !u!65 &565354012
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -27016,6 +27017,7 @@ MonoBehaviour:
   meeraSequenceController: {fileID: 0}
   subtitlePositionController: {fileID: 0}
   nextNPCsToUnlock: []
+  npcAnimator: {fileID: 1604532262}
 --- !u!1001 &612162039
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -45216,6 +45218,7 @@ MonoBehaviour:
   meeraSequenceController: {fileID: 0}
   subtitlePositionController: {fileID: 0}
   nextNPCsToUnlock: []
+  npcAnimator: {fileID: 0}
 --- !u!1 &968706905
 GameObject:
   m_ObjectHideFlags: 0
@@ -47081,6 +47084,18 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 6a587319573ca0b42958624114481396, type: 3}
       propertyPath: m_Name
       value: LocalNPC Model
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: 6a587319573ca0b42958624114481396, type: 3}
+      propertyPath: m_Avatar
+      value: 
+      objectReference: {fileID: 9000000, guid: 6a587319573ca0b42958624114481396, type: 3}
+    - target: {fileID: 5866666021909216657, guid: 6a587319573ca0b42958624114481396, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 38d6352f83232074b865b6f40f38b9bd, type: 2}
+    - target: {fileID: 5866666021909216657, guid: 6a587319573ca0b42958624114481396, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8111781155169087978, guid: 6a587319573ca0b42958624114481396, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -65545,6 +65560,11 @@ Transform:
   - {fileID: 831792694}
   m_Father: {fileID: 576247535}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!95 &1604532262 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: 6a587319573ca0b42958624114481396, type: 3}
+  m_PrefabInstance: {fileID: 1024022621}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &1605379659 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: f49dce2e54c484a49b0ee3dedc732f95, type: 3}
@@ -73607,6 +73627,7 @@ MonoBehaviour:
   subtitlePositionController: {fileID: 0}
   nextNPCsToUnlock:
   - {fileID: 0}
+  npcAnimator: {fileID: 0}
 --- !u!65 &1891705897
 BoxCollider:
   m_ObjectHideFlags: 0

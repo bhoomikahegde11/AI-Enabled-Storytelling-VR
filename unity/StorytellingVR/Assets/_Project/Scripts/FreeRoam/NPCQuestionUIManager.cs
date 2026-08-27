@@ -206,11 +206,13 @@ public class NPCQuestionUIManager : MonoBehaviour
 
         if (NarratorUIManager.Instance != null)
         {
+            npcAtStart.StartTalking();
             yield return NarratorUIManager.Instance
                 .PlayNarrationLineByLine(
                     dialogueAtStart.npcName,
                     question.response
                 );
+            npcAtStart.StopTalking();
         }
         else
         {

@@ -66,6 +66,9 @@ public class NPCInteraction : MonoBehaviour
 
     private Coroutine conversationRoutine;
 
+    [Header("Animation")]
+    [SerializeField]
+    private Animator npcAnimator;
     private void Start()
     {
         interactionUnlocked = availableOnStart;
@@ -202,6 +205,7 @@ public class NPCInteraction : MonoBehaviour
 
     private IEnumerator ConversationFlowRoutine()
     {
+        StartTalking();
         yield return NarratorUIManager.Instance
             .PlayNarrationLineByLine(
                 dialogue.npcName,
@@ -209,7 +213,7 @@ public class NPCInteraction : MonoBehaviour
             );
 
         conversationRoutine = null;
-
+        StopTalking();
         if (!inConversation)
             yield break;
 
@@ -441,11 +445,13 @@ public class NPCInteraction : MonoBehaviour
 
         if (!string.IsNullOrWhiteSpace(dialogue.closingDialogue))
         {
+            StartTalking();
             yield return NarratorUIManager.Instance
                 .PlayNarrationLineByLine(
                     dialogue.npcName,
                     dialogue.closingDialogue
                 );
+            StopTalking();
         }
 
         CompleteConversation();
@@ -463,6 +469,7 @@ public class NPCInteraction : MonoBehaviour
 
     private void CompleteConversation()
     {
+        StopTalking();
         inConversation = false;
         conversationCompleted = true;
         closingDialoguePlaying = false;
@@ -594,5 +601,42 @@ public class NPCInteraction : MonoBehaviour
     {
         if (TeleportManager.Instance != null)
             TeleportManager.Instance.EnableGroup("General");
+    }
+    public void StartTalking()
+    {
+        Debug.Log($"[NPC ANIMATION] START TALKING called on {gameObject.name}");
+
+        if (npcAnimator == null)
+        {
+            Debug.LogError($"[NPC ANIMATION] {gameObject.name}: npcAnimator is NULL!");
+            return;
+        }
+
+        Debug.Log(
+            $"[NPC ANIMATION] Setting IsTalking TRUE on Animator: {npcAnimator.gameObject.name}"
+        );
+
+        npcAnimator.SetBool("IsTalking", true);
+
+        Debug.Log(
+            $"[NPC ANIMATION] IsTalking is now: {npcAnimator.GetBool("IsTalking")}"
+        );
+    }
+
+    public void StopTalking()
+    {
+        Debug.Log($"[NPC ANIMATION] STOP TALKING called on {gameObject.name}");
+
+        if (npcAnimator == null)
+        {
+            Debug.LogError($"[NPC ANIMATION] {gameObject.name}: npcAnimator is NULL!");
+            return;
+        }
+
+        npcAnimator.SetBool("IsTalking", false);
+
+        Debug.Log(
+            $"[NPC ANIMATION] IsTalking is now: {npcAnimator.GetBool("IsTalking")}"
+        );
     }
 }
