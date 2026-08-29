@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class TutorialPromptUIManager : MonoBehaviour
 {
@@ -10,7 +11,10 @@ public class TutorialPromptUIManager : MonoBehaviour
     public TMP_Text promptTitleText;
     public TMP_Text promptBodyText;
 
-    private object currentOwner = null;
+    [Header("Icons")]
+    [SerializeField] private Image promptIcon;
+    [SerializeField] private Sprite leftJoystickSprite;
+    [SerializeField] private Sprite rightTriggerSprite;
 
     private void Awake()
     {
@@ -36,7 +40,35 @@ public class TutorialPromptUIManager : MonoBehaviour
             promptBodyText.text = body;
     }
 
-    public void HidePrompt(object owner = null)
+    public void ShowLeftJoystickPrompt(string title, string body)
+    {
+        promptCanvas.SetActive(true);
+
+        promptTitleText.text = title;
+        promptBodyText.text = body;
+
+        if (promptIcon != null && leftJoystickSprite != null)
+        {
+            promptIcon.sprite = leftJoystickSprite;
+            promptIcon.gameObject.SetActive(true);
+        }
+    }
+
+    public void ShowRightTriggerPrompt(string title, string body)
+    {
+        promptCanvas.SetActive(true);
+
+        promptTitleText.text = title;
+        promptBodyText.text = body;
+
+        if (promptIcon != null && rightTriggerSprite != null)
+        {
+            promptIcon.sprite = rightTriggerSprite;
+            promptIcon.gameObject.SetActive(true);
+        }
+    }
+
+    public void HidePrompt()
     {
         if (owner != null && currentOwner != null && currentOwner != owner)
             return;
