@@ -153,6 +153,12 @@ MonoBehaviour:
   mainMenuSceneName: MainMenu_Optimized
   scenes:
   - MainMenu_Optimized
+  - ModernStudyRoom
+  - FreeRoam_WIthTerrain
+  - NewSpiceScene
+  - NewTransactionTutorial
+  - NewCoinScene
+  - SpicesInteraction
   - Level1_MainLoopUpdated
   fader: {fileID: 1819468858}
   enableDeveloperSceneSkip: 1
