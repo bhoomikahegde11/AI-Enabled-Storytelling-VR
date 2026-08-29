@@ -20,6 +20,10 @@ public class NarratorUIManager : MonoBehaviour
     public TMP_Text speakerText;
     public TMP_Text subtitleText;
 
+    [Header("Voice")]
+    [SerializeField] DialogueVoiceDatabase voiceDatabase;
+    [SerializeField] AudioSource dialogueVoiceSource;
+
     [Header("Continue Input")]
     public ContinueInputType continueInput =
         ContinueInputType.RightTrigger;
@@ -87,7 +91,20 @@ public class NarratorUIManager : MonoBehaviour
         StopCurrentRoutine();
 
         currentRoutine = StartCoroutine(
-            NarrationRoutine(speaker, subtitle)
+            NarrationRoutine(speaker, subtitle, null)
+        );
+    }
+
+    public void ShowNarration(
+        string lineId,
+        string speaker,
+        string subtitle,
+        float duration = -1f)
+    {
+        StopCurrentRoutine();
+
+        currentRoutine = StartCoroutine(
+            NarrationRoutine(speaker, subtitle, lineId)
         );
     }
 
@@ -103,7 +120,24 @@ public class NarratorUIManager : MonoBehaviour
         StopCurrentRoutine();
 
         currentRoutine = StartCoroutine(
-            NarrationRoutine(speaker, subtitle)
+            NarrationRoutine(speaker, subtitle, null)
+        );
+
+        yield return currentRoutine;
+
+        currentRoutine = null;
+    }
+
+    public IEnumerator PlayNarration(
+        string lineId,
+        string speaker,
+        string subtitle,
+        float duration = -1f)
+    {
+        StopCurrentRoutine();
+
+        currentRoutine = StartCoroutine(
+            NarrationRoutine(speaker, subtitle, lineId)
         );
 
         yield return currentRoutine;
@@ -122,7 +156,23 @@ public class NarratorUIManager : MonoBehaviour
         StopCurrentRoutine();
 
         currentRoutine = StartCoroutine(
-            NarrationRoutine(speaker, fullText)
+            NarrationRoutine(speaker, fullText, null)
+        );
+
+        yield return currentRoutine;
+
+        currentRoutine = null;
+    }
+
+    public IEnumerator PlayNarrationLineByLine(
+        string lineId,
+        string speaker,
+        string fullText)
+    {
+        StopCurrentRoutine();
+
+        currentRoutine = StartCoroutine(
+            NarrationRoutine(speaker, fullText, lineId)
         );
 
         yield return currentRoutine;
@@ -132,7 +182,8 @@ public class NarratorUIManager : MonoBehaviour
 
     private IEnumerator NarrationRoutine(
         string speaker,
-        string fullText)
+        string fullText,
+        string lineId)
     {
         if (string.IsNullOrWhiteSpace(fullText))
             yield break;
@@ -141,6 +192,30 @@ public class NarratorUIManager : MonoBehaviour
 
         if (speakerText != null)
             speakerText.text = speaker;
+
+        Debug.Log($"[VOICE] Request lineId={(string.IsNullOrEmpty(lineId) ? "NULL" : lineId)}");
+        Debug.Log($"[VOICE] Database assigned={(voiceDatabase != null)}");
+        Debug.Log($"[VOICE] AudioSource assigned={(dialogueVoiceSource != null)}");
+
+        StopCurrentVoice();
+        if (!string.IsNullOrEmpty(lineId) && voiceDatabase != null && dialogueVoiceSource != null)
+        {
+            AudioClip clip = voiceDatabase.GetAudioClip(lineId);
+            Debug.Log($"[VOICE] Lookup success={(clip != null)}");
+            if (clip != null)
+            {
+                Debug.Log($"[VOICE] Clip={clip.name}");
+                dialogueVoiceSource.clip = clip;
+                Debug.Log($"[VOICE] AudioSource active={dialogueVoiceSource.gameObject.activeInHierarchy} enabled={dialogueVoiceSource.enabled} volume={dialogueVoiceSource.volume}");
+                Debug.Log("[VOICE] Calling Play");
+                dialogueVoiceSource.Play();
+                Debug.Log($"[VOICE] isPlaying after Play={dialogueVoiceSource.isPlaying}");
+            }
+            else
+            {
+                Debug.LogWarning($"[NarratorUIManager] Missing audio clip for lineId: {lineId}");
+            }
+        }
 
         string[] lines = fullText.Split(
             new[] { "\r\n", "\r", "\n" },
@@ -291,6 +366,7 @@ public class NarratorUIManager : MonoBehaviour
 
             if (waitForManualContinue && freshPress)
             {
+                StopCurrentVoice();
                 advanceLine = true;
 
                 if (isShowingContinueTutorial)
@@ -363,13 +439,24 @@ public class NarratorUIManager : MonoBehaviour
 
     public void HideNarrator()
     {
+        StopCurrentVoice();
         if (narratorCanvas != null)
             narratorCanvas.SetActive(false);
+    }
+
+    public void StopCurrentVoice()
+    {
+        Debug.Log($"[VOICE] StopCurrentVoice called. Source assigned={(dialogueVoiceSource != null)}, isPlaying={(dialogueVoiceSource != null && dialogueVoiceSource.isPlaying)}");
+        if (dialogueVoiceSource != null && dialogueVoiceSource.isPlaying)
+        {
+            dialogueVoiceSource.Stop();
+        }
     }
 
     private void StopCurrentRoutine()
     {
         HideContinueTutorialPrompt();
+        StopCurrentVoice();
 
         if (currentRoutine != null)
         {

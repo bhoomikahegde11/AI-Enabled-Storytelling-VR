@@ -17,6 +17,7 @@ public class FreeRoamIntroFlow : MonoBehaviour
 
         // Yield on the first narration coroutine
         yield return StartCoroutine(NarratorUIManager.Instance.PlayNarration(
+            "NARRATOR_FREEROAM_INTRO_01",
             "Narrator",
             "Welcome to Hampi Bazaar. Take a moment to observe the people around you.",
             5f
@@ -26,6 +27,7 @@ public class FreeRoamIntroFlow : MonoBehaviour
 
         // Yield on the second narration coroutine
         yield return StartCoroutine(NarratorUIManager.Instance.PlayNarration(
+            "NARRATOR_FREEROAM_INTRO_02",
             "Narrator",
             "This marketplace is alive with merchants, travelers, craftsmen, and pilgrims. For many here, this is simply another ordinary morning.",
             7f

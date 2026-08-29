@@ -209,6 +209,7 @@ public class NPCQuestionUIManager : MonoBehaviour
             npcAtStart.StartTalking();
             yield return NarratorUIManager.Instance
                 .PlayNarrationLineByLine(
+                    question.answerVoiceLineId,
                     dialogueAtStart.npcName,
                     question.response
                 );
@@ -238,11 +239,13 @@ public class NPCQuestionUIManager : MonoBehaviour
                 );
 
                 yield return NarratorUIManager.Instance.PlayNarrationLineByLine(
+                    "NARRATOR_NOTEBOOK_REMAIN_01",
                     "Narrator",
                     "For now, the notebook would have to remain where it was."
                 );
 
                 yield return NarratorUIManager.Instance.PlayNarrationLineByLine(
+                    "MEERA_NO_MONEY_RESPONSE_01",
                     "Meera",
                     "Then come back when you have the money."
                 );

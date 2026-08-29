@@ -208,6 +208,7 @@ public class NPCInteraction : MonoBehaviour
         StartTalking();
         yield return NarratorUIManager.Instance
             .PlayNarrationLineByLine(
+                dialogue.openingDialogueLineId,
                 dialogue.npcName,
                 dialogue.openingDialogue
             );
@@ -448,6 +449,7 @@ public class NPCInteraction : MonoBehaviour
             StartTalking();
             yield return NarratorUIManager.Instance
                 .PlayNarrationLineByLine(
+                    dialogue.closingDialogueLineId,
                     dialogue.npcName,
                     dialogue.closingDialogue
                 );

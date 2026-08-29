@@ -266,6 +266,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
                 .InspectableItemType.LampOrVase:
 
                 yield return PlayNormalItemSequence(
+                    "MEERA_LAMP_01",
                     "This was made by craftsmen from a settlement " +
                     "near the kingdom. Objects like this are used " +
                     "both in homes and during ceremonies."
@@ -283,6 +284,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
                 SetCompassLight(true);
 
                 yield return PlayNormalItemSequence(
+                    "MEERA_COMPASS_01",
                     "A foreign trader brought this through the western " +
                     "ports. Its material and decoration are unlike the " +
                     "objects made by our local craftsmen."
@@ -339,6 +341,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
     }
 
     private IEnumerator PlayNormalItemSequence(
+        string lineId,
         string meeraLine
     )
     {
@@ -350,6 +353,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         if (narrator != null)
         {
             yield return narrator.PlayNarration(
+                lineId,
                 "Meera",
                 meeraLine
             );
@@ -414,6 +418,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         Debug.Log($"[MEERA] {meeraLine}");
 
         yield return narrator.PlayNarration(
+            "MEERA_NOTEBOOK_01",
             "Meera",
             meeraLine
         );
@@ -427,6 +432,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         );
 
         yield return narrator.PlayNarration(
+            "NARRATOR_NOTEBOOK_01",
             "Narrator",
             narratorLine
         );
@@ -630,6 +636,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         if (narrator != null)
         {
             yield return narrator.PlayNarration(
+                "MEERA_BUY_PROMPT_01",
                 "Meera",
                 buyPrompt
             );

@@ -180,6 +180,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
 
         // Merchant introduces himself
         yield return Say(
+            "BHASKARA_GREETING_01",
             merchantName,
             greetingLine,
             greetingDuration
@@ -187,6 +188,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
 
         // Player asks for work
         yield return Say(
+            null,
             "You",
             playerLine,
             playerLineDuration
@@ -194,6 +196,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
 
         // Merchant offers work
         yield return Say(
+            "BHASKARA_WORK_EXPLANATION_01",
             merchantName,
             merchantReplyLine,
             replyDuration
@@ -202,6 +205,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         // Merchant signals player to follow
 
         yield return Say(
+            "BHASKARA_FOLLOW_ME_01",
             merchantName,
             followLine
         );
@@ -262,6 +266,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         System.Action onDialogueFinished)
     {
         yield return Say(
+            "BHASKARA_STALL_ARRIVAL_01",
             merchantName,
             stallArrivalLine,
             stallArrivalLineDuration
@@ -271,6 +276,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
     }
 
     private IEnumerator Say(
+    string lineId,
     string speaker,
     string text,
     float duration = -1f)
@@ -284,8 +290,10 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         if (NarratorUIManager.Instance != null)
         {
             yield return NarratorUIManager.Instance.PlayNarration(
+                lineId,
                 speaker,
-                text
+                text,
+                duration
             );
         }
         else

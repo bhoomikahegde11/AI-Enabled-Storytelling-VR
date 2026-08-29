@@ -139,6 +139,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         objectiveUI?.SetObjective("Listen");
 
         yield return PlayNarration(
+            "NARRATOR_FREEROAM_INTRO_01",
             "Narrator",
             "Welcome to Hampi Bazaar. Take a moment to observe the people around you.",
             5f
@@ -147,6 +148,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         yield return new WaitForSecondsRealtime(0.5f);
 
         yield return PlayNarration(
+            "NARRATOR_FREEROAM_INTRO_02",
             "Narrator",
             "This marketplace is alive with merchants, travelers, craftsmen, and pilgrims. For many here, this is simply another ordinary morning.",
             7f
@@ -197,6 +199,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         );
 
         yield return PlayNarration(
+            "NARRATOR_SPEAK_LOCAL_01",
             "Narrator",
             "Good. Now that you can move through the bazaar, speak with someone nearby. A local resident may help you understand this place.",
             6f
@@ -234,6 +237,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         );
 
         yield return PlayNarration(
+            "NARRATOR_SPEAK_FOREIGNER_01",
             "Narrator",
             "Hampi draws people from far beyond the empire. Speak with the traveler nearby and learn how far these trade routes reach.",
             6f
@@ -279,6 +283,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         // Meera calls from somewhere nearby.
         // Her identity remains hidden for now.
         yield return PlayNarration(
+            "MEERA_STALL_CALL_01",
             "???",
             "Curiosities from near and far! Fine trinkets, rare keepsakes—come, take a look!",
             5f
@@ -288,6 +293,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         yield return new WaitForSecondsRealtime(0.6f);
 
         yield return PlayNarration(
+            "NARRATOR_INTERESTING_STALL_01",
             "Narrator",
             "That sounds like an interesting stall. Perhaps it is worth taking a closer look.",
             6f
@@ -442,6 +448,7 @@ public class FreeRoamStoryManager : MonoBehaviour
 
         Debug.Log("[FIND WORK] Starting narrator transition.");
         yield return PlayNarration(
+            "NARRATOR_FIND_WORK_01",
             "Narrator",
             "Without coin, the answers you seek remain beyond reach. But a city this busy always has work for someone willing to earn their place.",
             7f
@@ -552,6 +559,28 @@ public class FreeRoamStoryManager : MonoBehaviour
         Debug.Log("[FREE ROAM STORY] Transition = FALSE");
 
         activeSequence = null;
+    }
+
+    private IEnumerator PlayNarration(
+        string lineId,
+        string speaker,
+        string line,
+        float duration)
+    {
+        if (narrator != null)
+        {
+            yield return narrator.PlayNarration(
+                lineId,
+                speaker,
+                line,
+                duration
+            );
+        }
+        else
+        {
+            Debug.Log($"[{speaker}] {line}");
+            yield return new WaitForSecondsRealtime(duration);
+        }
     }
 
     private IEnumerator PlayNarration(

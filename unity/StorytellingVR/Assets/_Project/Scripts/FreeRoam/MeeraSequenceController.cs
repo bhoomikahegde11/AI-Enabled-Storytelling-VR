@@ -153,6 +153,7 @@ public class MeeraSequenceController : MonoBehaviour
         if (narrator != null)
         {
             yield return narrator.PlayNarration(
+                "MEERA_GREETING_01",
                 speakerName,
                 greetingLine
             );
@@ -162,6 +163,7 @@ public class MeeraSequenceController : MonoBehaviour
             );
 
             yield return narrator.PlayNarration(
+                "MEERA_INSPECTION_INVITATION_01",
                 speakerName,
                 inspectionInvitation
             );
