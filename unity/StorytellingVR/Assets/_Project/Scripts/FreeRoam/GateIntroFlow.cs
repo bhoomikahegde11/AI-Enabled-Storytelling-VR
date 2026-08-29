@@ -8,12 +8,14 @@ public class GateIntroFlow : MonoBehaviour
 
     [Header("Look Around Tutorial")]
     [SerializeField] private string lookAroundTitle = "Prompt";
+
     [SerializeField]
     private string lookAroundBody =
         "Use the Left Joystick to look at your surroundings.";
 
     [Header("Continue Tutorial")]
     [SerializeField] private string continueTitle = "Prompt";
+
     [SerializeField]
     private string continueBody =
         "Press the Right Trigger to continue.";
@@ -23,6 +25,7 @@ public class GateIntroFlow : MonoBehaviour
 
     [Header("Narration")]
     [SerializeField] private string narratorName = "Narrator (V.O.)";
+
     [SerializeField]
     private string narratorLine =
         "You seem to be lost, traveler. Let me be your guide. Welcome to Hampi, the roaring heart of the Vijayanagara Empire.";
@@ -35,37 +38,49 @@ public class GateIntroFlow : MonoBehaviour
     [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
 
-    private bool canContinue = false;
-    private bool triggerWasReleased = true;
+    private bool canContinue;
+    private bool triggerReleased = true;
 
     private IEnumerator Start()
     {
-        // Initial delay
+        // Wait when the scene starts
         yield return new WaitForSecondsRealtime(startupDelay);
 
-        // Objective
+        // Set objective
         if (ObjectiveUIManager.Instance != null)
         {
-            ObjectiveUIManager.Instance.SetObjective(objectiveText);
+            ObjectiveUIManager.Instance.SetObjective(
+                objectiveText
+            );
         }
 
-        // Show LEFT JOYSTICK tutorial
+        // ---------------------------------------------
+        // SHOW LEFT JOYSTICK PROMPT
+        // ---------------------------------------------
+
         if (TutorialPromptUIManager.Instance != null)
         {
             TutorialPromptUIManager.Instance.ShowLeftJoystickPrompt(
                 lookAroundTitle,
-                lookAroundBody
+                lookAroundBody,
+                this
             );
         }
 
-        // Start narration audio
+        // ---------------------------------------------
+        // PLAY AUDIO
+        // ---------------------------------------------
+
         if (audioSource != null && narratorAudio != null)
         {
             audioSource.clip = narratorAudio;
             audioSource.Play();
         }
 
-        // Start narration subtitle
+        // ---------------------------------------------
+        // SHOW SUBTITLE
+        // ---------------------------------------------
+
         if (NarratorUIManager.Instance != null)
         {
             yield return NarratorUIManager.Instance.PlayNarration(
@@ -74,25 +89,40 @@ public class GateIntroFlow : MonoBehaviour
             );
         }
 
-        // Make sure audio has finished
-        if (audioSource != null && audioSource.isPlaying)
+        // Make sure the actual audio has finished.
+        if (audioSource != null &&
+            audioSource.isPlaying)
         {
-            yield return new WaitWhile(() => audioSource.isPlaying);
+            yield return new WaitWhile(
+                () => audioSource.isPlaying
+            );
         }
 
-        // Wait a few seconds after narration
-        yield return new WaitForSecondsRealtime(continuePromptDelay);
+        // ---------------------------------------------
+        // WAIT A LITTLE AFTER AUDIO
+        // ---------------------------------------------
 
-        // Change tutorial to RIGHT TRIGGER
+        yield return new WaitForSecondsRealtime(
+            continuePromptDelay
+        );
+
+        // ---------------------------------------------
+        // CHANGE LEFT JOYSTICK → RIGHT TRIGGER
+        // ---------------------------------------------
+
         if (TutorialPromptUIManager.Instance != null)
         {
             TutorialPromptUIManager.Instance.ShowRightTriggerPrompt(
                 continueTitle,
-                continueBody
+                continueBody,
+                this
             );
         }
 
         canContinue = true;
+
+        // If trigger is currently held, wait for release first.
+        triggerReleased = !IsRightTriggerPressed();
     }
 
     private void Update()
@@ -100,24 +130,24 @@ public class GateIntroFlow : MonoBehaviour
         if (!canContinue)
             return;
 
-        bool triggerPressed = IsRightTriggerPressed();
+        bool pressed = IsRightTriggerPressed();
 
-        // Require the player to release the trigger first.
-        if (!triggerPressed)
+        // Player must release the trigger first.
+        if (!pressed)
         {
-            triggerWasReleased = true;
+            triggerReleased = true;
             return;
         }
 
-        // New right-trigger press
-        if (triggerWasReleased)
+        // New trigger press
+        if (triggerReleased)
         {
-            triggerWasReleased = false;
+            triggerReleased = false;
             canContinue = false;
 
             if (TutorialPromptUIManager.Instance != null)
             {
-                TutorialPromptUIManager.Instance.HidePrompt();
+                TutorialPromptUIManager.Instance.HidePrompt(this);
             }
 
             if (GameManager.Instance != null)
@@ -132,14 +162,12 @@ public class GateIntroFlow : MonoBehaviour
         InputDevice rightHand =
             InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
 
-        if (rightHand.isValid &&
-            rightHand.TryGetFeatureValue(
-                CommonUsages.triggerButton,
-                out bool pressed))
-        {
-            return pressed;
-        }
+        if (!rightHand.isValid)
+            return false;
 
-        return false;
+        return rightHand.TryGetFeatureValue(
+            CommonUsages.triggerButton,
+            out bool pressed
+        ) && pressed;
     }
 }
