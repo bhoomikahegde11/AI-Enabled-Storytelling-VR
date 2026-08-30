@@ -49,9 +49,8 @@ public class SpiceGuideTutorialPrompt : MonoBehaviour
         if (promptText != null)
         {
             promptText.text =
-                "NEW REFERENCE TOOL\n\n" +
-                "Hold X to open the Spice Cost Guide.\n\n" +
-                "Release X after checking the prices.";
+                "Cost Prices\n\n" +
+                "Press X during a trade to view the cost price list.";
         }
 
         yield return FadeCanvas(promptCanvas, 1f, 0.4f);

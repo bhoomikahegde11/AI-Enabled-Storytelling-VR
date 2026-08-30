@@ -39,6 +39,12 @@ public class GameManager : MonoBehaviour
 
     [Header("Skip")]
     private bool yButtonHeld;
+    private bool skipSuppressed = false;
+
+    public void SuppressSkip(bool suppress)
+    {
+        skipSuppressed = suppress;
+    }
 
     [Header("Developer Testing")]
     [SerializeField] private bool enableDeveloperSceneSkip = true;
@@ -117,7 +123,7 @@ public class GameManager : MonoBehaviour
         bool yPressed = false;
         leftHand.TryGetFeatureValue(CommonUsages.secondaryButton, out yPressed);
 
-        if (yPressed && !yButtonHeld)
+        if (!skipSuppressed && yPressed && !yButtonHeld)
         {
             yButtonHeld = true;
             Debug.Log("[SCENE FLOW] Skip triggered");
@@ -129,7 +135,7 @@ public class GameManager : MonoBehaviour
             yButtonHeld = false;
         }
 
-        if (ShouldHandleDeveloperSceneSkip() && Input.GetKeyDown(developerSkipKey))
+        if (!skipSuppressed && ShouldHandleDeveloperSceneSkip() && Input.GetKeyDown(developerSkipKey))
         {
             TryDeveloperSkipCurrentScene();
         }

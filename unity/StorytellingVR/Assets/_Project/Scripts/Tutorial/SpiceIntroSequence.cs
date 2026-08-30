@@ -6,8 +6,8 @@ using UnityEngine.Rendering.Universal;
 
 public class SpiceIntroSequence : MonoBehaviour
 {
-    private const string IntroLineId = "NARRATOR_SPICE_INTRO_WELCOME_01";
-    private const string EndingLineId = "NARRATOR_SPICE_INTRO_REMEMBER_01";
+    private const string IntroLineId = "BHASKARA_SPICE_INTRO_WELCOME_01";
+    private const string EndingLineId = "BHASKARA_SPICE_INTRO_REMEMBER_01";
 
     [System.Serializable]
     public class SpiceStep
@@ -82,7 +82,7 @@ public class SpiceIntroSequence : MonoBehaviour
         yield return FadeCanvas(subtitleCanvas, 1f, 0.5f);
 
         yield return ShowSubtitle(
-            "Welcome to your spice stall in the Hampi Bazaar. Traders from distant lands come here seeking valuable goods, but your success depends on knowing your costs.",
+            "Before you begin trading, you should know the spices we keep here and what each one has cost us.",
             IntroLineId,
             introClip,
             5f
@@ -94,7 +94,7 @@ public class SpiceIntroSequence : MonoBehaviour
         }
 
         yield return ShowSubtitle(
-            "Remember these goods well. Knowing their worth may decide the success of your trade.",
+            "Remember, the price we paid matters when you bargain. Sell above your cost to earn a profit, but choose your price carefully.",
             EndingLineId,
             endingClip,
             4f
@@ -218,13 +218,13 @@ public class SpiceIntroSequence : MonoBehaviour
         switch (spiceName.Trim().ToLowerInvariant())
         {
             case "pepper":
-                return "NARRATOR_SPICE_INTRO_PEPPER_01";
+                return "BHASKARA_SPICE_INTRO_PEPPER_01";
             case "turmeric":
-                return "NARRATOR_SPICE_INTRO_TURMERIC_01";
+                return "BHASKARA_SPICE_INTRO_TURMERIC_01";
             case "cardamom":
-                return "NARRATOR_SPICE_INTRO_CARDAMOM_01";
+                return "BHASKARA_SPICE_INTRO_CARDAMOM_01";
             case "cinnamon":
-                return "NARRATOR_SPICE_INTRO_CINNAMON_01";
+                return "BHASKARA_SPICE_INTRO_CINNAMON_01";
             default:
                 return null;
         }
