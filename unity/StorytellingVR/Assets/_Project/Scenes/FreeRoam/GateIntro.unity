@@ -3680,8 +3680,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'Current Objective :'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
+  m_sharedMaterial: {fileID: 3746222270625453336, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -3817,8 +3817,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Look around
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
+  m_sharedMaterial: {fileID: 3746222270625453336, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -11841,8 +11841,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Use the Left Joystick to look at your surroundings.
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
+  m_sharedMaterial: {fileID: 3746222270625453336, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -16228,8 +16228,8 @@ MonoBehaviour:
   m_text: You seem to be lost, traveler. Let me be your guide. Welcome to Hampi,
     the roaring heart of the Vijayanagara Empire.
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: 79459efec17a4d00a321bdcc27bbc385, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
+  m_sharedMaterial: {fileID: 3746222270625453336, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -17753,8 +17753,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Narrator
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
+  m_sharedMaterial: {fileID: 3746222270625453336, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -19031,8 +19031,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
+  m_sharedMaterial: {fileID: 3746222270625453336, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
