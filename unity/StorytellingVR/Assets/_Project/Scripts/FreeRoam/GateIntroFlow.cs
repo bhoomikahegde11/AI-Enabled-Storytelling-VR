@@ -144,9 +144,8 @@ public class GateIntroFlow : MonoBehaviour
                 "[GATE INTRO] Intro completed."
             );
 
-            // IMPORTANT:
-            // Do NOT call GameManager.LoadNextScene() here.
-            // The scene remains active after the intro finishes.
+            Debug.Log("[GATE INTRO] Requesting next scene from GameManager.");
+            GameManager.Instance.LoadNextScene();
         }
     }
 

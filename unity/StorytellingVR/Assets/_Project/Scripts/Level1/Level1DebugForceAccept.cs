@@ -9,7 +9,7 @@ public class Level1DebugForceAccept : MonoBehaviour
     {
         SecondaryButtonY = 0,
         SecondaryButtonX = 1,
-        Start = 2
+        StartReservedForPause = 2
     }
 
     [Header("TEMP DEBUG")]
@@ -116,7 +116,7 @@ public class Level1DebugForceAccept : MonoBehaviour
         {
             DebugButtonOption.SecondaryButtonY => OVRInput.GetDown(OVRInput.Button.Four),
             DebugButtonOption.SecondaryButtonX => OVRInput.GetDown(OVRInput.Button.Three),
-            DebugButtonOption.Start => OVRInput.GetDown(OVRInput.Button.Start),
+            DebugButtonOption.StartReservedForPause => false,
             _ => false
         };
     }

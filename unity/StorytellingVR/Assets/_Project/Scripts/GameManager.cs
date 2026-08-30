@@ -13,6 +13,12 @@ public class GameManager : MonoBehaviour
     private static readonly string[] DefaultSceneOrder =
     {
         DefaultIntroSceneName,
+        "GateIntro",
+        "FreeRoam_WithTerrain",
+        "NewSpiceScene",
+        "NewTransactionTutorial",
+        "NewCoinScene",
+        "SpicesInteraction",
         DefaultGameplaySceneName
     };
 
@@ -27,6 +33,9 @@ public class GameManager : MonoBehaviour
         DefaultGameplaySceneName
     };
     [SerializeField] private ScreenFader fader;
+
+    [Header("Persistent Controllers")]
+    [SerializeField] private bool enablePauseMenuController;
 
     [Header("Skip")]
     private bool yButtonHeld;
@@ -56,6 +65,7 @@ public class GameManager : MonoBehaviour
             }
 
             instance.InitializeRuntimeState();
+            instance.EnsurePersistentControllers();
             return instance;
         }
     }
@@ -74,6 +84,7 @@ public class GameManager : MonoBehaviour
         instance = this;
         DontDestroyOnLoad(gameObject);
         InitializeRuntimeState();
+        EnsurePersistentControllers();
         Debug.Log("[SCENE FLOW] Bootstrap loaded");
     }
 
@@ -86,6 +97,7 @@ public class GameManager : MonoBehaviour
     {
         if (ShouldLoadMainMenuOnStart())
         {
+            Debug.Log($"[SCENE FLOW] Bootstrap -> {mainMenuSceneName}");
             LoadSceneByName(mainMenuSceneName);
         }
     }
@@ -136,9 +148,17 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        LocalSaveManager.DeleteActiveProfile();
-        PersistProgressionState(scenes[0], 0);
-        Debug.Log("[SCENE FLOW] Starting New Journey at intro scene.");
+        if (Level1GameState.ExistingInstance != null)
+        {
+            Level1GameState.ExistingInstance.ResetProfileToDefaults();
+        }
+        else
+        {
+            LocalSaveManager.DeleteActiveProfile();
+        }
+
+        currentIndex = -1;
+        Debug.Log($"[SCENE FLOW] Starting new journey at index 0: {scenes[0]}");
         LoadSceneByName(scenes[0]);
     }
 
@@ -164,10 +184,13 @@ public class GameManager : MonoBehaviour
 
         LocalSaveManager saveManager = new LocalSaveManager();
         LocalProfileData profile = saveManager.LoadProfile();
-        string targetScene = ResolveContinueScene(profile, out int targetIndex);
+        if (!TryResolveContinueScene(profile, out string targetScene, out int targetIndex))
+        {
+            Debug.LogError("[SCENE FLOW] Continue failed because the save does not reference a canonical progression scene.");
+            return;
+        }
 
-        PersistProgressionState(targetScene, targetIndex);
-        Debug.Log($"[SCENE FLOW] Continuing from saved scene: {targetScene}");
+        Debug.Log($"[SCENE FLOW] Continue resolved '{targetScene}' to index {targetIndex}");
         LoadSceneByName(targetScene);
     }
 
@@ -192,6 +215,7 @@ public class GameManager : MonoBehaviour
         }
 
         PrepareCurrentSceneForAdvance(nextIndex);
+        Debug.Log($"[SCENE FLOW] Advancing {currentIndex} -> {nextIndex}: {scenes[nextIndex]}");
         LoadSceneByName(scenes[nextIndex]);
     }
 
@@ -208,7 +232,23 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        StartCoroutine(LoadRoutine(sceneName.Trim()));
+        string targetSceneName = sceneName.Trim();
+        int targetIndex = GetProgressionIndex(targetSceneName);
+        if (targetIndex >= 0)
+        {
+            currentIndex = targetIndex;
+        }
+        else if (string.Equals(targetSceneName, mainMenuSceneName, System.StringComparison.Ordinal))
+        {
+            currentIndex = -1;
+        }
+        else
+        {
+            currentIndex = -1;
+            Debug.LogWarning($"[SCENE FLOW] Loading non-progression scene '{targetSceneName}'. Progression index reset to -1.");
+        }
+
+        StartCoroutine(LoadRoutine(targetSceneName));
     }
 
     public void SkipScene()
@@ -274,6 +314,20 @@ public class GameManager : MonoBehaviour
         EnsureSceneDefaults();
         SyncCurrentScene(SceneManager.GetActiveScene().name);
         runtimeStateInitialized = true;
+    }
+
+    private void EnsurePersistentControllers()
+    {
+        if (!enablePauseMenuController)
+        {
+            return;
+        }
+
+        if (GetComponent<PauseMenuController>() == null)
+        {
+            gameObject.AddComponent<PauseMenuController>();
+            Debug.Log("[SCENE FLOW] Added missing PauseMenuController to persistent GameManager.");
+        }
     }
 
     private void EnsureSceneDefaults()
@@ -362,28 +416,29 @@ public class GameManager : MonoBehaviour
         return -1;
     }
 
-    private string ResolveContinueScene(LocalProfileData profile, out int targetIndex)
+    private bool TryResolveContinueScene(LocalProfileData profile, out string targetScene, out int targetIndex)
     {
-        targetIndex = LocalSaveManager.DefaultProgressionIndex;
+        targetScene = string.Empty;
+        targetIndex = -1;
         string savedScene = profile != null ? profile.current_scene : string.Empty;
-        int savedIndex = profile != null ? profile.progression_index : LocalSaveManager.DefaultProgressionIndex;
+        int savedIndex = profile != null ? profile.progression_index : -1;
 
         int sceneIndex = GetProgressionIndex(savedScene);
         if (sceneIndex >= 0)
         {
             targetIndex = sceneIndex;
-            return scenes[targetIndex];
+            targetScene = scenes[targetIndex];
+            return true;
         }
 
         if (savedIndex >= 0 && savedIndex < scenes.Length)
         {
             targetIndex = savedIndex;
-            return scenes[targetIndex];
+            targetScene = scenes[targetIndex];
+            return true;
         }
 
-        int fallbackIndex = Mathf.Clamp(LocalSaveManager.DefaultProgressionIndex, 0, scenes.Length - 1);
-        targetIndex = fallbackIndex;
-        return scenes[targetIndex];
+        return false;
     }
 
     private void PrepareCurrentSceneForAdvance(int nextIndex)

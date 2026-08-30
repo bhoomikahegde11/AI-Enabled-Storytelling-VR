@@ -27,9 +27,9 @@
         "total_varahas_earned": 0,
         "total_deals_made": 0
     },
-    "current_scene": "Level1_MainLoopUpdated",
-    "progression_index": 1,
-    "intro_completed": true,
-    "remainingMarketDaySeconds": 1969.8648681640625,
-    "hasSavedMarketDayTimer": true
+    "current_scene": "ModernStudyRoom",
+    "progression_index": 0,
+    "intro_completed": false,
+    "remainingMarketDaySeconds": 0.0,
+    "hasSavedMarketDayTimer": false
 }
