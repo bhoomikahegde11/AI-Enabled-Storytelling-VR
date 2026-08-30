@@ -663,7 +663,7 @@ MonoBehaviour:
     text: "Now, you stand before Hampi \u2014 the roaring heart of the Vijayanagara
       Empire."
   - lineId: GATE_INTRO_NARRATOR_05
-    text: You may be wondering where you are... or why you are here.
+    text: You may be wondering why you are here.
   - lineId: GATE_INTRO_NARRATOR_06
     text: For now, do not search for every answer at once.
   - lineId: GATE_INTRO_NARRATOR_07
@@ -5832,7 +5832,7 @@ Transform:
   m_GameObject: {fileID: 605386974}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.9985555, z: 0, w: 0.053730384}
-  m_LocalPosition: {x: 0, y: 0.3, z: 0}
+  m_LocalPosition: {x: 0, y: 1.3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
