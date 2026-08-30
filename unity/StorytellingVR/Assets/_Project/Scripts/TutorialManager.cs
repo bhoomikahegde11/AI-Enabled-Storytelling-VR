@@ -185,7 +185,7 @@ public class TutorialManager : MonoBehaviour
         params string[] lines)
     {
         if (speakerNameText != null)
-            speakerNameText.text = speaker + ":";
+            speakerNameText.text = speaker;
 
         AudioClip resolvedClip = ResolveVoiceClip(lineId, audioClip);
         AudioSource playbackSource = GetPlaybackSource(audioSource, resolvedClip);
@@ -221,7 +221,7 @@ public class TutorialManager : MonoBehaviour
     }
 
 
-    IEnumerator ShowDialogueSequenceWithTimings(
+        IEnumerator ShowDialogueSequenceWithTimings(
         string speaker,
         AudioSource audioSource,
         AudioClip audioClip,
@@ -229,46 +229,7 @@ public class TutorialManager : MonoBehaviour
         string[] lines,
         float[] startTimes)
     {
-        if (speakerNameText != null)
-            speakerNameText.text = speaker + ":";
-
-        AudioClip resolvedClip = ResolveVoiceClip(lineId, audioClip);
-        AudioSource playbackSource = GetPlaybackSource(audioSource, resolvedClip);
-
-        if (resolvedClip != null && playbackSource != null)
-        {
-            playbackSource.clip = resolvedClip;
-            playbackSource.Play();
-        }
-
-        for (int i = 0; i < lines.Length; i++)
-        {
-            if (playbackSource != null &&
-                resolvedClip != null &&
-                playbackSource.isPlaying)
-            {
-                yield return new WaitUntil(() =>
-                    playbackSource.time >= startTimes[i] ||
-                    !playbackSource.isPlaying
-                );
-            }
-            else
-            {
-                yield return new WaitForSeconds(2f);
-            }
-
-            if (dialogueText != null)
-                dialogueText.text = lines[i];
-
-            if (hudManager != null)
-                hudManager.ShowSubtitle(speaker, lines[i]);
-        }
-
-        while (playbackSource != null && playbackSource.isPlaying)
-            yield return null;
-
-        if (hudManager != null)
-            hudManager.HideSubtitle();
+        yield return ShowDialogueSequence(speaker, audioSource, audioClip, lineId, lines);
     }
 
 
@@ -740,7 +701,7 @@ public class TutorialManager : MonoBehaviour
 
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.LoadNextScene();
+            GameManager.Instance.LoadSceneByName("NewCoinScene");
         }
     }
 
@@ -834,7 +795,7 @@ public class TutorialManager : MonoBehaviour
                 null,
                 "NARRATOR_TRANSACTION_STATUS_UI_01",
 
-                "To your left, you can keep track of your Reputation, while your earnings are shown to your right. Watch them closely � both will change with the choices you make while trading."
+                "To your left, you can keep track of your Reputation, while your earnings are shown to your right. Watch them closely Ã¢â‚¬â€ both will change with the choices you make while trading."
             )
         );
     }

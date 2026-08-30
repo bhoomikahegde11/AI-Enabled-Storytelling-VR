@@ -99,7 +99,7 @@ public class SpiceTutorialManager : MonoBehaviour
     IEnumerator OpeningSequence()
     {
         yield return StartCoroutine(ShowDialogueSequence(
-            customerName + ":",
+            customerName,
             Color.white,
             customerAudioSource,
             customerRequestClip,
@@ -127,7 +127,7 @@ public class SpiceTutorialManager : MonoBehaviour
         SetPrompt("Move the scooper into the highlighted sack.");
 
         StartDialogueSequence(ShowDialogueSequence(
-            "Narrator:",
+            "Narrator",
             Color.yellow,
             narratorAudioSource,
             narratorScooperAppearedClip,
@@ -165,7 +165,7 @@ public class SpiceTutorialManager : MonoBehaviour
         SetPrompt("Bring the filled scooper to the customer's bag.");
 
         StartDialogueSequence(ShowDialogueSequence(
-            "Narrator:",
+            "Narrator",
             Color.yellow,
             narratorAudioSource,
             narratorScoopedClip,
@@ -186,7 +186,7 @@ public class SpiceTutorialManager : MonoBehaviour
         SetPrompt("Collect " + GetRequestedSpiceName() + ".");
 
         StartDialogueSequence(ShowDialogueSequence(
-            "Narrator:",
+            "Narrator",
             Color.yellow,
             narratorAudioSource,
             narratorWrongSpiceClip,
@@ -208,7 +208,7 @@ public class SpiceTutorialManager : MonoBehaviour
         SetPrompt("Collect " + GetRequestedSpiceName() + ".");
 
         StartDialogueSequence(ShowDialogueSequence(
-            "Narrator:",
+            "Narrator",
             Color.yellow,
             narratorAudioSource,
             narratorWrongBagClip,
@@ -231,7 +231,7 @@ public class SpiceTutorialManager : MonoBehaviour
     IEnumerator CompletionSequence()
     {
         yield return StartCoroutine(ShowDialogueSequence(
-            customerName + ":",
+            customerName,
             Color.white,
             customerAudioSource,
             customerThanksClip,
@@ -240,7 +240,7 @@ public class SpiceTutorialManager : MonoBehaviour
         ));
 
         yield return StartCoroutine(ShowDialogueSequence(
-            "Narrator:",
+            "Narrator",
             Color.yellow,
             narratorAudioSource,
             narratorCompletedClip,
@@ -314,7 +314,7 @@ public class SpiceTutorialManager : MonoBehaviour
         }
     }
 
-    IEnumerator ShowDialogueSequenceWithTimings(
+        IEnumerator ShowDialogueSequenceWithTimings(
         string speaker,
         Color color,
         AudioSource audioSource,
@@ -322,56 +322,7 @@ public class SpiceTutorialManager : MonoBehaviour
         string[] lines,
         float[] startTimes)
     {
-        if (speakerNameText != null)
-        {
-            speakerNameText.text = speaker;
-        }
-
-        bool usingAudio = audioClip != null && audioSource != null;
-
-        if (usingAudio)
-        {
-            audioSource.clip = audioClip;
-            audioSource.Play();
-        }
-
-        if (hudManager != null)
-        {
-            hudManager.ShowSubtitle(speaker, lines.Length > 0 ? lines[0] : "");
-        }
-
-        for (int i = 0; i < lines.Length; i++)
-        {
-            if (usingAudio)
-            {
-                yield return new WaitUntil(() => audioSource.time >= startTimes[i]);
-            }
-            else
-            {
-                yield return new WaitForSeconds(timedFallbackLineSeconds);
-            }
-
-            if (dialogueText != null)
-                dialogueText.text = lines[i];
-
-            if (hudManager != null)
-                hudManager.ShowSubtitle(speaker, lines[i]);
-        }
-
-        while (audioSource != null && audioSource.isPlaying)
-        {
-            yield return null;
-        }
-
-        if (!usingAudio && subtitlePostHoldSeconds > 0f)
-        {
-            yield return new WaitForSeconds(subtitlePostHoldSeconds);
-        }
-
-        if (hudManager != null)
-        {
-            hudManager.HideSubtitle();
-        }
+        yield return ShowDialogueSequence(speaker, color, audioSource, audioClip, null, lines);
     }
 
     public void ShowNarrator(string text)
@@ -381,7 +332,7 @@ public class SpiceTutorialManager : MonoBehaviour
 
         if (speakerNameText != null)
         {
-            speakerNameText.text = "Narrator:";
+            speakerNameText.text = "Narrator";
         }
 
         if (dialogueText != null)
@@ -402,7 +353,7 @@ public class SpiceTutorialManager : MonoBehaviour
 
         if (speakerNameText != null)
         {
-            speakerNameText.text = customerName + ":";
+            speakerNameText.text = customerName;
         }
 
         if (dialogueText != null)

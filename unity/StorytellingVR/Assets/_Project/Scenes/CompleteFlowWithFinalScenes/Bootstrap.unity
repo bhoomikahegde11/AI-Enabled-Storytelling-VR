@@ -159,8 +159,6 @@ MonoBehaviour:
   - NewSpiceScene
   - NewTransactionTutorial
   - NewCoinScene
-  - SpicesInteraction
-  - Level1_MainLoopUpdated
   fader: {fileID: 1819468858}
   enablePauseMenuController: 0
   enableDeveloperSceneSkip: 1
@@ -177,18 +175,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 229bf613f564df640855a5e3ba168129, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SceneSkipTester
---- !u!114 &40321879
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 40321874}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7f22d84852a94f9498b06f502efcf471, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PauseMenuController
 --- !u!4 &40321878
 Transform:
   m_ObjectHideFlags: 0
@@ -204,6 +190,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &40321879
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 40321874}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f22d84852a94f9498b06f502efcf471, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PauseMenuController
 --- !u!1 &1075799399
 GameObject:
   m_ObjectHideFlags: 0
@@ -612,6 +610,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ScreenFader
   fadeImage: {fileID: 1327145207}
   speed: 1
+  fadeColor: {r: 0, g: 0, b: 0, a: 1}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

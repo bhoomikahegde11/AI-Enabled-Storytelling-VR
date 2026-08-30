@@ -30,6 +30,6 @@
     "current_scene": "ModernStudyRoom",
     "progression_index": 0,
     "intro_completed": false,
-    "remainingMarketDaySeconds": 0.0,
-    "hasSavedMarketDayTimer": false
+    "remainingMarketDaySeconds": 2000.0,
+    "hasSavedMarketDayTimer": true
 }

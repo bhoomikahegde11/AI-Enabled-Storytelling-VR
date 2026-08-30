@@ -3828,8 +3828,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Name
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: d8bab806c555092448924b788a84844f, type: 2}
+  m_sharedMaterial: {fileID: 3970555609361681697, guid: d8bab806c555092448924b788a84844f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -14446,7 +14446,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: c2ad6be1fad6bc54994da49913a08987, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 52.11
+      value: 51.672
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: c2ad6be1fad6bc54994da49913a08987, type: 3}
       propertyPath: m_LocalPosition.y
@@ -14454,7 +14454,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: c2ad6be1fad6bc54994da49913a08987, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -1.82
+      value: -1.987
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: c2ad6be1fad6bc54994da49913a08987, type: 3}
       propertyPath: m_LocalRotation.w
@@ -15190,8 +15190,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Can you give me one veesai cardamom?
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: d8bab806c555092448924b788a84844f, type: 2}
+  m_sharedMaterial: {fileID: 3970555609361681697, guid: d8bab806c555092448924b788a84844f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -15565,8 +15565,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Hold Right Trigger to pick up the scooper.
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: d8bab806c555092448924b788a84844f, type: 2}
+  m_sharedMaterial: {fileID: 3970555609361681697, guid: d8bab806c555092448924b788a84844f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

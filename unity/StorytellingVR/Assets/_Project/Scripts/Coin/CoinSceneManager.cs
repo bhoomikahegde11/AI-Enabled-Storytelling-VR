@@ -69,7 +69,7 @@ public class CoinSceneManager : MonoBehaviour
 
 
         yield return ShowDialogue(
-            "Rahim:",
+            "Rahim",
             "A pleasure doing business with you, trader. Here is your payment.",
             RahimPaymentLineId,
             npcPaymentClip
@@ -89,7 +89,7 @@ public class CoinSceneManager : MonoBehaviour
 
 
         yield return ShowDialogue(
-            "Narrator:",
+            "Narrator",
             "Take a closer look at this coin.",
             NarratorInspectCoinLineId,
             inspectCoinClip
@@ -118,7 +118,7 @@ public class CoinSceneManager : MonoBehaviour
     IEnumerator VarahaRoutine()
     {
         yield return ShowDialogue(
-            "Narrator:",
+            "Narrator",
             "The Varaha was a gold coin used for important trade and represented the wealth of the Vijayanagara Empire.",
             NarratorVarahaLineId,
             varahaClip
@@ -139,7 +139,7 @@ public class CoinSceneManager : MonoBehaviour
     {
         StartCoroutine(
             ShowDialogue(
-                "Narrator:",
+                "Narrator",
                 "The Kasu was a bronze coin used by common people for everyday marketplace transactions.",
                 NarratorKasuLineId,
                 kasuClip
@@ -161,7 +161,7 @@ public class CoinSceneManager : MonoBehaviour
     IEnumerator EndDialogue()
     {
         yield return ShowDialogue(
-            "Narrator:",
+            "Narrator",
             "You now understand the coins used in Vijayanagara markets.",
             NarratorUnderstandCoinsLineId,
             understandCoinsClip
@@ -169,7 +169,7 @@ public class CoinSceneManager : MonoBehaviour
 
 
         yield return ShowDialogue(
-            "Narrator:",
+            "Narrator",
             "Now use this knowledge while trading with the customers ahead.",
             NarratorTradingAheadLineId,
             tradingAheadClip
@@ -183,7 +183,7 @@ public class CoinSceneManager : MonoBehaviour
 
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.LoadNextScene();
+            GameManager.Instance.LoadSceneByName("SpicesInteraction");
         }
     }
 

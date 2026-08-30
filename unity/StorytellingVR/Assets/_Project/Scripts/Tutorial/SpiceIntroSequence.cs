@@ -33,6 +33,7 @@ public class SpiceIntroSequence : MonoBehaviour
     [Header("Subtitle UI")]
     [SerializeField] private CanvasGroup subtitleCanvas;
     [SerializeField] private TMP_Text subtitleText;
+    [SerializeField] private TMP_Text speakerNameText;
 
     [Header("Spice Popup UI")]
     [SerializeField] private CanvasGroup spiceInfoCanvas;
@@ -116,7 +117,7 @@ public class SpiceIntroSequence : MonoBehaviour
         if (loadNextSceneAfterSequence)
         {
             if (GameManager.Instance != null)
-                GameManager.Instance.LoadNextScene();
+                GameManager.Instance.LoadSceneByName("NewTransactionTutorial");
             else
                 Debug.LogWarning("GameManager.Instance is missing. Cannot load next scene.");
         }
@@ -162,23 +163,15 @@ public class SpiceIntroSequence : MonoBehaviour
 
     private IEnumerator ShowSubtitle(string message, string lineId, AudioClip clip, float fallbackTime)
     {
-        if (subtitleText != null)
-            subtitleText.text = message;
-
         AudioClip resolvedClip = ResolveVoiceClip(lineId, clip);
 
-        if (resolvedClip != null && narratorAudioSource != null)
-        {
-            narratorAudioSource.Stop();
-            narratorAudioSource.clip = resolvedClip;
-            narratorAudioSource.Play();
-
-            yield return new WaitWhile(() => narratorAudioSource.isPlaying);
-        }
-        else
-        {
-            yield return new WaitForSeconds(fallbackTime);
-        }
+        yield return StorytellingVR.Tutorial.TutorialDialogueUIHelper.PlayDialogue(
+            subtitleText,
+            narratorAudioSource,
+            resolvedClip,
+            new string[] { message },
+            StorytellingVR.Tutorial.TutorialDialogueUIHelper.GetRightTriggerPressed
+        );
     }
 
     private IEnumerator FadeCanvas(CanvasGroup canvasGroup, float targetAlpha, float duration)
