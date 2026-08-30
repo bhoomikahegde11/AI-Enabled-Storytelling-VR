@@ -20,6 +20,8 @@ public class MainMenuSaveFlow : MonoBehaviour
     [SerializeField] private Toggle femaleToggle;
     [SerializeField] private TMP_Dropdown genderDropdown;
 
+    private bool journeyStarting;
+
     private void Awake()
     {
         SetPanelActive(mainMenuRoot, true);
@@ -74,9 +76,14 @@ public class MainMenuSaveFlow : MonoBehaviour
 
     public void StartNewSave()
     {
+        if (journeyStarting)
+        {
+            return;
+        }
+
+        journeyStarting = true;
         PlayMenuClick();
         SaveCurrentFieldValuesToPrefs();
-        CloseSaveSelect();
         GameManager.Instance.StartNewJourney();
     }
 

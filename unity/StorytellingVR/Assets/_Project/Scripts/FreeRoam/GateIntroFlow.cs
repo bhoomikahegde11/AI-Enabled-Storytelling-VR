@@ -1,7 +1,5 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.XR;
-using UnityEngine.SceneManagement;
 
 public class GateIntroFlow : MonoBehaviour
 {
@@ -47,7 +45,6 @@ public class GateIntroFlow : MonoBehaviour
 
     [Header("Transition")]
     [SerializeField] private ScreenFader screenFader;
-    [SerializeField] private string nextSceneName = "FreeRoam";
 
     private IEnumerator Start()
     {
@@ -112,14 +109,15 @@ public class GateIntroFlow : MonoBehaviour
             yield return screenFader.FadeOut();
         }
 
-        // 13. Explicitly load the Free Roam scene.
-        if (string.IsNullOrEmpty(nextSceneName))
+        // 13. Let the canonical progression system choose the next playable scene.
+        if (GameManager.Instance != null)
         {
-            Debug.LogError("[GATE INTRO] nextSceneName is not set! Cannot load the next scene.");
+            Debug.Log("[GATE INTRO] Intro completed. Requesting next scene from GameManager.");
+            GameManager.Instance.LoadNextScene();
         }
         else
         {
-            SceneManager.LoadScene(nextSceneName);
+            Debug.LogError("[GATE INTRO] GameManager.Instance is missing. Cannot advance scene flow.");
         }
     }
 

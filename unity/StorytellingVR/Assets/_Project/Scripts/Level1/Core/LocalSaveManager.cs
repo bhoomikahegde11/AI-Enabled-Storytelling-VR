@@ -34,7 +34,7 @@ public class LocalProfileData
     public ShiftStatsData shift_stats = new ShiftStatsData();
     public string current_scene = LocalSaveManager.DefaultCurrentSceneName;
     public int progression_index = LocalSaveManager.DefaultProgressionIndex;
-    public bool intro_completed = true;
+    public bool intro_completed;
     public float remainingMarketDaySeconds;
     public bool hasSavedMarketDayTimer;
 }
@@ -42,8 +42,8 @@ public class LocalProfileData
 public class LocalSaveManager
 {
     public const string ProfileFileName = "level1_player_profile.json";
-    public const string DefaultCurrentSceneName = GameManager.DefaultGameplaySceneName;
-    public const int DefaultProgressionIndex = 1;
+    public const string DefaultCurrentSceneName = "";
+    public const int DefaultProgressionIndex = -1;
 
     private readonly string savePath;
     public string SavePath => savePath;
@@ -207,7 +207,7 @@ public class LocalSaveManager
             shift_stats = new ShiftStatsData(),
             current_scene = DefaultCurrentSceneName,
             progression_index = DefaultProgressionIndex,
-            intro_completed = true,
+            intro_completed = false,
             remainingMarketDaySeconds = 0f,
             hasSavedMarketDayTimer = false
         };
@@ -235,12 +235,7 @@ public class LocalSaveManager
             profile.inventory = new List<InventoryEntry>();
         }
 
-        if (string.IsNullOrWhiteSpace(profile.current_scene))
-        {
-            profile.current_scene = DefaultCurrentSceneName;
-        }
-
-        if (profile.progression_index < 0)
+        if (profile.progression_index < DefaultProgressionIndex)
         {
             profile.progression_index = DefaultProgressionIndex;
         }
@@ -249,22 +244,6 @@ public class LocalSaveManager
         {
             profile.remainingMarketDaySeconds = 0f;
             profile.hasSavedMarketDayTimer = false;
-        }
-
-        int resolvedProgressionIndex = profile.progression_index;
-        if (string.Equals(profile.current_scene, GameManager.DefaultIntroSceneName, StringComparison.Ordinal))
-        {
-            resolvedProgressionIndex = 0;
-        }
-        else if (string.Equals(profile.current_scene, GameManager.DefaultGameplaySceneName, StringComparison.Ordinal))
-        {
-            resolvedProgressionIndex = DefaultProgressionIndex;
-        }
-
-        profile.progression_index = resolvedProgressionIndex;
-        if (resolvedProgressionIndex >= DefaultProgressionIndex)
-        {
-            profile.intro_completed = true;
         }
 
         foreach (InventoryEntry defaultEntry in marketManager.CreateDefaultInventoryEntries())
