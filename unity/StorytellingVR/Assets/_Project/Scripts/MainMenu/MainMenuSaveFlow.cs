@@ -56,7 +56,7 @@ public class MainMenuSaveFlow : MonoBehaviour
     public void OpenNewSave()
     {
         PlayMenuClick();
-        PopulateFieldsFromPrefs();
+        ResetNewSaveForm();
         SetPanelActive(saveSelectPanel, true);
         SetPanelActive(newSavePanel, true);
     }
@@ -187,6 +187,38 @@ public class MainMenuSaveFlow : MonoBehaviour
         if (!string.IsNullOrWhiteSpace(savedGender))
         {
             ApplySavedGender(savedGender);
+        }
+    }
+
+    private void ResetNewSaveForm()
+    {
+        if (saveNameInput != null)
+        {
+            saveNameInput.SetTextWithoutNotify(string.Empty);
+        }
+
+        if (characterNameInput != null)
+        {
+            characterNameInput.SetTextWithoutNotify(string.Empty);
+        }
+
+        if (maleToggle != null)
+        {
+            maleToggle.SetIsOnWithoutNotify(true);
+            if (femaleToggle != null)
+            {
+                femaleToggle.SetIsOnWithoutNotify(false);
+            }
+        }
+        else if (femaleToggle != null)
+        {
+            femaleToggle.SetIsOnWithoutNotify(true);
+        }
+
+        if (genderDropdown != null && genderDropdown.options != null && genderDropdown.options.Count > 0)
+        {
+            int maleOptionIndex = FindGenderOptionIndex("Male");
+            genderDropdown.SetValueWithoutNotify(maleOptionIndex >= 0 ? maleOptionIndex : 0);
         }
     }
 
