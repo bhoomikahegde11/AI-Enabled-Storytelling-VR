@@ -30,6 +30,6 @@
     "current_scene": "Level1_MainLoopUpdated",
     "progression_index": 1,
     "intro_completed": true,
-    "remainingMarketDaySeconds": 0.0,
-    "hasSavedMarketDayTimer": false
+    "remainingMarketDaySeconds": 1969.8648681640625,
+    "hasSavedMarketDayTimer": true
 }

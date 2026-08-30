@@ -27,26 +27,27 @@ public class GateIntroFlow : MonoBehaviour
     [SerializeField] private string narratorName = "Narrator (V.O.)";
 
     [SerializeField]
+    private string narratorLineId =
+        "GATE_INTRO_NARRATOR_01";
+
+    [SerializeField]
     private string narratorLine =
         "You seem to be lost, traveler. Let me be your guide. Welcome to Hampi, the roaring heart of the Vijayanagara Empire.";
 
-    [SerializeField] private AudioClip narratorAudio;
-
     [Header("Timing")]
     [SerializeField] private float continuePromptDelay = 2f;
-
-    [Header("Audio")]
-    [SerializeField] private AudioSource audioSource;
 
     private bool canContinue;
     private bool triggerReleased = true;
 
     private IEnumerator Start()
     {
-        // Wait when the scene starts
         yield return new WaitForSecondsRealtime(startupDelay);
 
-        // Set objective
+        // ------------------------------------------------
+        // OBJECTIVE
+        // ------------------------------------------------
+
         if (ObjectiveUIManager.Instance != null)
         {
             ObjectiveUIManager.Instance.SetObjective(
@@ -54,9 +55,9 @@ public class GateIntroFlow : MonoBehaviour
             );
         }
 
-        // ---------------------------------------------
-        // SHOW LEFT JOYSTICK PROMPT
-        // ---------------------------------------------
+        // ------------------------------------------------
+        // LOOK AROUND PROMPT
+        // ------------------------------------------------
 
         if (TutorialPromptUIManager.Instance != null)
         {
@@ -67,48 +68,37 @@ public class GateIntroFlow : MonoBehaviour
             );
         }
 
-        // ---------------------------------------------
-        // PLAY AUDIO
-        // ---------------------------------------------
-
-        if (audioSource != null && narratorAudio != null)
-        {
-            audioSource.clip = narratorAudio;
-            audioSource.Play();
-        }
-
-        // ---------------------------------------------
-        // SHOW SUBTITLE
-        // ---------------------------------------------
+        // ------------------------------------------------
+        // NARRATION + VOICE
+        // NarratorUIManager handles the voice database lookup.
+        // ------------------------------------------------
 
         if (NarratorUIManager.Instance != null)
         {
             yield return NarratorUIManager.Instance.PlayNarration(
+                narratorLineId,
                 narratorName,
                 narratorLine
             );
         }
-
-        // Make sure the actual audio has finished.
-        if (audioSource != null &&
-            audioSource.isPlaying)
+        else
         {
-            yield return new WaitWhile(
-                () => audioSource.isPlaying
+            Debug.LogWarning(
+                "[GATE INTRO] NarratorUIManager.Instance is missing."
             );
         }
 
-        // ---------------------------------------------
-        // WAIT A LITTLE AFTER AUDIO
-        // ---------------------------------------------
+        // ------------------------------------------------
+        // WAIT BEFORE CONTINUE PROMPT
+        // ------------------------------------------------
 
         yield return new WaitForSecondsRealtime(
             continuePromptDelay
         );
 
-        // ---------------------------------------------
-        // CHANGE LEFT JOYSTICK → RIGHT TRIGGER
-        // ---------------------------------------------
+        // ------------------------------------------------
+        // CHANGE PROMPT TO RIGHT TRIGGER
+        // ------------------------------------------------
 
         if (TutorialPromptUIManager.Instance != null)
         {
@@ -121,7 +111,8 @@ public class GateIntroFlow : MonoBehaviour
 
         canContinue = true;
 
-        // If trigger is currently held, wait for release first.
+        // Prevent a trigger press used during narration
+        // from immediately dismissing this prompt.
         triggerReleased = !IsRightTriggerPressed();
     }
 
@@ -132,7 +123,6 @@ public class GateIntroFlow : MonoBehaviour
 
         bool pressed = IsRightTriggerPressed();
 
-        // Player must release the trigger first.
         if (!pressed)
         {
             triggerReleased = true;
@@ -150,10 +140,13 @@ public class GateIntroFlow : MonoBehaviour
                 TutorialPromptUIManager.Instance.HidePrompt(this);
             }
 
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.LoadNextScene();
-            }
+            Debug.Log(
+                "[GATE INTRO] Intro completed."
+            );
+
+            // IMPORTANT:
+            // Do NOT call GameManager.LoadNextScene() here.
+            // The scene remains active after the intro finishes.
         }
     }
 
