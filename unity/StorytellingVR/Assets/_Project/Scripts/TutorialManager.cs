@@ -4,6 +4,21 @@ using UnityEngine;
 
 public class TutorialManager : MonoBehaviour
 {
+    private const string RahimIntroLineId = "RAHIM_TRANSACTION_INTRO_01";
+    private const string BhaskaraTeachTradeLineId = "BHASKARA_TRANSACTION_STUDY_TRADE_01";
+    private const string BhaskaraExplainTradePanelLineId = "BHASKARA_TRANSACTION_PANEL_01";
+    private const string BhaskaraExplainNegotiationLineId = "BHASKARA_TRANSACTION_NEGOTIATION_01";
+    private const string BhaskaraAskHighPriceLineId = "BHASKARA_TRANSACTION_ASK_HIGH_PRICE_01";
+    private const string RahimAngryHighPriceLineId = "RAHIM_TRANSACTION_HIGH_PRICE_01";
+    private const string BhaskaraHighPriceLessonLineId = "BHASKARA_TRANSACTION_HIGH_PRICE_LESSON_01";
+    private const string RahimAcceptFairPriceLineId = "RAHIM_TRANSACTION_ACCEPT_FAIR_01";
+    private const string BhaskaraFairPriceEndingLineId = "BHASKARA_TRANSACTION_FAIR_PRICE_ENDING_01";
+    private const string RahimStillTooHighLineId = "RAHIM_TRANSACTION_STILL_TOO_HIGH_01";
+    private const string BhaskaraStillTooHighLessonLineId = "BHASKARA_TRANSACTION_STILL_TOO_HIGH_LESSON_01";
+    private const string RahimAcceptLowPriceLineId = "RAHIM_TRANSACTION_ACCEPT_LOW_01";
+    private const string BhaskaraLowProfitLessonLineId = "BHASKARA_TRANSACTION_LOW_PROFIT_LESSON_01";
+    private const string TutorialMerchantSpeaker = "Bhaskara";
+
     //==================================================
     // REFERENCES
     //==================================================
@@ -16,6 +31,7 @@ public class TutorialManager : MonoBehaviour
     public VoiceRecognitionManager voiceRecognitionManager;
     public Level1HUDManager hudManager;
     public RespectUIManager respectUIManager;
+    [SerializeField] private DialogueVoiceDatabase voiceDatabase;
 
     //==================================================
     // AUDIO SOURCES
@@ -102,6 +118,7 @@ public class TutorialManager : MonoBehaviour
 
     private bool currentTradePanelOpened = false;
     private bool currentTradePanelVisible = false;
+    private AudioSource fallbackAudioSource;
 
 
     //==================================================
@@ -162,19 +179,23 @@ public class TutorialManager : MonoBehaviour
         string speaker,
         AudioSource audioSource,
         AudioClip audioClip,
+        string lineId,
         params string[] lines)
     {
         if (speakerNameText != null)
             speakerNameText.text = speaker + ":";
 
-        if (audioClip != null && audioSource != null)
+        AudioClip resolvedClip = ResolveVoiceClip(lineId, audioClip);
+        AudioSource playbackSource = GetPlaybackSource(audioSource, resolvedClip);
+
+        if (resolvedClip != null && playbackSource != null)
         {
-            audioSource.clip = audioClip;
-            audioSource.Play();
+            playbackSource.clip = resolvedClip;
+            playbackSource.Play();
         }
 
-        float clipLength = audioClip != null
-            ? audioClip.length
+        float clipLength = resolvedClip != null
+            ? resolvedClip.length
             : lines.Length * 3f;
 
         float timePerLine = clipLength / lines.Length;
@@ -190,7 +211,7 @@ public class TutorialManager : MonoBehaviour
             yield return new WaitForSeconds(timePerLine);
         }
 
-        while (audioSource != null && audioSource.isPlaying)
+        while (playbackSource != null && playbackSource.isPlaying)
             yield return null;
 
         if (hudManager != null)
@@ -202,27 +223,31 @@ public class TutorialManager : MonoBehaviour
         string speaker,
         AudioSource audioSource,
         AudioClip audioClip,
+        string lineId,
         string[] lines,
         float[] startTimes)
     {
         if (speakerNameText != null)
             speakerNameText.text = speaker + ":";
 
-        if (audioClip != null && audioSource != null)
+        AudioClip resolvedClip = ResolveVoiceClip(lineId, audioClip);
+        AudioSource playbackSource = GetPlaybackSource(audioSource, resolvedClip);
+
+        if (resolvedClip != null && playbackSource != null)
         {
-            audioSource.clip = audioClip;
-            audioSource.Play();
+            playbackSource.clip = resolvedClip;
+            playbackSource.Play();
         }
 
         for (int i = 0; i < lines.Length; i++)
         {
-            if (audioSource != null &&
-                audioClip != null &&
-                audioSource.isPlaying)
+            if (playbackSource != null &&
+                resolvedClip != null &&
+                playbackSource.isPlaying)
             {
                 yield return new WaitUntil(() =>
-                    audioSource.time >= startTimes[i] ||
-                    !audioSource.isPlaying
+                    playbackSource.time >= startTimes[i] ||
+                    !playbackSource.isPlaying
                 );
             }
             else
@@ -237,7 +262,7 @@ public class TutorialManager : MonoBehaviour
                 hudManager.ShowSubtitle(speaker, lines[i]);
         }
 
-        while (audioSource != null && audioSource.isPlaying)
+        while (playbackSource != null && playbackSource.isPlaying)
             yield return null;
 
         if (hudManager != null)
@@ -261,6 +286,7 @@ public class TutorialManager : MonoBehaviour
                 "Rahim",
                 customerAudioSource,
                 rahimIntroClip,
+                RahimIntroLineId,
 
                 new string[]
                 {
@@ -303,9 +329,10 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                TutorialMerchantSpeaker,
                 merchantAudioSource,
                 merchantAskHighPriceClip,
+                BhaskaraAskHighPriceLineId,
 
                 "Now, you must decide what to charge Rahim.",
                 "For your first attempt, ask for 70 Varahas.",
@@ -349,9 +376,10 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                TutorialMerchantSpeaker,
                 merchantAudioSource,
                 merchantTeachTradeClip,
+                BhaskaraTeachTradeLineId,
 
                 "Before you answer, take a moment to study the trade.",
                 "A wise merchant always knows what the customer wants and what his goods have cost him."
@@ -377,9 +405,10 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                TutorialMerchantSpeaker,
                 merchantAudioSource,
                 merchantExplainTradePanelClip,
+                BhaskaraExplainTradePanelLineId,
 
                 "There. This will help you keep track of the trade.",
                 "You can see the customer's request and the cost of the spice here.",
@@ -471,6 +500,7 @@ public class TutorialManager : MonoBehaviour
                 "Rahim",
                 customerAudioSource,
                 rahimAngryHighPriceClip,
+                RahimAngryHighPriceLineId,
 
                 "That price is outrageous, merchant.",
                 "Surely you can offer something more reasonable."
@@ -484,9 +514,10 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                TutorialMerchantSpeaker,
                 merchantAudioSource,
                 merchantHighPriceLessonClip,
+                BhaskaraHighPriceLessonLineId,
 
                 "You see? Push a customer too far and you may lose his trust.",
                 "And look. Your Reputation has suffered.",
@@ -565,6 +596,7 @@ public class TutorialManager : MonoBehaviour
                 "Rahim",
                 customerAudioSource,
                 rahimAcceptFairPriceClip,
+                RahimAcceptFairPriceLineId,
 
                 "Hmm... that seems much more reasonable.",
                 "Very well. I accept your offer."
@@ -588,9 +620,10 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                TutorialMerchantSpeaker,
                 merchantAudioSource,
                 merchantFairPriceEndingClip,
+                BhaskaraFairPriceEndingLineId,
 
                 "Well done.",
                 "Your Reputation has improved, and you have earned Varahas from the trade.",
@@ -621,6 +654,7 @@ public class TutorialManager : MonoBehaviour
                 "Rahim",
                 customerAudioSource,
                 rahimStillTooHighClip,
+                RahimStillTooHighLineId,
 
                 "That price is still too expensive.",
                 "At those rates, I may take my business elsewhere."
@@ -634,9 +668,10 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                TutorialMerchantSpeaker,
                 merchantAudioSource,
                 merchantStillTooHighLessonClip,
+                BhaskaraStillTooHighLessonLineId,
 
                 "Still too high.",
                 "Notice how your Reputation continues to fall.",
@@ -674,6 +709,7 @@ public class TutorialManager : MonoBehaviour
                 "Rahim",
                 customerAudioSource,
                 rahimAcceptLowPriceClip,
+                RahimAcceptLowPriceLineId,
 
                 "That is a very generous offer.",
                 "I happily accept your price."
@@ -697,9 +733,10 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                TutorialMerchantSpeaker,
                 merchantAudioSource,
                 merchantLowProfitLessonClip,
+                BhaskaraLowProfitLessonLineId,
 
                 "Rahim is certainly pleased.",
                 "But look at what you have earned from this trade.",
@@ -793,7 +830,7 @@ public class TutorialManager : MonoBehaviour
     }
     IEnumerator MerchantExplainNegotiationSequence()
     {
-        string speaker = "Stall Owner";
+        string speaker = TutorialMerchantSpeaker;
 
         string[] lines =
         {
@@ -838,13 +875,16 @@ public class TutorialManager : MonoBehaviour
         // PLAY MERCHANT AUDIO
         //==================================================
 
-        if (merchantExplainNegotiationClip != null &&
-            merchantAudioSource != null)
-        {
-            merchantAudioSource.clip =
-                merchantExplainNegotiationClip;
+        AudioClip resolvedClip = ResolveVoiceClip(BhaskaraExplainNegotiationLineId, merchantExplainNegotiationClip);
+        AudioSource playbackSource = GetPlaybackSource(merchantAudioSource, resolvedClip);
 
-            merchantAudioSource.Play();
+        if (resolvedClip != null &&
+            playbackSource != null)
+        {
+            playbackSource.clip =
+                resolvedClip;
+
+            playbackSource.Play();
         }
 
 
@@ -858,13 +898,13 @@ public class TutorialManager : MonoBehaviour
             // WAIT FOR CORRECT AUDIO TIME
             //--------------------------------------------------
 
-            if (merchantExplainNegotiationClip != null &&
-                merchantAudioSource != null &&
-                merchantAudioSource.isPlaying)
+            if (resolvedClip != null &&
+                playbackSource != null &&
+                playbackSource.isPlaying)
             {
                 yield return new WaitUntil(() =>
-                    merchantAudioSource.time >= startTimes[i] ||
-                    !merchantAudioSource.isPlaying
+                    playbackSource.time >= startTimes[i] ||
+                    !playbackSource.isPlaying
                 );
             }
             else
@@ -911,8 +951,8 @@ public class TutorialManager : MonoBehaviour
         // WAIT FOR AUDIO TO FINISH
         //==================================================
 
-        while (merchantAudioSource != null &&
-               merchantAudioSource.isPlaying)
+        while (playbackSource != null &&
+               playbackSource.isPlaying)
         {
             yield return null;
         }
@@ -922,7 +962,7 @@ public class TutorialManager : MonoBehaviour
         // FALLBACK WAIT IF THERE IS NO AUDIO
         //==================================================
 
-        if (merchantExplainNegotiationClip == null)
+        if (resolvedClip == null)
         {
             yield return new WaitForSeconds(3f);
         }
@@ -949,5 +989,28 @@ public class TutorialManager : MonoBehaviour
                 line
             );
         }
+    }
+
+    private AudioClip ResolveVoiceClip(string lineId, AudioClip fallbackClip)
+    {
+        if (voiceDatabase == null)
+            return fallbackClip;
+
+        AudioClip databaseClip = voiceDatabase.GetAudioClip(lineId);
+        return databaseClip != null ? databaseClip : fallbackClip;
+    }
+
+    private AudioSource GetPlaybackSource(AudioSource preferredSource, AudioClip clip)
+    {
+        if (preferredSource != null || clip == null)
+            return preferredSource;
+
+        if (fallbackAudioSource == null)
+        {
+            fallbackAudioSource = gameObject.AddComponent<AudioSource>();
+            fallbackAudioSource.playOnAwake = false;
+        }
+
+        return fallbackAudioSource;
     }
 }

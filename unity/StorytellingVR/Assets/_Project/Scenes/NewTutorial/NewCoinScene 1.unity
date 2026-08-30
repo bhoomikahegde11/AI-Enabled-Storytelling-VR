@@ -13612,6 +13612,7 @@ MonoBehaviour:
   varahaCoin: {fileID: 919132149155446097, guid: 4c7edf7621b7fd34a9a4e2a99888543c, type: 3}
   instructionPrompt: {fileID: 979231196}
   coinSequence: {fileID: 213218752}
+  voiceDatabase: {fileID: 11400000, guid: 70f75dc8456948e28f6b6b691a7b2c3f, type: 2}
   npcPaymentClip: {fileID: 8300000, guid: 4a64f1db38f885943a56cf2969930f98, type: 3}
   inspectCoinClip: {fileID: 8300000, guid: 6bc6f74c8b409714882f31ec5d62ecdd, type: 3}
   varahaClip: {fileID: 8300000, guid: 8d3e3a8ab54572a42978f3fb0e8fb2a4, type: 3}

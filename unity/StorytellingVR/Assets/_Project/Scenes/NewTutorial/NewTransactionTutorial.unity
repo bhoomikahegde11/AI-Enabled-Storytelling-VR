@@ -9002,6 +9002,7 @@ MonoBehaviour:
   voiceRecognitionManager: {fileID: 1408326717}
   hudManager: {fileID: 1274161122}
   respectUIManager: {fileID: 490512593}
+  voiceDatabase: {fileID: 11400000, guid: 70f75dc8456948e28f6b6b691a7b2c3f, type: 2}
   customerAudioSource: {fileID: 1121223228}
   merchantAudioSource: {fileID: 0}
   rahimIntroClip: {fileID: 0}

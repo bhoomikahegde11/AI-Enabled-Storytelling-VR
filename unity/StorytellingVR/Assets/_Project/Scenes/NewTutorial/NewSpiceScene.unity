@@ -12247,6 +12247,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpiceIntroSequence
   narratorAudioSource: {fileID: 1566595347}
+  voiceDatabase: {fileID: 11400000, guid: 70f75dc8456948e28f6b6b691a7b2c3f, type: 2}
   introClip: {fileID: 8300000, guid: 0350dc699771c6b4bbfa8f105bc3a8a9, type: 3}
   endingClip: {fileID: 8300000, guid: 29dc6f4bab4ca4347822ff82e973f6da, type: 3}
   subtitleCanvas: {fileID: 806500097}

@@ -4,6 +4,14 @@ using UnityEngine;
 
 public class SpiceTutorialManager : MonoBehaviour
 {
+    private const string CustomerRequestLineId = "CUSTOMER_SPICE_INTERACTION_REQUEST_01";
+    private const string NarratorScooperAppearedLineId = "NARRATOR_SPICE_INTERACTION_SCOOPER_01";
+    private const string NarratorScoopedLineId = "NARRATOR_SPICE_INTERACTION_CARRY_01";
+    private const string NarratorWrongSpiceLineId = "NARRATOR_SPICE_INTERACTION_WRONG_SPICE_01";
+    private const string NarratorWrongBagLineId = "NARRATOR_SPICE_INTERACTION_WRONG_BAG_01";
+    private const string CustomerThanksLineId = "CUSTOMER_SPICE_INTERACTION_THANKS_01";
+    private const string NarratorCompletedLineId = "NARRATOR_SPICE_INTERACTION_COMPLETE_01";
+
     public static SpiceTutorialManager Instance;
 
     [Header("Dialogue UI")]
@@ -16,6 +24,8 @@ public class SpiceTutorialManager : MonoBehaviour
     public AudioSource customerAudioSource;
 
     [Header("Dialogue Audio")]
+    [SerializeField] private DialogueVoiceDatabase voiceDatabase;
+
     public AudioClip customerRequestClip;
     public AudioClip narratorScooperAppearedClip;
     public AudioClip narratorScoopedClip;
@@ -30,7 +40,7 @@ public class SpiceTutorialManager : MonoBehaviour
     public InstructionPromptManager instructionPromptManager;
 
     [Header("Tutorial")]
-    public string customerName = "Customer";
+    public string customerName = "Rahim";
     public SpiceType requestedSpice = SpiceType.Cardamom;
 
     [Header("Timing")]
@@ -47,6 +57,7 @@ public class SpiceTutorialManager : MonoBehaviour
     private bool bagFilled = false;
     private float nextWrongSpiceReminderTime;
     private float nextWrongBagReminderTime;
+    private AudioSource fallbackAudioSource;
 
     private bool IsTutorialActive
     {
@@ -92,6 +103,7 @@ public class SpiceTutorialManager : MonoBehaviour
             Color.white,
             customerAudioSource,
             customerRequestClip,
+            CustomerRequestLineId,
             "Could you fill one bag of " + GetRequestedSpiceName() + " for me?"
         ));
 
@@ -119,6 +131,7 @@ public class SpiceTutorialManager : MonoBehaviour
             Color.yellow,
             narratorAudioSource,
             narratorScooperAppearedClip,
+            NarratorScooperAppearedLineId,
             "Good. Move the scooper into the sack of the requested spice."
         ));
     }
@@ -156,6 +169,7 @@ public class SpiceTutorialManager : MonoBehaviour
             Color.yellow,
             narratorAudioSource,
             narratorScoopedClip,
+            NarratorScoopedLineId,
             "Excellent. Now carry the spice to the customer's bag."
         ));
     }
@@ -176,6 +190,7 @@ public class SpiceTutorialManager : MonoBehaviour
             Color.yellow,
             narratorAudioSource,
             narratorWrongSpiceClip,
+            NarratorWrongSpiceLineId,
             "That is not the spice the customer requested. Try Again."
         ));
     }
@@ -197,6 +212,7 @@ public class SpiceTutorialManager : MonoBehaviour
             Color.yellow,
             narratorAudioSource,
             narratorWrongBagClip,
+            NarratorWrongBagLineId,
             "Collect the correct spice before filling the customer's bag."
         ));
     }
@@ -219,6 +235,7 @@ public class SpiceTutorialManager : MonoBehaviour
             Color.white,
             customerAudioSource,
             customerThanksClip,
+            CustomerThanksLineId,
             "Thank you, Merchant."
         ));
 
@@ -227,6 +244,7 @@ public class SpiceTutorialManager : MonoBehaviour
             Color.yellow,
             narratorAudioSource,
             narratorCompletedClip,
+            NarratorCompletedLineId,
             "Well done. You have successfully completed your first spice order."
 
         ));
@@ -237,6 +255,7 @@ public class SpiceTutorialManager : MonoBehaviour
         Color color,
         AudioSource audioSource,
         AudioClip audioClip,
+        string lineId,
         params string[] lines)
     {
         if (speakerNameText != null)
@@ -244,12 +263,14 @@ public class SpiceTutorialManager : MonoBehaviour
             speakerNameText.text = speaker;
         }
 
-        bool usingAudio = audioClip != null && audioSource != null;
+        AudioClip resolvedClip = ResolveVoiceClip(lineId, audioClip);
+        AudioSource playbackSource = GetPlaybackSource(audioSource, resolvedClip);
+        bool usingAudio = resolvedClip != null && playbackSource != null;
 
         if (usingAudio)
         {
-            audioSource.clip = audioClip;
-            audioSource.Play();
+            playbackSource.clip = resolvedClip;
+            playbackSource.Play();
         }
 
         if (hudManager != null)
@@ -257,7 +278,7 @@ public class SpiceTutorialManager : MonoBehaviour
             hudManager.ShowSubtitle(speaker, lines.Length > 0 ? lines[0] : "");
         }
 
-        float clipLength = usingAudio ? audioClip.length : subtitleSecondsPerLine;
+        float clipLength = usingAudio ? resolvedClip.length : subtitleSecondsPerLine;
         float timePerLine = lines.Length > 0 ? clipLength / lines.Length : clipLength;
         if (!usingAudio)
             timePerLine = Mathf.Max(timePerLine, subtitleSecondsPerLine);
@@ -277,7 +298,7 @@ public class SpiceTutorialManager : MonoBehaviour
             yield return new WaitForSeconds(timePerLine);
         }
 
-        while (audioSource != null && audioSource.isPlaying)
+        while (playbackSource != null && playbackSource.isPlaying)
         {
             yield return null;
         }
@@ -475,5 +496,28 @@ public class SpiceTutorialManager : MonoBehaviour
     string GetRequestedSpiceName()
     {
         return GetRequestedSpice().ToString();
+    }
+
+    private AudioClip ResolveVoiceClip(string lineId, AudioClip fallbackClip)
+    {
+        if (voiceDatabase == null)
+            return fallbackClip;
+
+        AudioClip databaseClip = voiceDatabase.GetAudioClip(lineId);
+        return databaseClip != null ? databaseClip : fallbackClip;
+    }
+
+    private AudioSource GetPlaybackSource(AudioSource preferredSource, AudioClip clip)
+    {
+        if (preferredSource != null || clip == null)
+            return preferredSource;
+
+        if (fallbackAudioSource == null)
+        {
+            fallbackAudioSource = gameObject.AddComponent<AudioSource>();
+            fallbackAudioSource.playOnAwake = false;
+        }
+
+        return fallbackAudioSource;
     }
 }

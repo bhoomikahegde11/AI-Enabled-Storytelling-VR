@@ -12465,6 +12465,7 @@ MonoBehaviour:
   hudManager: {fileID: 1224839060}
   narratorAudioSource: {fileID: 0}
   customerAudioSource: {fileID: 0}
+  voiceDatabase: {fileID: 11400000, guid: 70f75dc8456948e28f6b6b691a7b2c3f, type: 2}
   customerRequestClip: {fileID: 0}
   narratorScooperAppearedClip: {fileID: 0}
   narratorScoopedClip: {fileID: 0}
