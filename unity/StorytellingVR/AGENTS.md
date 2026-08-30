@@ -2,7 +2,7 @@
 - Project name: StorytellingVR
 - Unity version: Unity 6000.3.10f1
 - Active game object:
-  - Name: TutorialPrompts
+  - Name: Meshy_AI_Marigold_Jasmine_Garl_0723101318_texture
   - Tag: Untagged
-  - Layer: Overlay UI
+  - Layer: Default
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->
