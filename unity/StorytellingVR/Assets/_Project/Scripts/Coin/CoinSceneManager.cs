@@ -4,6 +4,13 @@ using UnityEngine;
 
 public class CoinSceneManager : MonoBehaviour
 {
+    private const string RahimPaymentLineId = "RAHIM_COIN_PAYMENT_01";
+    private const string NarratorInspectCoinLineId = "NARRATOR_COIN_INSPECT_01";
+    private const string NarratorVarahaLineId = "NARRATOR_COIN_VARAHA_01";
+    private const string NarratorKasuLineId = "NARRATOR_COIN_KASU_01";
+    private const string NarratorUnderstandCoinsLineId = "NARRATOR_COIN_COMPLETE_01";
+    private const string NarratorTradingAheadLineId = "NARRATOR_COIN_TRADING_AHEAD_01";
+
     [Header("References")]
     public NPCAnimationController npc;
 
@@ -26,6 +33,8 @@ public class CoinSceneManager : MonoBehaviour
 
 
     [Header("Voice Lines")]
+    [SerializeField] private DialogueVoiceDatabase voiceDatabase;
+
     public AudioClip npcPaymentClip;
     public AudioClip inspectCoinClip;
     public AudioClip varahaClip;
@@ -37,6 +46,9 @@ public class CoinSceneManager : MonoBehaviour
 
     void Start()
     {
+        if (voiceSource == null)
+            voiceSource = gameObject.AddComponent<AudioSource>();
+
         subtitlePanel.SetActive(false);
 
         if (coinSequence != null)
@@ -57,8 +69,9 @@ public class CoinSceneManager : MonoBehaviour
 
 
         yield return ShowDialogue(
-            "Rahim:",
+            "Rahim",
             "A pleasure doing business with you, trader. Here is your payment.",
+            RahimPaymentLineId,
             npcPaymentClip
         );
 
@@ -76,8 +89,9 @@ public class CoinSceneManager : MonoBehaviour
 
 
         yield return ShowDialogue(
-            "Narrator:",
+            "Narrator",
             "Take a closer look at this coin.",
+            NarratorInspectCoinLineId,
             inspectCoinClip
         );
 
@@ -104,8 +118,9 @@ public class CoinSceneManager : MonoBehaviour
     IEnumerator VarahaRoutine()
     {
         yield return ShowDialogue(
-            "Narrator:",
+            "Narrator",
             "The Varaha was a gold coin used for important trade and represented the wealth of the Vijayanagara Empire.",
+            NarratorVarahaLineId,
             varahaClip
         );
 
@@ -124,8 +139,9 @@ public class CoinSceneManager : MonoBehaviour
     {
         StartCoroutine(
             ShowDialogue(
-                "Narrator:",
+                "Narrator",
                 "The Kasu was a bronze coin used by common people for everyday marketplace transactions.",
+                NarratorKasuLineId,
                 kasuClip
             )
         );
@@ -145,15 +161,17 @@ public class CoinSceneManager : MonoBehaviour
     IEnumerator EndDialogue()
     {
         yield return ShowDialogue(
-            "Narrator:",
+            "Narrator",
             "You now understand the coins used in Vijayanagara markets.",
+            NarratorUnderstandCoinsLineId,
             understandCoinsClip
         );
 
 
         yield return ShowDialogue(
-            "Narrator:",
+            "Narrator",
             "Now use this knowledge while trading with the customers ahead.",
+            NarratorTradingAheadLineId,
             tradingAheadClip
         );
 
@@ -165,7 +183,7 @@ public class CoinSceneManager : MonoBehaviour
 
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.LoadNextScene();
+            GameManager.Instance.LoadSceneByName("SpicesInteraction");
         }
     }
 
@@ -175,6 +193,7 @@ public class CoinSceneManager : MonoBehaviour
     IEnumerator ShowDialogue(
         string speaker,
         string line,
+        string lineId,
         AudioClip clip
     )
     {
@@ -187,18 +206,20 @@ public class CoinSceneManager : MonoBehaviour
         dialogueText.text = line;
 
 
+        AudioClip resolvedClip = ResolveVoiceClip(lineId, clip);
+
         if (
-            clip != null &&
+            resolvedClip != null &&
             voiceSource != null
         )
         {
-            voiceSource.clip = clip;
+            voiceSource.clip = resolvedClip;
 
             voiceSource.Play();
 
 
             yield return new WaitForSeconds(
-                clip.length
+                resolvedClip.length
             );
         }
         else
@@ -208,5 +229,14 @@ public class CoinSceneManager : MonoBehaviour
 
 
         subtitlePanel.SetActive(false);
+    }
+
+    private AudioClip ResolveVoiceClip(string lineId, AudioClip fallbackClip)
+    {
+        if (voiceDatabase == null)
+            return fallbackClip;
+
+        AudioClip databaseClip = voiceDatabase.GetAudioClip(lineId);
+        return databaseClip != null ? databaseClip : fallbackClip;
     }
 }

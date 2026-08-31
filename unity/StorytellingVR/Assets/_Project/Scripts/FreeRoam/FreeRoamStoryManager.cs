@@ -35,6 +35,8 @@ public class FreeRoamStoryManager : MonoBehaviour
     [SerializeField] private TutorialPromptUIManager promptUI;
     [SerializeField] private TeleportManager teleportManager;
     [SerializeField] private NPCDirectionalIndicator directionalIndicator;
+    [SerializeField]
+    private MeeraInspectionSequenceController meeraInspectionSequenceController;
 
     [Header("Story Targets")]
     [SerializeField] private Transform localNPCTarget;
@@ -137,6 +139,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         objectiveUI?.SetObjective("Listen");
 
         yield return PlayNarration(
+            "NARRATOR_FREEROAM_INTRO_01",
             "Narrator",
             "Welcome to Hampi Bazaar. Take a moment to observe the people around you.",
             5f
@@ -145,6 +148,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         yield return new WaitForSecondsRealtime(0.5f);
 
         yield return PlayNarration(
+            "NARRATOR_FREEROAM_INTRO_02",
             "Narrator",
             "This marketplace is alive with merchants, travelers, craftsmen, and pilgrims. For many here, this is simply another ordinary morning.",
             7f
@@ -153,8 +157,8 @@ public class FreeRoamStoryManager : MonoBehaviour
         SetStage(StoryStage.TeleportTutorial);
 
         promptUI?.ShowPrompt(
-            "Teleport Movement",
-            "Use the teleport arc to move around the market. Aim at a clear spot on the street and release to teleport."
+            "Teleport",
+            "Use the RIGHT JOYSTICK to aim at a hotspot, then release it to teleport."
         );
 
         objectiveUI?.SetObjective(
@@ -195,6 +199,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         );
 
         yield return PlayNarration(
+            "NARRATOR_SPEAK_LOCAL_01",
             "Narrator",
             "Good. Now that you can move through the bazaar, speak with someone nearby. A local resident may help you understand this place.",
             6f
@@ -232,6 +237,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         );
 
         yield return PlayNarration(
+            "NARRATOR_SPEAK_FOREIGNER_01",
             "Narrator",
             "Hampi draws people from far beyond the empire. Speak with the traveler nearby and learn how far these trade routes reach.",
             6f
@@ -277,6 +283,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         // Meera calls from somewhere nearby.
         // Her identity remains hidden for now.
         yield return PlayNarration(
+            "MEERA_STALL_CALL_01",
             "???",
             "Curiosities from near and far! Fine trinkets, rare keepsakes—come, take a look!",
             5f
@@ -286,6 +293,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         yield return new WaitForSecondsRealtime(0.6f);
 
         yield return PlayNarration(
+            "NARRATOR_INTERESTING_STALL_01",
             "Narrator",
             "That sounds like an interesting stall. Perhaps it is worth taking a closer look.",
             6f
@@ -338,11 +346,6 @@ public class FreeRoamStoryManager : MonoBehaviour
         if (currentStage != StoryStage.VisitTrinketStall)
             return;
 
-        promptUI?.ShowPrompt(
-            "Talk to the stall owner",
-            "Move closer to the stall owner and press X to speak."
-        );
-
         Debug.Log(
             "[FREE ROAM STORY] Waiting for the player to interact with Meera."
         );
@@ -386,11 +389,20 @@ public class FreeRoamStoryManager : MonoBehaviour
 
         SetStage(StoryStage.InspectTrinkets);
 
+        if (meeraInspectionSequenceController != null)
+        {
+            meeraInspectionSequenceController.BeginInspectionSequence();
+        }
+        else
+        {
+            Debug.LogError(
+                "[FREE ROAM STORY] MeeraInspectionSequenceController is not assigned."
+            );
+        }
+
         objectiveUI?.SetObjective(
             "Inspect the objects on Meera's stall"
         );
-
-        teleportManager?.EnableGroup("General");
 
         Debug.Log(
             "[FREE ROAM STORY] Meera introduction complete. " +
@@ -400,12 +412,20 @@ public class FreeRoamStoryManager : MonoBehaviour
 
     public void NotifyNotebookConversationCompleted()
     {
-        if (currentStage != StoryStage.InspectNotebook &&
+        Debug.Log(
+            $"[MEERA HANDOFF] NotifyNotebookConversationCompleted entered. " +
+            $"Object={gameObject.name}, active={gameObject.activeInHierarchy}, " +
+            $"enabled={enabled}, stage={currentStage}, transitionRunning={transitionInProgress}"
+        );
+
+        if (currentStage != StoryStage.InspectTrinkets &&
             currentStage != StoryStage.MeeraIntroduction)
         {
+            Debug.Log($"[MEERA HANDOFF] Aborted: expected InspectTrinkets or MeeraIntroduction but stage was {currentStage}.");
             return;
         }
 
+        Debug.Log("[MEERA HANDOFF] Starting FindWorkSequence.");
         StartManagedSequence(
             FindWorkSequence()
         );
@@ -413,29 +433,60 @@ public class FreeRoamStoryManager : MonoBehaviour
 
     private IEnumerator FindWorkSequence()
     {
+        Debug.Log("[FIND WORK] Sequence entered.");
+        
         HideIndicator();
 
+        Debug.Log("[FIND WORK] Setting stage to FindWork.");
         SetStage(StoryStage.FindWork);
 
-        objectiveUI?.SetObjective(
-            "Find work in the bazaar"
-        );
+        Debug.Log("[FIND WORK] Setting objective.");
+        if (objectiveUI != null)
+            objectiveUI.SetObjective("Find work in the bazaar");
+        else
+            Debug.LogWarning("[FIND WORK] objectiveUI is null!");
 
+        Debug.Log("[FIND WORK] Starting narrator transition.");
         yield return PlayNarration(
+            "NARRATOR_FIND_WORK_01",
             "Narrator",
             "Without coin, the answers you seek remain beyond reach. But a city this busy always has work for someone willing to earn their place.",
             7f
         );
 
+        Debug.Log("[FIND WORK] Waiting 7 seconds completed.");
+
+        Debug.Log("[FIND WORK] Activating merchant sequence object.");
         if (merchantSequence != null)
             merchantSequence.gameObject.SetActive(true);
+        else
+            Debug.LogWarning("[FIND WORK] merchantSequence is null!");
 
-        teleportManager?.EnableGroup("MerchantPath");
+        Debug.Log("[FIND WORK] Enabling teleport groups.");
+        if (teleportManager != null)
+        {
+            teleportManager.EnableGroup("General");
+            teleportManager.EnableGroup("MerchantPath");
+        }
+        else
+        {
+            Debug.LogWarning("[FIND WORK] teleportManager is null!");
+        }
 
-        SetIndicator(
-            merchantTarget,
-            merchantWorldIndicator
-        );
+        Debug.Log("[FIND WORK] Showing merchant indicator.");
+        if (merchantTarget != null)
+        {
+            SetIndicator(
+                merchantTarget,
+                merchantWorldIndicator
+            );
+        }
+        else
+        {
+            Debug.LogWarning("[FIND WORK] merchantTarget is null!");
+        }
+
+        Debug.Log("[FIND WORK] Sequence completed.");
 
         SetStage(StoryStage.TalkToMerchant);
     }
@@ -508,6 +559,28 @@ public class FreeRoamStoryManager : MonoBehaviour
         Debug.Log("[FREE ROAM STORY] Transition = FALSE");
 
         activeSequence = null;
+    }
+
+    private IEnumerator PlayNarration(
+        string lineId,
+        string speaker,
+        string line,
+        float duration)
+    {
+        if (narrator != null)
+        {
+            yield return narrator.PlayNarration(
+                lineId,
+                speaker,
+                line,
+                duration
+            );
+        }
+        else
+        {
+            Debug.Log($"[{speaker}] {line}");
+            yield return new WaitForSecondsRealtime(duration);
+        }
     }
 
     private IEnumerator PlayNarration(

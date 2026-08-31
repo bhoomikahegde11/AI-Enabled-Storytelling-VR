@@ -6,8 +6,8 @@ using UnityEngine.UI;
 public class ScreenFader : MonoBehaviour
 {
     public Image fadeImage;
-
     public float speed = 1;
+    public Color fadeColor = Color.black;
 
 
     public IEnumerator FadeOut()
@@ -20,13 +20,12 @@ public class ScreenFader : MonoBehaviour
             a += Time.deltaTime * speed;
 
 
-            fadeImage.color =
-                new Color(
-                    0,
-                    0,
-                    0,
-                    a
-                );
+            fadeImage.color = new Color(
+                fadeColor.r,
+                fadeColor.g,
+                fadeColor.b,
+                a
+            );
 
 
             yield return null;
@@ -45,13 +44,12 @@ public class ScreenFader : MonoBehaviour
             a -= Time.deltaTime * speed;
 
 
-            fadeImage.color =
-                new Color(
-                    0,
-                    0,
-                    0,
-                    a
-                );
+            fadeImage.color = new Color(
+                fadeColor.r,
+                fadeColor.g,
+                fadeColor.b,
+                a
+            );
 
 
             yield return null;

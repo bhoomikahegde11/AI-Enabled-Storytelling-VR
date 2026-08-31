@@ -206,11 +206,14 @@ public class NPCQuestionUIManager : MonoBehaviour
 
         if (NarratorUIManager.Instance != null)
         {
+            npcAtStart.StartTalking();
             yield return NarratorUIManager.Instance
                 .PlayNarrationLineByLine(
+                    question.answerVoiceLineId,
                     dialogueAtStart.npcName,
                     question.response
                 );
+            npcAtStart.StopTalking();
         }
         else
         {
@@ -218,6 +221,51 @@ public class NPCQuestionUIManager : MonoBehaviour
                 "[QUESTION UI] NarratorUIManager.Instance is missing."
             );
         }
+
+        // --- Meera Notebook Sequence Interception ---
+        bool isNotebookQuestion = question.question != null &&
+            question.question.IndexOf("notebook", System.StringComparison.OrdinalIgnoreCase) >= 0 &&
+            question.question.IndexOf("how much", System.StringComparison.OrdinalIgnoreCase) >= 0;
+
+        if (isNotebookQuestion)
+        {
+            SetCanvasVisible(false);
+
+            if (NarratorUIManager.Instance != null)
+            {
+                yield return NarratorUIManager.Instance.PlayNarrationLineByLine(
+                    "Player",
+                    "...I don't have any money."
+                );
+
+                yield return NarratorUIManager.Instance.PlayNarrationLineByLine(
+                    "NARRATOR_NOTEBOOK_REMAIN_01",
+                    "Narrator",
+                    "For now, the notebook would have to remain where it was."
+                );
+
+                yield return NarratorUIManager.Instance.PlayNarrationLineByLine(
+                    "MEERA_NO_MONEY_RESPONSE_01",
+                    "Meera",
+                    "Then come back when you have the money."
+                );
+            }
+
+            answerRoutine = null;
+
+            if (npcAtStart != null)
+            {
+                npcAtStart.CompleteSpecialConversation();
+            }
+
+            if (currentNPC != null)
+            {
+                ClearConversationState();
+            }
+
+            yield break;
+        }
+        // --------------------------------------------
 
         // This answer coroutine has now genuinely finished.
         answerRoutine = null;

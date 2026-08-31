@@ -20,6 +20,10 @@ public class NarratorUIManager : MonoBehaviour
     public TMP_Text speakerText;
     public TMP_Text subtitleText;
 
+    [Header("Voice")]
+    [SerializeField] DialogueVoiceDatabase voiceDatabase;
+    [SerializeField] AudioSource dialogueVoiceSource;
+
     [Header("Continue Input")]
     public ContinueInputType continueInput =
         ContinueInputType.RightTrigger;
@@ -54,11 +58,10 @@ public class NarratorUIManager : MonoBehaviour
     [Tooltip("In the Editor, Space or left mouse click acts as the continue input.")]
     public bool allowEditorInput = true;
 
-    private Coroutine currentRoutine;
+    private static bool continueTutorialTaught = false;
+    private bool isShowingContinueTutorial = false;
 
-    private NPCDialogueVRLaserPointer cachedLaserPointer;
-    private bool previousLaserEnabledState;
-    private bool laserStateCaptured;
+    private Coroutine currentRoutine;
 
     private void Awake()
     {
@@ -88,7 +91,20 @@ public class NarratorUIManager : MonoBehaviour
         StopCurrentRoutine();
 
         currentRoutine = StartCoroutine(
-            NarrationRoutine(speaker, subtitle)
+            NarrationRoutine(speaker, subtitle, null)
+        );
+    }
+
+    public void ShowNarration(
+        string lineId,
+        string speaker,
+        string subtitle,
+        float duration = -1f)
+    {
+        StopCurrentRoutine();
+
+        currentRoutine = StartCoroutine(
+            NarrationRoutine(speaker, subtitle, lineId)
         );
     }
 
@@ -104,7 +120,24 @@ public class NarratorUIManager : MonoBehaviour
         StopCurrentRoutine();
 
         currentRoutine = StartCoroutine(
-            NarrationRoutine(speaker, subtitle)
+            NarrationRoutine(speaker, subtitle, null)
+        );
+
+        yield return currentRoutine;
+
+        currentRoutine = null;
+    }
+
+    public IEnumerator PlayNarration(
+        string lineId,
+        string speaker,
+        string subtitle,
+        float duration = -1f)
+    {
+        StopCurrentRoutine();
+
+        currentRoutine = StartCoroutine(
+            NarrationRoutine(speaker, subtitle, lineId)
         );
 
         yield return currentRoutine;
@@ -123,7 +156,23 @@ public class NarratorUIManager : MonoBehaviour
         StopCurrentRoutine();
 
         currentRoutine = StartCoroutine(
-            NarrationRoutine(speaker, fullText)
+            NarrationRoutine(speaker, fullText, null)
+        );
+
+        yield return currentRoutine;
+
+        currentRoutine = null;
+    }
+
+    public IEnumerator PlayNarrationLineByLine(
+        string lineId,
+        string speaker,
+        string fullText)
+    {
+        StopCurrentRoutine();
+
+        currentRoutine = StartCoroutine(
+            NarrationRoutine(speaker, fullText, lineId)
         );
 
         yield return currentRoutine;
@@ -133,7 +182,8 @@ public class NarratorUIManager : MonoBehaviour
 
     private IEnumerator NarrationRoutine(
         string speaker,
-        string fullText)
+        string fullText,
+        string lineId)
     {
         if (string.IsNullOrWhiteSpace(fullText))
             yield break;
@@ -142,6 +192,30 @@ public class NarratorUIManager : MonoBehaviour
 
         if (speakerText != null)
             speakerText.text = speaker;
+
+        Debug.Log($"[VOICE] Request lineId={(string.IsNullOrEmpty(lineId) ? "NULL" : lineId)}");
+        Debug.Log($"[VOICE] Database assigned={(voiceDatabase != null)}");
+        Debug.Log($"[VOICE] AudioSource assigned={(dialogueVoiceSource != null)}");
+
+        StopCurrentVoice();
+        if (!string.IsNullOrEmpty(lineId) && voiceDatabase != null && dialogueVoiceSource != null)
+        {
+            AudioClip clip = voiceDatabase.GetAudioClip(lineId);
+            Debug.Log($"[VOICE] Lookup success={(clip != null)}");
+            if (clip != null)
+            {
+                Debug.Log($"[VOICE] Clip={clip.name}");
+                dialogueVoiceSource.clip = clip;
+                Debug.Log($"[VOICE] AudioSource active={dialogueVoiceSource.gameObject.activeInHierarchy} enabled={dialogueVoiceSource.enabled} volume={dialogueVoiceSource.volume}");
+                Debug.Log("[VOICE] Calling Play");
+                dialogueVoiceSource.Play();
+                Debug.Log($"[VOICE] isPlaying after Play={dialogueVoiceSource.isPlaying}");
+            }
+            else
+            {
+                Debug.LogWarning($"[NarratorUIManager] Missing audio clip for lineId: {lineId}");
+            }
+        }
 
         string[] lines = fullText.Split(
             new[] { "\r\n", "\r", "\n" },
@@ -273,6 +347,11 @@ public class NarratorUIManager : MonoBehaviour
         previousPressed = false;
         updatePressedState?.Invoke(false);
 
+        if (waitForManualContinue && !continueTutorialTaught)
+        {
+            ShowContinueTutorialPrompt();
+        }
+
         float completedLineElapsed = 0f;
         bool advanceLine = false;
 
@@ -287,7 +366,14 @@ public class NarratorUIManager : MonoBehaviour
 
             if (waitForManualContinue && freshPress)
             {
+                StopCurrentVoice();
                 advanceLine = true;
+
+                if (isShowingContinueTutorial)
+                {
+                    continueTutorialTaught = true;
+                    HideContinueTutorialPrompt();
+                }
             }
 
             previousPressed = currentlyPressed;
@@ -307,6 +393,8 @@ public class NarratorUIManager : MonoBehaviour
             yield return null;
         }
 
+        HideContinueTutorialPrompt();
+
         // Prevent a held trigger from skipping the next line.
         while (GetContinueButtonPressed())
         {
@@ -320,7 +408,6 @@ public class NarratorUIManager : MonoBehaviour
     private void BeginDialoguePresentation()
     {
         ShowCanvas();
-        CaptureAndDisableLaserPointer();
 
         if (subtitleText != null)
         {
@@ -332,6 +419,8 @@ public class NarratorUIManager : MonoBehaviour
 
     private void EndDialoguePresentation()
     {
+        HideContinueTutorialPrompt();
+
         if (subtitleText != null)
         {
             subtitleText.text = string.Empty;
@@ -339,7 +428,6 @@ public class NarratorUIManager : MonoBehaviour
                 int.MaxValue;
         }
 
-        RestoreLaserPointer();
         HideNarrator();
     }
 
@@ -351,19 +439,30 @@ public class NarratorUIManager : MonoBehaviour
 
     public void HideNarrator()
     {
+        StopCurrentVoice();
         if (narratorCanvas != null)
             narratorCanvas.SetActive(false);
     }
 
+    public void StopCurrentVoice()
+    {
+        Debug.Log($"[VOICE] StopCurrentVoice called. Source assigned={(dialogueVoiceSource != null)}, isPlaying={(dialogueVoiceSource != null && dialogueVoiceSource.isPlaying)}");
+        if (dialogueVoiceSource != null && dialogueVoiceSource.isPlaying)
+        {
+            dialogueVoiceSource.Stop();
+        }
+    }
+
     private void StopCurrentRoutine()
     {
+        HideContinueTutorialPrompt();
+        StopCurrentVoice();
+
         if (currentRoutine != null)
         {
             StopCoroutine(currentRoutine);
             currentRoutine = null;
         }
-
-        RestoreLaserPointer();
 
         if (subtitleText != null)
         {
@@ -373,6 +472,36 @@ public class NarratorUIManager : MonoBehaviour
         }
 
         HideNarrator();
+    }
+
+    private void ShowContinueTutorialPrompt()
+    {
+        if (continueTutorialTaught || isShowingContinueTutorial)
+            return;
+
+        isShowingContinueTutorial = true;
+
+        if (TutorialPromptUIManager.Instance != null)
+        {
+            TutorialPromptUIManager.Instance.ShowPrompt(
+                "Continue Dialogue",
+                "Press the RIGHT TRIGGER to continue.",
+                this
+            );
+        }
+    }
+
+    private void HideContinueTutorialPrompt()
+    {
+        if (!isShowingContinueTutorial)
+            return;
+
+        isShowingContinueTutorial = false;
+
+        if (TutorialPromptUIManager.Instance != null)
+        {
+            TutorialPromptUIManager.Instance.HidePrompt(this);
+        }
     }
 
     private bool GetContinueButtonPressed()
@@ -435,39 +564,5 @@ public class NarratorUIManager : MonoBehaviour
         }
 
         return false;
-    }
-
-    private void CaptureAndDisableLaserPointer()
-    {
-        cachedLaserPointer =
-            Object.FindAnyObjectByType<
-                NPCDialogueVRLaserPointer
-            >(
-                FindObjectsInactive.Include
-            );
-
-        if (cachedLaserPointer == null)
-            return;
-
-        previousLaserEnabledState =
-            cachedLaserPointer.enabled;
-
-        laserStateCaptured = true;
-        cachedLaserPointer.enabled = false;
-    }
-
-    private void RestoreLaserPointer()
-    {
-        if (!laserStateCaptured)
-            return;
-
-        if (cachedLaserPointer != null)
-        {
-            cachedLaserPointer.enabled =
-                previousLaserEnabledState;
-        }
-
-        cachedLaserPointer = null;
-        laserStateCaptured = false;
     }
 }

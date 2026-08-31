@@ -34,6 +34,10 @@ public class NPCInteraction : MonoBehaviour
     [SerializeField]
     private bool availableOnStart;
 
+    [Header("Conversation Access")]
+    [SerializeField]
+    private bool conversationUnlocked = true;
+
     [Header("Indicator")]
     [SerializeField]
     private NPCDirectionalIndicator indicator;
@@ -41,6 +45,9 @@ public class NPCInteraction : MonoBehaviour
     [Header("Optional Dedicated Sequence")]
     [SerializeField]
     private MeeraSequenceController meeraSequenceController;
+
+    [SerializeField]
+    private NPCSubtitlePositionController subtitlePositionController;
 
     [Header("Legacy Next NPCs")]
     [Tooltip(
@@ -55,15 +62,16 @@ public class NPCInteraction : MonoBehaviour
     private bool conversationCompleted;
     private bool buttonHeld;
     private bool interactionUnlocked;
+    private bool questionConversationStarted;
 
     private Coroutine conversationRoutine;
 
+    [Header("Animation")]
+    [SerializeField]
+    private Animator npcAnimator;
     private void Start()
     {
         interactionUnlocked = availableOnStart;
-
-        if (talkPromptObject != null)
-            talkPromptObject.SetActive(false);
 
         if (indicator != null)
         {
@@ -91,6 +99,7 @@ public class NPCInteraction : MonoBehaviour
             if (!inConversation)
             {
                 if (interactionUnlocked &&
+                    conversationUnlocked &&
                     !conversationCompleted)
                 {
                     StartConversation();
@@ -123,10 +132,6 @@ public class NPCInteraction : MonoBehaviour
         if (dialogue == null ||
             NarratorUIManager.Instance == null ||
             NPCQuestionUIManager.Instance == null)
-
-            if (dialogue == null ||
-            NarratorUIManager.Instance == null ||
-            NPCQuestionUIManager.Instance == null)
         {
             Debug.LogError(
                 "[NPC] Cannot start conversation. " +
@@ -148,8 +153,7 @@ public class NPCInteraction : MonoBehaviour
 
         inConversation = true;
 
-        if (talkPromptObject != null)
-            talkPromptObject.SetActive(false);
+        HideInteractionPrompt();
 
         if (TeleportManager.Instance != null)
             TeleportManager.Instance.DisableAll();
@@ -159,8 +163,6 @@ public class NPCInteraction : MonoBehaviour
 
         if (indicator != null)
             indicator.Hide();
-
-        SetLaserPointerEnabled(false);
 
         conversationRoutine =
             StartCoroutine(ConversationFlowRoutine());
@@ -183,8 +185,7 @@ public class NPCInteraction : MonoBehaviour
 
         inConversation = true;
 
-        if (talkPromptObject != null)
-            talkPromptObject.SetActive(false);
+        HideInteractionPrompt();
 
         if (TeleportManager.Instance != null)
             TeleportManager.Instance.DisableAll();
@@ -195,8 +196,6 @@ public class NPCInteraction : MonoBehaviour
         if (indicator != null)
             indicator.Hide();
 
-        SetLaserPointerEnabled(false);
-
         meeraSequenceController.BeginSequence();
 
         Debug.Log(
@@ -206,14 +205,16 @@ public class NPCInteraction : MonoBehaviour
 
     private IEnumerator ConversationFlowRoutine()
     {
+        StartTalking();
         yield return NarratorUIManager.Instance
             .PlayNarrationLineByLine(
+                dialogue.openingDialogueLineId,
                 dialogue.npcName,
                 dialogue.openingDialogue
             );
 
         conversationRoutine = null;
-
+        StopTalking();
         if (!inConversation)
             yield break;
 
@@ -258,11 +259,11 @@ public class NPCInteraction : MonoBehaviour
         playerNearby = true;
 
         if (interactionUnlocked &&
+            conversationUnlocked &&
             !inConversation &&
-            !conversationCompleted &&
-            talkPromptObject != null)
+            !conversationCompleted)
         {
-            talkPromptObject.SetActive(true);
+            ShowInteractionPrompt();
         }
     }
 
@@ -273,8 +274,7 @@ public class NPCInteraction : MonoBehaviour
 
         playerNearby = false;
 
-        if (talkPromptObject != null)
-            talkPromptObject.SetActive(false);
+        HideInteractionPrompt();
     }
 
     private bool IsPlayer(Collider other)
@@ -308,10 +308,10 @@ public class NPCInteraction : MonoBehaviour
             indicator.Show();
 
         if (playerNearby &&
-            !inConversation &&
-            talkPromptObject != null)
+            conversationUnlocked &&
+            !inConversation)
         {
-            talkPromptObject.SetActive(true);
+            ShowInteractionPrompt();
         }
 
         Debug.Log(
@@ -319,22 +319,107 @@ public class NPCInteraction : MonoBehaviour
         );
     }
 
+    /// <summary>
+    /// Called programmatically to unlock the conversation gate
+    /// and immediately start the standard conversation flow.
+    /// Used by MeeraInspectionSequenceController after inspection.
+    /// </summary>
+    public void UnlockAndStartConversation()
+    {
+        if (conversationCompleted)
+        {
+            Debug.Log(
+                "[NPC] UnlockAndStartConversation skipped; " +
+                "conversation already completed."
+            );
+
+            return;
+        }
+
+        if (questionConversationStarted)
+        {
+            Debug.Log(
+                "[NPC] UnlockAndStartConversation skipped; " +
+                "question conversation already started."
+            );
+
+            return;
+        }
+
+        questionConversationStarted = true;
+        conversationUnlocked = true;
+
+        StartQuestionConversation();
+    }
+
+    /// <summary>
+    /// Starts the standard conversation flow (opening dialogue
+    /// then question canvas) without going through the dedicated
+    /// Meera sequence, even if this NPC is of type Meera.
+    /// </summary>
+    private void StartQuestionConversation()
+    {
+        if (dialogue == null ||
+            NPCQuestionUIManager.Instance == null)
+        {
+            Debug.LogError(
+                "[NPC] Cannot start question conversation. " +
+                "Dialogue or manager reference is missing."
+            );
+
+            return;
+        }
+
+        if (questionCanvasView == null)
+        {
+            Debug.LogError(
+                $"[NPC] {gameObject.name} has no " +
+                "NPCQuestionCanvasView assigned."
+            );
+
+            return;
+        }
+
+        inConversation = true;
+
+        HideInteractionPrompt();
+
+        if (indicator != null)
+            indicator.Hide();
+
+        if (string.IsNullOrWhiteSpace(dialogue.openingDialogue) ||
+            NarratorUIManager.Instance == null)
+        {
+            NPCQuestionUIManager.Instance.Open(
+                dialogue,
+                this,
+                questionCanvasView
+            );
+
+            Debug.Log(
+                "[NPC] Question conversation started (no opening dialogue)."
+            );
+        }
+        else
+        {
+            conversationRoutine =
+                StartCoroutine(ConversationFlowRoutine());
+
+            Debug.Log(
+                "[NPC] Question conversation started (with opening dialogue)."
+            );
+        }
+    }
+
     public void DisableIndicator()
     {
         if (indicator != null)
             indicator.Hide();
+
+        HideInteractionPrompt();
     }
 
-    private void SetLaserPointerEnabled(bool enabled)
-    {
-        NPCDialogueVRLaserPointer laser =
-            Object.FindAnyObjectByType<NPCDialogueVRLaserPointer>(
-                FindObjectsInactive.Include
-            );
 
-        if (laser != null)
-            laser.enabled = enabled;
-    }
 
     private void BeginClosingDialogue()
     {
@@ -345,8 +430,6 @@ public class NPCInteraction : MonoBehaviour
 
         if (NPCQuestionUIManager.Instance != null)
             NPCQuestionUIManager.Instance.Close();
-
-        SetLaserPointerEnabled(false);
 
         StartCoroutine(ClosingConversationRoutine());
 
@@ -360,22 +443,35 @@ public class NPCInteraction : MonoBehaviour
 
     private IEnumerator ClosingConversationRoutine()
     {
-        SetLaserPointerEnabled(false);
 
         if (!string.IsNullOrWhiteSpace(dialogue.closingDialogue))
         {
+            StartTalking();
             yield return NarratorUIManager.Instance
                 .PlayNarrationLineByLine(
+                    dialogue.closingDialogueLineId,
                     dialogue.npcName,
                     dialogue.closingDialogue
                 );
+            StopTalking();
         }
 
         CompleteConversation();
     }
 
+    /// <summary>
+    /// Safely completes a special out-of-bounds conversation (like Meera's 
+    /// notebook sequence) using the standard internal cleanup logic.
+    /// </summary>
+    public void CompleteSpecialConversation()
+    {
+        Debug.Log($"[NPC] Special conversation completion triggered for {gameObject.name}.");
+        CompleteConversation();
+    }
+
     private void CompleteConversation()
     {
+        StopTalking();
         inConversation = false;
         conversationCompleted = true;
         closingDialoguePlaying = false;
@@ -383,13 +479,10 @@ public class NPCInteraction : MonoBehaviour
         if (NPCQuestionUIManager.Instance != null)
             NPCQuestionUIManager.Instance.Close();
 
-        SetLaserPointerEnabled(false);
-
         if (teleportSystem != null)
             teleportSystem.SetActive(true);
 
-        if (talkPromptObject != null)
-            talkPromptObject.SetActive(false);
+        HideInteractionPrompt();
 
         if (indicator != null)
             indicator.Hide();
@@ -399,6 +492,26 @@ public class NPCInteraction : MonoBehaviour
         Debug.Log(
             $"[NPC] Conversation fully completed for {storyNPCType}."
         );
+    }
+
+    private void ShowInteractionPrompt()
+    {
+        if (TutorialPromptUIManager.Instance != null)
+        {
+            TutorialPromptUIManager.Instance.ShowPrompt(
+                "Interact",
+                "Press X to interact.",
+                this
+            );
+        }
+    }
+
+    private void HideInteractionPrompt()
+    {
+        if (TutorialPromptUIManager.Instance != null)
+        {
+            TutorialPromptUIManager.Instance.HidePrompt(this);
+        }
     }
 
     private void NotifyStoryManager()
@@ -450,7 +563,9 @@ public class NPCInteraction : MonoBehaviour
                     "[NPC STORY] Sending Meera completed event."
                 );
 
+                Debug.Log($"[MEERA HANDOFF] About to call NotifyNotebookConversationCompleted. Manager={storyManager}");
                 storyManager.NotifyNotebookConversationCompleted();
+                Debug.Log("[MEERA HANDOFF] Returned from NotifyNotebookConversationCompleted.");
                 break;
 
             case StoryNPCType.Bhaskara:
@@ -488,5 +603,42 @@ public class NPCInteraction : MonoBehaviour
     {
         if (TeleportManager.Instance != null)
             TeleportManager.Instance.EnableGroup("General");
+    }
+    public void StartTalking()
+    {
+        Debug.Log($"[NPC ANIMATION] START TALKING called on {gameObject.name}");
+
+        if (npcAnimator == null)
+        {
+            Debug.LogError($"[NPC ANIMATION] {gameObject.name}: npcAnimator is NULL!");
+            return;
+        }
+
+        Debug.Log(
+            $"[NPC ANIMATION] Setting IsTalking TRUE on Animator: {npcAnimator.gameObject.name}"
+        );
+
+        npcAnimator.SetBool("IsTalking", true);
+
+        Debug.Log(
+            $"[NPC ANIMATION] IsTalking is now: {npcAnimator.GetBool("IsTalking")}"
+        );
+    }
+
+    public void StopTalking()
+    {
+        Debug.Log($"[NPC ANIMATION] STOP TALKING called on {gameObject.name}");
+
+        if (npcAnimator == null)
+        {
+            Debug.LogError($"[NPC ANIMATION] {gameObject.name}: npcAnimator is NULL!");
+            return;
+        }
+
+        npcAnimator.SetBool("IsTalking", false);
+
+        Debug.Log(
+            $"[NPC ANIMATION] IsTalking is now: {npcAnimator.GetBool("IsTalking")}"
+        );
     }
 }

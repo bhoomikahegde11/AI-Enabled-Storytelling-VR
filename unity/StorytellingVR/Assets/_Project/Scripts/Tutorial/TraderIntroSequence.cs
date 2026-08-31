@@ -6,8 +6,21 @@ using UnityEngine.Rendering.Universal;
 
 public class TraderIntroSequence : MonoBehaviour
 {
+    private static readonly string[] NarrationLineIds =
+    {
+        "NARRATOR_TRADER_INTRO_APPROACH_01",
+        "NARRATOR_TRADER_INTRO_LOOK_CLOSELY_01",
+        "NARRATOR_TRADER_INTRO_ATTIRE_01",
+        "NARRATOR_TRADER_INTRO_MARKETS_01",
+        "NARRATOR_TRADER_INTRO_GOODS_01",
+        "NARRATOR_TRADER_INTRO_FOREIGNERS_01",
+        "NARRATOR_TRADER_INTRO_BEFORE_YOU_01",
+        "NARRATOR_TRADER_INTRO_FIRST_CUSTOMER_01"
+    };
+
     [Header("Audio")]
     public AudioSource audioSource;
+    [SerializeField] private DialogueVoiceDatabase voiceDatabase;
     public AudioClip[] narrationClips;
 
     [Header("UI")]
@@ -219,9 +232,11 @@ public class TraderIntroSequence : MonoBehaviour
         yield return new WaitForSecondsRealtime(0.05f);
         subtitleText.text = text;
         
-        if (narrationClips != null && index >= 0 && index < narrationClips.Length && narrationClips[index] != null)
+        AudioClip resolvedClip = ResolveNarrationClip(index);
+
+        if (resolvedClip != null)
         {
-            audioSource.clip = narrationClips[index];
+            audioSource.clip = resolvedClip;
             audioSource.Play();
             
             yield return new WaitForSecondsRealtime(0.1f);
@@ -234,6 +249,20 @@ public class TraderIntroSequence : MonoBehaviour
         
         yield return new WaitForSecondsRealtime(0.15f);
         subtitleText.text = "";
+    }
+
+    private AudioClip ResolveNarrationClip(int index)
+    {
+        AudioClip fallbackClip = null;
+
+        if (narrationClips != null && index >= 0 && index < narrationClips.Length)
+            fallbackClip = narrationClips[index];
+
+        if (voiceDatabase == null || index < 0 || index >= NarrationLineIds.Length)
+            return fallbackClip;
+
+        AudioClip databaseClip = voiceDatabase.GetAudioClip(NarrationLineIds[index]);
+        return databaseClip != null ? databaseClip : fallbackClip;
     }
 
     IEnumerator FocusOnNPC_Bokeh()

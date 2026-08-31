@@ -28,6 +28,7 @@ public class MeeraSequenceController : MonoBehaviour
     [SerializeField]
     private GameObject sequenceObjectsRoot;
 
+
     [Header("Introduction Dialogue")]
     [SerializeField]
     private string speakerName = "Meera";
@@ -35,16 +36,19 @@ public class MeeraSequenceController : MonoBehaviour
     [TextArea(2, 5)]
     [SerializeField]
     private string greetingLine =
-        "Ah, so my call caught your attention. Come closer, traveller. There may be something here that interests you.";
+        "Ah, so my call caught your attention. Come closer, traveller. " +
+        "There may be something here that interests you.";
 
     [TextArea(2, 5)]
     [SerializeField]
     private string inspectionInvitation =
-        "Take your time and look around. Every object on this stall has a story of its own.";
+        "Take your time and look around. Every object on this stall " +
+        "has a story of its own.";
 
     [Header("Timing")]
     [SerializeField]
     private float pauseBetweenLines = 0.5f;
+
 
     private Coroutine activeRoutine;
     private bool sequenceStarted;
@@ -58,8 +62,15 @@ public class MeeraSequenceController : MonoBehaviour
         }
     }
 
+    private void Start()
+    {
+        // Before Meera interaction: do not change the ray’s normal scene state.
+    }
+
     public void BeginSequence()
     {
+        SetInspectionRayEnabled(false);
+
         if (sequenceStarted)
         {
             Debug.LogWarning(
@@ -94,6 +105,10 @@ public class MeeraSequenceController : MonoBehaviour
 
         sequenceStarted = true;
 
+        // Ensure that the ray is hidden throughout
+        // Meera's introduction.
+        SetInspectionRayEnabled(false);
+
         activeRoutine = StartCoroutine(
             IntroductionRoutine()
         );
@@ -104,11 +119,23 @@ public class MeeraSequenceController : MonoBehaviour
         currentState = MeeraSequenceState.Introduction;
 
         Debug.Log(
-            "[MEERA SEQUENCE] Introduction started."
+            "[MEERA SEQUENCE] Introduction started. " +
+            "Inspection ray disabled."
         );
 
         FreeRoamStoryManager storyManager =
             FreeRoamStoryManager.Instance;
+
+        if (storyManager == null)
+        {
+            Debug.LogError(
+                "[MEERA SEQUENCE] Story manager disappeared " +
+                "during the introduction."
+            );
+
+            activeRoutine = null;
+            yield break;
+        }
 
         storyManager.NotifyMeeraInteractionStarted();
 
@@ -126,6 +153,7 @@ public class MeeraSequenceController : MonoBehaviour
         if (narrator != null)
         {
             yield return narrator.PlayNarration(
+                "MEERA_GREETING_01",
                 speakerName,
                 greetingLine
             );
@@ -135,6 +163,7 @@ public class MeeraSequenceController : MonoBehaviour
             );
 
             yield return narrator.PlayNarration(
+                "MEERA_INSPECTION_INVITATION_01",
                 speakerName,
                 inspectionInvitation
             );
@@ -155,6 +184,16 @@ public class MeeraSequenceController : MonoBehaviour
         currentState =
             MeeraSequenceState.WaitingForInspection;
 
+        /*
+         * This calls:
+         *
+         * FreeRoamStoryManager
+         * -> NotifyMeeraIntroductionCompleted()
+         * -> MeeraInspectionSequenceController
+         * -> BeginInspectionSequence()
+         *
+         * BeginInspectionSequence() will enable the ray.
+         */
         storyManager.NotifyMeeraIntroductionCompleted();
 
         activeRoutine = null;
@@ -165,16 +204,25 @@ public class MeeraSequenceController : MonoBehaviour
         );
     }
 
+    public void SetInspectionRayEnabled(bool enabled)
+    {
+        var inspectCtrl = GetComponent<MeeraInspectionSequenceController>();
+        if (inspectCtrl != null)
+        {
+            inspectCtrl.SetInspectionRay(enabled);
+        }
+        else
+        {
+            Debug.LogWarning(
+                "[MEERA SEQUENCE] MeeraInspectionSequenceController is missing."
+            );
+        }
+    }
+
     private void PlayGreetingAnimation()
     {
         if (meeraAnimator == null)
             return;
-
-        /*
-         * Add a Trigger parameter named "Greet" to the
-         * Animator Controller when the greeting animation
-         * is added.
-         */
 
         meeraAnimator.SetTrigger("Greet");
     }
@@ -183,8 +231,11 @@ public class MeeraSequenceController : MonoBehaviour
     {
         currentState = MeeraSequenceState.Complete;
 
+        SetInspectionRayEnabled(false);
+
         Debug.Log(
-            "[MEERA SEQUENCE] Sequence marked complete."
+            "[MEERA SEQUENCE] Sequence marked complete. " +
+            "Inspection ray disabled."
         );
     }
 }

@@ -17,6 +17,7 @@ public class FreeRoamIntroFlow : MonoBehaviour
 
         // Yield on the first narration coroutine
         yield return StartCoroutine(NarratorUIManager.Instance.PlayNarration(
+            "NARRATOR_FREEROAM_INTRO_01",
             "Narrator",
             "Welcome to Hampi Bazaar. Take a moment to observe the people around you.",
             5f
@@ -26,6 +27,7 @@ public class FreeRoamIntroFlow : MonoBehaviour
 
         // Yield on the second narration coroutine
         yield return StartCoroutine(NarratorUIManager.Instance.PlayNarration(
+            "NARRATOR_FREEROAM_INTRO_02",
             "Narrator",
             "This marketplace is alive with merchants, travelers, craftsmen, and pilgrims. For many here, this is simply another ordinary morning.",
             7f
@@ -35,8 +37,8 @@ public class FreeRoamIntroFlow : MonoBehaviour
 
         // Show the movement tutorial prompt
         TutorialPromptUIManager.Instance.ShowPrompt(
-            "Teleport Movement",
-            "Use the teleport arc to move around the market. Aim at a clear spot on the street and release to teleport."
+            "Teleport",
+            "Use the RIGHT JOYSTICK to aim at a hotspot, then release it to teleport."
         );
 
         ObjectiveUIManager.Instance.SetObjective("Learn to move using teleport");

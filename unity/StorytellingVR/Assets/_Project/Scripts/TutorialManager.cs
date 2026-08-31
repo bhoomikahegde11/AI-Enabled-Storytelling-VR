@@ -4,6 +4,21 @@ using UnityEngine;
 
 public class TutorialManager : MonoBehaviour
 {
+    private const string RahimIntroLineId = "RAHIM_TRANSACTION_INTRO_01";
+    private const string BhaskaraTeachTradeLineId = "BHASKARA_TRANSACTION_STUDY_TRADE_01";
+    private const string NarratorExplainTradePanelLineId = "NARRATOR_TRANSACTION_PANEL_01";
+    private const string BhaskaraExplainNegotiationLineId = "BHASKARA_TRANSACTION_NEGOTIATION_01";
+    private const string BhaskaraAskHighPriceLineId = "BHASKARA_TRANSACTION_ASK_HIGH_PRICE_01";
+    private const string RahimAngryHighPriceLineId = "RAHIM_TRANSACTION_HIGH_PRICE_01";
+    private const string BhaskaraHighPriceLessonLineId = "BHASKARA_TRANSACTION_HIGH_PRICE_LESSON_01";
+    private const string RahimAcceptFairPriceLineId = "RAHIM_TRANSACTION_ACCEPT_FAIR_01";
+    private const string BhaskaraFairPriceEndingLineId = "BHASKARA_TRANSACTION_FAIR_PRICE_ENDING_01";
+    private const string RahimStillTooHighLineId = "RAHIM_TRANSACTION_STILL_TOO_HIGH_01";
+    private const string BhaskaraStillTooHighLessonLineId = "BHASKARA_TRANSACTION_STILL_TOO_HIGH_LESSON_01";
+    private const string RahimAcceptLowPriceLineId = "RAHIM_TRANSACTION_ACCEPT_LOW_01";
+    private const string BhaskaraLowProfitLessonLineId = "BHASKARA_TRANSACTION_LOW_PROFIT_LESSON_01";
+    private const string TutorialMerchantSpeaker = "Bhaskara";
+
     //==================================================
     // REFERENCES
     //==================================================
@@ -16,6 +31,7 @@ public class TutorialManager : MonoBehaviour
     public VoiceRecognitionManager voiceRecognitionManager;
     public Level1HUDManager hudManager;
     public RespectUIManager respectUIManager;
+    [SerializeField] private DialogueVoiceDatabase voiceDatabase;
 
     //==================================================
     // AUDIO SOURCES
@@ -102,6 +118,7 @@ public class TutorialManager : MonoBehaviour
 
     private bool currentTradePanelOpened = false;
     private bool currentTradePanelVisible = false;
+    private AudioSource fallbackAudioSource;
 
 
     //==================================================
@@ -120,6 +137,8 @@ public class TutorialManager : MonoBehaviour
 
     void Start()
     {
+        if (GameManager.Instance != null)
+            GameManager.Instance.SuppressSkip(true);
         if (hudManager == null)
             hudManager = FindFirstObjectByType<Level1HUDManager>();
 
@@ -162,19 +181,23 @@ public class TutorialManager : MonoBehaviour
         string speaker,
         AudioSource audioSource,
         AudioClip audioClip,
+        string lineId,
         params string[] lines)
     {
         if (speakerNameText != null)
-            speakerNameText.text = speaker + ":";
+            speakerNameText.text = speaker;
 
-        if (audioClip != null && audioSource != null)
+        AudioClip resolvedClip = ResolveVoiceClip(lineId, audioClip);
+        AudioSource playbackSource = GetPlaybackSource(audioSource, resolvedClip);
+
+        if (resolvedClip != null && playbackSource != null)
         {
-            audioSource.clip = audioClip;
-            audioSource.Play();
+            playbackSource.clip = resolvedClip;
+            playbackSource.Play();
         }
 
-        float clipLength = audioClip != null
-            ? audioClip.length
+        float clipLength = resolvedClip != null
+            ? resolvedClip.length
             : lines.Length * 3f;
 
         float timePerLine = clipLength / lines.Length;
@@ -190,7 +213,7 @@ public class TutorialManager : MonoBehaviour
             yield return new WaitForSeconds(timePerLine);
         }
 
-        while (audioSource != null && audioSource.isPlaying)
+        while (playbackSource != null && playbackSource.isPlaying)
             yield return null;
 
         if (hudManager != null)
@@ -198,50 +221,15 @@ public class TutorialManager : MonoBehaviour
     }
 
 
-    IEnumerator ShowDialogueSequenceWithTimings(
+        IEnumerator ShowDialogueSequenceWithTimings(
         string speaker,
         AudioSource audioSource,
         AudioClip audioClip,
+        string lineId,
         string[] lines,
         float[] startTimes)
     {
-        if (speakerNameText != null)
-            speakerNameText.text = speaker + ":";
-
-        if (audioClip != null && audioSource != null)
-        {
-            audioSource.clip = audioClip;
-            audioSource.Play();
-        }
-
-        for (int i = 0; i < lines.Length; i++)
-        {
-            if (audioSource != null &&
-                audioClip != null &&
-                audioSource.isPlaying)
-            {
-                yield return new WaitUntil(() =>
-                    audioSource.time >= startTimes[i] ||
-                    !audioSource.isPlaying
-                );
-            }
-            else
-            {
-                yield return new WaitForSeconds(2f);
-            }
-
-            if (dialogueText != null)
-                dialogueText.text = lines[i];
-
-            if (hudManager != null)
-                hudManager.ShowSubtitle(speaker, lines[i]);
-        }
-
-        while (audioSource != null && audioSource.isPlaying)
-            yield return null;
-
-        if (hudManager != null)
-            hudManager.HideSubtitle();
+        yield return ShowDialogueSequence(speaker, audioSource, audioClip, lineId, lines);
     }
 
 
@@ -261,6 +249,7 @@ public class TutorialManager : MonoBehaviour
                 "Rahim",
                 customerAudioSource,
                 rahimIntroClip,
+                RahimIntroLineId,
 
                 new string[]
                 {
@@ -303,13 +292,12 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                TutorialMerchantSpeaker,
                 merchantAudioSource,
                 merchantAskHighPriceClip,
+                BhaskaraAskHighPriceLineId,
 
-                "Now, you must decide what to charge Rahim.",
-                "For your first attempt, ask for 70 Varahas.",
-                "Watch carefully how the customer responds."
+                "Let me show you what happens when a merchant asks for too much. Offer Rahim 70 Varahas and watch how he responds."
             )
         );
 
@@ -318,8 +306,7 @@ public class TutorialManager : MonoBehaviour
         // CONTROL INSTRUCTIONS
         //--------------------------------------------------
 
-        PromptManager.Instance.ShowPrompt(
-            "Hold Left Trigger and say '70 Varahas'",
+        PromptManager.Instance.ShowPrompt("Make an Offer\n\nHold the LEFT TRIGGER and say \"70 Varahas\".",
             PromptManager.Instance.leftTriggerButton
         );
 
@@ -349,12 +336,12 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                TutorialMerchantSpeaker,
                 merchantAudioSource,
                 merchantTeachTradeClip,
+                BhaskaraTeachTradeLineId,
 
-                "Before you answer, take a moment to study the trade.",
-                "A wise merchant always knows what the customer wants and what his goods have cost him."
+                "Before you answer, consider what Rahim has asked for.", "A wise merchant always remembers what his goods have cost him before naming a price."
             )
         );
 
@@ -363,8 +350,7 @@ public class TutorialManager : MonoBehaviour
         // NARRATOR EXPLAINS BUTTON
         //--------------------------------------------------
 
-        PromptManager.Instance.ShowPrompt(
-            "Press Y to open the Current Trade panel.",
+        PromptManager.Instance.ShowPrompt("Current Trade\n\nPress Y to view the customer's request and spice cost.",
             PromptManager.Instance.yButton
         );
 
@@ -377,13 +363,7 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
-                merchantAudioSource,
-                merchantExplainTradePanelClip,
-
-                "There. This will help you keep track of the trade.",
-                "You can see the customer's request and the cost of the spice here.",
-                "Check it whenever you need before making an offer."
+                "Narrator", merchantAudioSource, merchantExplainTradePanelClip, NarratorExplainTradePanelLineId, "The Current Trade panel shows the customer's request and the cost of the spice. You can check it whenever you need."
             )
         );
     }
@@ -447,8 +427,7 @@ public class TutorialManager : MonoBehaviour
         }
         else
         {
-            PromptManager.Instance.ShowPrompt(
-                "Hold Left Trigger and say '70 Varahas'",
+            PromptManager.Instance.ShowPrompt("Make an Offer\n\nHold the LEFT TRIGGER and say \"70 Varahas\".",
                 PromptManager.Instance.leftTriggerButton
             );
             voiceRecognitionManager.ListenForPrice(
@@ -471,6 +450,7 @@ public class TutorialManager : MonoBehaviour
                 "Rahim",
                 customerAudioSource,
                 rahimAngryHighPriceClip,
+                RahimAngryHighPriceLineId,
 
                 "That price is outrageous, merchant.",
                 "Surely you can offer something more reasonable."
@@ -484,16 +464,12 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                TutorialMerchantSpeaker,
                 merchantAudioSource,
                 merchantHighPriceLessonClip,
+                BhaskaraHighPriceLessonLineId,
 
-                "You see? Push a customer too far and you may lose his trust.",
-                "And look. Your Reputation has suffered.",
-                "Word travels quickly through the markets of Vijayanagara.",
-                "If traders believe you are unfair, fewer customers will choose to do business with you.",
-                "Profit matters, but so does the trust of those who trade with us.",
-                "Try again. This time, offer Rahim a fairer price while still earning a profit."
+                "You see? Ask for too much and you risk losing the customer's trust. Your Reputation has fallen.", "Profit matters, but a merchant known for unfair prices will soon lose customers.", "Try again. This time, choose a fairer price while still earning a profit."
             )
         );
 
@@ -565,6 +541,7 @@ public class TutorialManager : MonoBehaviour
                 "Rahim",
                 customerAudioSource,
                 rahimAcceptFairPriceClip,
+                RahimAcceptFairPriceLineId,
 
                 "Hmm... that seems much more reasonable.",
                 "Very well. I accept your offer."
@@ -588,17 +565,12 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                TutorialMerchantSpeaker,
                 merchantAudioSource,
                 merchantFairPriceEndingClip,
+                BhaskaraFairPriceEndingLineId,
 
-                "Well done.",
-                "Your Reputation has improved, and you have earned Varahas from the trade.",
-                "Remember what you have learned.",
-                "Ask too much, and you may lose the customer.",
-                "Ask too little, and there is hardly a profit to be made.",
-                "A good merchant builds wealth. A great merchant builds trust as well.",
-                "Learn to balance both, and you will do well in this market."
+                "Well done. You earned a profit without sacrificing the customer's trust.", "Remember that balance. A good merchant builds wealth, but a great merchant builds a reputation as well."
             )
         );
 
@@ -621,6 +593,7 @@ public class TutorialManager : MonoBehaviour
                 "Rahim",
                 customerAudioSource,
                 rahimStillTooHighClip,
+                RahimStillTooHighLineId,
 
                 "That price is still too expensive.",
                 "At those rates, I may take my business elsewhere."
@@ -634,15 +607,12 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                TutorialMerchantSpeaker,
                 merchantAudioSource,
                 merchantStillTooHighLessonClip,
+                BhaskaraStillTooHighLessonLineId,
 
-                "Still too high.",
-                "Notice how your Reputation continues to fall.",
-                "Even a wealthy merchant cannot prosper without the trust of his customers.",
-                "Think about the 18 Varahas the cardamom cost us.",
-                "Try proposing a price closer to 25 Varahas."
+                "Still too high. Your Reputation continues to fall.", "Remember, the cardamom cost us 18 Varahas.", "Try a price closer to 25 Varahas."
             )
         );
 
@@ -674,6 +644,7 @@ public class TutorialManager : MonoBehaviour
                 "Rahim",
                 customerAudioSource,
                 rahimAcceptLowPriceClip,
+                RahimAcceptLowPriceLineId,
 
                 "That is a very generous offer.",
                 "I happily accept your price."
@@ -697,15 +668,12 @@ public class TutorialManager : MonoBehaviour
 
         yield return StartCoroutine(
             ShowDialogueSequence(
-                "Stall Owner",
+                TutorialMerchantSpeaker,
                 merchantAudioSource,
                 merchantLowProfitLessonClip,
+                BhaskaraLowProfitLessonLineId,
 
-                "Rahim is certainly pleased.",
-                "But look at what you have earned from this trade.",
-                "A merchant who constantly sells below value may gain customers, but he will struggle to build wealth.",
-                "You must satisfy your customers without sacrificing every chance of profit.",
-                "To thrive in these markets, learn to balance both."
+                "Rahim is certainly pleased, but look at what you earned.", "Selling below your cost may satisfy a customer, but it cannot sustain a merchant.", "You must protect your profit while still treating customers fairly."
             )
         );
 
@@ -719,6 +687,8 @@ public class TutorialManager : MonoBehaviour
 
     void FinishTutorial()
     {
+        if (GameManager.Instance != null)
+            GameManager.Instance.SuppressSkip(false);
         tutorialFinished = true;
 
         Debug.Log(
@@ -731,7 +701,7 @@ public class TutorialManager : MonoBehaviour
 
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.LoadNextScene();
+            GameManager.Instance.LoadSceneByName("NewCoinScene");
         }
     }
 
@@ -783,6 +753,12 @@ public class TutorialManager : MonoBehaviour
     // RESPECT UI
     //==================================================
 
+    private void OnDestroy()
+    {
+        if (GameManager.Instance != null)
+            GameManager.Instance.SuppressSkip(false);
+    }
+
     private void UpdateRespectUI()
     {
         if (hudManager != null)
@@ -791,149 +767,37 @@ public class TutorialManager : MonoBehaviour
         if (respectUIManager != null)
             respectUIManager.SetRespect(respect);
     }
-    IEnumerator MerchantExplainNegotiationSequence()
+        IEnumerator MerchantExplainNegotiationSequence()
     {
-        string speaker = "Stall Owner";
+        yield return StartCoroutine(
+            ShowDialogueSequence(
+                TutorialMerchantSpeaker,
+                merchantAudioSource,
+                merchantExplainNegotiationClip,
+                BhaskaraExplainNegotiationLineId,
 
-        string[] lines =
-        {
-        "Good. Rahim wants one veesai of cardamom.",
-
-        "The cardamom has cost us 18 Varahas. Keep that in mind when naming your price.",
-
-        "To your right, you can see the Varahas you earn from each successful trade.",
-
-        "Beside it is your Reputation in the market.",
-
-        "A merchant must earn a profit, but the trust of his customers matters just as much.",
-
-        "Treat people unfairly, and word will travel quickly through these markets."
-    };
-
-
-        //==================================================
-        // AUDIO TIMINGS
-        //==================================================
-
-        float[] startTimes =
-        {
-        0.0f,   // Good. Rahim wants...
-        3.0f,   // The cardamom has cost...
-        8.0f,   // To your right...
-        13.0f,  // Beside it is your Reputation...
-        17.0f,  // A merchant must earn...
-        22.0f   // Treat people unfairly...
-    };
-
-
-        //==================================================
-        // SET SPEAKER
-        //==================================================
-
-        if (speakerNameText != null)
-            speakerNameText.text = speaker + ":";
-
-
-        //==================================================
-        // PLAY MERCHANT AUDIO
-        //==================================================
-
-        if (merchantExplainNegotiationClip != null &&
-            merchantAudioSource != null)
-        {
-            merchantAudioSource.clip =
-                merchantExplainNegotiationClip;
-
-            merchantAudioSource.Play();
-        }
-
-
-        //==================================================
-        // SHOW EACH LINE AT ITS AUDIO TIMESTAMP
-        //==================================================
-
-        for (int i = 0; i < lines.Length; i++)
-        {
-            //--------------------------------------------------
-            // WAIT FOR CORRECT AUDIO TIME
-            //--------------------------------------------------
-
-            if (merchantExplainNegotiationClip != null &&
-                merchantAudioSource != null &&
-                merchantAudioSource.isPlaying)
-            {
-                yield return new WaitUntil(() =>
-                    merchantAudioSource.time >= startTimes[i] ||
-                    !merchantAudioSource.isPlaying
-                );
-            }
-            else
-            {
-                //--------------------------------------------------
-                // FALLBACK WHEN NO AUDIO IS ASSIGNED
-                //--------------------------------------------------
-
-                if (i > 0)
-                    yield return new WaitForSeconds(3f);
-            }
-
-
-            //--------------------------------------------------
-            // SHOW SUBTITLE
-            //--------------------------------------------------
-
-            ShowTutorialDialogue(
-                speaker,
-                lines[i]
-            );
-
-
-            //--------------------------------------------------
-            // TRIGGER PANEL PULSE
-            //--------------------------------------------------
-
-            if (i == 2)
-            {
-                // "To your right, you can see the Varahas..."
-                if (hudManager != null)
-                    hudManager.PulseMoneyPanel(3f);
-            }
-            else if (i == 3)
-            {
-                // "Beside it is your Reputation..."
-                if (hudManager != null)
-                    hudManager.PulseRespectPanel(3f);
-            }
-        }
-
-
-        //==================================================
-        // WAIT FOR AUDIO TO FINISH
-        //==================================================
-
-        while (merchantAudioSource != null &&
-               merchantAudioSource.isPlaying)
-        {
-            yield return null;
-        }
-
-
-        //==================================================
-        // FALLBACK WAIT IF THERE IS NO AUDIO
-        //==================================================
-
-        if (merchantExplainNegotiationClip == null)
-        {
-            yield return new WaitForSeconds(3f);
-        }
-
-
-        //==================================================
-        // HIDE SUBTITLE
-        //==================================================
+                "Rahim wants one veesai of cardamom. It cost us 18 Varahas.",
+                "You should earn a profit, but do not forget that a merchant's reputation matters too.",
+                "Treat customers unfairly, and word will travel quickly through the market."
+            )
+        );
 
         if (hudManager != null)
-            hudManager.HideSubtitle();
+        {
+            hudManager.PulseMoneyPanel(3f);
+            hudManager.PulseRespectPanel(3f);
+        }
+
+        yield return StartCoroutine(
+            ShowDialogueSequence(
+                "Narrator",
+                merchantAudioSource,
+                null,
+                "NARRATOR_TRANSACTION_STATUS_UI_01",
+
+                "To your left, you can keep track of your Reputation, while your earnings are shown to your right. Watch them closely Ã¢â‚¬â€ both will change with the choices you make while trading."
+            )
+        );
     }
     private void ShowTutorialDialogue(
     string speaker,
@@ -949,5 +813,28 @@ public class TutorialManager : MonoBehaviour
                 line
             );
         }
+    }
+
+    private AudioClip ResolveVoiceClip(string lineId, AudioClip fallbackClip)
+    {
+        if (voiceDatabase == null)
+            return fallbackClip;
+
+        AudioClip databaseClip = voiceDatabase.GetAudioClip(lineId);
+        return databaseClip != null ? databaseClip : fallbackClip;
+    }
+
+    private AudioSource GetPlaybackSource(AudioSource preferredSource, AudioClip clip)
+    {
+        if (preferredSource != null || clip == null)
+            return preferredSource;
+
+        if (fallbackAudioSource == null)
+        {
+            fallbackAudioSource = gameObject.AddComponent<AudioSource>();
+            fallbackAudioSource.playOnAwake = false;
+        }
+
+        return fallbackAudioSource;
     }
 }
