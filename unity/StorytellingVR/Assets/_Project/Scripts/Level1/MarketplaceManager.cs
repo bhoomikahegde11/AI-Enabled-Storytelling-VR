@@ -29,6 +29,10 @@ public class MarketplaceManager : MonoBehaviour
     [Tooltip("Reference to the ChatManager script on the GameManager.")]
     public ChatManager chatManager;
 
+    [Header("Animation")]
+    [Tooltip("Controller applied to each runtime-spawned customer visual. Movement remains owned by BuyerNPC/NavMeshAgent.")]
+    [SerializeField] private RuntimeAnimatorController sharedBuyerAnimationController;
+
     [Header("Settings")]
     [Tooltip("Movement speed multiplier for the NavMeshAgent.")]
     public float movementSpeed = 1.3f;
@@ -238,6 +242,13 @@ public class MarketplaceManager : MonoBehaviour
             return activeCharacterAnimator;
         }
 
+        // A custom visual without an Animator is a safe static fallback. Do not drive the
+        // hidden BuyerNPC Animator while that visual is the active customer.
+        if (activeCharacterModelInstance != null)
+        {
+            return null;
+        }
+
         if (rootAnimator == null && buyerNPC != null)
         {
             rootAnimator = buyerNPC.GetComponent<Animator>() ?? buyerNPC.GetComponentInChildren<Animator>(true);
@@ -326,15 +337,48 @@ public class MarketplaceManager : MonoBehaviour
         ApplyCharacterVisualOffsets(activeCharacterModelInstance.transform, characterProfile);
 
         activeCharacterAnimator = activeCharacterModelInstance.GetComponent<Animator>() ?? activeCharacterModelInstance.GetComponentInChildren<Animator>(true);
-        if (activeCharacterAnimator != null)
+        if (activeCharacterAnimator == null)
         {
-            activeCharacterAnimator.applyRootMotion = false;
+            Debug.LogWarning("[MarketplaceManager] Spawned customer visual has no Animator. It will remain static, but the customer lifecycle will continue.");
+            animator = null;
         }
-        animator = activeCharacterAnimator != null ? activeCharacterAnimator : rootAnimator;
+        else
+        {
+            ConfigureCustomModelAnimator(activeCharacterAnimator);
+            animator = activeCharacterAnimator;
+        }
 
         RefreshNpcRigBindings();
         LogActiveVisualDiagnostics("post-assignment");
         ValidateNpcVisualState("post-assignment");
+    }
+
+    private void ConfigureCustomModelAnimator(Animator customAnimator)
+    {
+        if (customAnimator == null)
+        {
+            return;
+        }
+
+        // BuyerNPC/NavMeshAgent owns world movement; imported animation may never move this transform.
+        customAnimator.applyRootMotion = false;
+
+        if (sharedBuyerAnimationController == null)
+        {
+            Debug.LogWarning("[MarketplaceManager] Shared buyer animation controller is not assigned. Spawned customer will keep its current controller.");
+            return;
+        }
+
+        try
+        {
+            customAnimator.runtimeAnimatorController = sharedBuyerAnimationController;
+            customAnimator.applyRootMotion = false;
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogWarning("[MarketplaceManager] Could not assign the shared buyer animation controller to spawned customer '" +
+                             customAnimator.name + "'. Customer lifecycle will continue. " + exception.Message);
+        }
     }
 
     /// <summary>

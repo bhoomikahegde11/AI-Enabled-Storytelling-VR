@@ -11,19 +11,39 @@ public class NPCWalker : MonoBehaviour
     private bool waiting = false;
     [SerializeField] private float moveSpeed = 0.85f;
     [SerializeField] private float turnSpeed = 5f;
+    [SerializeField] private Transform visualAnchor;
 
 
     private float waitTime;
     private Animator animator;
 
+    public Transform VisualAnchor => visualAnchor != null ? visualAnchor : transform;
+
     void Start()
     {
-        animator = GetComponent<Animator>();
+        if (animator == null)
+        {
+            animator = visualAnchor != null
+                ? visualAnchor.GetComponentInChildren<Animator>(true)
+                : GetComponent<Animator>();
+        }
 
+        ConfigureAnimator();
+        Debug.Log($"[BG NPC] Walker movement started: {name}.", gameObject);
+    }
+
+    public void SetVisualAnimator(Animator visualAnimator)
+    {
+        animator = visualAnimator;
+        ConfigureAnimator();
+    }
+
+    private void ConfigureAnimator()
+    {
         if (animator != null)
         {
             animator.applyRootMotion = false;
-            animator.SetFloat("Speed", 1f);
+            animator.SetFloat("Speed", waiting ? 0f : 1f);
         }
     }
 

@@ -1,7 +1,7 @@
 {
     "global_metrics": {
-        "reputation": 50,
-        "total_varahas": 100,
+        "reputation": 46,
+        "total_varahas": 959,
         "completed_levels": []
     },
     "inventory": [
@@ -15,11 +15,11 @@
         },
         {
             "spiceKey": "cinnamon",
-            "grams": 12000
+            "grams": 8640
         },
         {
             "spiceKey": "cardamom",
-            "grams": 4000
+            "grams": 640
         }
     ],
     "shift_stats": {
@@ -30,6 +30,6 @@
     "current_scene": "ModernStudyRoom",
     "progression_index": 0,
     "intro_completed": false,
-    "remainingMarketDaySeconds": 2000.0,
+    "remainingMarketDaySeconds": 1508.88720703125,
     "hasSavedMarketDayTimer": true
 }
