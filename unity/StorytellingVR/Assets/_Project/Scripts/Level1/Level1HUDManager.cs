@@ -20,10 +20,12 @@ public class Level1HUDManager : MonoBehaviour
     [SerializeField] private RectTransform inputBoxTransform;
     [SerializeField] private UnityEngine.UI.Image inputGlowImage;
     [SerializeField] private float inputPanelFadeDuration = 0.2f;
+    [SerializeField, Range(1f, 1.05f)] private float listeningInputScaleMultiplier = 1.04f;
 
     private Coroutine inputAnimationCoroutine;
     private Coroutine inputIdleCoroutine;
     private Coroutine inputVisibilityCoroutine;
+    private Vector3 inputBoxBaseScale = Vector3.one;
 
     [Header("Player References")]
     public TMP_InputField playerInput;
@@ -103,6 +105,11 @@ public class Level1HUDManager : MonoBehaviour
 
     private void Start()
     {
+        if (inputBoxTransform != null)
+        {
+            inputBoxBaseScale = inputBoxTransform.localScale;
+        }
+
         // Set initial UI panel states
         if (subtitlePanel != null) subtitlePanel.SetActive(false);
         if (npcIntroPanel != null) npcIntroPanel.SetActive(false);
@@ -237,7 +244,7 @@ public class Level1HUDManager : MonoBehaviour
         float elapsed = 0f;
 
         Vector3 startScale = inputBoxTransform != null ? inputBoxTransform.localScale : Vector3.one;
-        Vector3 targetScale = Vector3.one * 1.08f;
+        Vector3 targetScale = inputBoxBaseScale * listeningInputScaleMultiplier;
 
         float startGlowAlpha = inputGlowImage != null ? inputGlowImage.color.a : 0.4f;
         float targetGlowAlpha = 0.85f;
@@ -295,7 +302,7 @@ public class Level1HUDManager : MonoBehaviour
         float elapsed = 0f;
 
         Vector3 startScale = inputBoxTransform != null ? inputBoxTransform.localScale : Vector3.one;
-        Vector3 targetScale = Vector3.one;
+        Vector3 targetScale = inputBoxBaseScale;
 
         float startGlowAlpha = inputGlowImage != null ? inputGlowImage.color.a : 0.85f;
         float targetGlowAlpha = 0.40f + Mathf.Sin(Time.time * Mathf.PI) * 0.15f; 

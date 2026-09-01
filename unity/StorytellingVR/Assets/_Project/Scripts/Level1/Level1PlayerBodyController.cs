@@ -1,4 +1,5 @@
 using UnityEngine;
+using Oculus.Interaction.Locomotion;
 
 public class Level1PlayerBodyController : MonoBehaviour
 {
@@ -46,6 +47,7 @@ public class Level1PlayerBodyController : MonoBehaviour
 
         ApplySelectedBody();
         ConfigureBodyVisuals();
+        DisableLevel1PositionalLocomotion();
         UpdateBodyPose();
     }
 
@@ -69,6 +71,18 @@ public class Level1PlayerBodyController : MonoBehaviour
     {
         ConfigureBodyRoot(maleBodyRoot, maleBodyLocalPosition, maleBodyLocalEulerAngles, maleBodyLocalScale, maleRenderersToDisable);
         ConfigureBodyRoot(femaleBodyRoot, femaleBodyLocalPosition, femaleBodyLocalEulerAngles, femaleBodyLocalScale, femaleRenderersToDisable);
+    }
+
+    private void DisableLevel1PositionalLocomotion()
+    {
+        // Level 1 is stall-bound: retain locomotion rotation handling while blocking velocity and jump translation.
+        FirstPersonLocomotor locomotor = transform.root.GetComponentInChildren<FirstPersonLocomotor>(true);
+        if (locomotor == null)
+            return;
+
+        locomotor.DisableMovement();
+        locomotor.Velocity = Vector3.zero;
+        locomotor.JumpForce = 0f;
     }
 
     private bool ResolveUseFemale()
