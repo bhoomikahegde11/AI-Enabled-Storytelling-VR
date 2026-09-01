@@ -49,10 +49,13 @@ public class Level1HUDManager : MonoBehaviour
     [SerializeField] private TMP_Text varahaAmountText;
     [SerializeField] private TMP_Text varahaLabelText;
     [SerializeField] private RectTransform moneyPanelTransform;
+    [SerializeField, Range(1f, 1.05f)] private float moneyPulseScaleMultiplier = 1.04f;
 
     private int lastMoneyAmount = -1;
     private Coroutine moneyAnimCoroutine;
     private Coroutine moneyPulseCoroutine;
+    private Vector3 moneyPanelBaseScale = Vector3.one;
+    private bool hasMoneyPanelBaseScale;
 
     [Header("NPC Intro References")]
     public GameObject npcIntroPanel;
@@ -109,6 +112,7 @@ public class Level1HUDManager : MonoBehaviour
         {
             inputBoxBaseScale = inputBoxTransform.localScale;
         }
+        CacheMoneyPanelBaseScale();
 
         // Set initial UI panel states
         if (subtitlePanel != null) subtitlePanel.SetActive(false);
@@ -735,10 +739,17 @@ public class Level1HUDManager : MonoBehaviour
 
         if (!isInitial)
         {
+            CacheMoneyPanelBaseScale();
+            if (moneyPulseCoroutine != null)
+            {
+                StopCoroutine(moneyPulseCoroutine);
+                moneyPulseCoroutine = null;
+            }
             if (moneyAnimCoroutine != null)
             {
                 StopCoroutine(moneyAnimCoroutine);
             }
+            RestoreMoneyPanelBaseScale();
             moneyAnimCoroutine = StartCoroutine(AnimateMoneyChange());
         }
     }
@@ -748,7 +759,8 @@ public class Level1HUDManager : MonoBehaviour
         float duration = 0.3f;
         float elapsed = 0f;
 
-        Vector3 originalScale = Vector3.one;
+        CacheMoneyPanelBaseScale();
+        Vector3 originalScale = moneyPanelBaseScale;
         Color originalColor = Color.white;
 
         if (varahaAmountText != null)
@@ -763,8 +775,8 @@ public class Level1HUDManager : MonoBehaviour
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
 
-            // Sine pulse for scale: 1.0 -> 1.12 -> 1.0
-            float scaleMultiplier = 1.0f + Mathf.Sin(t * Mathf.PI) * 0.12f;
+            // Sine pulse relative to the authored panel scale.
+            float scaleMultiplier = 1.0f + Mathf.Sin(t * Mathf.PI) * (moneyPulseScaleMultiplier - 1f);
             if (moneyPanelTransform != null)
             {
                 moneyPanelTransform.localScale = originalScale * scaleMultiplier;
@@ -991,17 +1003,20 @@ public class Level1HUDManager : MonoBehaviour
             return;
         }
 
+        CacheMoneyPanelBaseScale();
+
+        if (moneyAnimCoroutine != null)
+        {
+            StopCoroutine(moneyAnimCoroutine);
+            moneyAnimCoroutine = null;
+        }
         if (moneyPulseCoroutine != null)
         {
             StopCoroutine(moneyPulseCoroutine);
         }
+        RestoreMoneyPanelBaseScale();
 
-        moneyPulseCoroutine = StartCoroutine(
-            PulsePanelRoutine(
-                moneyPanelTransform,
-                duration
-            )
-        );
+        moneyPulseCoroutine = StartCoroutine(PulseMoneyPanelRoutine(duration));
     }
 
 
@@ -1064,8 +1079,46 @@ public class Level1HUDManager : MonoBehaviour
 
         panel.localScale = originalScale;
 
-        moneyPulseCoroutine = null;
         reputationPulseCoroutine = null;
+    }
+
+    private IEnumerator PulseMoneyPanelRoutine(float duration)
+    {
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float pulse = (Mathf.Sin(elapsed * Mathf.PI * 2f) + 1f) * 0.5f;
+            float scaleMultiplier = Mathf.Lerp(1f, moneyPulseScaleMultiplier, pulse);
+
+            if (moneyPanelTransform != null)
+            {
+                moneyPanelTransform.localScale = moneyPanelBaseScale * scaleMultiplier;
+            }
+
+            yield return null;
+        }
+
+        RestoreMoneyPanelBaseScale();
+        moneyPulseCoroutine = null;
+    }
+
+    private void CacheMoneyPanelBaseScale()
+    {
+        if (!hasMoneyPanelBaseScale && moneyPanelTransform != null)
+        {
+            moneyPanelBaseScale = moneyPanelTransform.localScale;
+            hasMoneyPanelBaseScale = true;
+        }
+    }
+
+    private void RestoreMoneyPanelBaseScale()
+    {
+        if (moneyPanelTransform != null && hasMoneyPanelBaseScale)
+        {
+            moneyPanelTransform.localScale = moneyPanelBaseScale;
+        }
     }
     // ─────────────────────────────────────────────
     //  TRADE COMPLETE POPUP
