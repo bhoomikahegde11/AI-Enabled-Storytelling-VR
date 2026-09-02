@@ -1,6 +1,6 @@
 {
     "global_metrics": {
-        "reputation": 48,
+        "reputation": 38,
         "total_varahas": 1010,
         "completed_levels": []
     },
@@ -30,6 +30,6 @@
     "current_scene": "ModernStudyRoom",
     "progression_index": 0,
     "intro_completed": false,
-    "remainingMarketDaySeconds": 1338.629638671875,
+    "remainingMarketDaySeconds": 1091.409423828125,
     "hasSavedMarketDayTimer": true
 }
