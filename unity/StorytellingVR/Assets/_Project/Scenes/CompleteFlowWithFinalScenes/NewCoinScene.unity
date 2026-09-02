@@ -3039,7 +3039,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -463689925048471867, guid: 906d60adab6fb744e924144ed1c57f88, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 29.55
+      value: 1.66
       objectReference: {fileID: 0}
     - target: {fileID: -463689925048471867, guid: 906d60adab6fb744e924144ed1c57f88, type: 3}
       propertyPath: m_LocalPosition.y
@@ -3047,7 +3047,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -463689925048471867, guid: 906d60adab6fb744e924144ed1c57f88, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 2.95
+      value: 0.68
       objectReference: {fileID: 0}
     - target: {fileID: -463689925048471867, guid: 906d60adab6fb744e924144ed1c57f88, type: 3}
       propertyPath: m_LocalRotation.w
@@ -6880,6 +6880,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MarketSpawner
   npcPrefab: {fileID: 7632564849704470384, guid: 791b49d738c7c4b4baf1f61787cbcad7, type: 3}
+  fallbackWalkerPrefab: {fileID: 0}
+  backgroundVisualPool: []
+  fallbackVisualPrefab: {fileID: 0}
+  backgroundWalkingController: {fileID: 0}
   leftSpawn: {fileID: 1649508376}
   rightSpawn: {fileID: 436392362}
   leftTarget: {fileID: 1966559372}

@@ -1074,7 +1074,7 @@ MonoBehaviour:
   narratorCanvas: {fileID: 787099019}
   speakerText: {fileID: 557835805}
   subtitleText: {fileID: 1325007776}
-  voiceDatabase: {fileID: 11400000, guid: 92d4be2381b0c6348bf784cd09f25dcf, type: 2}
+  voiceDatabase: {fileID: 11400000, guid: 8532f33f82c2ef84e82b35a52130d483, type: 2}
   dialogueVoiceSource: {fileID: 23441732}
   continueInput: 0
   charactersPerSecond: 40
