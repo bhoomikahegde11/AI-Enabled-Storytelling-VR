@@ -6053,6 +6053,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MarketSpawner
   npcPrefab: {fileID: 7632564849704470384, guid: 791b49d738c7c4b4baf1f61787cbcad7, type: 3}
+  fallbackWalkerPrefab: {fileID: 0}
+  backgroundVisualPool: []
+  fallbackVisualPrefab: {fileID: 0}
+  backgroundWalkingController: {fileID: 0}
   leftSpawn: {fileID: 1649508376}
   rightSpawn: {fileID: 436392362}
   leftTarget: {fileID: 1966559372}
@@ -10668,27 +10672,26 @@ MonoBehaviour:
   spices:
   - spiceName: Pepper
     costText: 'Cost Price: 12 Varahas / Veesai'
-    narration: Pepper costs you 12 Varahas per Veesai. It is among the most sought-after
-      goods in the market, making it one of your most profitable spices when sold
-      wisely.
+    narration: This is pepper. It costs us 12 Varahas per veesai. It is highly sought
+      after, so there is good profit to be made if you sell it wisely.
     narrationClip: {fileID: 8300000, guid: c0af79e51af17ab48ab51eb8b8505d0e, type: 3}
     uiAnchor: {fileID: 386362050}
   - spiceName: Turmeric
     costText: 'Cost Price: 5 Varahas / Veesai'
-    narration: Turmeric costs 5 Varahas per Veesai. Though inexpensive, it remains
-      a staple spice valued for its colour, flavour, and medicinal use.
+    narration: Turmeric costs us 5 Varahas per veesai. It is inexpensive, but commonly
+      used, so you will see plenty of demand for it
     narrationClip: {fileID: 8300000, guid: 3fa7a35433fd9eb4f9400df39fbe8ae5, type: 3}
     uiAnchor: {fileID: 1474245902}
   - spiceName: Cardamom
     costText: 'Cost Price: 18 Varahas / Veesai'
-    narration: Cardamom costs 18 Varahas per Veesai. Rare and fragrant, it is highly
-      prized in royal kitchens and temple offerings.
+    narration: Cardamom costs us 18 Varahas per veesai. It is valuable and highly
+      prized, so keep its cost in mind when bargaining.
     narrationClip: {fileID: 8300000, guid: a9d8ffad4a148444698c2e5a80bac95e, type: 3}
     uiAnchor: {fileID: 480705086}
   - spiceName: Cinnamon
     costText: 'Cost Price: 20 Varahas / Veesai'
-    narration: Cinnamon costs 20 Varahas per Veesai. Brought through long trade routes,
-      it is one of the most valuable spices in the Hampi Bazaar.
+    narration: Cinnamon costs us 20 Varahas per veesai. It is one of our more expensive
+      spices, so be careful not to sell it too cheaply.
     narrationClip: {fileID: 8300000, guid: 34ca75209cecff44aa2e3d2cf89649f5, type: 3}
     uiAnchor: {fileID: 623430303}
   finalPromptDuration: 4

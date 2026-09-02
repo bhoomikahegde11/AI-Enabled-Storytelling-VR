@@ -153,6 +153,13 @@ MonoBehaviour:
   bootstrapSceneName: Bootstrap
   mainMenuSceneName: MainMenu_Optimized
   scenes:
+  - ModernStudyRoom
+  - GateIntro
+  - FreeRoam_WithTerrain
+  - NewSpiceScene
+  - NewTransactionTutorial
+  - NewCoinScene
+  - SpicesInteraction
   - Level1_MainLoopUpdated
   fader: {fileID: 1819468858}
   enablePauseMenuController: 0
