@@ -1,0 +1,281 @@
+from npc_engine.core.models import PlayerAction, EngineDecision
+from npc_engine.core.measurements import grams_to_traditional_label
+
+
+class Controller:
+    """
+    Level-agnostic engine controller that manages session flows, 
+    delegating NLP, classification, and dialogue generation to level-specific injected hooks.
+    """
+    def __init__(self, engine, classify_intent_fn, extract_quantity_info_fn, extract_price_fn, dialogue_fn):
+        self.engine = engine
+        self.classify_intent_fn = classify_intent_fn
+        self.extract_quantity_info_fn = extract_quantity_info_fn
+        self.extract_price_fn = extract_price_fn
+        self.dialogue_fn = dialogue_fn
+
+    def _build_debug_info(self):
+        return {
+            "stage": self.engine.stage,
+            "current_offer": self.engine.current_offer,
+            "seller_price": self.engine.last_seller_price,
+            "desperation": round(self.engine.buyer.desperation, 2),
+            "frustration": round(self.engine.frustration, 2),
+            "turn": self.engine.turns
+        }
+
+    def format_final_quantity(self):
+        quantity = self.engine.final_quantity
+        if quantity is None:
+            return grams_to_traditional_label(1000)
+        return grams_to_traditional_label(quantity)
+
+    def _build_player_action(self, seller_input):
+        text = str(seller_input).strip()
+        if not text:
+            return PlayerAction(intent="CONTINUE", price=None, quantity=None)
+
+        from npc_engine.utils.text_normalizer import normalize_text, normalize_trade_numbers, normalize_currency_tokens
+        # Step 1: normalize spoken numbers to digits and fix Whisper homophones
+        text = normalize_text(text)
+        text = normalize_currency_tokens(text)
+        text = normalize_trade_numbers(text, self.engine)
+
+        lowered = text.lower()
+        quantity_info = self.extract_quantity_info_fn(text)
+        quantity = quantity_info["quantity_grams"] if quantity_info is not None else None
+        price = self.extract_price_fn(text)
+
+        # Step 2: Apply price context range correction (x10 if < min_reasonable and *10 <= max_range)
+        if price is not None and self.engine:
+            min_reasonable = max(30, int(self.engine.market_price * 0.5))
+            max_range = int(self.engine.max_price)
+            if price < min_reasonable:
+                if price * 10 <= max_range:
+                    price *= 10
+
+        result = self.classify_intent_fn(text, context={
+            "in_negotiation": self.engine.started,
+            "item_name": self.engine.item.name,
+            "last_system_action": self.engine.last_action,
+            "last_seller_price": self.engine.last_seller_price,
+            "current_offer": self.engine.current_offer
+        })
+        
+        if result is None:
+            result = {
+                "intent": "IRRELEVANT"
+            }
+
+        intent = result.get("intent", "IRRELEVANT")
+        price = result.get("price", price)
+        quantity = result.get("quantity", quantity)
+
+        # Context-aware deal acceptance handler
+        last_system_action = self.engine.last_action if self.engine else None
+        if intent in ["AFFIRM", "ACCEPT"] and last_system_action in ["OFFER", "COUNTER", "FINAL_OFFER"]:
+            intent = "ACCEPT"
+            if price is None and self.engine:
+                price = self.engine.current_offer
+
+        # Apply price context correction to final resolved price too
+        if price is not None and self.engine:
+            min_reasonable = max(30, int(self.engine.market_price * 0.5))
+            max_range = int(self.engine.max_price)
+            if price < min_reasonable:
+                if price * 10 <= max_range:
+                    price *= 10
+
+        if intent == "NO_ITEM" and quantity is not None and any(
+            word in lowered for word in ["only", "left", "have", "but", "instead", "g", "gm", "kg", "palam", "palams", "seer", "seers", "veesai", "viss", "manangu", "maund", "bahar", "candy"]
+        ):
+            intent = "QUANTITY_CHANGE"
+
+        if intent == "QUERY" and any(term in lowered for term in ["how many", "how much", "grams", "gram", "kg", "quantity", "seer", "seers", "veesai", "viss", "palam", "palams", "manangu", "maund", "maunds", "bahar", "bahars", "candy", "candies"]):
+            intent = "QUERY_QUANTITY"
+
+        if intent == "COUNTER" and any(phrase in lowered for phrase in ["middle", "meet in the middle", "split"]):
+            intent = "COUNTER_MIDPOINT"
+
+        if price is not None:
+            try:
+                price = float(price)
+            except Exception:
+                price = None
+
+        if intent == "PRICE" and not isinstance(price, (int, float)):
+            print("[WARN PRICE] Invalid price type recovered")
+            return PlayerAction(intent="CLARIFICATION", price=None, quantity=None)
+
+        return PlayerAction(intent=intent, price=price, quantity=quantity)
+
+    def _format_response(self, decision, dialogue):
+        return {
+            "npc_text": dialogue,
+            "action": decision.action,
+            "price": decision.price,
+            "quantity": decision.quantity,
+            "done": decision.done,
+            "debug": self._build_debug_info(),
+            "tone": "neutral",
+            "emotion": "idle"
+        }
+
+    def step(self, seller_input):
+        import time
+        intent_time_ms = 0
+        llm_time_ms = 0
+
+        decision = None
+        if seller_input is None:
+            decision = self.engine.next_step(None)
+        else:
+            self.engine.last_seller_input = seller_input
+            
+            # Check acceptance intent priority early
+            text_lower = str(seller_input).strip().lower().rstrip("!.,")
+            acceptance_phrases = {
+                "deal",
+                "done",
+                "okay deal",
+                "agreed",
+                "fine",
+                "sounds good",
+                "you have a deal"
+            }
+            if text_lower in acceptance_phrases:
+                print(f"[ACCEPT BYPASS] User input '{seller_input}' matches acceptance phrase.")
+                decision = EngineDecision(action="ACCEPT", price=self.engine.current_offer, quantity=self.engine.current_quantity, done=True)
+                
+                personality = getattr(self.engine.buyer, "personality", "Standard").lower()
+                if any(p in personality for p in ["strict", "impatient"]):
+                    npc_text = "Fine. Deal."
+                elif any(p in personality for p in ["friendly", "curious traveler"]):
+                    npc_text = "Alright… I think this works."
+                else:
+                    npc_text = "A fair bargain. I will remember your honesty, trader."
+                
+                final_quantity = self.format_final_quantity()
+                final_item = self.engine.final_item or self.engine.item.name
+                npc_text += f"\n\nTransaction complete.\nFinal Deal: {final_quantity} {final_item} for {decision.price} varahas"
+                
+                return {
+                    "npc_text": npc_text,
+                    "tone": "neutral",
+                    "emotion": "idle",
+                    "action": "ACCEPT",
+                    "price": decision.price,
+                    "quantity": decision.quantity,
+                    "done": True,
+                    "debug": self._build_debug_info(),
+                    "perf_intent": 0,
+                    "perf_llm": 0
+                }
+
+            start_intent = time.time()
+            action = self._build_player_action(seller_input)
+            intent_time_ms = int((time.time() - start_intent) * 1000)
+
+            text_lower = str(seller_input).lower()
+            text = text_lower
+
+            # Level-1 Specific early exits
+            if any(p in text for p in [
+                "difference", 
+                "isnt doing anything",
+                "isn't doing anything",
+                "almost same",
+                "close enough"
+            ]):
+                decision = EngineDecision(action="OFFER", price=self.engine.current_offer, quantity=self.engine.current_quantity, done=False)
+
+            elif (
+                (any(q in text_lower for q in ["how much", "quantity", "how many", "quanitity"]) or action.intent == "QUERY_QUANTITY")
+                and self.engine.last_seller_price is None
+            ):
+                quantity = self.engine.current_quantity
+                # Sync backend engine quantity and active bundle immediately to prevent logic desyncs
+                self.engine.current_quantity = quantity
+                self.engine.update_active_bundle([{
+                    "name": self.engine.item.name.lower(),
+                    "quantity": quantity,
+                    "unit": "g"
+                }])
+                self.engine.quantity_given = True
+                decision = EngineDecision(action="QUERY_QUANTITY", price=self.engine.current_offer, quantity=quantity, done=False)
+
+            elif action.intent == "GENERAL_DIALOGUE":
+                from npc_engine.levels.level1_market.dialogue_generator import generate_context_response
+                current_state = {
+                    "current_offer": self.engine.current_offer,
+                    "seller_price": self.engine.last_seller_price,
+                    "turns": self.engine.turns,
+                    "personality": getattr(self.engine.buyer, "personality", "Polite Merchant")
+                }
+                start_llm = time.time()
+                composed = generate_context_response(
+                    player_text=seller_input,
+                    buyer_name=getattr(self.engine.buyer, "name", "Abdul"),
+                    buyer_origin=getattr(self.engine.buyer, "origin", "Persia"),
+                    spice=self.engine.item.name,
+                    current_negotiation_state=current_state
+                )
+                llm_time_ms = int((time.time() - start_llm) * 1000)
+                
+                return {
+                    "npc_text": composed["text"],
+                    "tone": composed["tone"],
+                    "emotion": composed["emotion"],
+                    "action": "WAIT",
+                    "price": self.engine.current_offer,
+                    "quantity": self.engine.current_quantity,
+                    "done": False,
+                    "debug": self._build_debug_info(),
+                    "perf_intent": intent_time_ms,
+                    "perf_llm": llm_time_ms
+                }
+
+            elif action.intent == "NO_ITEM":
+                decision = EngineDecision(action="WALK_AWAY", price=self.engine.current_offer, quantity=self.engine.current_quantity, done=True)
+
+            elif action.intent == "CLARIFICATION":
+                decision = EngineDecision(action="CLARIFICATION", price=self.engine.current_offer, quantity=self.engine.current_quantity, done=False)
+
+            elif action.intent == "OUT_OF_WORLD":
+                self.engine.out_of_world_count += 1
+
+                if self.engine.out_of_world_count >= 2:
+                    decision = EngineDecision(action="WALK_AWAY", price=self.engine.current_offer, quantity=self.engine.current_quantity, done=True)
+                else:
+                    decision = EngineDecision(action="OUT_OF_WORLD", price=self.engine.current_offer, quantity=self.engine.current_quantity, done=False)
+            
+            else:
+                decision = self.engine.next_step(action)
+
+        if decision.action == "END":
+            return self._format_response(decision, None)
+
+        # Generate dialogue using injected generator
+        start_llm = time.time()
+        composed = self.dialogue_fn(decision, self.engine)
+        llm_time_ms = int((time.time() - start_llm) * 1000)
+
+        if decision.action == "ACCEPT" and composed.get("action", decision.action) == "ACCEPT":
+            final_quantity = self.format_final_quantity()
+            final_item = self.engine.final_item or self.engine.item.name
+            composed["text"] += f"\n\nTransaction complete.\nFinal Deal: {final_quantity} {final_item} for {decision.price} varahas"
+
+        debug_info = self._build_debug_info()
+
+        return {
+            "npc_text": composed["text"],
+            "tone": composed["tone"],
+            "emotion": composed["emotion"],
+            "action": composed.get("action", decision.action),
+            "price": decision.price,
+            "quantity": decision.quantity,
+            "done": decision.done or composed.get("action") == "WALK_AWAY",
+            "debug": debug_info,
+            "perf_intent": intent_time_ms,
+            "perf_llm": llm_time_ms
+        }

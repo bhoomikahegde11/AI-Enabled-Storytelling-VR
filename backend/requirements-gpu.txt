@@ -1,0 +1,8 @@
+# NVIDIA CUDA Libraries for faster-whisper (CTranslate2)
+nvidia-cublas-cu12
+nvidia-cudnn-cu12
+nvidia-cuda-runtime-cu12
+
+# CUDA-enabled llama-cpp-python pre-built wheel override
+--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124
+llama-cpp-python>=0.3,<0.4

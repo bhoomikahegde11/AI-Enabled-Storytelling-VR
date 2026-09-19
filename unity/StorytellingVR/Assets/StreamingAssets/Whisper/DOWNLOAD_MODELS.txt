@@ -1,0 +1,15 @@
+Whisper model binaries are not stored in git because they are too large and can cause GitHub push failures.
+
+Download the required models manually:
+
+tiny.en
+https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin
+
+base.en
+https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
+
+small.en
+https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
+
+After downloading, place the .bin files in this same folder:
+unity/StorytellingVR/Assets/StreamingAssets/Whisper/

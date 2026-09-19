@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "overall_accuracy": 93.3,
+  "p95_trade_latency_ms": 49.39,
+  "p95_general_latency_ms": 77.45,
+  "diversity_uniqueness_ratio": 1.0,
+  "diversity_facts_preserved": true,
+  "multi_turn_negotiations_passed": true,
+  "multi_turn_errors_count": 0,
+  "timestamp": "2026-06-05 11:47:22",
+  "total_test_runs": 2090,
+  "passed_cases": 1950,
+  "failed_cases": 140
+}

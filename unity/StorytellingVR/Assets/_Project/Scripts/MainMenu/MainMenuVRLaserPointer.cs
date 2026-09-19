@@ -1,0 +1,362 @@
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using TMPro;
+
+public class MainMenuVRLaserPointer : MonoBehaviour
+{
+    private enum ControllerHand
+    {
+        Left,
+        Right
+    }
+
+    [Header("Controller")]
+    [SerializeField] private ControllerHand controllerHand = ControllerHand.Right;
+    [SerializeField] private float triggerThreshold = 0.75f;
+
+    [Header("Haptics")]
+    [SerializeField] [Range(0f, 1f)] private float hoverHapticStrength = 0.1f;
+    [SerializeField] private float hoverHapticDuration = 0.03f;
+    [SerializeField] [Range(0f, 1f)] private float clickHapticStrength = 0.22f;
+    [SerializeField] private float clickHapticDuration = 0.045f;
+    [SerializeField] private float hapticFrequency = 0.3f;
+
+    [Header("Ray")]
+    [SerializeField] private float maxDistance = 8f;
+    [SerializeField] private float rayWidth = 0.01f;
+    [SerializeField] private Color idleColor = new Color(1f, 0.95f, 0.6f, 0.9f);
+    [SerializeField] private Color hoverColor = Color.white;
+
+    private EventSystem eventSystem;
+    private LineRenderer lineRenderer;
+    private GameObject currentHoverObject;
+    private bool wasTriggerPressed;
+    private Coroutine hapticRoutine;
+
+    private OVRInput.Controller OvrController =>
+        controllerHand == ControllerHand.Left
+            ? OVRInput.Controller.LTouch
+            : OVRInput.Controller.RTouch;
+
+    private int PointerId =>
+        controllerHand == ControllerHand.Left ? -101 : -102;
+
+    private void Awake()
+    {
+        eventSystem = EventSystem.current;
+        EnsureLineRenderer();
+        SyncSelectableColliders();
+
+        Debug.Log($"{nameof(MainMenuVRLaserPointer)} initialized on '{gameObject.name}' for {controllerHand} controller.");
+    }
+
+    private bool IsControllerConnected()
+    {
+        OVRInput.Controller connectedControllers = OVRInput.GetConnectedControllers();
+        return (connectedControllers & OvrController) == OvrController;
+    }
+
+    private void Update()
+    {
+        SyncSelectableColliders();
+
+        if (!IsControllerConnected())
+        {
+            if (lineRenderer != null)
+                lineRenderer.enabled = false;
+
+            ClearHover();
+            return;
+        }
+
+        Vector3 origin = transform.position;
+        Vector3 direction = transform.forward;
+        Selectable hitSelectable = FindSelectableHit(origin, direction, out RaycastHit hitInfo);
+        GameObject hoverTarget = hitSelectable != null ? hitSelectable.gameObject : null;
+
+        UpdateHoverTarget(hoverTarget);
+        UpdateLine(origin, hitSelectable != null ? hitInfo.point : origin, hoverTarget != null);
+        HandleTriggerPress(hoverTarget);
+    }
+
+    private void OnDisable()
+    {
+        ClearHover();
+        OVRInput.SetControllerVibration(0f, 0f, OvrController);
+    }
+
+    private void EnsureLineRenderer()
+    {
+        GameObject lineObject = new GameObject($"{nameof(MainMenuVRLaserPointer)}_Line");
+        lineObject.transform.SetParent(transform, false);
+
+        lineRenderer = lineObject.AddComponent<LineRenderer>();
+        lineRenderer.useWorldSpace = true;
+        lineRenderer.positionCount = 2;
+        lineRenderer.startWidth = rayWidth;
+        lineRenderer.endWidth = rayWidth;
+        lineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        lineRenderer.receiveShadows = false;
+        lineRenderer.alignment = LineAlignment.View;
+        lineRenderer.numCapVertices = 4;
+        lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
+        lineRenderer.startColor = idleColor;
+        lineRenderer.endColor = idleColor;
+        lineRenderer.enabled = false;
+    }
+
+    private void SyncSelectableColliders()
+    {
+        Canvas[] canvases = Resources.FindObjectsOfTypeAll<Canvas>();
+        if (canvases == null || canvases.Length == 0)
+        {
+            Debug.LogWarning($"{nameof(MainMenuVRLaserPointer)} could not find any canvases to prepare menu colliders.");
+            return;
+        }
+
+        bool foundAnySelectable = false;
+
+        foreach (Canvas canvas in canvases)
+        {
+            if (canvas == null)
+                continue;
+
+            if (!canvas.gameObject.scene.IsValid())
+                continue;
+
+            Selectable[] selectables = canvas.GetComponentsInChildren<Selectable>(true);
+            foreach (Selectable selectable in selectables)
+            {
+                if (selectable == null)
+                    continue;
+
+                RectTransform rectTransform = selectable.GetComponent<RectTransform>();
+                if (rectTransform == null)
+                    continue;
+
+                BoxCollider boxCollider = selectable.GetComponent<BoxCollider>();
+                if (boxCollider == null)
+                {
+                    boxCollider = selectable.gameObject.AddComponent<BoxCollider>();
+                    Debug.Log($"{nameof(MainMenuVRLaserPointer)} added runtime BoxCollider to '{selectable.gameObject.name}'.");
+                }
+
+                Rect rect = rectTransform.rect;
+                boxCollider.center = new Vector3(rect.center.x, rect.center.y, 0f);
+                boxCollider.size = new Vector3(Mathf.Abs(rect.width), Mathf.Abs(rect.height), 0.02f);
+                boxCollider.isTrigger = true;
+                boxCollider.enabled = IsSelectableRaycastable(selectable);
+                foundAnySelectable = true;
+            }
+        }
+
+        if (!foundAnySelectable)
+        {
+            Debug.LogWarning($"{nameof(MainMenuVRLaserPointer)} found canvases but no selectable menu controls to prepare.");
+            return;
+        }
+    }
+
+    private Selectable FindSelectableHit(Vector3 origin, Vector3 direction, out RaycastHit closestHit)
+    {
+        closestHit = default;
+        RaycastHit[] hits = Physics.RaycastAll(origin, direction, maxDistance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
+
+        if (hits.Length == 0)
+            return null;
+
+        System.Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
+
+        foreach (RaycastHit hit in hits)
+        {
+            TMP_InputField inputField = hit.collider.GetComponentInParent<TMP_InputField>();
+            if (inputField == null || !IsSelectableRaycastable(inputField))
+                continue;
+
+            closestHit = hit;
+            return inputField;
+        }
+
+        foreach (RaycastHit hit in hits)
+        {
+            Selectable selectable = hit.collider.GetComponentInParent<Selectable>();
+            if (selectable == null || !IsSelectableRaycastable(selectable))
+                continue;
+
+            closestHit = hit;
+            return selectable;
+        }
+
+        return null;
+    }
+
+    private void UpdateHoverTarget(GameObject newHoverObject)
+    {
+        if (currentHoverObject == newHoverObject)
+            return;
+
+        PointerEventData eventData = CreatePointerEventData();
+
+        if (currentHoverObject != null)
+        {
+            ExecuteEvents.ExecuteHierarchy(currentHoverObject, eventData, ExecuteEvents.pointerExitHandler);
+        }
+
+        currentHoverObject = newHoverObject;
+
+        if (currentHoverObject != null)
+        {
+            ExecuteEvents.ExecuteHierarchy(currentHoverObject, eventData, ExecuteEvents.pointerEnterHandler);
+            MainMenuAudioController.Instance?.PlayHover();
+            PlayHapticPulse(hoverHapticStrength, hoverHapticDuration);
+        }
+    }
+
+    private void HandleTriggerPress(GameObject hoverTarget)
+    {
+        bool isTriggerPressed = OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OvrController) >= triggerThreshold;
+
+        if (isTriggerPressed && !wasTriggerPressed && hoverTarget != null)
+        {
+            PointerEventData eventData = CreatePointerEventData();
+            LogClickTarget(hoverTarget.name);
+
+            TMP_InputField inputField = hoverTarget.GetComponent<TMP_InputField>();
+            if (inputField != null)
+            {
+                MainMenuAudioController.Instance?.PlayClick();
+                PlayHapticPulse(clickHapticStrength, clickHapticDuration);
+
+                if (eventSystem == null)
+                    eventSystem = EventSystem.current;
+
+                eventSystem?.SetSelectedGameObject(hoverTarget, eventData);
+                ExecuteEvents.Execute(hoverTarget, eventData, ExecuteEvents.pointerClickHandler);
+                ExecuteEvents.Execute(hoverTarget, eventData, ExecuteEvents.selectHandler);
+                inputField.ActivateInputField();
+            }
+            else
+            {
+                Toggle toggle = hoverTarget.GetComponent<Toggle>();
+                bool previousToggleValue = toggle != null && toggle.isOn;
+
+                ExecuteEvents.Execute(hoverTarget, eventData, ExecuteEvents.pointerClickHandler);
+                ExecuteEvents.Execute(hoverTarget, eventData, ExecuteEvents.selectHandler);
+
+                if (toggle != null && toggle.isOn != previousToggleValue)
+                {
+                    MainMenuAudioController.Instance?.PlayClick();
+                    PlayHapticPulse(clickHapticStrength, clickHapticDuration);
+                }
+                else if (toggle == null)
+                {
+                    PlayHapticPulse(clickHapticStrength, clickHapticDuration);
+                }
+            }
+        }
+
+        wasTriggerPressed = isTriggerPressed;
+    }
+
+    private PointerEventData CreatePointerEventData()
+    {
+        if (eventSystem == null)
+            eventSystem = EventSystem.current;
+
+        return new PointerEventData(eventSystem)
+        {
+            button = PointerEventData.InputButton.Left,
+            pointerId = PointerId
+        };
+    }
+
+    private void UpdateLine(Vector3 start, Vector3 end, bool isHoveringButton)
+    {
+        if (lineRenderer == null)
+            return;
+
+        lineRenderer.enabled = isHoveringButton;
+
+        if (!isHoveringButton)
+            return;
+
+        lineRenderer.startColor = isHoveringButton ? hoverColor : idleColor;
+        lineRenderer.endColor = isHoveringButton ? hoverColor : idleColor;
+        lineRenderer.SetPosition(0, start);
+        lineRenderer.SetPosition(1, end);
+    }
+
+    private void ClearHover()
+    {
+        if (currentHoverObject == null)
+            return;
+
+        ExecuteEvents.ExecuteHierarchy(currentHoverObject, CreatePointerEventData(), ExecuteEvents.pointerExitHandler);
+        currentHoverObject = null;
+    }
+
+    private static bool IsSelectableRaycastable(Selectable selectable)
+    {
+        if (selectable == null)
+            return false;
+
+        if (!selectable.gameObject.activeInHierarchy || !selectable.isActiveAndEnabled || !selectable.IsInteractable())
+            return false;
+
+        if (selectable.targetGraphic != null)
+        {
+            if (!selectable.targetGraphic.raycastTarget || !selectable.targetGraphic.isActiveAndEnabled)
+                return false;
+
+            CanvasRenderer canvasRenderer = selectable.targetGraphic.canvasRenderer;
+            if (canvasRenderer != null && canvasRenderer.cull)
+                return false;
+        }
+
+        Canvas[] parentCanvases = selectable.GetComponentsInParent<Canvas>(true);
+        foreach (Canvas parentCanvas in parentCanvases)
+        {
+            if (parentCanvas == null || !parentCanvas.enabled || !parentCanvas.gameObject.activeInHierarchy)
+                return false;
+        }
+
+        CanvasGroup[] canvasGroups = selectable.GetComponentsInParent<CanvasGroup>(true);
+        foreach (CanvasGroup canvasGroup in canvasGroups)
+        {
+            if (canvasGroup == null || !canvasGroup.enabled)
+                continue;
+
+            if (!canvasGroup.interactable || !canvasGroup.blocksRaycasts || canvasGroup.alpha <= 0.001f)
+                return false;
+        }
+
+        return true;
+    }
+
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+    private void LogClickTarget(string targetName)
+    {
+        Debug.Log($"{nameof(MainMenuVRLaserPointer)} clicked '{targetName}' with {controllerHand} controller.");
+    }
+
+    private void PlayHapticPulse(float amplitude, float duration)
+    {
+        if (!IsControllerConnected())
+            return;
+
+        if (hapticRoutine != null)
+            StopCoroutine(hapticRoutine);
+
+        hapticRoutine = StartCoroutine(HapticPulseRoutine(Mathf.Clamp01(amplitude), duration));
+    }
+
+    private System.Collections.IEnumerator HapticPulseRoutine(float amplitude, float duration)
+    {
+        OVRInput.SetControllerVibration(hapticFrequency, amplitude, OvrController);
+        yield return new WaitForSecondsRealtime(Mathf.Max(0.01f, duration));
+        OVRInput.SetControllerVibration(0f, 0f, OvrController);
+        hapticRoutine = null;
+    }
+}

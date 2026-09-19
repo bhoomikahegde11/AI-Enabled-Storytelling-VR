@@ -1,0 +1,138 @@
+{
+  "historical_period": "1500s (Peak Prosperity under Emperor Krishnadevaraya, Tuluva Dynasty)",
+  "capital_cities": {
+    "primary": "Vijayanagara (known to Portuguese merchants as Bisnaga, modern-day Hampi)",
+    "description": "A metropolis of over 500,000 residents, described by Domingo Paes in 1520 as 'large as Rome, and very beautiful to the look', surrounded by seven concentric rings of massive granite fortifications."
+  },
+  "monetary_system": {
+    "gold_coins": {
+      "varaha": {
+        "name": "Varaha (also known as Pagoda, Hon, or Gadyana)",
+        "weight_grams": 3.4,
+        "purity": "High-purity gold (approx. 20-22 karat)",
+        "iconography": "Images of Hindu deities (such as Balakrishna, Venkatesvara, or Shiva-Parvati) and the imperial emblem Gandaberunda (double-headed eagle) minted on the obverse.",
+        "purchasing_power": "Standard unit for high-value wholesale transactions, international trade, land purchases, and royal temple endowments."
+      },
+      "pratapa": {
+        "name": "Pratapa",
+        "value": "0.5 varaha",
+        "weight_grams": 1.7,
+        "description": "Minted in gold for medium-to-high commerce transactions."
+      },
+      "hana": {
+        "name": "Hana (or Fanam)",
+        "value": "0.1 varaha",
+        "description": "Small gold coin widely used in local bazaar trade for buying grain, fine fabrics, or paying skilled daily artisan wages."
+      }
+    },
+    "silver_coins": {
+      "tara": {
+        "name": "Tara",
+        "value": "1/16 of a varaha (or 0.625 hana)",
+        "weight_grams": 0.2,
+        "description": "Fractional silver coin essential for everyday retail marketplace trades and food transactions."
+      }
+    },
+    "copper_coins": {
+      "jital": {
+        "name": "Jital (or Kasu / Duggani)",
+        "value": "Fractional copper coin (typically 1/3 of a silver tara)",
+        "description": "Primary low-value coin used by rural populations, common laborers, and for purchasing cheap kitchen spices and vegetables."
+      }
+    },
+    "historical_purchasing_power": {
+      "skilled_mason_daily_wage": "1 to 2 gold hanas",
+      "common_laborer_daily_wage": "2 to 4 copper jitals",
+      "1_kg_malabar_pepper": "80 to 120 gold varahas (highly volatile based on Portuguese shipping blocks at coastal ports)",
+      "fine_silk_patta_saree": "15 to 30 gold varahas",
+      "import_war_horse": "300 to 500 gold varahas (highly valued by the military cavalry)"
+    }
+  },
+  "trade_dynamics": {
+    "bazaar_locations": [
+      {
+        "name": "Hampi Virupaksha Bazaar",
+        "description": "A grand paved avenue, 40 yards wide and nearly a mile long, running directly in front of the Virupaksha Temple. Lined with beautiful stone colonnaded double-story buildings, chronicled by Duarte Barbosa as the hub of global merchant exchange."
+      },
+      {
+        "name": "Krishna Bazaar",
+        "description": "Situated in front of the Krishna Temple, specialized in international spice trade, agricultural wholesale transactions, and raw materials."
+      },
+      {
+        "name": "Pan Supari Bazaar",
+        "description": "Located adjacent to the royal enclosure, specializing in luxury goods: betel leaves (pan), areca nut (supari), precious sandalwood, imported perfumes, musk, and Chinese porcelain."
+      }
+    ],
+    "major_imports": [
+      {
+        "item": "War Horses (Arabian and Persian breeds)",
+        "ports": "Bhatkal, Honavar, and Goa ports",
+        "treaties": "Under Emperor Krishnadevaraya, the Portuguese held exclusive import monopoly rights on war horses. In exchange, the Portuguese provided military assistance and guaranteed maritime trade access to spice ports."
+      },
+      {
+        "item": "Luxury Velvets and Silks",
+        "source": "China and Portuguese Malacca",
+        "usage": "Used exclusively by royal courtiers, palace dancers, and noble lords."
+      },
+      {
+        "item": "Copper and Tin",
+        "usage": "Essential for local bronze casting (temple icons, bells) and minting of common copper coins."
+      }
+    ],
+    "major_exports": [
+      {
+        "item": "Malabar Pepper (Black Gold)",
+        "source": "Western Ghats and spice gardens of Malenadu",
+        "trade_notes": "Shipped globally through Portuguese Bhatkal and Arab merchant fleets."
+      },
+      {
+        "item": "Ghats Cardamom, Cinnamon, Clove, and Ginger",
+        "usage": "Highly prized spices exchanged in temple bazaars."
+      },
+      {
+        "item": "Fine Cotton Textiles and Prints",
+        "weaving_guilds": "Sourced from Kaikollar and Devanga weavers, shipped to Southeast Asia, Persia, and the Red Sea."
+      },
+      {
+        "item": "Diamonds",
+        "mines": "Kollur Mines (Guntur district) and Vajrakarur",
+        "status": "The empire controlled the only active diamond mines in the world during the 16th century."
+      }
+    ]
+  },
+  "level_connections": {
+    "level1_marketplace": {
+      "title": "Bazaar Spice Trade",
+      "skill": "Trade & Negotiation",
+      "historical_insight": "Bazaars in Hampi were temple-adjacent hubs of international trade where Persian horse-traders, Portuguese merchant agents, and local spice growers bargained side-by-side. The standard currency is the gold Varaha, and the buyer's patience depends directly on their socio-economic desperation.",
+      "dialogue_triggers": {
+        "cautious_buyer": "Often worries about high prices due to Portuguese monopolies along the Bhatkal trade route.",
+        "aggressive_trader": "A Persian or Arab merchant agent purchasing wholesale spice bundles for maritime shipment, seeking deep cuts to maximize export margins."
+      }
+    },
+    "level2_craftsmanship": {
+      "title": "Weaving Guilds & Quality",
+      "skill": "Guild Regulations & Dye Chemistry",
+      "historical_insight": "Artisans operated under powerful local guilds (Senis) regulated by royal Pattaswamis. High respect from Level 1 bazaar trade allows the player to obtain rare indigo and madder root dye licenses, while low respect locks the player to standard clay pigments and cheap cotton threads.",
+      "guild_laws": "Raw silk thread sourcing and weaving measurements were strictly inspected by imperial officers (Mahanayakacharyas) to maintain export reputation."
+    },
+    "level3_temple_civic": {
+      "title": "Temple Civic & Irrigation",
+      "skill": "Hydraulic Engineering & Labour Trust",
+      "historical_insight": "Temples acted as municipal banks, land-owners, and employers, financing massive irrigation canals (like the Basavanna and Raya canals) diverting the Tungabhadra River. The player balances worker wages (paid in silver taras) and structural canal durability.",
+      "redemption_loop": "A greedy seller from Level 1 can redeem their reputation by volunteering as a temple architect, accepting lower profit margins in exchange for building grand stone aqueducts for Hampi's agricultural belt."
+    },
+    "level4_royal_artistry": {
+      "title": "Etiquette & Mahanavami Performance",
+      "skill": "Etiquette and Classical Performance (Sadir / Bharatanatyam)",
+      "historical_insight": "During the 9-day spring festival (Mahanavami Dibba celebrations), artists perform traditional Sadir dance or present fine stone sculptures before court ministers. Modifiers include bowing with the Dandanam gesture, presenting gold coins (nazar) on silk trays, and matching classical aesthetics.",
+      "social_status": "Dancers (Devadasis) and master sculptors held elite positions, owned land, and made direct donations to state temples."
+    },
+    "level5_royal_court": {
+      "title": "The Imperial Audience",
+      "skill": "Political Diplomacy & Judgment",
+      "historical_insight": "The player is summoned before Emperor Krishnadevaraya inside the palace audience hall. Their global accumulated varahas and reputation are read dynamically by the Royal Treasurer. Ends branch into trusted advisor, provincial guild leader, or exiled trader.",
+      "court_protocol": "Requires strict adherence to court language, avoiding modern slangs (out-of-world count checks), and kneeling before the imperial throne."
+    }
+  }
+}

@@ -1,0 +1,291 @@
+# Blender 4.2.1 LTS MTL File: 'sp1.blend'
+# www.blender.org
+
+newmtl Burlap_Upholstery_for_Rough_Sacks
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Pr C:/Burlap_upholstery_Roughness.jpg
+
+newmtl Charcoal_Gravel
+Kd 0.038204 0.038204 0.038204
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+Pr 0.500000
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+
+newmtl Dried_Mud_with_Displacement
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+Pr 0.500000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/GWC Dry Mud 01_BaseColor.jpg
+map_Pm C:/GWC Dry Mud 01_Metallic.jpg
+map_d C:/GWC Dry Mud 01_BaseColor.jpg
+map_Bump -bm 1.000000 C:/GWC Dry Mud 01_Normal.jpg
+
+newmtl Flowers_01
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Pr C:/flower_001_11222023_Roughness.jpg
+
+newmtl Granite_Rock_Material
+Ks 0.379154 0.379154 0.379154
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Rock sept16 2_BaseColor.jpg
+map_Pr C:/Rock sept16 2_Roughness.jpg
+map_Bump -bm 1.000000 C:/Rock sept16 2_Normal.jpg
+
+newmtl Grass_Flowers_Clovers
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+Pr 0.400000
+Pm 0.000000
+
+newmtl Green_fabric
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/green fabric2_BaseColor.jpg
+map_Pm C:/green fabric2_Metallic.jpg
+map_Pr C:/green fabric2_Roughness.jpg
+map_Bump -bm 1.000000 C:/green fabric2_Normal.jpg
+
+newmtl Hessian_for_Bags
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Hessian_Base_Color.jpg
+map_Pr C:/Hessian_Roughness.jpg
+
+newmtl Metal
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+Pr 0.500000
+Pm 1.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Metal_basecolor.jpg
+map_Bump -bm 1.000000 C:/Metal_normal.jpg
+
+newmtl Old_damaaged_used_metal
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+Pr 0.500000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/metal_basecolor_diffuse.jpg
+map_Pm C:/metal_metallic.jpg
+map_Ks C:/metal_specular.jpg
+map_Bump -bm 1.000000 C:/metal_normal_opengl.jpg
+
+newmtl Red_fabric
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/red fabric_BaseColor.jpg
+map_Pm C:/red fabric_Metallic.jpg
+map_Pr C:/red fabric_Roughness.jpg
+map_Bump -bm 3.300000 C:/red fabric_Normal.jpg
+
+newmtl Rock.021
+Kd 0.800000 0.800000 0.800000
+Ks 0.200000 0.200000 0.200000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+Pr 0.500000
+Pm 0.200000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+
+newmtl Rough_Pink_Granite
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Pr C:/Rough_Pink_Granite_02-disp.jpg
+map_Bump -bm 1.000000 C:/Rough_Pink_Granite_02-normal.jpg
+
+newmtl Sand_and_gravel
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/sand and pebble_BaseColor.jpg
+map_Pm C:/sand and pebble_Metallic.jpg
+map_Pr C:/sand and pebble_Roughness.jpg
+map_Bump -bm 1.000000 C:/sand and pebble_Normal.jpg
+
+newmtl Soil_Dark.001
+Kd 0.800000 0.800000 0.800000
+Ks 0.200000 0.200000 0.200000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+Pr 0.750000
+Pm 0.300000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+
+newmtl Soil_Dust
+Kd 0.800000 0.800000 0.800000
+Ks 0.200000 0.200000 0.200000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+Pr 0.750000
+Pm 0.300000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+
+newmtl Soil_Red.001
+Kd 0.800000 0.800000 0.800000
+Ks 0.200000 0.200000 0.200000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+Pr 0.750000
+Pm 0.300000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+
+newmtl Tree_Bark.040
+Kd 0.800000 0.800000 0.800000
+Ks 0.200000 0.200000 0.200000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+Pr 0.500000
+Pm 0.200000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+
+newmtl Yellow_fabric
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/yellow fabic_BaseColor.jpg
+map_Pm C:/yellow fabic_Metallic.jpg
+map_Pr C:/yellow fabic_Roughness.jpg
+map_Bump -bm 5.700000 C:/yellow fabic_Normal.jpg
