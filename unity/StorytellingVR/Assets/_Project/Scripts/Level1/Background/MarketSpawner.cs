@@ -20,6 +20,7 @@ public class MarketSpawner : MonoBehaviour
     [SerializeField] private List<BackgroundNpcVisualEntry> backgroundVisualPool = new List<BackgroundNpcVisualEntry>();
     [SerializeField] private GameObject fallbackVisualPrefab;
     [SerializeField] private RuntimeAnimatorController backgroundWalkingController;
+    [SerializeField] private bool startSpawningImmediately;
 
     public Transform leftSpawn;
     public Transform rightSpawn;
@@ -37,18 +38,29 @@ public class MarketSpawner : MonoBehaviour
 
     void Start()
     {
-        Debug.Log("[BG NPC] MarketSpawner started; waiting for market day.");
+        Debug.Log(startSpawningImmediately
+            ? "[BG NPC] MarketSpawner started; spawning immediately."
+            : "[BG NPC] MarketSpawner started; waiting for market day.");
         StartCoroutine(SpawnLoop());
     }
 
     IEnumerator SpawnLoop()
     {
-        while (!Level1GameState.Instance.MarketDayStarted && !Level1GameState.Instance.MarketDayEnded)
+        if (!startSpawningImmediately)
         {
-            yield return null;
+            while (!Level1GameState.Instance.MarketDayStarted && !Level1GameState.Instance.MarketDayEnded)
+            {
+                yield return null;
+            }
+
+            if (Level1GameState.Instance.MarketDayEnded)
+            {
+                Debug.Log("[MARKET SPAWNER] Market day ended before background spawning started.");
+                yield break;
+            }
         }
 
-        while (!Level1GameState.Instance.MarketDayEnded)
+        while (startSpawningImmediately || !Level1GameState.Instance.MarketDayEnded)
         {
             Debug.Log($"[BG NPC] Spawn tick: active={activeNPCs}, max={maxNPCs}.");
             if (activeNPCs < maxNPCs)
