@@ -70,6 +70,90 @@ public class Level1ConversationRuntimeSoakTests
         yield return RunClarificationReminderRegression(seed);
     }
 
+    [UnityTest, Explicit("Manual voice-review regression: select from an empty unsaved scene.")]
+    public IEnumerator ReviewLT_ReplacesCandidateWithoutSubmittingOrReusingTurn()
+    {
+        RequireEmptyEditorScene();
+        yield return new EnterPlayMode();
+        originalTimeScale = Time.timeScale;
+        originalCaptureFramerate = Time.captureFramerate;
+        originalUnityRandomState = UnityEngine.Random.state;
+        Time.captureFramerate = 60;
+        Time.timeScale = 20f;
+        fixture = new SoakFixture(DefaultSoakSeed);
+        Application.logMessageReceived += CaptureError;
+        yield return null;
+
+        fixture.ShowConversationUI();
+        fixture.Chat.StartNewSession();
+        Assert.IsFalse(fixture.Voice.BeginSimulatedCapture(out _), "LT must remain blocked during NPC greeting.");
+        yield return WaitUntil(() => fixture.Chat.IsWaitingForPlayer, "greeting never yielded input");
+
+        Assert.IsTrue(fixture.Voice.BeginSimulatedCapture(out var old), fixture.Diagnostics());
+        Assert.IsTrue(fixture.Voice.BeginSimulatedRecognition(old), fixture.Diagnostics());
+        yield return WaitUntil(() => fixture.Speech.PendingCount == 1, "first recognition did not start");
+        fixture.Speech.CompleteNext("I accept your offer");
+        yield return WaitUntil(() => fixture.Chat.TurnPhase == ConversationTurnLifecycle.Phase.Reviewing,
+            "first candidate never reached review");
+        Assert.AreEqual("I accept your offer", fixture.Input.text, fixture.Diagnostics());
+        int processedBefore = (int)LocalDialogueTurnField.GetValue(fixture.Chat);
+        int tradeTurnsBefore = Level1GameState.Instance.ActiveTrade.turnIndex;
+
+        Assert.IsTrue(fixture.Voice.BeginSimulatedCapture(out var replacement), fixture.Diagnostics());
+        Assert.AreEqual(old.Interaction, replacement.Interaction, fixture.Diagnostics());
+        Assert.AreNotEqual(old.Turn, replacement.Turn, fixture.Diagnostics());
+        Assert.IsFalse(fixture.Chat.IsCurrentVoiceTurn(old), fixture.Diagnostics());
+        Assert.IsFalse(fixture.Chat.TryAdvanceVoiceTurn(old, ConversationTurnLifecycle.Phase.Reviewing), fixture.Diagnostics());
+        Assert.IsFalse(fixture.Voice.BeginSimulatedRecognition(old), fixture.Diagnostics());
+        Assert.AreEqual(ConversationTurnLifecycle.Phase.Capturing, fixture.Chat.TurnPhase, fixture.Diagnostics());
+        Assert.AreEqual(Level1VoiceInputManager.VoiceInputState.Recording, fixture.Voice.CurrentState, fixture.Diagnostics());
+        Assert.IsEmpty(fixture.Input.text, fixture.Diagnostics());
+        fixture.Chat.OnSend(); // The replaced candidate cannot be submitted, even by a late confirm.
+        Assert.AreEqual(processedBefore, (int)LocalDialogueTurnField.GetValue(fixture.Chat), fixture.Diagnostics());
+        Assert.AreEqual(tradeTurnsBefore, Level1GameState.Instance.ActiveTrade.turnIndex, fixture.Diagnostics());
+        yield return DelayFrames(120); // Capturing must not count as player silence.
+        Assert.IsFalse(fixture.Chat.TryHandleNegotiationTimeout(), fixture.Diagnostics());
+        Assert.AreEqual(ConversationTurnLifecycle.Phase.Capturing, fixture.Chat.TurnPhase, fixture.Diagnostics());
+
+        Assert.IsTrue(fixture.Voice.BeginSimulatedRecognition(replacement), fixture.Diagnostics());
+        yield return WaitUntil(() => fixture.Speech.PendingCount == 1, "replacement recognition did not start");
+        fixture.Speech.CompleteNext("What is your price?");
+        yield return WaitUntil(() => fixture.Chat.TurnPhase == ConversationTurnLifecycle.Phase.Reviewing,
+            "replacement candidate never reached review");
+        Assert.AreEqual("What is your price?", fixture.Input.text, fixture.Diagnostics());
+        Assert.AreEqual(processedBefore, (int)LocalDialogueTurnField.GetValue(fixture.Chat), fixture.Diagnostics());
+        fixture.Voice.ClearTranscript(); // B remains an optional clear action.
+        Assert.IsTrue(fixture.Chat.IsWaitingForPlayer, fixture.Diagnostics());
+        Assert.IsEmpty(fixture.Input.text, fixture.Diagnostics());
+        Assert.IsFalse(fixture.Chat.IsCurrentVoiceTurn(replacement), fixture.Diagnostics());
+
+        // A recognition task from an abandoned attempt may finish after another turn starts.
+        Assert.IsTrue(fixture.Voice.BeginSimulatedCapture(out var delayed), fixture.Diagnostics());
+        Assert.IsTrue(fixture.Voice.BeginSimulatedRecognition(delayed), fixture.Diagnostics());
+        yield return WaitUntil(() => fixture.Speech.PendingCount == 1, "delayed recognition did not start");
+        fixture.Voice.ClearTranscript();
+        Assert.IsTrue(fixture.Voice.BeginSimulatedCapture(out var fresh), fixture.Diagnostics());
+        Assert.AreEqual(delayed.Interaction, fresh.Interaction, fixture.Diagnostics());
+        Assert.AreNotEqual(delayed.Turn, fresh.Turn, fixture.Diagnostics());
+        Assert.IsTrue(fixture.Voice.BeginSimulatedRecognition(fresh), fixture.Diagnostics());
+        yield return WaitUntil(() => fixture.Speech.PendingCount == 2, "fresh recognition did not start");
+        fixture.Speech.CompleteNext("I accept your offer"); // Late result for the abandoned turn.
+        yield return DelayFrames(2);
+        Assert.AreEqual(ConversationTurnLifecycle.Phase.Recognizing, fixture.Chat.TurnPhase, fixture.Diagnostics());
+        Assert.IsTrue(fixture.Chat.IsCurrentVoiceTurn(fresh), fixture.Diagnostics());
+        Assert.IsEmpty(fixture.Input.text, fixture.Diagnostics());
+        Assert.AreEqual(processedBefore, (int)LocalDialogueTurnField.GetValue(fixture.Chat), fixture.Diagnostics());
+        fixture.Speech.CompleteNext("What is your price?");
+        yield return WaitUntil(() => fixture.Chat.TurnPhase == ConversationTurnLifecycle.Phase.Reviewing,
+            "fresh recognition did not reach review");
+        Assert.AreEqual("What is your price?", fixture.Input.text, fixture.Diagnostics());
+
+        fixture.Chat.ResetConversationUI();
+        Assert.IsFalse(fixture.Voice.BeginSimulatedCapture(out _), "LT must remain blocked after resolution/reset.");
+        Assert.IsEmpty(fixture.Input.text, fixture.Diagnostics());
+        Assert.IsEmpty(errors, fixture.Diagnostics());
+    }
+
     // Construct the captured wait predicates after EnterPlayMode's domain reload.
     private IEnumerator RunClarificationReminderRegression(int seed)
     {

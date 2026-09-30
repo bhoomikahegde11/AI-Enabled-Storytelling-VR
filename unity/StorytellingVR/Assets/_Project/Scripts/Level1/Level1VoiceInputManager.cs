@@ -130,8 +130,8 @@ public class Level1VoiceInputManager : MonoBehaviour
     private string GetReviewText()
     {
         return IsXRDeviceActive()
-            ? "Press A to send\nPress B to clear"
-            : "Press Enter to send\nPress R to clear";
+            ? "Press A to send\nLT to retry (B clears)"
+            : "Press Enter to send\nV to retry (R clears)";
     }
 
     private bool IsXRDeviceActive()
@@ -348,7 +348,7 @@ public class Level1VoiceInputManager : MonoBehaviour
     {
         if (isListening || isRequestingMicrophonePermission) return;
 
-        if (chatManager == null || !chatManager.TryBeginVoiceTurn(out activeVoiceToken)) return;
+        if (!TryStartVoiceTurn()) return;
 
         if (!Application.HasUserAuthorization(UserAuthorization.Microphone))
         {
@@ -358,6 +358,19 @@ public class Level1VoiceInputManager : MonoBehaviour
         }
 
         BeginCapture(activeVoiceToken);
+    }
+
+    private bool TryStartVoiceTurn()
+    {
+        if (chatManager == null) return false;
+        if (currentState == VoiceInputState.Review)
+        {
+            // LT replaces only this interaction's current review; never clear a resolved or responding turn.
+            if (chatManager.TurnPhase != ConversationTurnLifecycle.Phase.Reviewing ||
+                !chatManager.IsCurrentVoiceTurn(activeVoiceToken)) return false;
+            ClearTranscript(); // Invalidates the reviewed token and clears its candidate before the next capture.
+        }
+        return chatManager.TryBeginVoiceTurn(out activeVoiceToken);
     }
 
     private void BeginCapture(ConversationTurnLifecycle.VoiceToken token)
@@ -621,6 +634,15 @@ public class Level1VoiceInputManager : MonoBehaviour
     }
 
     #if UNITY_EDITOR
+    // Uses the same turn-start path as LT without accessing microphone hardware.
+    public bool BeginSimulatedCapture(out ConversationTurnLifecycle.VoiceToken token)
+    {
+        bool started = TryStartVoiceTurn();
+        token = activeVoiceToken;
+        if (started) currentState = VoiceInputState.Recording;
+        return started;
+    }
+
     // PlayMode soak tests enter the real recognition/review path without opening a microphone.
     public bool BeginSimulatedRecognition(ConversationTurnLifecycle.VoiceToken token)
     {

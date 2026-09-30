@@ -20,7 +20,7 @@ public class Level1TransactionIntegrityTests
     [SetUp]
     public void SetUp()
     {
-        Assert.IsNull(Level1GameState.ExistingInstance, "Run outside an active game session; this fixture must not touch a live player's state.");
+        Assert.IsFalse(Level1GameState.ExistingInstance != null, "Run outside an active game session; this fixture must not touch a live player's state.");
         previousSaveOverride = LocalSaveManager.EditorTestSaveDirectoryOverride;
         saveDirectory = Path.Combine(Path.GetTempPath(), "Level1Pass3_" + Guid.NewGuid().ToString("N"));
         LocalSaveManager.EditorTestSaveDirectoryOverride = saveDirectory;

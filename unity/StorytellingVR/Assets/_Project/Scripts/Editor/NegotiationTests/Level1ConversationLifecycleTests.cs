@@ -40,8 +40,10 @@ public class Level1ConversationLifecycleTests
         Assert.IsFalse(lifecycle.IsWaitingForPlayer);
         Assert.IsFalse(lifecycle.IsCurrent(old));
         Assert.IsFalse(lifecycle.SubmitPlayerTurn());
+        Assert.IsFalse(lifecycle.TryBeginCapture(out _));
 
         lifecycle.BeginInteraction();
+        Assert.IsFalse(lifecycle.TryBeginCapture(out _)); // NPC greeting is not a legal player turn.
         Assert.IsFalse(lifecycle.IsCurrent(old));
         Assert.IsFalse(lifecycle.TryAdvanceVoice(old, ConversationTurnLifecycle.Phase.Reviewing));
         Assert.IsTrue(lifecycle.WaitForPlayer(lifecycle.InteractionId));
