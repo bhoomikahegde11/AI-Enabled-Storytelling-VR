@@ -54,6 +54,7 @@ public class Level1DebugForceAccept : MonoBehaviour
 
     private void Update()
     {
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
         // TEMP DEBUG: Heartbeat log every 2 seconds so we can confirm Update is executing.
         if (enableVerboseLogs && Time.unscaledTime >= nextHeartbeatLogTime)
         {
@@ -98,6 +99,7 @@ public class Level1DebugForceAccept : MonoBehaviour
         {
             LogVerbose("[TEMP DEBUG] Force accept ignored because no active negotiable trade/customer was available.");
         }
+        #endif
     }
 
     private bool GetDebugButtonDown()
@@ -123,7 +125,11 @@ public class Level1DebugForceAccept : MonoBehaviour
 
     public static bool ShouldBypassScoopFulfillment()
     {
-        return Instance != null && Instance.bypassScoopFulfillmentForTesting;
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        return Instance != null && Instance.debugModeEnabled && Instance.bypassScoopFulfillmentForTesting;
+        #else
+        return false;
+        #endif
     }
 
     public static bool IsKeyboardVoiceShortcutEnabled()
@@ -135,9 +141,13 @@ public class Level1DebugForceAccept : MonoBehaviour
 
     public static bool IsKeyboardResetShortcutEnabled()
     {
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
         return Instance != null &&
                Instance.enableKeyboardDebugShortcuts &&
                Instance.enableKeyboardResetShortcut;
+        #else
+        return false;
+        #endif
     }
 
     public static bool IsVrTradePanelShortcutPressed()

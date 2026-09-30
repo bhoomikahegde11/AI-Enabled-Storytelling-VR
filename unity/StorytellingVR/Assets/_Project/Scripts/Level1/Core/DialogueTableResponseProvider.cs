@@ -89,7 +89,7 @@ public class DialogueTableResponseProvider
     public string GetReply(NegotiationInput input, LocalTradeState trade, RuleBasedNPCBrainResult brainResult, int roundCount)
     {
         string fallbackReply = brainResult != null ? brainResult.replyText : string.Empty;
-        if (brainResult == null)
+        if (brainResult == null || brainResult.requiresClarification)
         {
             return fallbackReply;
         }
@@ -252,7 +252,7 @@ public class DialogueTableResponseProvider
 
     private static DialogueContext BuildContext(NegotiationInput input, LocalTradeState trade, RuleBasedNPCBrainResult brainResult, int roundCount)
     {
-        int reputation = Level1GameState.Instance != null ? Level1GameState.Instance.CurrentReputation : PlayerState.DefaultReputation;
+        int reputation = Level1GameState.ExistingInstance != null ? Level1GameState.ExistingInstance.CurrentReputation : PlayerState.DefaultReputation;
         int patience = trade != null ? trade.buyerPatience : 5;
         float desperation = trade != null ? trade.buyerDesperation : 0.5f;
         int offeredPrice = input != null && input.hasSellerPrice ? input.sellerPrice : (trade != null ? trade.lastSellerPrice : 0);
@@ -292,8 +292,8 @@ public class DialogueTableResponseProvider
     {
         NegotiationIntent intent = input != null ? input.intent : NegotiationIntent.UNKNOWN;
         bool hasOfferedPrice = input != null && input.hasSellerPrice;
-        bool offerMovedUp = trade != null && brainResult.updatedOffer > trade.npcOffer;
-        bool buyerHeldFirm = trade != null && brainResult.updatedOffer <= trade.npcOffer;
+        bool offerMovedUp = brainResult.updatedOffer > brainResult.previousOffer;
+        bool buyerHeldFirm = brainResult.updatedOffer <= brainResult.previousOffer;
 
         if (brainResult.isAccepted || string.Equals(brainResult.resolutionAction, "ACCEPT", StringComparison.OrdinalIgnoreCase))
         {
@@ -302,11 +302,6 @@ public class DialogueTableResponseProvider
 
         if (brainResult.walkedAway || string.Equals(brainResult.resolutionAction, "WALK_AWAY", StringComparison.OrdinalIgnoreCase))
         {
-            if (trade != null && trade.buyerPatience <= 1)
-            {
-                return DialogueScenario.TimePressure;
-            }
-
             return DialogueScenario.TransactionFailure;
         }
 
@@ -359,7 +354,7 @@ public class DialogueTableResponseProvider
                     : DialogueScenario.SellerPriceTooHigh;
             }
 
-            if (offeredPrice > trade.npcOffer)
+            if (offeredPrice > brainResult.previousOffer)
             {
                 if (offerMovedUp)
                 {
@@ -368,13 +363,13 @@ public class DialogueTableResponseProvider
 
                 if (buyerHeldFirm)
                 {
-                    return offeredPrice - trade.npcOffer <= Mathf.Max(5, trade.minIncrement * 2)
+                    return offeredPrice - brainResult.previousOffer <= Mathf.Max(5, trade.minIncrement * 2)
                         ? DialogueScenario.SellerPriceSlightlyHigh
                         : DialogueScenario.BuyerHoldsFirm;
                 }
             }
 
-            if (offeredPrice < trade.npcOffer)
+            if (offeredPrice < brainResult.previousOffer)
             {
                 if (offerMovedUp)
                 {

@@ -14,6 +14,7 @@ public class ScooperFill : MonoBehaviour
     private SpiceZone currentZone;
     private readonly HashSet<SpiceZone> overlappingZones = new HashSet<SpiceZone>();
     private Coroutine clearZoneCoroutine;
+    private Coroutine wrongSpiceClearCoroutine;
     public static ScooperFill Instance;
     void Awake()
     {
@@ -46,10 +47,6 @@ public class ScooperFill : MonoBehaviour
 
         FillScooper();
 
-        if (currentSpice != OrderManager.Instance.requestedSpice)
-        {
-            StartCoroutine(ClearWrongSpiceAfterDelay());
-        }
     }
 
     void FillScooper()
@@ -64,9 +61,10 @@ public class ScooperFill : MonoBehaviour
             SpiceTutorialManager.Instance.NotifyScooperFilled(currentSpice);
 
         if (OrderManager.Instance != null &&
-            currentSpice != OrderManager.Instance.requestedSpice)
+            currentSpice != OrderManager.Instance.ExpectedSpice)
         {
-            StartCoroutine(ClearWrongSpiceAfterDelay());
+            if (wrongSpiceClearCoroutine != null) StopCoroutine(wrongSpiceClearCoroutine);
+            wrongSpiceClearCoroutine = StartCoroutine(ClearWrongSpiceAfterDelay());
         }
 
         OVRInput.SetControllerVibration(
@@ -80,6 +78,11 @@ public class ScooperFill : MonoBehaviour
 
     public void ResetScooper()
     {
+        if (wrongSpiceClearCoroutine != null)
+        {
+            StopCoroutine(wrongSpiceClearCoroutine);
+            wrongSpiceClearCoroutine = null;
+        }
         filled = false;
         insideSack = false;
         currentZone = null;
@@ -157,10 +160,11 @@ public class ScooperFill : MonoBehaviour
     IEnumerator ClearWrongSpiceAfterDelay()
     {
         yield return new WaitForSeconds(wrongSpiceClearDelay);
+        wrongSpiceClearCoroutine = null;
 
         if (filled &&
             OrderManager.Instance != null &&
-            currentSpice != OrderManager.Instance.requestedSpice)
+            currentSpice != OrderManager.Instance.ExpectedSpice)
         {
             EmptyScooper();
         }
@@ -228,9 +232,15 @@ public class ScooperFill : MonoBehaviour
 
     void ShowSpiceVisual(SpiceType spice)
     {
+        if (spiceVisuals == null) return;
         foreach (SpiceVisualSet item in spiceVisuals)
         {
-            item.visual.SetActive(item.spiceType == spice);
+            if (item != null && item.visual != null) item.visual.SetActive(item.spiceType == spice);
         }
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
     }
 }

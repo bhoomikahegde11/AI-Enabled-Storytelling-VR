@@ -72,14 +72,15 @@ public class MarketplaceManager : MonoBehaviour
     private int activeVisualSessionId = -1;
     private string activeCharacterId = string.Empty;
     private bool isTransitioning = false;
+    public bool IsTransitioning => isTransitioning;
     private bool negotiationWasAccepted = false;
     private Coroutine negotiationIdleCoroutine;
     private Coroutine nextCustomerCountdownCoroutine;
     private Coroutine marketDayStartupCoroutine;
-    private bool isAwaitingPlayerInput;
     private bool isOriginalPlaceholderVisible = true;
     private bool keepsHipsActive = true;
     private float playerIdleStartedAt;
+    private float idleReminderStartedAt = -1f;
     private int reminderStage;
     private int firstReminderSeconds;
     private int secondReminderSeconds;
@@ -455,7 +456,9 @@ public class MarketplaceManager : MonoBehaviour
         if (chatManager != null && chatManager.hudManager != null)
         {
             // Show temporary subtitle: Speaker "Customer", Text "Customer is browsing your goods..."
-            chatManager.hudManager.ShowSubtitle("Customer", "Customer is browsing your goods...");
+            string buyerName = Level1GameState.ExistingInstance?.ActiveTrade?.buyerName;
+            if (string.IsNullOrWhiteSpace(buyerName)) buyerName = "Customer";
+            chatManager.hudManager.ShowSubtitle(buyerName, $"{buyerName} is browsing your goods...");
         }
 
         if (chatManager != null && chatManager.feedbackManager != null)
@@ -502,12 +505,11 @@ public class MarketplaceManager : MonoBehaviour
         yield return new WaitForSeconds(0.6f);
         elapsed += 0.6f;
 
-        if (chatManager != null && chatManager.audioManager != null && chatManager.audioManager.audioSource != null)
+        if (chatManager != null && chatManager.audioManager != null)
         {
-            AudioSource source = chatManager.audioManager.audioSource;
             while (elapsed < maxWaitTime)
             {
-                if (source.isPlaying)
+                if (chatManager.HasActiveNpcPresentation)
                 {
                     // Audio is actively playing, keep waiting
                 }
@@ -717,8 +719,8 @@ public class MarketplaceManager : MonoBehaviour
             StopCoroutine(negotiationIdleCoroutine);
             negotiationIdleCoroutine = null;
         }
-        isAwaitingPlayerInput = false;
         reminderStage = 0;
+        idleReminderStartedAt = -1f;
     }
 
     public void StartPlayerIdleWindow()
@@ -728,23 +730,31 @@ public class MarketplaceManager : MonoBehaviour
             return;
         }
 
-        isAwaitingPlayerInput = true;
         playerIdleStartedAt = Time.time;
         reminderStage = 0;
+        idleReminderStartedAt = -1f;
     }
 
     public void MarkMeaningfulPlayerInput()
     {
-        isAwaitingPlayerInput = false;
         playerIdleStartedAt = Time.time;
         reminderStage = 0;
+        idleReminderStartedAt = -1f;
+    }
+
+    public void ResumePlayerIdleWindowAfterReminder()
+    {
+        if (idleReminderStartedAt < 0f) return;
+        // Preserve elapsed player-idle time; only the NPC's reminder pauses it.
+        playerIdleStartedAt += Time.time - idleReminderStartedAt;
+        idleReminderStartedAt = -1f;
     }
 
     private IEnumerator NegotiationIdleRoutine()
     {
         while (true)
         {
-            if (isAwaitingPlayerInput)
+            if (!isTransitioning && chatManager != null && chatManager.IsWaitingForPlayer)
             {
                 float idleSeconds = Time.time - playerIdleStartedAt;
 
@@ -753,6 +763,7 @@ public class MarketplaceManager : MonoBehaviour
                     reminderStage = 1;
                     if (chatManager != null)
                     {
+                        idleReminderStartedAt = Time.time;
                         chatManager.PlayNegotiationIdleReminder(FirstReminderLines[Random.Range(0, FirstReminderLines.Length)]);
                     }
                 }
@@ -761,6 +772,7 @@ public class MarketplaceManager : MonoBehaviour
                     reminderStage = 2;
                     if (chatManager != null)
                     {
+                        idleReminderStartedAt = Time.time;
                         chatManager.PlayNegotiationIdleReminder(SecondReminderLines[Random.Range(0, SecondReminderLines.Length)]);
                     }
                 }

@@ -6,6 +6,22 @@ public class AudioManager : MonoBehaviour
 {
     public AudioSource audioSource;
     public UnityEngine.MonoBehaviour localNpcTtsProvider;
+    private bool isDownloading;
+
+    public bool IsPlayingOrLoading => isDownloading ||
+        (audioSource != null && audioSource.isPlaying) ||
+        (localNpcTtsProvider is SherpaEditorTtsProvider sherpa &&
+         sherpa.audioSource != null && sherpa.audioSource.isPlaying) ||
+        (localNpcTtsProvider is AndroidNativeTtsProvider android && android.IsSpeakingOrPending);
+
+    public void StopPlayback()
+    {
+        StopAllCoroutines();
+        isDownloading = false;
+        if (audioSource != null) audioSource.Stop();
+        if (localNpcTtsProvider is INpcTtsCancellable cancellable) cancellable.StopSpeaking();
+        ResetTalkingParameter();
+    }
 
     private void Awake()
     {
@@ -66,6 +82,7 @@ public class AudioManager : MonoBehaviour
         ResetTalkingParameter();
         StopAllCoroutines();
 
+        isDownloading = true;
         StartCoroutine(DownloadAndPlayAudioRoutine(url));
     }
 
@@ -150,6 +167,7 @@ public class AudioManager : MonoBehaviour
         using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(url, audioType))
         {
             yield return www.SendWebRequest();
+            isDownloading = false;
 
             if (www.result == UnityWebRequest.Result.ConnectionError || www.result == UnityWebRequest.Result.ProtocolError)
             {

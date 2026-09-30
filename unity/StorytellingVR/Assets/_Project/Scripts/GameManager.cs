@@ -123,7 +123,7 @@ public class GameManager : MonoBehaviour
         bool yPressed = false;
         leftHand.TryGetFeatureValue(CommonUsages.secondaryButton, out yPressed);
 
-        if (!skipSuppressed && yPressed && !yButtonHeld)
+        if (!skipSuppressed && ControllerSceneSkipAllowedIn(currentSceneName) && yPressed && !yButtonHeld)
         {
             yButtonHeld = true;
             Debug.Log("[SCENE FLOW] Skip triggered");
@@ -255,6 +255,12 @@ public class GameManager : MonoBehaviour
         }
 
         StartCoroutine(LoadRoutine(targetSceneName));
+    }
+
+    // Level 1 uses Y for its ledger; it must not also advance the scene/progression.
+    public static bool ControllerSceneSkipAllowedIn(string sceneName)
+    {
+        return !string.Equals(sceneName, DefaultGameplaySceneName, System.StringComparison.Ordinal);
     }
 
     public void SkipScene()

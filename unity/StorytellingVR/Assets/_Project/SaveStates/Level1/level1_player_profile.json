@@ -1,13 +1,13 @@
 {
     "global_metrics": {
-        "reputation": 48,
-        "total_varahas": 1010,
+        "reputation": 47,
+        "total_varahas": 1046,
         "completed_levels": []
     },
     "inventory": [
         {
             "spiceKey": "pepper",
-            "grams": 15000
+            "grams": 14720
         },
         {
             "spiceKey": "clove",
@@ -30,6 +30,6 @@
     "current_scene": "ModernStudyRoom",
     "progression_index": 0,
     "intro_completed": false,
-    "remainingMarketDaySeconds": 1338.629638671875,
+    "remainingMarketDaySeconds": 1160.44140625,
     "hasSavedMarketDayTimer": true
 }

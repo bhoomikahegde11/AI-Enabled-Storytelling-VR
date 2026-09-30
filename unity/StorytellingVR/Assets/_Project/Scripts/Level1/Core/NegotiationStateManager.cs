@@ -85,6 +85,7 @@ public enum ExpectedReplyState
 
 public class NegotiationInput
 {
+    public TradeTermsSnapshot acceptedOffer;
     public NegotiationIntent intent = NegotiationIntent.UNKNOWN;
     public string normalizedText = string.Empty;
     public int sellerPrice = -1;
@@ -341,9 +342,17 @@ public class NegotiationStateManager
 
         NegotiationInput Finish(string reason, int detectedNumber = -1)
         {
+            if (!result.hasQuantity && TryExtractQuantity(text, trade, out int candidateQuantity))
+            {
+                result.hasQuantity = true;
+                result.quantityGrams = candidateQuantity;
+            }
             FinalizeNegotiationInput(result, playerText, text, tokens, trade, rawContainsQuestionMark, detectedNumber);
             ApplyStateSafetyGates(result, hasActiveOffer, ref reason);
             FinalizeNegotiationInput(result, playerText, text, tokens, trade, rawContainsQuestionMark, detectedNumber);
+            ApplyAcceptanceSafety(result, playerText, trade, ref reason);
+            if (result.intent == NegotiationIntent.ACCEPT && !result.needsClarification && trade != null)
+                result.acceptedOffer = TradeTermsSnapshot.Capture(trade);
             Level1DebugForceAccept.LogParser("[NEGOTIATION UNDERSTANDING] raw=" + playerText +
                                              " | normalized=" + result.normalizedText +
                                              " | primaryIntent=" + result.intent +
@@ -2489,6 +2498,116 @@ public class NegotiationStateManager
             return trade != null;
         }
 
+        return false;
+    }
+
+    // Local decisions own completion and patience. Do not run the legacy pre-decision
+    // decrement/finish logic on this path.
+    public RuleBasedNPCBrainResult ProcessLocalTurn(NegotiationInput input, LocalTradeState trade,
+        RuleBasedNPCBrain brain, MarketEventData activeEvent = null)
+    {
+        int previousRound = CurrentRound;
+        LastTurnCountedAsNegotiation = input != null && !input.needsClarification && CountsAsNegotiationPressure(input.intent);
+        if (LastTurnCountedAsNegotiation && trade != null && trade.AcceptedTerms == null)
+            CurrentRound++;
+        if (input != null)
+        {
+            RepeatedIntentCount = input.intent == LastIntent ? RepeatedIntentCount + 1 : 1;
+            LastIntent = input.intent;
+        }
+        RuleBasedNPCBrainResult decision = brain.GenerateReply(input != null ? input.normalizedText : string.Empty,
+            input, trade, CurrentRound, BuyerPatience, activeEvent, MaxRounds);
+        if (decision.requiresClarification)
+        {
+            CurrentRound = previousRound;
+            LastTurnCountedAsNegotiation = false;
+        }
+        if (trade != null && input != null && !decision.isFinished && !decision.requiresClarification)
+        {
+            int patienceCost = input.intent == NegotiationIntent.HOSTILE ? 2 :
+                (LastTurnCountedAsNegotiation || input.intent == NegotiationIntent.OFF_TOPIC ? 1 : 0);
+            trade.buyerPatience = Mathf.Max(0, trade.buyerPatience - patienceCost);
+        }
+        trade?.ApplyDecision(decision);
+        ApplyLocalDecision(decision, trade);
+        return decision;
+    }
+
+    public void ApplyLocalDecision(RuleBasedNPCBrainResult decision, LocalTradeState trade)
+    {
+        IsNegotiationFinished = decision.isFinished;
+        BuyerPatience = trade != null ? trade.buyerPatience : BuyerPatience;
+        SetLastOffer(trade != null ? (trade.AcceptedTerms != null ? trade.AcceptedTerms.Price : trade.npcOffer) : decision.updatedOffer);
+        SetExpectedReplyState(decision.nextExpectedReplyState, "local semantic decision");
+        lastNpcReplyPresentedOfferAmount = decision.nextExpectedReplyState == ExpectedReplyState.ExpectAcceptOrCounter;
+    }
+
+    private static void ApplyAcceptanceSafety(NegotiationInput input, string raw, LocalTradeState trade, ref string reason)
+    {
+        // Inspect the original transcript: normalization must not erase a negation or condition.
+        string text = (raw ?? string.Empty).ToLowerInvariant().Replace('’', '\'');
+        text = Regex.Replace(text, @"\b(don't|doesn't|didn't|won't|wouldn't|can't|couldn't|isn't)\b", "not");
+        bool accepting = input.intent == NegotiationIntent.ACCEPT;
+        bool proposing = input.hasSellerPrice && (input.intent == NegotiationIntent.PRICE ||
+            input.intent == NegotiationIntent.COUNTER || input.intent == NegotiationIntent.QUANTITY_PRICE || input.intent == NegotiationIntent.ULTIMATUM);
+        bool changingQuantity = input.intent == NegotiationIntent.QUANTITY_CHANGE;
+        if (!accepting && !proposing && !changingQuantity)
+            return;
+
+        bool negated = Regex.IsMatch(text, @"\b(?:not|never|cannot|no longer)\s+(?:(?:really|actually|yet|ever|fully|necessarily)\s+)*(?:agree(?:ing|d)?|accept(?:ing|ed)?|take|settle|deal|work|fine|okay|ok)\b") ||
+            Regex.IsMatch(text, @"\b(?:refuse|decline)\s+to\s+(?:agree|accept|take|settle)\b") ||
+            Regex.IsMatch(text, @"\b(?:agree|accept|deal)\b.{0,12}\bnot\b");
+        bool conditional = Regex.IsMatch(text, @"\b(if|unless|provided|providing|assuming|conditional|condition|contingent)\b|\bas long as\b|\bonly (?:when|with)\b");
+        // Support the existing simple price counter ('yes if you make it 180'). Any
+        // other condition needs clarification; it is not part of our trade model.
+        bool simplePriceCondition = proposing && Regex.IsMatch(input.normalizedText ?? string.Empty,
+            @"\bif\s+(?:(?:you|we)\s+)?(?:(?:can|will)\s+)?(?:pay|offer|make it|make that)\s+\d+\s*(?:varahas?)?\s*[.!]*$") &&
+            !Regex.IsMatch(text, @"\b(unless|provided|assuming)\b");
+        bool attachedTerms = Regex.IsMatch(text, @"\b(include|including|includes|delivery|deliver|credit|refund|guarantee|free|extra)\b|\bthrow in\b|\bpay (?:later|tomorrow)\b") ||
+            (accepting && Regex.IsMatch(text, @"\b(without|subject to|in exchange|under|plus)\b|\b(?:accept|agree|agreed|deal|yes)\b.*\b(?:and|with)\b"));
+        bool uncertain = Regex.IsMatch(text, @"\b(maybe|perhaps|possibly|might|unsure)\b|\bnot sure\b");
+        // A trailing correction/qualification must be resolved before accepting. A reluctant
+        // preamble ('not ideal, but okay') remains a valid unconditional concession.
+        bool conflicting = accepting && Regex.IsMatch(text,
+            @"\b(accept|agree|agreed|deal|okay|ok|fine|yes)\b.*\b(but|except|however|actually|instead|wait|no)\b");
+        bool changedQuantity = accepting && input.hasQuantity && trade != null && input.quantityGrams != trade.quantityGrams;
+        bool differentItem = trade != null && HasDifferentSpice(text, trade.spiceKey);
+        // Acceptance cues may be followed only by supported terms or a short acknowledgement.
+        // Unknown complements ('I accept on Monday') must not disappear into an agreement.
+        Match acceptanceClause = Regex.Match(input.normalizedText ?? string.Empty, @"\b(?:accept|accepted|agree|agreed|yes|yeah|okay|ok|fine|deal)\b(?<tail>.*)$");
+        string acceptanceTail = acceptanceClause.Groups["tail"].Value;
+        if (accepting && trade != null && input.expectedReplyState == ExpectedReplyState.ExpectAcceptOrCounter &&
+            input.acceptanceTarget == trade.npcOffer && input.referencedPrices.Contains(trade.npcOffer))
+        {
+            // These describe an already-resolved current-price acceptance, not extra terms.
+            // Limit history to a relative clause attached to that price; 'before Monday'
+            // remains unsupported. All raw-text safety checks above remain authoritative.
+            acceptanceTail = Regex.Replace(acceptanceTail, @"^\s*so\b", string.Empty);
+            string currentPrice = trade.npcOffer.ToString();
+            acceptanceTail = Regex.Replace(acceptanceTail,
+                @"\b" + Regex.Escape(currentPrice) + @"\s+(?:that\s+)?(?:you\s+)?(?:(?:previously|earlier)\s+)?offered(?:\s+(?:before|earlier|previously))?\s*$",
+                currentPrice);
+        }
+        bool unsupportedComplement = accepting && acceptanceClause.Success && !Regex.IsMatch(acceptanceTail,
+            @"^(?:\s*(?:\d+|i|we|you|your|my|me|the|a|this|that|it|is|at|to|for|of|by|have|works|seems|fair|sounds|good|reasonable|acceptable|enough|do|will|accept|accepted|agree|agreed|deal|yes|offer|price|terms|then|please|thank|thanks|okay|ok|fine|varaha|varahas|pepper|clove|cloves|cinnamon|cardamom|seer|seers|palam|palams|grams|gram|g|kg|kilograms|kilogram|lot)\b)*\s*$");
+        bool unresolvedNegation = negated && (accepting || (!input.correctionDetected && input.referencedPrices.Count == 0));
+
+        if (unresolvedNegation || attachedTerms || uncertain || conflicting || changedQuantity || differentItem || unsupportedComplement ||
+            (conditional && !simplePriceCondition))
+        {
+            BlockToClarification(input, ParseReason.AmbiguousAcceptOrCounter, "unresolved acceptance or proposal terms", ref reason);
+            input.clarificationKind = ClarificationKind.UnresolvedTerms;
+            input.hasSellerPrice = false;
+            input.sellerPrice = -1;
+            input.acceptanceTarget = -1;
+        }
+    }
+
+    private static bool HasDifferentSpice(string text, string currentSpice)
+    {
+        foreach (Match match in Regex.Matches(text, @"\b(pepper|cloves?|cinnamon|cardamom)\b"))
+            if (!string.Equals(match.Value.TrimEnd('s'), currentSpice, StringComparison.OrdinalIgnoreCase))
+                return true;
         return false;
     }
 

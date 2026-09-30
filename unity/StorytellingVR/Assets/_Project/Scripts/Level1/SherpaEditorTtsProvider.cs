@@ -7,7 +7,7 @@ using UnityEngine.Networking;
 using Debug = UnityEngine.Debug;
 
 [RequireComponent(typeof(AudioSource))]
-public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacterNpcTtsProvider, INpcTtsPlaybackAware
+public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacterNpcTtsProvider, INpcTtsPlaybackAware, INpcTtsCancellable
 {
     [System.Serializable]
     public class SherpaVoiceProfile
@@ -72,6 +72,7 @@ public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacte
     };
 
     private Coroutine activeSpeakRoutine;
+    private Process activeProcess;
 
     private void Awake()
     {
@@ -100,6 +101,26 @@ public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacte
         Speak(text, string.Empty);
     }
 
+    public void StopSpeaking()
+    {
+        if (activeSpeakRoutine != null)
+        {
+            StopCoroutine(activeSpeakRoutine);
+            activeSpeakRoutine = null;
+        }
+        if (audioSource != null) audioSource.Stop();
+        if (activeProcess != null)
+        {
+            try
+            {
+                if (!activeProcess.HasExited) activeProcess.Kill();
+                activeProcess.Dispose();
+            }
+            catch (System.Exception ex) { Debug.LogWarning("[TTS] Stop process failed: " + ex.Message); }
+            activeProcess = null;
+        }
+    }
+
     public void Speak(string text, string characterId)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -112,11 +133,7 @@ public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacte
 #if UNITY_EDITOR
         EnsureAudioSource();
 
-        if (activeSpeakRoutine != null)
-        {
-            StopCoroutine(activeSpeakRoutine);
-            activeSpeakRoutine = null;
-        }
+        StopSpeaking();
 
         activeSpeakRoutine = StartCoroutine(SpeakRoutine(text, characterId));
 #else
@@ -182,6 +199,7 @@ public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacte
         {
             process = new Process { StartInfo = startInfo };
             process.Start();
+            activeProcess = process;
         }
         catch (System.Exception ex)
         {
@@ -199,6 +217,7 @@ public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacte
         string stderr = process.StandardError.ReadToEnd();
         int exitCode = process.ExitCode;
         process.Dispose();
+        activeProcess = null;
 
         Debug.Log("[TTS] Sherpa exit code: " + exitCode);
         if (!string.IsNullOrWhiteSpace(stdout))

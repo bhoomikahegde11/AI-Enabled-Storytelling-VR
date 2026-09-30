@@ -26,6 +26,21 @@ public class HandBagAnimation : MonoBehaviour
     private bool useMarketplaceCustomerVisuals;
     private Coroutine bagMoveCoroutine;
     private Coroutine bagFillCoroutine;
+    public bool UsesMarketplaceCustomerVisuals => useMarketplaceCustomerVisuals;
+    private TradeTermsSnapshot marketplaceAgreement;
+
+    public void BindMarketplaceAgreement(TradeTermsSnapshot agreement)
+    {
+        marketplaceAgreement = agreement;
+    }
+
+    private bool CanReceiveHandoffEvent()
+    {
+        if (OrderManager.Instance != null && OrderManager.Instance.tutorialMode) return true;
+        return marketplaceAgreement != null && OrderManager.Instance != null &&
+            OrderManager.Instance.MarketplaceOrder != null &&
+            OrderManager.Instance.MarketplaceOrder.BelongsTo(Level1GameState.ExistingInstance?.ActiveTrade, marketplaceAgreement);
+    }
 
     void Awake()
     {
@@ -40,8 +55,12 @@ public class HandBagAnimation : MonoBehaviour
 
     void Start()
     {
-        originalBagPos = handBag.transform.position;
-        originalBagRot = handBag.transform.rotation;
+        if (handBag == null) return;
+        if (!useMarketplaceCustomerVisuals)
+        {
+            originalBagPos = handBag.transform.position;
+            originalBagRot = handBag.transform.rotation;
+        }
 
         if (OrderManager.Instance != null && OrderManager.Instance.tutorialMode)
         {
@@ -98,6 +117,7 @@ public class HandBagAnimation : MonoBehaviour
 
     public void FreezeHand()
     {
+        if (!CanReceiveHandoffEvent()) return;
         Debug.Log("Freeze called");
 
         if (animator != null)
@@ -141,6 +161,7 @@ public class HandBagAnimation : MonoBehaviour
     }
     public void ReceiveBag()
     {
+        if (!CanReceiveHandoffEvent()) return;
         StartBagMoveCoroutine(ReturnBag());
     }
     IEnumerator ReturnBag()
@@ -200,8 +221,10 @@ public class HandBagAnimation : MonoBehaviour
     }
     void ShowBagSpice(SpiceType spice)
     {
+        if (spiceVisuals == null) return;
         foreach (SpiceVisualSet item in spiceVisuals)
         {
+            if (item == null || item.visual == null) continue;
             if (spice == SpiceType.None)
             {
                 item.visual.SetActive(false);
@@ -236,7 +259,7 @@ public class HandBagAnimation : MonoBehaviour
             }
 
             handBag.SetActive(true);
-            StartCoroutine(MoveBagForward());
+            StartBagMoveCoroutine(MoveBagForward());
             return;
         }
 
@@ -283,6 +306,7 @@ public class HandBagAnimation : MonoBehaviour
 
     public void ResetHandoffState()
     {
+        marketplaceAgreement = null;
         if (bagMoveCoroutine != null)
         {
             StopCoroutine(bagMoveCoroutine);
@@ -303,7 +327,7 @@ public class HandBagAnimation : MonoBehaviour
         }
 
         ShowBagSpice(SpiceType.None);
-        ResumeAnimation();
+        if (animator != null) animator.speed = 1f;
     }
 
     public void SetActorVisualsVisible(bool visible)
@@ -355,7 +379,7 @@ public class HandBagAnimation : MonoBehaviour
 
     private IEnumerator RunBagMoveRoutine(IEnumerator routine)
     {
-        yield return StartCoroutine(routine);
+        yield return routine; // Keep nested movement owned by the handle that reset cancels.
         bagMoveCoroutine = null;
     }
 }

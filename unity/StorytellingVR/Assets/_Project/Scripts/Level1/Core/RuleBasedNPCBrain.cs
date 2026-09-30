@@ -3,6 +3,13 @@ using UnityEngine;
 
 public class RuleBasedNPCBrainResult
 {
+    public TradeTermsSnapshot acceptedTerms;
+    public ExpectedReplyState nextExpectedReplyState;
+    public bool requiresClarification;
+    public bool commitsQuantity;
+    public string quantityLabel;
+    public int marketValue;
+    public int previousOffer;
     public string replyText;
     public int updatedOffer;
     public int resolvedPrice;
@@ -18,24 +25,46 @@ public class RuleBasedNPCBrainResult
 
 public class RuleBasedNPCBrain
 {
+    private readonly MarketManager market = new MarketManager();
     public RuleBasedNPCBrainResult GenerateReply(
         string playerText,
         NegotiationInput input,
         LocalTradeState trade,
         int roundCount,
-        int patience)
+        int patience,
+        MarketEventData activeEvent = null,
+        int maximumRounds = int.MaxValue)
     {
+        if (trade != null && trade.AcceptedTerms != null)
+        {
+            TradeTermsSnapshot accepted = trade.AcceptedTerms;
+            return new RuleBasedNPCBrainResult
+            {
+                acceptedTerms = accepted, isAccepted = true, isFinished = true, resolutionAction = "ACCEPT",
+                updatedOffer = accepted.Price, resolvedPrice = accepted.Price, resolvedQuantityGrams = accepted.QuantityGrams,
+                quantityLabel = accepted.QuantityLabel, marketValue = accepted.MarketValue,
+                nextExpectedReplyState = ExpectedReplyState.ExpectFulfillment,
+                replyText = "Our bargain is already set. Bring the agreed goods to complete the trade.",
+                trust = trade.buyerTrust, frustration = trade.buyerFrustration, outOfWorldCount = trade.outOfWorldCount
+            };
+        }
         EnsureTradeInitialized(trade, patience);
 
         string buyerName = trade != null ? trade.buyerName : "Buyer";
         string buyerOrigin = trade != null ? trade.buyerOrigin : "Merchant";
         string personality = trade != null ? trade.buyerPersonality : string.Empty;
-        string spice = trade != null ? trade.spiceDisplayName.ToLowerInvariant() : "spice";
+        string spice = trade != null ? (trade.spiceDisplayName ?? "spice").ToLowerInvariant() : "spice";
         string quantity = trade != null ? trade.quantityLabel : "this lot";
         int currentOffer = trade != null ? trade.npcOffer : 0;
         int marketValue = trade != null ? trade.marketValue : 0;
         int sellerPrice = input != null && input.hasSellerPrice ? input.sellerPrice : -1;
-        int quantityGrams = input != null && input.hasQuantity ? input.quantityGrams : (trade != null ? trade.quantityGrams : 0);
+        bool validQuantity = input != null && !input.needsClarification && input.parseConfidence != ParseConfidence.Low &&
+            input.hasQuantity && input.quantityGrams > 0 &&
+            (input.intent == NegotiationIntent.QUANTITY_CHANGE || input.intent == NegotiationIntent.QUANTITY_PRICE ||
+             input.intent == NegotiationIntent.PRICE || input.intent == NegotiationIntent.COUNTER || input.intent == NegotiationIntent.ULTIMATUM);
+        int quantityGrams = validQuantity ? input.quantityGrams : (trade != null ? trade.quantityGrams : 0);
+        if (validQuantity)
+            quantity = market.FormatTraditionalQuantity(quantityGrams);
         string spiceDescriptor = GetSpiceDescriptor(trade != null ? trade.spiceKey : string.Empty, spice);
         float marketPerGram = trade != null && trade.quantityGrams > 0 ? (float)trade.marketValue / trade.quantityGrams : 0f;
         float targetMarketValue = quantityGrams > 0 ? marketPerGram * quantityGrams : marketValue;
@@ -43,34 +72,48 @@ public class RuleBasedNPCBrain
         RuleBasedNPCBrainResult result = new RuleBasedNPCBrainResult
         {
             updatedOffer = currentOffer,
+            previousOffer = currentOffer,
             resolvedPrice = currentOffer,
-            resolvedQuantityGrams = trade != null ? trade.quantityGrams : 0
+            resolvedQuantityGrams = quantityGrams,
+            quantityLabel = quantity,
+            marketValue = validQuantity && trade != null ? market.CalculateMarketValue(trade.spiceKey, quantityGrams, activeEvent) : marketValue,
+            commitsQuantity = validQuantity,
+            nextExpectedReplyState = ExpectedReplyState.ExpectAcceptOrCounter
         };
 
         if (trade == null || input == null)
         {
+            result.requiresClarification = true;
+            result.nextExpectedReplyState = ExpectedReplyState.ExpectOfferPrice;
             result.replyText = "Speak plainly, merchant.";
             return result;
         }
 
-        UpdateMemory(trade, input);
-        if (input.hasQuantity && input.quantityGrams > 0)
+        bool invalidTerms = (input.intent == NegotiationIntent.ACCEPT || input.intent == NegotiationIntent.PRICE ||
+            input.intent == NegotiationIntent.QUANTITY_PRICE || (input.intent == NegotiationIntent.COUNTER && input.hasSellerPrice)) &&
+            !CanFinalizeAcceptance(input, trade);
+        if (input.needsClarification || input.intent == NegotiationIntent.CLARIFICATION || input.intent == NegotiationIntent.CONFUSED || invalidTerms)
         {
-            result.resolvedQuantityGrams = input.quantityGrams;
+            result.requiresClarification = true;
+            result.nextExpectedReplyState = input.expectedReplyState == ExpectedReplyState.None
+                ? ExpectedReplyState.ExpectOfferPrice : input.expectedReplyState;
+            if (input.clarificationKind == ClarificationKind.UnresolvedTerms && currentOffer > 0)
+                result.nextExpectedReplyState = ExpectedReplyState.ExpectAcceptOrCounter;
+            result.replyText = GetClarificationLine(input, trade, spiceDescriptor, quantity, currentOffer);
+            return SyncState(result, trade);
         }
 
-        if (trade.buyerPatience <= 0 || trade.buyerFrustration >= GetWalkAwayThreshold(personality))
+        // A valid acceptance of our still-outstanding offer has priority over pressure.
+        bool acceptingOutstandingOffer = input.intent == NegotiationIntent.ACCEPT && CanFinalizeAcceptance(input, trade);
+        if (!acceptingOutstandingOffer && (trade.buyerPatience <= 0 || trade.buyerFrustration >= GetWalkAwayThreshold(personality) || roundCount >= maximumRounds))
         {
-            string reason = trade.buyerPatience <= 0 ? "buyer patience exhausted" : "buyer frustration threshold reached";
+            string reason = trade.buyerPatience <= 0 ? "buyer patience exhausted" :
+                roundCount >= maximumRounds ? "negotiation round limit reached" : "buyer frustration threshold reached";
             LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY", reason);
             return WalkAway(result, trade, GetWalkAwayLine(buyerName, personality), "WALK_AWAY");
         }
 
-        if (input.needsClarification)
-        {
-            result.replyText = GetClarificationLine(input, trade, spiceDescriptor, quantity, currentOffer);
-            return SyncState(result, trade);
-        }
+        UpdateMemory(trade, input);
 
         switch (input.intent)
         {
@@ -79,16 +122,21 @@ public class RuleBasedNPCBrain
                 return WalkAway(result, trade, "Very well. I will take my business elsewhere.", "WALK_AWAY");
 
             case NegotiationIntent.GREETING:
+                result.nextExpectedReplyState = input.expectedReplyState == ExpectedReplyState.None
+                    ? ExpectedReplyState.ExpectOfferPrice : input.expectedReplyState;
                 result.replyText = GetGreetingLine(buyerName, buyerOrigin, personality, quantity, spiceDescriptor);
                 return SyncState(result, trade);
 
             case NegotiationIntent.ITEM_QUERY:
+                result.nextExpectedReplyState = input.asksCurrentOffer || trade.priceIntroduced
+                    ? ExpectedReplyState.ExpectAcceptOrCounter : ExpectedReplyState.ExpectOfferPrice;
                 if (input.asksCurrentOffer)
                 {
                     result.replyText = $"You ask well. I seek {quantity} of {spiceDescriptor}, and I am offering {currentOffer} varahas.";
                 }
                 else if (input.tradeOpeningQuery)
                 {
+                    result.nextExpectedReplyState = ExpectedReplyState.ExpectOfferPrice;
                     result.replyText = $"I seek {quantity} of {spiceDescriptor}. Tell me your price, merchant.";
                 }
                 else
@@ -98,6 +146,7 @@ public class RuleBasedNPCBrain
                 return SyncState(result, trade);
 
             case NegotiationIntent.QUANTITY_QUERY:
+                result.nextExpectedReplyState = trade.priceIntroduced ? ExpectedReplyState.ExpectAcceptOrCounter : ExpectedReplyState.ExpectOfferPrice;
                 result.replyText = GetQuantityQueryLine(trade, quantity, spiceDescriptor);
                 return SyncState(result, trade);
 
@@ -109,10 +158,13 @@ public class RuleBasedNPCBrain
 
             case NegotiationIntent.SOCIAL:
             case NegotiationIntent.GENERAL_DIALOGUE:
+                result.nextExpectedReplyState = input.expectedReplyState == ExpectedReplyState.None
+                    ? ExpectedReplyState.ExpectOfferPrice : input.expectedReplyState;
                 result.replyText = GetSocialLine(input.normalizedText, trade, buyerName, buyerOrigin, personality, spiceDescriptor);
                 return SyncState(result, trade);
 
             case NegotiationIntent.OFF_TOPIC:
+                result.nextExpectedReplyState = input.expectedReplyState;
                 trade.outOfWorldCount++;
                 AdjustEmotion(trade, 0.18f, -0.08f);
                 if (trade.outOfWorldCount >= 4)
@@ -123,6 +175,7 @@ public class RuleBasedNPCBrain
                 return SyncState(result, trade);
 
             case NegotiationIntent.HOSTILE:
+                result.nextExpectedReplyState = input.expectedReplyState;
                 trade.hostileCount++;
                 AdjustEmotion(trade, 0.28f, -0.12f);
                 if (trade.hostileCount >= 4 || (trade.hostileCount >= 3 && trade.buyerFrustration >= 0.75f))
@@ -164,6 +217,8 @@ public class RuleBasedNPCBrain
             case NegotiationIntent.ACCEPT:
                 if (!CanFinalizeAcceptance(input, trade))
                 {
+                    result.requiresClarification = true;
+                    result.nextExpectedReplyState = input.expectedReplyState;
                     result.replyText = GetClarificationLine(input, trade, spiceDescriptor, quantity, currentOffer);
                     return SyncState(result, trade);
                 }
@@ -174,10 +229,11 @@ public class RuleBasedNPCBrain
                     return SyncState(result, trade);
                 }
 
-                result.resolvedPrice = ResolveAcceptedPrice(input, trade, currentOffer);
-                result.replyText = input.hasSellerPrice && result.resolvedPrice == trade.lastSellerPrice
-                    ? $"Agreed. I will pay {result.resolvedPrice} varahas for the {spiceDescriptor}."
-                    : $"Agreed. {quantity} of {spiceDescriptor} for {result.resolvedPrice} varahas.";
+                result.acceptedTerms = input.acceptedOffer;
+                result.resolvedPrice = result.acceptedTerms.Price;
+                result.resolvedQuantityGrams = result.acceptedTerms.QuantityGrams;
+                result.quantityLabel = result.acceptedTerms.QuantityLabel;
+                result.replyText = $"Agreed. {result.acceptedTerms.QuantityLabel} of {result.acceptedTerms.SpiceName} for {result.acceptedTerms.Price} varahas.";
                 result.isFinished = true;
                 result.isAccepted = true;
                 result.resolutionAction = "ACCEPT";
@@ -187,13 +243,15 @@ public class RuleBasedNPCBrain
             case NegotiationIntent.QUANTITY_CHANGE:
                 AdjustEmotion(trade, -0.01f, 0.03f);
                 result.replyText = quantityGrams < trade.quantityGrams
-                    ? $"For the smaller quantity of {trade.quantityLabel}, my offer remains {currentOffer} varahas."
-                    : $"For {trade.quantityLabel} of {spiceDescriptor}, I can still begin at {currentOffer} varahas.";
+                    ? $"For the smaller quantity of {quantity}, my offer remains {currentOffer} varahas."
+                    : $"For {quantity} of {spiceDescriptor}, I can still begin at {currentOffer} varahas.";
                 return SyncState(result, trade);
 
             case NegotiationIntent.ULTIMATUM:
                 if (!input.hasSellerPrice)
                 {
+                    result.requiresClarification = true;
+                    result.nextExpectedReplyState = ExpectedReplyState.ExpectOfferPrice;
                     result.replyText = "State your final price clearly, merchant.";
                     return SyncState(result, trade);
                 }
@@ -231,35 +289,7 @@ public class RuleBasedNPCBrain
             case NegotiationIntent.COUNTER:
                 if (input.hasSellerPrice)
                 {
-                    trade.actualPriceOfferCount++;
-                    trade.counterCount++;
-                    AdjustEmotion(trade, 0.08f, 0f);
-                    if (ShouldWalkAwayForNegotiationPressure(trade, input, roundCount))
-                    {
-                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "WALK_AWAY", "price-offer pressure exceeded buyer limits");
-                        return WalkAway(result, trade, GetWalkAwayLine(buyerName, personality), "WALK_AWAY");
-                    }
-
-                    trade.lastSellerPrice = sellerPrice;
-                    if (sellerPrice > trade.maxBuyerPrice && !ShouldWalkAwayFromHighPrice(trade, sellerPrice, roundCount))
-                    {
-                        result.updatedOffer = MoveTowardTarget(trade, trade.maxBuyerPrice, roundCount);
-                        result.replyText = GetCounterLine(trade, sellerPrice, result.updatedOffer, spiceDescriptor);
-                        LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, "COUNTER", "counter above buyer max, stretch toward limit", result.updatedOffer - currentOffer);
-                        return SyncState(result, trade);
-                    }
-
-                    if (ShouldHoldPosition(trade, sellerPrice, roundCount))
-                    {
-                        result.replyText = $"I cannot move beyond {currentOffer} varahas.";
-                        LogNegotiation(trade, input, currentOffer, currentOffer, roundCount, "HOLD", "counter-offer gap still too high");
-                        return SyncState(result, trade);
-                    }
-
-                    result.updatedOffer = MoveTowardTarget(trade, sellerPrice, roundCount);
-                    result.replyText = $"We are getting closer. I can offer {result.updatedOffer} varahas.";
-                    LogNegotiation(trade, input, currentOffer, result.updatedOffer, roundCount, "COUNTER", "counter-offer accepted for negotiation", result.updatedOffer - currentOffer);
-                    return SyncState(result, trade);
+                    goto case NegotiationIntent.PRICE;
                 }
 
                 trade.softBargainCount++;
@@ -271,8 +301,10 @@ public class RuleBasedNPCBrain
 
             case NegotiationIntent.PRICE:
             case NegotiationIntent.QUANTITY_PRICE:
-                if (!input.hasSellerPrice)
+                if (!input.hasSellerPrice || !CanFinalizeAcceptance(input, trade))
                 {
+                    result.requiresClarification = true;
+                    result.nextExpectedReplyState = ExpectedReplyState.ExpectOfferPrice;
                     result.replyText = "I did not catch your price. Say it plainly.";
                     return SyncState(result, trade);
                 }
@@ -318,7 +350,7 @@ public class RuleBasedNPCBrain
                 {
                     result.resolvedPrice = sellerPrice;
                     result.resolvedQuantityGrams = quantityGrams;
-                    result.replyText = $"Agreed. {trade.quantityLabel} of {spiceDescriptor} for {sellerPrice} varahas.";
+                    result.replyText = $"Agreed. {quantity} of {spiceDescriptor} for {sellerPrice} varahas.";
                     result.isFinished = true;
                     result.isAccepted = true;
                     result.resolutionAction = "ACCEPT";
@@ -333,7 +365,7 @@ public class RuleBasedNPCBrain
                     {
                         result.resolvedPrice = sellerPrice;
                         result.resolvedQuantityGrams = quantityGrams;
-                        result.replyText = $"Agreed. {trade.quantityLabel} of {spiceDescriptor} for {sellerPrice} varahas.";
+                        result.replyText = $"Agreed. {quantity} of {spiceDescriptor} for {sellerPrice} varahas.";
                         result.isFinished = true;
                         result.isAccepted = true;
                         result.resolutionAction = "ACCEPT";
@@ -431,6 +463,19 @@ public class RuleBasedNPCBrain
 
     private static RuleBasedNPCBrainResult SyncState(RuleBasedNPCBrainResult result, LocalTradeState trade)
     {
+        if (result.isAccepted)
+        {
+            if (result.acceptedTerms == null)
+                result.acceptedTerms = new TradeTermsSnapshot(trade, result.resolvedPrice, result.resolvedQuantityGrams, result.quantityLabel, result.marketValue);
+            result.updatedOffer = result.acceptedTerms.Price;
+            result.quantityLabel = result.acceptedTerms.QuantityLabel;
+            result.marketValue = result.acceptedTerms.MarketValue;
+            result.nextExpectedReplyState = ExpectedReplyState.ExpectFulfillment;
+        }
+        else if (result.walkedAway)
+            result.nextExpectedReplyState = ExpectedReplyState.None;
+        else if (!result.requiresClarification && result.nextExpectedReplyState == ExpectedReplyState.ExpectAcceptOrCounter)
+            trade.priceIntroduced = true;
         result.updatedOffer = Mathf.Max(0, result.updatedOffer);
         result.trust = trade.buyerTrust;
         result.frustration = trade.buyerFrustration;
@@ -457,7 +502,7 @@ public class RuleBasedNPCBrain
 
     private static void EnsureTradeInitialized(LocalTradeState trade, int patience)
     {
-        if (trade == null)
+        if (trade == null || trade.negotiationInitialized || trade.AcceptedTerms != null)
         {
             return;
         }
@@ -469,10 +514,6 @@ public class RuleBasedNPCBrain
         if (trade.buyerPatience <= 0)
         {
             trade.buyerPatience = Mathf.Max(1, patience);
-        }
-        else
-        {
-            trade.buyerPatience = Mathf.Min(trade.buyerPatience, Mathf.Max(0, patience));
         }
         if (trade.buyerTrust <= 0f)
         {
@@ -488,11 +529,8 @@ public class RuleBasedNPCBrain
         }
         trade.minIncrement = Mathf.Max(2, Mathf.RoundToInt(trade.marketValue * 0.02f));
 
-        if (trade.referencePrice > 0)
-        {
-            float anchored = (0.7f * trade.npcOffer) + (0.3f * trade.referencePrice);
-            trade.npcOffer = Mathf.Min(trade.maxBuyerPrice, Mathf.Max(trade.npcOffer, Mathf.RoundToInt(anchored)));
-        }
+        // Opening offers are already advertised. Historical prices must never reprice them here.
+        trade.negotiationInitialized = true;
     }
 
     private static void UpdateMemory(LocalTradeState trade, NegotiationInput input)
@@ -530,26 +568,6 @@ public class RuleBasedNPCBrain
                 sourceText = input.normalizedText
             });
         }
-    }
-
-    private static int ResolveAcceptedPrice(NegotiationInput input, LocalTradeState trade, int currentOffer)
-    {
-        if (input != null && input.hasSellerPrice)
-        {
-            return input.sellerPrice;
-        }
-
-        if (trade != null && trade.npcOffer > 0)
-        {
-            return trade.npcOffer;
-        }
-
-        if (trade != null && trade.previousNpcOffer > 0)
-        {
-            return trade.previousNpcOffer;
-        }
-
-        return currentOffer;
     }
 
     private static int MoveTowardTarget(LocalTradeState trade, int sellerPrice, int roundCount)
@@ -683,10 +701,14 @@ public class RuleBasedNPCBrain
 
     private static bool CanFinalizeAcceptance(NegotiationInput input, LocalTradeState trade)
     {
-        if (input == null)
+        if (input == null || trade == null || input.needsClarification)
         {
             return false;
         }
+
+        if (input.intent != NegotiationIntent.ACCEPT)
+            return input.hasSellerPrice && input.sellerPrice > 0 && input.parseConfidence != ParseConfidence.Low &&
+                input.expectedReplyState != ExpectedReplyState.ExpectFulfillment && input.expectedReplyState != ExpectedReplyState.ExpectQuantity;
 
         if (input.parseConfidence != ParseConfidence.High)
         {
@@ -698,13 +720,16 @@ public class RuleBasedNPCBrain
             return false;
         }
 
-        return trade != null && trade.npcOffer > 0;
+        return input.expectedReplyState == ExpectedReplyState.ExpectAcceptOrCounter && input.acceptedOffer != null &&
+            ReferenceEquals(input.acceptedOffer.Source, trade) && input.acceptedOffer.Price > 0 && input.acceptedOffer.QuantityGrams > 0;
     }
 
     private static string GetClarificationLine(NegotiationInput input, LocalTradeState trade, string spiceDescriptor, string quantity, int currentOffer)
     {
         if (input != null)
         {
+            if (input.clarificationKind == ClarificationKind.UnresolvedTerms)
+                return $"Our current terms are {quantity} of {spiceDescriptor} for {currentOffer} varahas. Do you accept those terms as they stand, or want to change the price or quantity?";
             if (input.parseReason == ParseReason.FulfillmentExpected)
             {
                 return "Our bargain is already set. Bring the goods I asked for to complete the trade.";
@@ -877,10 +902,6 @@ public class RuleBasedNPCBrain
     {
         trade.buyerFrustration = Mathf.Clamp01(trade.buyerFrustration + frustrationDelta);
         trade.buyerTrust = Mathf.Clamp01(trade.buyerTrust + trustDelta);
-        if (frustrationDelta > 0f)
-        {
-            trade.buyerPatience = Mathf.Max(0, trade.buyerPatience - 1);
-        }
     }
 
     private static int GetMaxRejections(string personality, LocalTradeState trade)
