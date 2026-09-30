@@ -6052,7 +6052,48 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5dbd49c7677f154bba67fd019069185, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MarketSpawner
-  npcPrefab: {fileID: 7632564849704470384, guid: 791b49d738c7c4b4baf1f61787cbcad7, type: 3}
+  npcPrefab: {fileID: 100000000000000001, guid: 5f89bf0c2d344c0a8e8f4b1c6d3a7e90, type: 3}
+  fallbackWalkerPrefab: {fileID: 0}
+  backgroundVisualPool:
+  - visualPrefab: {fileID: 919132149155446097, guid: 7f158f5e5e01ed14caa795cf2f3463d7, type: 3}
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1.25, y: 1.25, z: 1.25}
+  - visualPrefab: {fileID: 919132149155446097, guid: a35cb043287dd624690e75ee6a7c7836, type: 3}
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1.25, y: 1.25, z: 1.25}
+  - visualPrefab: {fileID: 919132149155446097, guid: 3f9e2fe381f2f524f97c949b352680dd, type: 3}
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1.25, y: 1.25, z: 1.25}
+  - visualPrefab: {fileID: 919132149155446097, guid: f509ca937b176f44fb6e3b3973896552, type: 3}
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1.25, y: 1.25, z: 1.25}
+  - visualPrefab: {fileID: 919132149155446097, guid: 18df6bf11a6a2384bab030c82a7d4a95, type: 3}
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1.25, y: 1.25, z: 1.25}
+  - visualPrefab: {fileID: 919132149155446097, guid: 05c0a48fcfb31bf4c856ff2f168db8d6, type: 3}
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1.25, y: 1.25, z: 1.25}
+  - visualPrefab: {fileID: 919132149155446097, guid: 994fa205bf5caec43a8f2639c70db1ec, type: 3}
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1, y: 1, z: 1}
+  - visualPrefab: {fileID: 919132149155446097, guid: cd9df9260e0bbe7478b52ce93ad70ce3, type: 3}
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1.25, y: 1.25, z: 1.25}
+  - visualPrefab: {fileID: 919132149155446097, guid: 13f6396f215e4ff419985bb8ff60813c, type: 3}
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1.25, y: 1.25, z: 1.25}
+  fallbackVisualPrefab: {fileID: 0}
+  backgroundWalkingController: {fileID: 9100000, guid: 23dccb7e643d31742850cda57606aca0, type: 2}
+  startSpawningImmediately: 1
   leftSpawn: {fileID: 1649508376}
   rightSpawn: {fileID: 436392362}
   leftTarget: {fileID: 1966559372}
@@ -6070,7 +6111,7 @@ MonoBehaviour:
   - {fileID: 343507271}
   - {fileID: 688356927}
   - {fileID: 1993944329}
-  maxNPCs: 5
+  maxNPCs: 30
 --- !u!1001 &916469923
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6175,7 +6216,7 @@ Transform:
   m_GameObject: {fileID: 934137779}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 28.7, y: 0, z: 7.2000017}
+  m_LocalPosition: {x: 24.6, y: 0, z: 7.2000017}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -10668,27 +10709,26 @@ MonoBehaviour:
   spices:
   - spiceName: Pepper
     costText: 'Cost Price: 12 Varahas / Veesai'
-    narration: Pepper costs you 12 Varahas per Veesai. It is among the most sought-after
-      goods in the market, making it one of your most profitable spices when sold
-      wisely.
+    narration: This is pepper. It costs us 12 Varahas per veesai. It is highly sought
+      after, so there is good profit to be made if you sell it wisely.
     narrationClip: {fileID: 8300000, guid: c0af79e51af17ab48ab51eb8b8505d0e, type: 3}
     uiAnchor: {fileID: 386362050}
   - spiceName: Turmeric
     costText: 'Cost Price: 5 Varahas / Veesai'
-    narration: Turmeric costs 5 Varahas per Veesai. Though inexpensive, it remains
-      a staple spice valued for its colour, flavour, and medicinal use.
+    narration: Turmeric costs us 5 Varahas per veesai. It is inexpensive, but commonly
+      used, so you will see plenty of demand for it
     narrationClip: {fileID: 8300000, guid: 3fa7a35433fd9eb4f9400df39fbe8ae5, type: 3}
     uiAnchor: {fileID: 1474245902}
   - spiceName: Cardamom
     costText: 'Cost Price: 18 Varahas / Veesai'
-    narration: Cardamom costs 18 Varahas per Veesai. Rare and fragrant, it is highly
-      prized in royal kitchens and temple offerings.
+    narration: Cardamom costs us 18 Varahas per veesai. It is valuable and highly
+      prized, so keep its cost in mind when bargaining.
     narrationClip: {fileID: 8300000, guid: a9d8ffad4a148444698c2e5a80bac95e, type: 3}
     uiAnchor: {fileID: 480705086}
   - spiceName: Cinnamon
     costText: 'Cost Price: 20 Varahas / Veesai'
-    narration: Cinnamon costs 20 Varahas per Veesai. Brought through long trade routes,
-      it is one of the most valuable spices in the Hampi Bazaar.
+    narration: Cinnamon costs us 20 Varahas per veesai. It is one of our more expensive
+      spices, so be careful not to sell it too cheaply.
     narrationClip: {fileID: 8300000, guid: 34ca75209cecff44aa2e3d2cf89649f5, type: 3}
     uiAnchor: {fileID: 623430303}
   finalPromptDuration: 4

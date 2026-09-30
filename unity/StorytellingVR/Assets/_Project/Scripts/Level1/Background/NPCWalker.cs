@@ -9,6 +9,7 @@ public class NPCWalker : MonoBehaviour
     private Quaternion stallRotation;
     private bool goingToStall = false;
     private bool waiting = false;
+    private FreeRoamMarketSpawner freeRoamSpawner;
     [SerializeField] private float moveSpeed = 0.85f;
     [SerializeField] private float turnSpeed = 5f;
     [SerializeField] private Transform visualAnchor;
@@ -27,6 +28,8 @@ public class NPCWalker : MonoBehaviour
                 ? visualAnchor.GetComponentInChildren<Animator>(true)
                 : GetComponent<Animator>();
         }
+        freeRoamSpawner =
+            FindFirstObjectByType<FreeRoamMarketSpawner>();
 
         ConfigureAnimator();
         Debug.Log($"[BG NPC] Walker movement started: {name}.", gameObject);
@@ -115,12 +118,19 @@ public class NPCWalker : MonoBehaviour
                 return;
             }
 
-            MarketSpawner spawner =
+            if (freeRoamSpawner != null)
+            {
+                freeRoamSpawner.NPCRemoved();
+            }
+            else
+            {
+                MarketSpawner spawner =
                 FindFirstObjectByType<MarketSpawner>();
 
-            if (spawner != null)
-            {
-                spawner.NPCRemoved();
+                if (spawner != null)
+                {
+                    spawner.NPCRemoved();
+                }
             }
 
             Destroy(gameObject);

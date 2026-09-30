@@ -90,7 +90,7 @@ public class CoinSceneManager : MonoBehaviour
 
         yield return ShowDialogue(
             "Narrator",
-            "Take a closer look at this coin.",
+            "Take a closer look at the coin you have received.",
             NarratorInspectCoinLineId,
             inspectCoinClip
         );
@@ -119,7 +119,7 @@ public class CoinSceneManager : MonoBehaviour
     {
         yield return ShowDialogue(
             "Narrator",
-            "The Varaha was a gold coin used for important trade and represented the wealth of the Vijayanagara Empire.",
+            "This is a Varaha, a gold coin used for valuable transactions and a reflection of the wealth of the Vijayanagara Empire.",
             NarratorVarahaLineId,
             varahaClip
         );
@@ -140,7 +140,7 @@ public class CoinSceneManager : MonoBehaviour
         StartCoroutine(
             ShowDialogue(
                 "Narrator",
-                "The Kasu was a bronze coin used by common people for everyday marketplace transactions.",
+                "The Kasu, by contrast, is a smaller bronze coin commonly used for everyday transactions in the marketplace.",
                 NarratorKasuLineId,
                 kasuClip
             )
@@ -162,7 +162,7 @@ public class CoinSceneManager : MonoBehaviour
     {
         yield return ShowDialogue(
             "Narrator",
-            "You now understand the coins used in Vijayanagara markets.",
+            "Together, coins such as these helped trade flow through the markets of Vijayanagara.",
             NarratorUnderstandCoinsLineId,
             understandCoinsClip
         );
@@ -170,7 +170,7 @@ public class CoinSceneManager : MonoBehaviour
 
         yield return ShowDialogue(
             "Narrator",
-            "Now use this knowledge while trading with the customers ahead.",
+            "A successful trade does not end with an agreed price. You must still prepare the goods your customer has purchased.",
             NarratorTradingAheadLineId,
             tradingAheadClip
         );

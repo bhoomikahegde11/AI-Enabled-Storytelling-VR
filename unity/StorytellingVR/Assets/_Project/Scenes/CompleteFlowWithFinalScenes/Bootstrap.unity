@@ -159,6 +159,8 @@ MonoBehaviour:
   - NewSpiceScene
   - NewTransactionTutorial
   - NewCoinScene
+  - SpicesInteraction
+  - Level1_MainLoopUpdated
   fader: {fileID: 1819468858}
   enablePauseMenuController: 0
   enableDeveloperSceneSkip: 1

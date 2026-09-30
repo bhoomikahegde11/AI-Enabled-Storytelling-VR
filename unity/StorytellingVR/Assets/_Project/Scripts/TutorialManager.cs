@@ -221,13 +221,13 @@ public class TutorialManager : MonoBehaviour
     }
 
 
-        IEnumerator ShowDialogueSequenceWithTimings(
-        string speaker,
-        AudioSource audioSource,
-        AudioClip audioClip,
-        string lineId,
-        string[] lines,
-        float[] startTimes)
+    IEnumerator ShowDialogueSequenceWithTimings(
+    string speaker,
+    AudioSource audioSource,
+    AudioClip audioClip,
+    string lineId,
+    string[] lines,
+    float[] startTimes)
     {
         yield return ShowDialogueSequence(speaker, audioSource, audioClip, lineId, lines);
     }
@@ -310,7 +310,7 @@ public class TutorialManager : MonoBehaviour
             PromptManager.Instance.leftTriggerButton
         );
 
-        
+
 
 
         //--------------------------------------------------
@@ -320,7 +320,7 @@ public class TutorialManager : MonoBehaviour
         voiceRecognitionManager.ListenForPrice("70 Varahas");
 
         waitingForHighPrice = true;
-        
+
     }
 
 
@@ -341,7 +341,7 @@ public class TutorialManager : MonoBehaviour
                 merchantTeachTradeClip,
                 BhaskaraTeachTradeLineId,
 
-                "Before you answer, consider what Rahim has asked for.", "A wise merchant always remembers what his goods have cost him before naming a price."
+                "Before you answer, consider what Rahim has asked for. A wise merchant always remembers what his goods have cost him before naming a price."
             )
         );
 
@@ -469,7 +469,7 @@ public class TutorialManager : MonoBehaviour
                 merchantHighPriceLessonClip,
                 BhaskaraHighPriceLessonLineId,
 
-                "You see? Ask for too much and you risk losing the customer's trust. Your Reputation has fallen.", "Profit matters, but a merchant known for unfair prices will soon lose customers.", "Try again. This time, choose a fairer price while still earning a profit."
+                "You see? Ask for too much and you risk losing the customer's trust. Your Reputation has fallen. Profit matters, but a merchant known for unfair prices will soon lose customers. Try again. This time, choose a fairer price while still earning a profit."
             )
         );
 
@@ -570,7 +570,7 @@ public class TutorialManager : MonoBehaviour
                 merchantFairPriceEndingClip,
                 BhaskaraFairPriceEndingLineId,
 
-                "Well done. You earned a profit without sacrificing the customer's trust.", "Remember that balance. A good merchant builds wealth, but a great merchant builds a reputation as well."
+                "Well done. You earned a profit without sacrificing the customer's trust. Remember that balance. A good merchant builds wealth, but a great merchant builds a reputation as well."
             )
         );
 
@@ -612,7 +612,7 @@ public class TutorialManager : MonoBehaviour
                 merchantStillTooHighLessonClip,
                 BhaskaraStillTooHighLessonLineId,
 
-                "Still too high. Your Reputation continues to fall.", "Remember, the cardamom cost us 18 Varahas.", "Try a price closer to 25 Varahas."
+                "Still too high. Your Reputation continues to fall. Remember, the cardamom cost us 18 Varahas. Try a price closer to 25 Varahas."
             )
         );
 
@@ -673,7 +673,7 @@ public class TutorialManager : MonoBehaviour
                 merchantLowProfitLessonClip,
                 BhaskaraLowProfitLessonLineId,
 
-                "Rahim is certainly pleased, but look at what you earned.", "Selling below your cost may satisfy a customer, but it cannot sustain a merchant.", "You must protect your profit while still treating customers fairly."
+                "Rahim is certainly pleased, but look at what you earned. Selling below your cost may satisfy a customer, but it cannot sustain a merchant. You must protect your profit while still treating customers fairly."
             )
         );
 
@@ -767,7 +767,7 @@ public class TutorialManager : MonoBehaviour
         if (respectUIManager != null)
             respectUIManager.SetRespect(respect);
     }
-        IEnumerator MerchantExplainNegotiationSequence()
+    IEnumerator MerchantExplainNegotiationSequence()
     {
         yield return StartCoroutine(
             ShowDialogueSequence(
@@ -776,9 +776,7 @@ public class TutorialManager : MonoBehaviour
                 merchantExplainNegotiationClip,
                 BhaskaraExplainNegotiationLineId,
 
-                "Rahim wants one veesai of cardamom. It cost us 18 Varahas.",
-                "You should earn a profit, but do not forget that a merchant's reputation matters too.",
-                "Treat customers unfairly, and word will travel quickly through the market."
+                "Rahim wants one veesai of cardamom. It cost us 18 Varahas. You should earn a profit, but do not forget that a merchant's reputation matters too. Treat customers unfairly, and word will travel quickly through the market."
             )
         );
 
@@ -795,7 +793,7 @@ public class TutorialManager : MonoBehaviour
                 null,
                 "NARRATOR_TRANSACTION_STATUS_UI_01",
 
-                "To your left, you can keep track of your Reputation, while your earnings are shown to your right. Watch them closely Ã¢â‚¬â€ both will change with the choices you make while trading."
+                "To your left, you can keep track of your Reputation, while your earnings are shown to your right. Watch them closely - both will change with the choices you make while trading."
             )
         );
     }
