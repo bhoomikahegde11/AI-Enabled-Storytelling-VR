@@ -240,14 +240,18 @@ public class SpiceTutorialManager : MonoBehaviour
         ));
 
         yield return StartCoroutine(ShowDialogueSequence(
-            "Narrator",
+            "Bhaskara",
             Color.yellow,
             narratorAudioSource,
             narratorCompletedClip,
             NarratorCompletedLineId,
-            "Well done. You have successfully completed your first spice order."
-
+            "Good. You have learned how to identify the spices and prepare them for trade. Now, the customers will arrive. Handle them as you have been taught."
         ));
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.LoadNextScene();
+        }
     }
 
     IEnumerator ShowDialogueSequence(

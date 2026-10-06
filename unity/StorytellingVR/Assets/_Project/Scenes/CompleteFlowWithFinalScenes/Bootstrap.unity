@@ -431,7 +431,7 @@ GameObject:
   - component: {fileID: 1327145206}
   - component: {fileID: 1327145208}
   - component: {fileID: 1327145207}
-  m_Layer: 5
+  m_Layer: 3
   m_Name: FadeImage
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -508,7 +508,8 @@ GameObject:
   - component: {fileID: 1819468855}
   - component: {fileID: 1819468854}
   - component: {fileID: 1819468858}
-  m_Layer: 5
+  - component: {fileID: 1819468859}
+  m_Layer: 3
   m_Name: FadeCanvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -554,7 +555,7 @@ MonoBehaviour:
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 0
+  m_PresetInfoIsWorld: 1
 --- !u!223 &1819468856
 Canvas:
   m_ObjectHideFlags: 0
@@ -564,7 +565,7 @@ Canvas:
   m_GameObject: {fileID: 1819468853}
   m_Enabled: 1
   serializedVersion: 3
-  m_RenderMode: 0
+  m_RenderMode: 2
   m_Camera: {fileID: 0}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
@@ -587,7 +588,7 @@ RectTransform:
   m_GameObject: {fileID: 1819468853}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1327145206}
@@ -595,9 +596,9 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 767, y: 398}
+  m_SizeDelta: {x: 1534, y: 796}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1819468858
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -613,6 +614,34 @@ MonoBehaviour:
   fadeImage: {fileID: 1327145207}
   speed: 1
   fadeColor: {r: 0, g: 0, b: 0, a: 1}
+--- !u!114 &1819468859
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1819468853}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee10491ef6d5d1d49a270cf6b09bdc19, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Oculus.VR::OVROverlayCanvas
+  _mipmapMode: 0
+  _dynamicResolution: 1
+  _redrawResolutionThreshold: 2147483647
+  rectTransform: {fileID: 1819468857}
+  maxTextureSize: 2048
+  manualRedraw: 0
+  renderInterval: 1
+  renderIntervalFrameOffset: 0
+  superSample: 0
+  layer: 5
+  opacity: 2
+  shape: 0
+  curveRadius: 1
+  overlapMask: 0
+  compositionMode: 1
+  _overlayEnabled: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

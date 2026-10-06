@@ -15,10 +15,18 @@ public class StallEntryTrigger : MonoBehaviour
     private bool arrivalDialogueStarted = false;
     private bool arrivalDialogueFinished = false;
 
-    private void Start()
+    private bool sceneLoadingTriggered = false;
+
+    private void TriggerNextScene()
     {
+        if (sceneLoadingTriggered) return;
+        sceneLoadingTriggered = true;
+
         if (promptCanvas != null)
             promptCanvas.SetActive(false);
+
+        Debug.Log("[STALL ENTRY] Entering stall automatically through GameManager");
+        GameManager.Instance.LoadNextScene();
     }
 
     private void Update()
@@ -30,34 +38,8 @@ public class StallEntryTrigger : MonoBehaviour
         if (!arrivalDialogueFinished)
             return;
 
-        InputDevice leftHand =
-            InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
-
-        bool xPressed = false;
-
-        leftHand.TryGetFeatureValue(
-            CommonUsages.secondaryButton,
-            out xPressed
-        );
-
-        if (xPressed && !buttonHeld)
-        {
-            buttonHeld = true;
-
-            if (promptCanvas != null)
-                promptCanvas.SetActive(false);
-
-            Debug.Log(
-                "[STALL ENTRY] Entering stall through GameManager"
-            );
-
-            GameManager.Instance.LoadNextScene();
-        }
-
-        if (!xPressed)
-        {
-            buttonHeld = false;
-        }
+        // Automatically trigger the transition
+        TriggerNextScene();
     }
 
     private void OnTriggerEnter(Collider other)
@@ -124,8 +106,7 @@ public class StallEntryTrigger : MonoBehaviour
 
     private void ShowEntryPrompt()
     {
-        if (promptCanvas != null)
-            promptCanvas.SetActive(true);
+        // Removed prompt display because the transition is now automatic without requiring X
     }
 
     private void OnTriggerExit(Collider other)

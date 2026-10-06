@@ -27,6 +27,10 @@ public class MeeraInspectionSequenceController : MonoBehaviour
     [SerializeField]
     private GameObject inspectionRayRoot;
 
+    [SerializeField]
+    [Tooltip("Assign the left hand XR ray so it can be disabled during inspection.")]
+    private GameObject leftHandRayRoot;
+
     [Header("Book Interaction")]
     [Tooltip(
         "Drag the RayInteractable component from the book interaction object."
@@ -539,16 +543,21 @@ public class MeeraInspectionSequenceController : MonoBehaviour
 
     public void SetInspectionRay(bool enabled)
     {
-        if (inspectionRayRoot == null)
+        if (inspectionRayRoot != null)
+        {
+            inspectionRayRoot.SetActive(enabled);
+        }
+        else
         {
             Debug.LogWarning(
                 "[MEERA INSPECTION] Inspection Ray Root is not assigned."
             );
-
-            return;
         }
 
-        inspectionRayRoot.SetActive(enabled);
+        if (leftHandRayRoot != null)
+        {
+            leftHandRayRoot.SetActive(!enabled);
+        }
 
         Debug.Log(
             $"[MEERA INSPECTION] Meta inspection ray active: {enabled}."

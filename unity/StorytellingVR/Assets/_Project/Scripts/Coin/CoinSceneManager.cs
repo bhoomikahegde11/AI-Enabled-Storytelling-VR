@@ -99,7 +99,7 @@ public class CoinSceneManager : MonoBehaviour
         if (instructionPrompt != null)
         {
             instructionPrompt.ShowTrigger(
-                "Press right trigger to inspect coin"
+                "Press the Trigger to inspect the coin"
             );
         }
     }

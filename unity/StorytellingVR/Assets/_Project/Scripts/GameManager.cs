@@ -285,6 +285,7 @@ public class GameManager : MonoBehaviour
 
         if (fader != null)
         {
+            fader.RepositionToCamera();
             yield return fader.FadeOut();
         }
 
@@ -304,6 +305,7 @@ public class GameManager : MonoBehaviour
 
         if (fader != null)
         {
+            yield return fader.WaitForCamera();
             yield return fader.FadeIn();
         }
 

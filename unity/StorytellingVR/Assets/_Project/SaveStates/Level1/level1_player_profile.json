@@ -1,7 +1,7 @@
 {
     "global_metrics": {
-        "reputation": 38,
-        "total_varahas": 1010,
+        "reputation": 50,
+        "total_varahas": 100,
         "completed_levels": []
     },
     "inventory": [
@@ -11,15 +11,15 @@
         },
         {
             "spiceKey": "clove",
-            "grams": 7440
+            "grams": 8000
         },
         {
             "spiceKey": "cinnamon",
-            "grams": 8640
+            "grams": 12000
         },
         {
             "spiceKey": "cardamom",
-            "grams": 640
+            "grams": 4000
         }
     ],
     "shift_stats": {
@@ -28,7 +28,7 @@
         "total_deals_made": 0
     },
     "current_scene": "Level1_MainLoopUpdated",
-    "progression_index": 1,
+    "progression_index": 7,
     "intro_completed": true,
     "remainingMarketDaySeconds": 2000.0,
     "hasSavedMarketDayTimer": true
