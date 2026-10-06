@@ -181,9 +181,9 @@ public class NarratorUIManager : MonoBehaviour
     }
 
     private IEnumerator NarrationRoutine(
-        string speaker,
-        string fullText,
-        string lineId)
+    string speaker,
+    string fullText,
+    string lineId)
     {
         if (string.IsNullOrWhiteSpace(fullText))
             yield break;
@@ -193,56 +193,54 @@ public class NarratorUIManager : MonoBehaviour
         if (speakerText != null)
             speakerText.text = speaker;
 
-        Debug.Log($"[VOICE] Request lineId={(string.IsNullOrEmpty(lineId) ? "NULL" : lineId)}");
-        Debug.Log($"[VOICE] Database assigned={(voiceDatabase != null)}");
-        Debug.Log($"[VOICE] AudioSource assigned={(dialogueVoiceSource != null)}");
-
-        StopCurrentVoice();
-        if (!string.IsNullOrEmpty(lineId) && voiceDatabase != null && dialogueVoiceSource != null)
-        {
-            AudioClip clip = voiceDatabase.GetAudioClip(lineId);
-            Debug.Log($"[VOICE] Lookup success={(clip != null)}");
-            if (clip != null)
-            {
-                Debug.Log($"[VOICE] Clip={clip.name}");
-                dialogueVoiceSource.clip = clip;
-                Debug.Log($"[VOICE] AudioSource active={dialogueVoiceSource.gameObject.activeInHierarchy} enabled={dialogueVoiceSource.enabled} volume={dialogueVoiceSource.volume}");
-                Debug.Log("[VOICE] Calling Play");
-                dialogueVoiceSource.Play();
-                Debug.Log($"[VOICE] isPlaying after Play={dialogueVoiceSource.isPlaying}");
-            }
-            else
-            {
-                Debug.LogWarning($"[NarratorUIManager] Missing audio clip for lineId: {lineId}");
-            }
-        }
-
         string[] lines = fullText.Split(
             new[] { "\r\n", "\r", "\n" },
             System.StringSplitOptions.RemoveEmptyEntries
         );
 
-        // Prevent a trigger already being held from instantly
-        // completing the first line.
+        // Prevent a trigger that was already being held from
+        // immediately skipping the first line.
         bool previousPressed = GetContinueButtonPressed();
 
-        foreach (string rawLine in lines)
+        for (int i = 0; i < lines.Length; i++)
         {
-            string line = rawLine.Trim();
+            string line = lines[i].Trim();
 
             if (string.IsNullOrWhiteSpace(line))
                 continue;
 
-            yield return TypeAndWaitForLine(
-                line,
-                previousPressed,
-                pressedState =>
-                {
-                    previousPressed = pressedState;
-                }
+            // Get the audio for THIS subtitle line.
+            AudioClip clip = null;
+
+            if (!string.IsNullOrEmpty(lineId) &&
+                voiceDatabase != null &&
+                dialogueVoiceSource != null)
+            {
+                string audioLineId = $"{lineId}_{i + 1:00}";
+
+                clip = voiceDatabase.GetAudioClip(audioLineId);
+
+                Debug.Log(
+                    $"[VOICE] Subtitle line {i + 1}: '{line}' | " +
+                    $"Audio ID: {audioLineId} | " +
+                    $"Found: {clip != null}"
+                );
+            }
+
+            // Show subtitle and play its corresponding audio.
+            yield return StartCoroutine(
+                TypeAndWaitForLine(
+                    line,
+                    clip,
+                    previousPressed,
+                    pressedState =>
+                    {
+                        previousPressed = pressedState;
+                    }
+                )
             );
 
-            // One frame of separation between lines.
+            // Small separation between lines.
             yield return null;
         }
 
@@ -250,25 +248,46 @@ public class NarratorUIManager : MonoBehaviour
     }
 
     private IEnumerator TypeAndWaitForLine(
-        string line,
-        bool startingPressedState,
-        System.Action<bool> updatePressedState)
+    string line,
+    AudioClip clip,
+    bool startingPressedState,
+    System.Action<bool> updatePressedState)
     {
         if (subtitleText == null)
             yield break;
 
+        // Show the subtitle.
         subtitleText.text = line;
         subtitleText.maxVisibleCharacters = 0;
 
-        // TMP needs to calculate the text layout before we can
-        // reliably read the visible character count.
+        // Force TMP to calculate the text.
         subtitleText.ForceMeshUpdate();
 
         TMP_TextInfo textInfo = subtitleText.textInfo;
         int totalCharacters = textInfo.characterCount;
 
+        // Start the audio for THIS subtitle line.
+        StopCurrentVoice();
+
+        if (clip != null && dialogueVoiceSource != null)
+        {
+            dialogueVoiceSource.clip = clip;
+            dialogueVoiceSource.Play();
+
+            Debug.Log($"[VOICE] Playing clip: {clip.name}");
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"[VOICE] No audio clip found for subtitle: '{line}'"
+            );
+        }
+
         bool previousPressed = startingPressedState;
-        bool textCompletedInstantly = false;
+
+        // --------------------------------------------------
+        // TYPEWRITER EFFECT
+        // --------------------------------------------------
 
         for (int visibleCount = 0;
              visibleCount < totalCharacters;
@@ -302,107 +321,62 @@ public class NarratorUIManager : MonoBehaviour
                     GetContinueButtonPressed();
 
                 bool freshPress =
-                    currentlyPressed &&
-                    !previousPressed;
+                    currentlyPressed && !previousPressed;
 
                 previousPressed = currentlyPressed;
                 updatePressedState?.Invoke(previousPressed);
 
+                // Trigger skips the current line AND audio.
                 if (freshPress)
                 {
                     subtitleText.maxVisibleCharacters =
                         totalCharacters;
 
-                    textCompletedInstantly = true;
-                    break;
+                    StopCurrentVoice();
+
+                    yield break;
                 }
 
                 elapsed += Time.unscaledDeltaTime;
                 yield return null;
             }
 
-            if (textCompletedInstantly)
-                break;
-
             subtitleText.maxVisibleCharacters =
                 visibleCount + 1;
         }
 
-        // Ensure the complete line is visible.
+        // Make sure the entire subtitle is visible.
         subtitleText.maxVisibleCharacters =
             totalCharacters;
 
-        if (!waitForManualContinue && !autoAdvance)
-            yield break;
+        // --------------------------------------------------
+        // WAIT FOR AUDIO TO FINISH
+        // --------------------------------------------------
 
-        // If the trigger was used to reveal the whole line,
-        // require it to be released before it can advance.
-        while (GetContinueButtonPressed())
-        {
-            previousPressed = true;
-            updatePressedState?.Invoke(true);
-            yield return null;
-        }
-
-        previousPressed = false;
-        updatePressedState?.Invoke(false);
-
-        if (waitForManualContinue && !continueTutorialTaught)
-        {
-            ShowContinueTutorialPrompt();
-        }
-
-        float completedLineElapsed = 0f;
-        bool advanceLine = false;
-
-        while (!advanceLine)
+        while (dialogueVoiceSource != null &&
+               dialogueVoiceSource.isPlaying)
         {
             bool currentlyPressed =
                 GetContinueButtonPressed();
 
             bool freshPress =
-                currentlyPressed &&
-                !previousPressed;
-
-            if (waitForManualContinue && freshPress)
-            {
-                StopCurrentVoice();
-                advanceLine = true;
-
-                if (isShowingContinueTutorial)
-                {
-                    continueTutorialTaught = true;
-                    HideContinueTutorialPrompt();
-                }
-            }
+                currentlyPressed && !previousPressed;
 
             previousPressed = currentlyPressed;
             updatePressedState?.Invoke(previousPressed);
 
-            if (autoAdvance)
+            // Trigger skips the rest of the audio.
+            if (freshPress)
             {
-                completedLineElapsed +=
-                    Time.unscaledDeltaTime;
-
-                if (completedLineElapsed >= autoAdvanceDelay)
-                {
-                    advanceLine = true;
-                }
+                StopCurrentVoice();
+                yield break;
             }
 
             yield return null;
         }
 
-        HideContinueTutorialPrompt();
-
-        // Prevent a held trigger from skipping the next line.
-        while (GetContinueButtonPressed())
-        {
-            updatePressedState?.Invoke(true);
-            yield return null;
-        }
-
-        updatePressedState?.Invoke(false);
+        // Audio has finished naturally.
+        StopCurrentVoice();
     }
 
     private void BeginDialoguePresentation()
