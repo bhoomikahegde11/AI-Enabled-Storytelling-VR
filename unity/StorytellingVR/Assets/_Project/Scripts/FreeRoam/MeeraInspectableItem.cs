@@ -17,6 +17,11 @@ public class MeeraInspectableItem : MonoBehaviour
     [SerializeField]
     private MeeraInspectionSequenceController inspectionController;
 
+    [Header("Epilogue Override (leave empty in FreeRoam)")]
+    [Tooltip("Assign EndingBookInteraction here to bypass the inspection sequence and route directly to the epilogue ending.")]
+    [SerializeField]
+    private EndingBookInteraction endingOverride;
+
     [Header("Optional Feedback")]
     [SerializeField] private GameObject glowObject;
     [SerializeField] private AudioSource audioSource;
@@ -37,6 +42,8 @@ public class MeeraInspectableItem : MonoBehaviour
 
     /// <summary>
     /// Called by the controller ray when the player presses Trigger.
+    /// If an EndingBookInteraction override is assigned, routes there instead
+    /// of the standard inspection sequence (used by the epilogue book).
     /// </summary>
     public void TryInspect()
     {
@@ -46,6 +53,14 @@ public class MeeraInspectableItem : MonoBehaviour
                 $"[MEERA INSPECTION] {itemDisplayName} was already inspected."
             );
 
+            return;
+        }
+
+        // Epilogue path: route to the ending interaction instead.
+        if (endingOverride != null)
+        {
+            Debug.Log($"[MEERA INSPECTION] {itemDisplayName} routed to epilogue ending.");
+            endingOverride.TryInspect();
             return;
         }
 

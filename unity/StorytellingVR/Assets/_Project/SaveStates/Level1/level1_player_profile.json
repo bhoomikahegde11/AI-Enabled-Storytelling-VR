@@ -1,7 +1,7 @@
 {
     "global_metrics": {
         "reputation": 50,
-        "total_varahas": 100,
+        "total_varahas": 105,
         "completed_levels": []
     },
     "inventory": [
@@ -27,9 +27,9 @@
         "total_varahas_earned": 0,
         "total_deals_made": 0
     },
-    "current_scene": "Level1_MainLoopUpdated",
-    "progression_index": 7,
-    "intro_completed": true,
+    "current_scene": "ModernStudyRoom",
+    "progression_index": 0,
+    "intro_completed": false,
     "remainingMarketDaySeconds": 2000.0,
     "hasSavedMarketDayTimer": true
 }

@@ -38,6 +38,11 @@ public class NPCDirectionalIndicator : MonoBehaviour
     private ParticleSystem.VelocityOverLifetimeModule edgeVelocity;
     private bool edgeVisible;
 
+    // Cached constant-mode Y and Z curves so that all three axes stay
+    // in the same ParticleSystemCurveMode when X is updated each frame.
+    private ParticleSystem.MinMaxCurve edgeVelocityY;
+    private ParticleSystem.MinMaxCurve edgeVelocityZ;
+
     private void Awake()
     {
         if (edgeIndicator != null)
@@ -45,6 +50,15 @@ public class NPCDirectionalIndicator : MonoBehaviour
             edgeTransform = edgeIndicator.transform;
             edgeVelocity = edgeIndicator.velocityOverLifetime;
             edgeVelocity.enabled = true;
+
+            // Force Y and Z into Constant mode and cache their values.
+            // This guarantees all three axes share the same curve mode
+            // when X is reassigned in ShowEdgeIndicator(), preventing
+            // "Particle Velocity curves must all be in the same mode".
+            edgeVelocityY = new ParticleSystem.MinMaxCurve(edgeVelocity.y.constant);
+            edgeVelocityZ = new ParticleSystem.MinMaxCurve(edgeVelocity.z.constant);
+            edgeVelocity.y = edgeVelocityY;
+            edgeVelocity.z = edgeVelocityZ;
         }
 
         HideWorldIndicator();
@@ -153,8 +167,10 @@ public class NPCDirectionalIndicator : MonoBehaviour
             ? horizontalParticleSpeed
             : -horizontalParticleSpeed;
 
-        edgeVelocity.x =
-            new ParticleSystem.MinMaxCurve(inwardSpeed);
+        // Write all three axes together so they remain in the same curve mode.
+        edgeVelocity.x = new ParticleSystem.MinMaxCurve(inwardSpeed);
+        edgeVelocity.y = edgeVelocityY;
+        edgeVelocity.z = edgeVelocityZ;
     }
 
     private void HideEdgeIndicator()
@@ -184,9 +200,7 @@ public class NPCDirectionalIndicator : MonoBehaviour
         edgeIndicator.gameObject.SetActive(false);
     }
 
-    public void SetTarget(
-    Transform target,
-    GameObject newWorldIndicator)
+    public void SetTarget(Transform target, GameObject newWorldIndicator)
     {
         // Hide the previous NPC's world marker first.
         HideWorldIndicator();
@@ -199,6 +213,10 @@ public class NPCDirectionalIndicator : MonoBehaviour
 
         // Ensure the newly selected world marker begins hidden.
         HideWorldIndicator();
+
+        Debug.Log($"[EPILOGUE INDICATOR] Target = {(target != null ? target.name : "NULL")}, " +
+                  $"World marker = {(newWorldIndicator != null ? newWorldIndicator.name : "NULL")}, " +
+                  $"Edge particle = {(edgeIndicator != null ? edgeIndicator.gameObject.name : "NULL")}");
     }
 
     public void Show()
@@ -211,6 +229,9 @@ public class NPCDirectionalIndicator : MonoBehaviour
 
             return;
         }
+
+        Debug.Log($"[EPILOGUE INDICATOR] Show — target={npcTarget.name}, " +
+                  $"playerCamera={(playerCamera != null ? playerCamera.name : "NULL")}");
 
         enabled = true;
     }

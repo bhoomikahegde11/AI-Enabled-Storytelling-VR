@@ -1119,9 +1119,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a35cc56b80caa44b9dcdf33df86c434, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NPCDirectionalIndicator
-  npcTarget: {fileID: 0}
+  npcTarget: {fileID: 1802081408}
   playerCamera: {fileID: 1388768018}
-  worldIndicator: {fileID: 0}
+  worldIndicator: {fileID: 1565669354}
   edgeIndicator: {fileID: 750772230}
   screenEdgePadding: 0.4
   edgeDepth: 1
@@ -9870,8 +9870,14 @@ MonoBehaviour:
   bookPrice: 10
   defaultPaycheck: 15
   walletHUD: {fileID: 0}
+  objectiveUI: {fileID: 23441724}
+  meeraDirectionalIndicator: {fileID: 23441728}
+  meeraTarget: {fileID: 1802081408}
+  meeraWorldMarker: {fileID: 1565669354}
+  endingBookInteraction: {fileID: 1770237390}
+  meeraTrigger: {fileID: 565354015}
   fader: {fileID: 0}
-  teleportManager: {fileID: 0}
+  teleportManager: {fileID: 23441731}
 --- !u!1 &401859222
 GameObject:
   m_ObjectHideFlags: 0
@@ -10403,47 +10409,47 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 690495003}
+    m_TransformParent: {fileID: 1770237384}
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 2a6c2cd7300ea134e8c61498e83ed0b3, type: 3}
       propertyPath: m_LocalScale.x
-      value: 31.014038
+      value: 0.96283466
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2a6c2cd7300ea134e8c61498e83ed0b3, type: 3}
       propertyPath: m_LocalScale.y
-      value: 32.22171
+      value: 1.0385867
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2a6c2cd7300ea134e8c61498e83ed0b3, type: 3}
       propertyPath: m_LocalScale.z
-      value: 32.22171
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2a6c2cd7300ea134e8c61498e83ed0b3, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -12.18799
+      value: -0.004987025
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2a6c2cd7300ea134e8c61498e83ed0b3, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.21994829
+      value: 0.00047315337
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2a6c2cd7300ea134e8c61498e83ed0b3, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.1393013
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2a6c2cd7300ea134e8c61498e83ed0b3, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.37425762
+      value: 0.7393895
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2a6c2cd7300ea134e8c61498e83ed0b3, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.37425756
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2a6c2cd7300ea134e8c61498e83ed0b3, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.5999428
+      value: -0.000000014901161
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2a6c2cd7300ea134e8c61498e83ed0b3, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0.5999427
+      value: -0.67327803
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2a6c2cd7300ea134e8c61498e83ed0b3, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -10456,6 +10462,10 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 2a6c2cd7300ea134e8c61498e83ed0b3, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: -116.086
+      objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 2a6c2cd7300ea134e8c61498e83ed0b3, type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -7511558181221131132, guid: 2a6c2cd7300ea134e8c61498e83ed0b3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -14490,6 +14500,7 @@ GameObject:
   - component: {fileID: 565354013}
   - component: {fileID: 565354012}
   - component: {fileID: 565354011}
+  - component: {fileID: 565354015}
   m_Layer: 0
   m_Name: NPC_InteractionTrigger
   m_TagString: Untagged
@@ -14614,6 +14625,18 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 565354009}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &565354015
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 565354009}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37334a22788df4240bf61af7c53572da, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EpilogueMeeraApproachTrigger
 --- !u!1 &566684425
 GameObject:
   m_ObjectHideFlags: 0
@@ -16248,7 +16271,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 632875786}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c639598f5842a54e8f520d8edd251e0, type: 3}
   m_Name: 
@@ -16256,6 +16279,7 @@ MonoBehaviour:
   itemType: 1
   itemDisplayName: Old Compass
   inspectionController: {fileID: 1494689257}
+  endingOverride: {fileID: 0}
   glowObject: {fileID: 1756123424}
   audioSource: {fileID: 0}
   inspectionSound: {fileID: 0}
@@ -17385,7 +17409,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 674513445}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c639598f5842a54e8f520d8edd251e0, type: 3}
   m_Name: 
@@ -17393,6 +17417,7 @@ MonoBehaviour:
   itemType: 0
   itemDisplayName: Bronze Lamp
   inspectionController: {fileID: 1494689257}
+  endingOverride: {fileID: 0}
   glowObject: {fileID: 1114019811}
   audioSource: {fileID: 0}
   inspectionSound: {fileID: 0}
@@ -17733,7 +17758,6 @@ Transform:
   - {fileID: 997372755}
   - {fileID: 2062032892}
   - {fileID: 499525733}
-  - {fileID: 423612317}
   - {fileID: 767870}
   - {fileID: 1441666345}
   - {fileID: 1840547568}
@@ -39253,7 +39277,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1176455201}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 173c32425d1958149ae5f71fec597fdc, type: 3}
   m_Name: 
@@ -45035,7 +45059,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1470283458}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f151b07b409f26a43b33029c86916340, type: 3}
   m_Name: 
@@ -45315,7 +45339,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1494689255}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 87ba47783c67bdb4ba5116a0096ff0b9, type: 3}
   m_Name: 
@@ -45324,6 +45348,7 @@ MonoBehaviour:
   foreignTrinket: {fileID: 632875788}
   book: {fileID: 1770237386}
   inspectionRayRoot: {fileID: 2004912799}
+  leftHandRayRoot: {fileID: 0}
   lampRayInteractable: {fileID: 1974603770}
   compassRayInteractable: {fileID: 1813580691}
   bookRayInteractable: {fileID: 1242450181}
@@ -45356,7 +45381,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1494689255}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f151b07b409f26a43b33029c86916340, type: 3}
   m_Name: 
@@ -52504,7 +52529,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1606039912
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -57091,6 +57116,9 @@ PrefabInstance:
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: dc19fa508a2ef0a47868e11b973ca9b2, type: 3}
       insertIndex: -1
+      addedObject: {fileID: 423612317}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: dc19fa508a2ef0a47868e11b973ca9b2, type: 3}
+      insertIndex: -1
       addedObject: {fileID: 1797608010}
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: dc19fa508a2ef0a47868e11b973ca9b2, type: 3}
       insertIndex: -1
@@ -57102,6 +57130,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: dc19fa508a2ef0a47868e11b973ca9b2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1770237387}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: dc19fa508a2ef0a47868e11b973ca9b2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1770237390}
   m_SourcePrefab: {fileID: 100100000, guid: dc19fa508a2ef0a47868e11b973ca9b2, type: 3}
 --- !u!4 &1770237384 stripped
 Transform:
@@ -57127,7 +57158,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MeeraInspectableItem
   itemType: 2
   itemDisplayName: Mysterious Book
-  inspectionController: {fileID: 1494689257}
+  inspectionController: {fileID: 0}
+  endingOverride: {fileID: 1770237390}
   glowObject: {fileID: 1797608009}
   audioSource: {fileID: 0}
   inspectionSound: {fileID: 0}
@@ -57154,6 +57186,19 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 1299116649474823381, guid: dc19fa508a2ef0a47868e11b973ca9b2, type: 3}
+--- !u!114 &1770237390
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1770237385}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b7dc967ef1d8314a9f5825831c76601, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndingBookInteraction
+  bookItem: {fileID: 1770237386}
 --- !u!1 &1774755130
 GameObject:
   m_ObjectHideFlags: 0
