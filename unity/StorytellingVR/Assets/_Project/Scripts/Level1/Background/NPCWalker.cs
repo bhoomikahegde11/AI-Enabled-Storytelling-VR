@@ -10,6 +10,8 @@ public class NPCWalker : MonoBehaviour
     private bool goingToStall = false;
     private bool waiting = false;
     private FreeRoamMarketSpawner freeRoamSpawner;
+    private Collider avoidanceNPC;
+    private Vector3 passingDirection;
     [SerializeField] private float moveSpeed = 0.85f;
     [SerializeField] private float turnSpeed = 5f;
     [SerializeField] private Transform visualAnchor;
@@ -63,6 +65,8 @@ public class NPCWalker : MonoBehaviour
 
         stallRotation = stallRot;
         myStall = stall;
+        avoidanceNPC = null;
+        passingDirection = Vector3.zero;
         waitTime =
     Random.Range(6f, 14f);
     }
@@ -72,44 +76,7 @@ public class NPCWalker : MonoBehaviour
         if (waiting)
             return;
 
-        Vector3 direction = target - transform.position;
-        direction.y = 0f;
-        Collider[] nearby = Physics.OverlapSphere(
-    transform.position,
-    1.2f
-);
-
-        foreach (Collider c in nearby)
-        {
-            if (c.gameObject == gameObject)
-                continue;
-
-            if (c.CompareTag("NPC"))
-            {
-                Vector3 toOther =
-                    c.transform.position - transform.position;
-
-                toOther.y = 0f;
-
-                float dot =
-                    Vector3.Dot(
-                        transform.forward,
-                        toOther.normalized
-                    );
-
-                // Only avoid NPCs roughly in front
-                float distance = toOther.magnitude;
-
-                if (dot > 0.3f && distance < 0.8f)
-                {
-                    Vector3 sideStep = -transform.right;
-
-                    direction += sideStep * 2f;
-                    direction -= toOther.normalized * 1f;
-                }
-            }
-        }
-        if (direction.magnitude < 0.05f)
+        if (!TryGetMovementDirection(out Vector3 direction))
         {
             if (goingToStall)
             {
@@ -150,6 +117,73 @@ public class NPCWalker : MonoBehaviour
             transform.forward *
             moveSpeed *
             Time.deltaTime;
+    }
+
+    private bool TryGetMovementDirection(out Vector3 direction)
+    {
+        direction = target - transform.position;
+        direction.y = 0f;
+
+        // Arrival belongs to the assigned target, never to avoidance steering.
+        if (direction.magnitude < 0.05f)
+        {
+            avoidanceNPC = null;
+            passingDirection = Vector3.zero;
+            return false;
+        }
+
+        Vector3 rawTargetDirection = direction;
+        Vector3 toOther = Vector3.zero;
+        if (avoidanceNPC != null)
+        {
+            toOther = avoidanceNPC.transform.position - transform.position;
+            toOther.y = 0f;
+            if (!avoidanceNPC.enabled || !avoidanceNPC.gameObject.activeInHierarchy ||
+                toOther.magnitude >= 1.2f)
+            {
+                avoidanceNPC = null;
+                passingDirection = Vector3.zero;
+            }
+        }
+
+        if (avoidanceNPC == null)
+        {
+            passingDirection = Vector3.zero;
+            float closestDistance = 0.8f;
+            foreach (Collider c in Physics.OverlapSphere(transform.position, 1.2f))
+            {
+                if (c.transform.IsChildOf(transform) || !c.CompareTag("NPC"))
+                    continue;
+
+                Vector3 offset = c.transform.position - transform.position;
+                offset.y = 0f;
+                float distance = offset.magnitude;
+                if (distance < closestDistance &&
+                    Vector3.Dot(transform.forward, offset.normalized) > 0.3f)
+                {
+                    avoidanceNPC = c;
+                    toOther = offset;
+                    closestDistance = distance;
+                }
+            }
+
+            if (avoidanceNPC != null)
+            {
+                // Freeze world-space left for this encounter. Opposing walkers
+                // see opposite separation vectors, so pass on opposite sides.
+                passingDirection = Vector3.Cross(toOther.normalized, Vector3.up);
+            }
+        }
+
+        if (avoidanceNPC != null && toOther.magnitude < 0.8f)
+        {
+            direction += passingDirection * 2f;
+            direction -= toOther.normalized;
+            if (direction.sqrMagnitude < 0.000001f)
+                direction = rawTargetDirection;
+        }
+
+        return true;
     }
 
     IEnumerator WaitAtStall()

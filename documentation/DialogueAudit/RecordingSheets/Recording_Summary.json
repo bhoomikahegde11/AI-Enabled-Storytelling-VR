@@ -1,0 +1,91 @@
+{
+  "source_templates": 1047,
+  "source_csv_exact_match": true,
+  "scenario_count": 34,
+  "placeholder_occurrences": {
+    "{quantityLabel}": 204,
+    "{spiceName}": 221,
+    "{currentBuyerOffer}": 58,
+    "{currency}": 465,
+    "{offeredPrice}": 32,
+    "{counterPrice}": 319,
+    "{finalPrice}": 56,
+    "{ruleReply}": 30
+  },
+  "per_npc": {
+    "Lakshmi Amma": {
+      "templates": 206,
+      "static_templates": 77,
+      "dynamic_templates": 129,
+      "static_clips": 345,
+      "number_clips": 36,
+      "vocabulary_clips": 17,
+      "planned_clips": 398,
+      "unresolved_cases": 71,
+      "recorded_or_approved_clips": 0
+    },
+    "Chinnamma Naik": {
+      "templates": 167,
+      "static_templates": 64,
+      "dynamic_templates": 103,
+      "static_clips": 270,
+      "number_clips": 36,
+      "vocabulary_clips": 17,
+      "planned_clips": 323,
+      "unresolved_cases": 49,
+      "recorded_or_approved_clips": 0
+    },
+    "Saraswati Chetti": {
+      "templates": 164,
+      "static_templates": 67,
+      "dynamic_templates": 97,
+      "static_clips": 240,
+      "number_clips": 36,
+      "vocabulary_clips": 17,
+      "planned_clips": 293,
+      "unresolved_cases": 39,
+      "recorded_or_approved_clips": 0
+    },
+    "Abdul Rahman": {
+      "templates": 170,
+      "static_templates": 71,
+      "dynamic_templates": 99,
+      "static_clips": 250,
+      "number_clips": 36,
+      "vocabulary_clips": 17,
+      "planned_clips": 303,
+      "unresolved_cases": 36,
+      "recorded_or_approved_clips": 0
+    },
+    "Francisco de Almeida": {
+      "templates": 170,
+      "static_templates": 70,
+      "dynamic_templates": 100,
+      "static_clips": 258,
+      "number_clips": 36,
+      "vocabulary_clips": 17,
+      "planned_clips": 311,
+      "unresolved_cases": 36,
+      "recorded_or_approved_clips": 0
+    },
+    "Father Penteado": {
+      "templates": 170,
+      "static_templates": 73,
+      "dynamic_templates": 97,
+      "static_clips": 252,
+      "number_clips": 36,
+      "vocabulary_clips": 17,
+      "planned_clips": 305,
+      "unresolved_cases": 35,
+      "recorded_or_approved_clips": 0
+    }
+  },
+  "total_planned_clips": 1933,
+  "total_unresolved_cases": 266,
+  "unresolved_by_placeholder": {
+    "{quantityLabel}": 204,
+    "{offeredPrice}": 32,
+    "{ruleReply}": 30
+  },
+  "id_stability": "positional IDs from source order; insertions/reordering can shift later IDs"
+}

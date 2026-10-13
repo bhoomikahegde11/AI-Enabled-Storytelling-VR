@@ -262,6 +262,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
 #if UNITY_EDITOR
         if (_enableEditorDebugTrigger && !_hasStarted && Input.GetKeyDown(KeyCode.Space))
         {
@@ -296,6 +297,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
 
     private void HandleNotebookPointerEvent(PointerEvent pointerEvent)
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (_hasStarted || pointerEvent.Type != PointerEventType.Select)
         {
             return;
@@ -320,12 +322,12 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         _finalBlastNormalizedProgress = 0f;
         Debug.Log("[INTRO] TimeTravelNotebook grabbed. Intro sequence started.", this);
         BeginPickupFeedback();
-        StartCoroutine(RunIntroSequence());
+        StartCoroutine(PauseMenuController.RunGameplay(RunIntroSequence()));
     }
 
     private IEnumerator RunIntroSequence()
     {
-        StartCoroutine(FlickerLamp());
+        StartCoroutine(PauseMenuController.RunGameplay(FlickerLamp()));
         StartDelayFeedback();
         yield return new WaitForSeconds(_floatStartDelay);
         yield return FloatNotebookToPlayer();
@@ -417,7 +419,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         _notebookTransform.rotation = _hoverBaseRotation;
         _isHovering = true;
         Debug.Log("[INTRO] Notebook reached hover target.", this);
-        StartCoroutine(BuildNotebookSupernaturalEffect());
+        StartCoroutine(PauseMenuController.RunGameplay(BuildNotebookSupernaturalEffect()));
     }
 
     private void GetTargetRootPose(out Vector3 targetRootPosition, out Quaternion targetRootRotation)
@@ -441,7 +443,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
             return;
         }
 
-        _floatingFlickerCoroutine = StartCoroutine(FloatingLampFlicker());
+        _floatingFlickerCoroutine = StartCoroutine(PauseMenuController.RunGameplay(FloatingLampFlicker()));
     }
 
     private IEnumerator FloatingLampFlicker()
@@ -1256,7 +1258,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
             StopCoroutine(_roomAmbienceFadeCoroutine);
         }
 
-        _roomAmbienceFadeCoroutine = StartCoroutine(FadeAudioSourceVolume(_roomAudioSource, targetVolume, duration, true));
+        _roomAmbienceFadeCoroutine = StartCoroutine(PauseMenuController.RunGameplay(FadeAudioSourceVolume(_roomAudioSource, targetVolume, duration, true)));
     }
 
     private void FadeLoopSource(AudioSource audioSource, float duration, ref Coroutine coroutineHandle)
@@ -1271,7 +1273,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
             StopCoroutine(coroutineHandle);
         }
 
-        coroutineHandle = StartCoroutine(FadeAudioSourceVolume(audioSource, 0f, duration, false));
+        coroutineHandle = StartCoroutine(PauseMenuController.RunGameplay(FadeAudioSourceVolume(audioSource, 0f, duration, false)));
     }
 
     private void FadeClockLoopSource(float duration)
@@ -1377,7 +1379,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
             StopCoroutine(_bookInfluenceImpulseCoroutine);
         }
 
-        _bookInfluenceImpulseCoroutine = StartCoroutine(InfluenceImpulseRoutine(Mathf.Min(alpha, 0.18f), duration));
+        _bookInfluenceImpulseCoroutine = StartCoroutine(PauseMenuController.RunGameplay(InfluenceImpulseRoutine(Mathf.Min(alpha, 0.18f), duration)));
     }
 
     private IEnumerator InfluenceImpulseRoutine(float alpha, float duration)
@@ -1403,7 +1405,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
             return;
         }
 
-        _repeatHapticsCoroutine = StartCoroutine(RepeatingHapticsRoutine());
+        _repeatHapticsCoroutine = StartCoroutine(PauseMenuController.RunGameplay(RepeatingHapticsRoutine()));
     }
 
     private void StopRepeatingHaptics()

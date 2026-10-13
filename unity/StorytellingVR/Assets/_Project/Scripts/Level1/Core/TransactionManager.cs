@@ -24,7 +24,8 @@ public class TransactionManager
         string outcome,
         int marketPrice,
         string buyerName,
-        string buyerOrigin)
+        string buyerOrigin,
+        string acceptedQuantityLabel = null)
     {
         LocalTradeOutcome result = new LocalTradeOutcome();
 
@@ -79,17 +80,24 @@ public class TransactionManager
 
         if (accepted)
         {
+            profile.shift_stats.total_deals_made++;
+            profile.shift_stats.total_varahas_earned += varahaChange;
             int baseValue = marketManager.CalculateBaseValue(spiceKey, finalQuantityGrams);
             result.transaction = new TransactionSummary
             {
                 item = Capitalize(spiceKey),
-                quantity = marketManager.FormatTraditionalQuantity(finalQuantityGrams),
+                quantity = !string.IsNullOrWhiteSpace(acceptedQuantityLabel) ? acceptedQuantityLabel : marketManager.FormatTraditionalQuantity(finalQuantityGrams),
                 earned = Mathf.Max(0, finalPrice),
                 profit = Mathf.Max(0, finalPrice - baseValue),
                 respect_change = reputationChange,
                 buyer_name = buyerName,
                 buyer_origin = buyerOrigin
             };
+        }
+        else
+        {
+            // Carry the resolved customer's identity even though no goods were exchanged.
+            result.transaction = new TransactionSummary { buyer_name = buyerName, buyer_origin = buyerOrigin, respect_change = reputationChange };
         }
 
         result.reputationDelta = reputationChange;

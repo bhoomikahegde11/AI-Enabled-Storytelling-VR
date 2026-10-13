@@ -28,8 +28,8 @@ public class MarketManager
         new MarketEventData
         {
             name = "Temple Chariot Festival",
-            description = "The annual Virupaksha Temple festival has begun. Religious offerings demand cloves and cardamom in massive amounts!",
-            affected_spice = "clove",
+            description = "The annual Virupaksha Temple festival has begun. Religious offerings demand cardamom in massive amounts!",
+            affected_spice = "cardamom",
             price_multiplier = 1.25f,
             quantity_multiplier = 1.3f,
             dialogue_trigger = "temple_festival"

@@ -1,0 +1,447 @@
+{
+  "total_rows": 1047,
+  "total_dialogue_lines": 263,
+  "npc_template_counts": {
+    "Lakshmi Amma": 206,
+    "Chinnamma Naik": 167,
+    "Saraswati Chetti": 164,
+    "Abdul Rahman": 170,
+    "Francisco de Almeida": 170,
+    "Father Penteado": 170
+  },
+  "scenario_count": 34,
+  "intentionally_inactive_time_pressure": 19,
+  "machine_validation_failures": [],
+  "editorial_status": "PENDING_MANUAL_VERIFICATION",
+  "tmpl_with_vars": 625,
+  "tmpl_without_vars": 422,
+  "var_counts": {
+    "{currency}": 446,
+    "{counterPrice}": 319,
+    "{spiceName}": 221,
+    "{quantityLabel}": 204,
+    "{currentBuyerOffer}": 58,
+    "{finalPrice}": 56,
+    "{offeredPrice}": 32,
+    "{ruleReply}": 30
+  },
+  "scen_counts": {
+    "CustomerGreeting": 27,
+    "RepeatCustomerGreeting": 27,
+    "AskWhatBuyerWants": 26,
+    "AskSellerPrice": 26,
+    "AskBuyerBudget": 26,
+    "AskQuantity": 26,
+    "QuantityChanged": 24,
+    "SellerPriceTooHigh": 44,
+    "SellerPriceSlightlyHigh": 26,
+    "SellerPriceBelowExpected": 26,
+    "BuyerCounterFirst": 26,
+    "BuyerCounterMiddle": 44,
+    "BuyerCounterFinal": 26,
+    "BuyerHoldsFirm": 166,
+    "SellerPriceAccepted": 28,
+    "PlayerAcceptedDeal": 28,
+    "PlayerRejectedBuyerOffer": 26,
+    "OfferReason": 24,
+    "AskName": 24,
+    "AskOrigin": 24,
+    "WeatherQuestion": 20,
+    "HistoryKing": 20,
+    "HistoryTemple": 20,
+    "HistoryQuestion": 24,
+    "SocialGreeting": 62,
+    "OffTopic": 26,
+    "HostileWarning": 22,
+    "UnclearSpeech": 24,
+    "Unknown": 6,
+    "TransactionSuccess": 26,
+    "TransactionFailure": 44,
+    "TimePressure": 19,
+    "IdleReminderFirst": 20,
+    "IdleReminderSecond": 20
+  },
+  "npc_scen_counts": {
+    "CustomerGreeting": {
+      "Lakshmi Amma": 6,
+      "Chinnamma Naik": 5,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "RepeatCustomerGreeting": {
+      "Lakshmi Amma": 6,
+      "Chinnamma Naik": 5,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "AskWhatBuyerWants": {
+      "Lakshmi Amma": 6,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "AskSellerPrice": {
+      "Lakshmi Amma": 6,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "AskBuyerBudget": {
+      "Lakshmi Amma": 6,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "AskQuantity": {
+      "Lakshmi Amma": 6,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "QuantityChanged": {
+      "Lakshmi Amma": 4,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "SellerPriceTooHigh": {
+      "Lakshmi Amma": 9,
+      "Chinnamma Naik": 7,
+      "Saraswati Chetti": 7,
+      "Abdul Rahman": 7,
+      "Francisco de Almeida": 7,
+      "Father Penteado": 7
+    },
+    "SellerPriceSlightlyHigh": {
+      "Lakshmi Amma": 6,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "SellerPriceBelowExpected": {
+      "Lakshmi Amma": 6,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "BuyerCounterFirst": {
+      "Lakshmi Amma": 6,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "BuyerCounterMiddle": {
+      "Lakshmi Amma": 9,
+      "Chinnamma Naik": 7,
+      "Saraswati Chetti": 7,
+      "Abdul Rahman": 7,
+      "Francisco de Almeida": 7,
+      "Father Penteado": 7
+    },
+    "BuyerCounterFinal": {
+      "Lakshmi Amma": 6,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "BuyerHoldsFirm": {
+      "Lakshmi Amma": 21,
+      "Chinnamma Naik": 25,
+      "Saraswati Chetti": 30,
+      "Abdul Rahman": 30,
+      "Francisco de Almeida": 30,
+      "Father Penteado": 30
+    },
+    "SellerPriceAccepted": {
+      "Lakshmi Amma": 8,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "PlayerAcceptedDeal": {
+      "Lakshmi Amma": 8,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "PlayerRejectedBuyerOffer": {
+      "Lakshmi Amma": 6,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "OfferReason": {
+      "Lakshmi Amma": 4,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "AskName": {
+      "Lakshmi Amma": 4,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "AskOrigin": {
+      "Lakshmi Amma": 4,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "WeatherQuestion": {
+      "Lakshmi Amma": 4,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 3,
+      "Abdul Rahman": 3,
+      "Francisco de Almeida": 3,
+      "Father Penteado": 3
+    },
+    "HistoryKing": {
+      "Lakshmi Amma": 4,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 3,
+      "Abdul Rahman": 3,
+      "Francisco de Almeida": 3,
+      "Father Penteado": 3
+    },
+    "HistoryTemple": {
+      "Lakshmi Amma": 4,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 3,
+      "Abdul Rahman": 3,
+      "Francisco de Almeida": 3,
+      "Father Penteado": 3
+    },
+    "HistoryQuestion": {
+      "Lakshmi Amma": 4,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "SocialGreeting": {
+      "Lakshmi Amma": 9,
+      "Chinnamma Naik": 7,
+      "Saraswati Chetti": 7,
+      "Abdul Rahman": 13,
+      "Francisco de Almeida": 13,
+      "Father Penteado": 13
+    },
+    "OffTopic": {
+      "Lakshmi Amma": 6,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "HostileWarning": {
+      "Lakshmi Amma": 6,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 3,
+      "Abdul Rahman": 3,
+      "Francisco de Almeida": 3,
+      "Father Penteado": 3
+    },
+    "UnclearSpeech": {
+      "Lakshmi Amma": 4,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "Unknown": {
+      "Lakshmi Amma": 1,
+      "Chinnamma Naik": 1,
+      "Saraswati Chetti": 1,
+      "Abdul Rahman": 1,
+      "Francisco de Almeida": 1,
+      "Father Penteado": 1
+    },
+    "TransactionSuccess": {
+      "Lakshmi Amma": 6,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 4,
+      "Abdul Rahman": 4,
+      "Francisco de Almeida": 4,
+      "Father Penteado": 4
+    },
+    "TransactionFailure": {
+      "Lakshmi Amma": 9,
+      "Chinnamma Naik": 7,
+      "Saraswati Chetti": 7,
+      "Abdul Rahman": 7,
+      "Francisco de Almeida": 7,
+      "Father Penteado": 7
+    },
+    "TimePressure": {
+      "Lakshmi Amma": 4,
+      "Chinnamma Naik": 3,
+      "Saraswati Chetti": 3,
+      "Abdul Rahman": 3,
+      "Francisco de Almeida": 3,
+      "Father Penteado": 3
+    },
+    "IdleReminderFirst": {
+      "Lakshmi Amma": 4,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 3,
+      "Abdul Rahman": 3,
+      "Francisco de Almeida": 3,
+      "Father Penteado": 3
+    },
+    "IdleReminderSecond": {
+      "Lakshmi Amma": 4,
+      "Chinnamma Naik": 4,
+      "Saraswati Chetti": 3,
+      "Abdul Rahman": 3,
+      "Francisco de Almeida": 3,
+      "Father Penteado": 3
+    }
+  },
+  "duplicates": {
+    "{ruleReply}": [
+      [
+        "L1_LAK_151",
+        "Lakshmi Amma",
+        "Unknown",
+        "Any",
+        "Any"
+      ],
+      [
+        "L1_CHI_116",
+        "Chinnamma Naik",
+        "Unknown",
+        "Any",
+        "Any"
+      ],
+      [
+        "L1_SAR_110",
+        "Saraswati Chetti",
+        "Unknown",
+        "Any",
+        "Any"
+      ],
+      [
+        "L1_ABD_110",
+        "Abdul Rahman",
+        "Unknown",
+        "Any",
+        "Any"
+      ],
+      [
+        "L1_FRA_110",
+        "Francisco de Almeida",
+        "Unknown",
+        "Any",
+        "Any"
+      ],
+      [
+        "L1_FAT_110",
+        "Father Penteado",
+        "Unknown",
+        "Any",
+        "Any"
+      ]
+    ]
+  },
+  "mood_restricted_counts": {
+    "Lakshmi Amma | BuyerHoldsFirm | Mood=Strict": 5,
+    "Lakshmi Amma | BuyerHoldsFirm | Mood=Impatient": 5,
+    "Chinnamma Naik | BuyerHoldsFirm | Mood=Friendly": 5,
+    "Chinnamma Naik | BuyerHoldsFirm | Mood=Strict": 5,
+    "Chinnamma Naik | BuyerHoldsFirm | Mood=Impatient": 5,
+    "Saraswati Chetti | BuyerHoldsFirm | Mood=Friendly": 5,
+    "Saraswati Chetti | BuyerHoldsFirm | Mood=Normal": 5,
+    "Saraswati Chetti | BuyerHoldsFirm | Mood=Strict": 5,
+    "Saraswati Chetti | BuyerHoldsFirm | Mood=Impatient": 5,
+    "Abdul Rahman | BuyerHoldsFirm | Mood=Friendly": 5,
+    "Abdul Rahman | BuyerHoldsFirm | Mood=Normal": 5,
+    "Abdul Rahman | BuyerHoldsFirm | Mood=Strict": 5,
+    "Abdul Rahman | BuyerHoldsFirm | Mood=Impatient": 5,
+    "Abdul Rahman | SocialGreeting | Mood=Strict": 3,
+    "Abdul Rahman | SocialGreeting | Mood=Impatient": 3,
+    "Francisco de Almeida | BuyerHoldsFirm | Mood=Friendly": 5,
+    "Francisco de Almeida | BuyerHoldsFirm | Mood=Normal": 5,
+    "Francisco de Almeida | BuyerHoldsFirm | Mood=Strict": 5,
+    "Francisco de Almeida | BuyerHoldsFirm | Mood=Impatient": 5,
+    "Francisco de Almeida | SocialGreeting | Mood=Strict": 3,
+    "Francisco de Almeida | SocialGreeting | Mood=Impatient": 3,
+    "Father Penteado | BuyerHoldsFirm | Mood=Friendly": 5,
+    "Father Penteado | BuyerHoldsFirm | Mood=Normal": 5,
+    "Father Penteado | BuyerHoldsFirm | Mood=Strict": 5,
+    "Father Penteado | BuyerHoldsFirm | Mood=Impatient": 5,
+    "Father Penteado | SocialGreeting | Mood=Strict": 3,
+    "Father Penteado | SocialGreeting | Mood=Impatient": 3
+  },
+  "patience_restricted_counts": {
+    "Lakshmi Amma | BuyerHoldsFirm | Patience=Low": 5,
+    "Lakshmi Amma | SellerPriceTooHigh | Patience=Low": 3,
+    "Lakshmi Amma | SellerPriceAccepted | Patience=Low": 2,
+    "Lakshmi Amma | PlayerAcceptedDeal | Patience=Low": 2,
+    "Lakshmi Amma | SocialGreeting | Patience=Low": 3,
+    "Lakshmi Amma | TransactionFailure | Patience=Low": 3,
+    "Lakshmi Amma | BuyerCounterMiddle | Patience=Low": 3,
+    "Chinnamma Naik | BuyerHoldsFirm | Patience=Low": 5,
+    "Chinnamma Naik | SellerPriceTooHigh | Patience=Low": 3,
+    "Chinnamma Naik | BuyerCounterMiddle | Patience=Low": 3,
+    "Chinnamma Naik | SocialGreeting | Patience=Low": 3,
+    "Chinnamma Naik | TransactionFailure | Patience=Low": 3,
+    "Saraswati Chetti | BuyerHoldsFirm | Patience=Low": 5,
+    "Saraswati Chetti | SellerPriceTooHigh | Patience=Low": 3,
+    "Saraswati Chetti | BuyerCounterMiddle | Patience=Low": 3,
+    "Saraswati Chetti | SocialGreeting | Patience=Low": 3,
+    "Saraswati Chetti | TransactionFailure | Patience=Low": 3,
+    "Abdul Rahman | BuyerHoldsFirm | Patience=Low": 5,
+    "Abdul Rahman | SellerPriceTooHigh | Patience=Low": 3,
+    "Abdul Rahman | BuyerCounterMiddle | Patience=Low": 3,
+    "Abdul Rahman | SocialGreeting | Patience=Low": 3,
+    "Abdul Rahman | TransactionFailure | Patience=Low": 3,
+    "Francisco de Almeida | BuyerHoldsFirm | Patience=Low": 5,
+    "Francisco de Almeida | SellerPriceTooHigh | Patience=Low": 3,
+    "Francisco de Almeida | BuyerCounterMiddle | Patience=Low": 3,
+    "Francisco de Almeida | SocialGreeting | Patience=Low": 3,
+    "Francisco de Almeida | TransactionFailure | Patience=Low": 3,
+    "Father Penteado | BuyerHoldsFirm | Patience=Low": 5,
+    "Father Penteado | SellerPriceTooHigh | Patience=Low": 3,
+    "Father Penteado | BuyerCounterMiddle | Patience=Low": 3,
+    "Father Penteado | SocialGreeting | Patience=Low": 3,
+    "Father Penteado | TransactionFailure | Patience=Low": 3
+  }
+}

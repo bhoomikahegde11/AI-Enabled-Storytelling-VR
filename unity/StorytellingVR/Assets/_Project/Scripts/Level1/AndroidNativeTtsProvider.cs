@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class AndroidNativeTtsProvider : MonoBehaviour, INpcTtsProvider
+public class AndroidNativeTtsProvider : MonoBehaviour, INpcTtsProvider, INpcTtsCancellable
 {
     public bool enableTts = true;
     public float speechRate = 0.95f;
@@ -13,6 +13,20 @@ public class AndroidNativeTtsProvider : MonoBehaviour, INpcTtsProvider
     private bool isInitializing;
     private bool isReady;
     private string pendingText;
+
+    public bool IsSpeakingOrPending
+    {
+        get
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (!string.IsNullOrEmpty(pendingText)) return true;
+            try { return textToSpeech != null && textToSpeech.Call<bool>("isSpeaking"); }
+            catch { return false; }
+#else
+            return false;
+#endif
+        }
+    }
 
     public void Speak(string text)
     {
@@ -48,6 +62,18 @@ public class AndroidNativeTtsProvider : MonoBehaviour, INpcTtsProvider
         }
 #else
         Debug.Log("[TTS] Skipped: Android native TTS only available on Android");
+#endif
+    }
+
+    public void StopSpeaking()
+    {
+        pendingText = null;
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (textToSpeech != null)
+        {
+            try { textToSpeech.Call("stop"); }
+            catch (System.Exception ex) { Debug.LogWarning("[TTS] Stop failed: " + ex.Message); }
+        }
 #endif
     }
 
@@ -97,6 +123,7 @@ public class AndroidNativeTtsProvider : MonoBehaviour, INpcTtsProvider
         if (status != 0)
         {
             Debug.LogWarning("[TTS] Android TTS failed reason: init status " + status);
+            pendingText = null;
             return;
         }
 

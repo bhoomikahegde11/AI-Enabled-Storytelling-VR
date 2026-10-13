@@ -103,14 +103,17 @@ public class Level1VoiceInputManager : MonoBehaviour
     private const float ExtremelyLowPeakThreshold = 0.005f;
     private bool hasLoggedKeyboardVoiceShortcutIgnored;
     private bool hasLoggedKeyboardResetShortcutIgnored;
+    private ConversationTurnLifecycle.VoiceToken activeVoiceToken;
 
     public enum VoiceInputState
     {
         Idle,
         Recording,
+        Recognizing,
         Review
     }
     private VoiceInputState currentState = VoiceInputState.Idle;
+    public VoiceInputState CurrentState => currentState;
 
     private Level1HUDManager hudManager
     {
@@ -127,8 +130,8 @@ public class Level1VoiceInputManager : MonoBehaviour
     private string GetReviewText()
     {
         return IsXRDeviceActive()
-            ? "Press A to send\nPress B to clear"
-            : "Press Enter to send\nPress R to clear";
+            ? "Press A to send\nLT to retry (B clears)"
+            : "Press Enter to send\nV to retry (R clears)";
     }
 
     private bool IsXRDeviceActive()
@@ -168,6 +171,14 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     public void ClearTranscript()
     {
+        if (isListening)
+        {
+            Microphone.End(deviceName);
+            isListening = false;
+            hudManager?.StopListeningAnimation();
+        }
+        chatManager?.EndVoiceWithoutSubmission(activeVoiceToken);
+        if (chatManager != null && chatManager.IsWaitingForPlayer) hudManager?.EnablePlayerTyping();
         if (inputField != null)
         {
             inputField.text = "";
@@ -175,6 +186,39 @@ public class Level1VoiceInputManager : MonoBehaviour
         currentState = VoiceInputState.Idle;
         SetVoiceStatusText(GetIdleText());
         Level1DebugForceAccept.LogVoice("[VOICE CONFIRM] Transcript cleared");
+    }
+
+    public void InvalidateVoiceWork()
+    {
+        if (isListening)
+        {
+            Microphone.End(deviceName);
+            isListening = false;
+            hudManager?.StopListeningAnimation();
+        }
+        recordingClip = null;
+        if (inputField != null) inputField.text = string.Empty;
+        currentState = VoiceInputState.Idle;
+        SetVoiceStatusText(GetIdleText());
+    }
+
+    public void OnGlobalPause()
+    {
+        // Recognition already in flight may finish, but its coroutine waits before publishing review.
+        if (currentState != VoiceInputState.Recording && !isRequestingMicrophonePermission) return;
+        chatManager?.EndVoiceWithoutSubmission(activeVoiceToken);
+        StopAllCoroutines();
+        isRequestingMicrophonePermission = false;
+        InvalidateVoiceWork(); // End capture without trimming, transcribing or submitting it.
+        if (chatManager != null && chatManager.IsWaitingForPlayer) hudManager?.EnablePlayerTyping();
+    }
+
+    public void CancelForSceneExit()
+    {
+        chatManager?.EndVoiceWithoutSubmission(activeVoiceToken);
+        StopAllCoroutines();
+        isRequestingMicrophonePermission = false;
+        InvalidateVoiceWork();
     }
 
     private void Start()
@@ -208,8 +252,21 @@ public class Level1VoiceInputManager : MonoBehaviour
         Level1DebugForceAccept.LogVerbose("[BACKEND] Using URL: " + serverUrl);
     }
 
+    private void OnDisable()
+    {
+        if (isListening) Microphone.End(deviceName);
+        isListening = false;
+        isRequestingMicrophonePermission = false;
+        recordingClip = null;
+        StopAllCoroutines();
+        chatManager?.EndVoiceWithoutSubmission(activeVoiceToken);
+        if (chatManager != null && chatManager.IsWaitingForPlayer) hudManager?.EnablePlayerTyping();
+        currentState = VoiceInputState.Idle;
+    }
+
     private void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         // Auto-discover voiceStatusText if it is null (in case hudManager initialized later)
         if (voiceStatusText == null && hudManager != null)
         {
@@ -265,10 +322,14 @@ public class Level1VoiceInputManager : MonoBehaviour
                 || OVRInput.GetDown(OVRInput.Button.One))
             {
                 Level1DebugForceAccept.LogVoice("[VOICE CONFIRM] Confirm triggered (Enter / A)");
-                if (chatManager != null)
+                if (chatManager != null && inputField != null && !string.IsNullOrWhiteSpace(inputField.text))
                 {
                     Level1DebugForceAccept.LogVoice("[STT] Sent to ChatManager: " + (inputField != null ? inputField.text : string.Empty));
                     chatManager.OnSend();
+                }
+                else
+                {
+                    chatManager?.EndVoiceWithoutSubmission(activeVoiceToken);
                 }
                 currentState = VoiceInputState.Idle;
                 SetVoiceStatusText(GetIdleText());
@@ -296,6 +357,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         {
             if (inputField != null && string.IsNullOrEmpty(inputField.text))
             {
+                chatManager?.EndVoiceWithoutSubmission(activeVoiceToken);
                 currentState = VoiceInputState.Idle;
                 SetVoiceStatusText(GetIdleText());
             }
@@ -304,14 +366,37 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     public void StartListening()
     {
-        if (isListening || isRequestingMicrophonePermission) return;
+        if (PauseMenuController.GameplayInputBlocked || isListening || isRequestingMicrophonePermission) return;
+
+        if (!TryStartVoiceTurn()) return;
 
         if (!Application.HasUserAuthorization(UserAuthorization.Microphone))
         {
             Debug.LogWarning("[STT-QUEST] Failure reason: Microphone permission not granted. Requesting permission.");
-            StartCoroutine(RequestMicrophonePermissionAndStartListening());
+            StartCoroutine(PauseMenuController.RunGameplay(RequestMicrophonePermissionAndStartListening(activeVoiceToken)));
             return;
         }
+
+        BeginCapture(activeVoiceToken);
+    }
+
+    private bool TryStartVoiceTurn()
+    {
+        if (PauseMenuController.GameplayInputBlocked || chatManager == null) return false;
+        if (currentState == VoiceInputState.Review)
+        {
+            // LT replaces only this interaction's current review; never clear a resolved or responding turn.
+            if (chatManager.TurnPhase != ConversationTurnLifecycle.Phase.Reviewing ||
+                !chatManager.IsCurrentVoiceTurn(activeVoiceToken)) return false;
+            ClearTranscript(); // Invalidates the reviewed token and clears its candidate before the next capture.
+        }
+        return chatManager.TryBeginVoiceTurn(out activeVoiceToken);
+    }
+
+    private void BeginCapture(ConversationTurnLifecycle.VoiceToken token)
+    {
+        if (PauseMenuController.GameplayInputBlocked) return;
+        if (chatManager == null || !chatManager.IsCurrentVoiceTurn(token)) return;
 
         Level1DebugForceAccept.LogVoice("[STT] Recording started");
         isListening = true;
@@ -341,13 +426,32 @@ public class Level1VoiceInputManager : MonoBehaviour
         SetVoiceStatusText("Listening...");
 
         // Start Unity Microphone capture
-        recordingClip = Microphone.Start(deviceName, false, maxRecordingDuration, sampleRate);
+        try
+        {
+            recordingClip = Microphone.Start(deviceName, false, maxRecordingDuration, sampleRate);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning("[STT-QUEST] Microphone start failed: " + ex.Message);
+            isListening = false;
+            hudManager?.StopListeningAnimation();
+            RecoverFromVoiceFailure(token, "Sorry, I couldn't start the microphone. Try again.");
+            return;
+        }
+        if (recordingClip == null)
+        {
+            isListening = false;
+            hudManager?.StopListeningAnimation();
+            RecoverFromVoiceFailure(token, "Sorry, I couldn't start the microphone. Try again.");
+            return;
+        }
         Level1DebugForceAccept.LogVoice("[STT-QUEST] Microphone device: " + ResolveMicrophoneDeviceName());
         Level1DebugForceAccept.LogVoice("[STT-QUEST] Sample rate: " + sampleRate);
     }
 
     public void StopListening()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (!isListening) return;
 
         isListening = false;
@@ -364,18 +468,17 @@ public class Level1VoiceInputManager : MonoBehaviour
         // Stop Unity Microphone capture
         Microphone.End(deviceName);
 
+        if (chatManager == null || !chatManager.TryAdvanceVoiceTurn(activeVoiceToken, ConversationTurnLifecycle.Phase.Recognizing))
+            return;
+        currentState = VoiceInputState.Recognizing;
+
         // Enforce minimum duration constraint of 0.5s
         if (duration < 0.5f)
         {
             Debug.LogWarning("[STT] Recording too short (< 0.5s), ignored.");
             Debug.LogWarning("[STT-QUEST] Recording too short");
             Debug.LogWarning("[STT-QUEST] Failure reason: Recording duration below 0.5 seconds.");
-            if (chatManager != null && chatManager.hudManager != null)
-            {
-                chatManager.hudManager.EnablePlayerTyping();
-            }
-            currentState = VoiceInputState.Idle;
-            SetVoiceStatusText(GetIdleText());
+            RecoverFromVoiceFailure(activeVoiceToken, "Sorry, I didn't catch that. Try again.");
             return;
         }
 
@@ -383,18 +486,23 @@ public class Level1VoiceInputManager : MonoBehaviour
         {
             Debug.LogError("[STT] Microphone recording failed (clip is null)!");
             Debug.LogError("[STT-QUEST] Failure reason: Microphone recording clip is null.");
-            if (chatManager != null && chatManager.hudManager != null)
-            {
-                chatManager.hudManager.EnablePlayerTyping();
-            }
-            currentState = VoiceInputState.Idle;
-            SetVoiceStatusText(GetIdleText());
+            RecoverFromVoiceFailure(activeVoiceToken, "Sorry, I didn't catch that. Try again.");
             return;
         }
 
         SetVoiceStatusText("Understanding speech...");
 
-        AudioClip trimmedClip = CreateTrimmedClip(recordingClip, duration);
+        AudioClip trimmedClip;
+        try
+        {
+            trimmedClip = CreateTrimmedClip(recordingClip, duration);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning("[STT-QUEST] Could not read recording: " + ex.Message);
+            RecoverFromVoiceFailure(activeVoiceToken, "Sorry, I didn't catch that. Try again.");
+            return;
+        }
         if (trimmedClip != null)
         {
             LogAudioDiagnostics(trimmedClip);
@@ -402,11 +510,12 @@ public class Level1VoiceInputManager : MonoBehaviour
             {
                 SaveRecordingDebug(trimmedClip);
             }
-            StartCoroutine(TranscribeAudioRoutine(trimmedClip));
+            StartCoroutine(PauseMenuController.RunGameplay(TranscribeAudioRoutine(trimmedClip, activeVoiceToken)));
         }
         else
         {
             Debug.LogError("[STT-QUEST] Failure reason: Trimmed recording clip is null.");
+            RecoverFromVoiceFailure(activeVoiceToken, "Sorry, I didn't catch that. Try again.");
         }
     }
 
@@ -426,18 +535,13 @@ public class Level1VoiceInputManager : MonoBehaviour
         return trimmedClip;
     }
 
-    private IEnumerator TranscribeAudioRoutine(AudioClip clip)
+    private IEnumerator TranscribeAudioRoutine(AudioClip clip, ConversationTurnLifecycle.VoiceToken token)
     {
         speechProvider = ResolveSpeechProvider();
         if (speechProvider == null)
         {
             Debug.LogError("[STT-QUEST] Failure reason: No speech provider available.");
-            currentState = VoiceInputState.Idle;
-            SetVoiceStatusText(GetIdleText());
-            if (chatManager != null && chatManager.hudManager != null)
-            {
-                chatManager.hudManager.EnablePlayerTyping();
-            }
+            RecoverFromVoiceFailure(token, "Sorry, I didn't catch that. Try again.");
             yield break;
         }
 
@@ -454,13 +558,39 @@ public class Level1VoiceInputManager : MonoBehaviour
         }
 
         Level1DebugForceAccept.LogVoice("[STT] Transcription started");
-        var task = speechProvider.Transcribe(clip);
+        System.Threading.Tasks.Task<string> task;
+        try
+        {
+            task = speechProvider.Transcribe(clip);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning("[STT] Provider failed: " + ex.Message);
+            RecoverFromVoiceFailure(token, "Sorry, I didn't catch that. Try again.");
+            yield break;
+        }
+        if (task == null)
+        {
+            RecoverFromVoiceFailure(token, "Sorry, I didn't catch that. Try again.");
+            yield break;
+        }
         while (!task.IsCompleted)
         {
+            if (chatManager == null || !chatManager.IsCurrentVoiceTurn(token))
+            {
+                Debug.Log($"[VOICE TURN] discarded stale result session={token.Interaction} turn={token.Turn}");
+                yield break;
+            }
             yield return null;
         }
 
-        string transcript = task.IsFaulted || task.Result == null ? "" : task.Result.Trim();
+        if (chatManager == null || !chatManager.IsCurrentVoiceTurn(token))
+        {
+            Debug.Log($"[VOICE TURN] discarded stale result session={token.Interaction} turn={token.Turn}");
+            yield break;
+        }
+
+        string transcript = task.IsFaulted || task.IsCanceled || task.Result == null ? "" : task.Result.Trim();
         string rawTranscript = usingWhisperProvider ? LocalSpeechProvider.LastRawTranscription : transcript;
         string normalizedTranscript = !string.IsNullOrWhiteSpace(transcript) ? InputNormalizer.Normalize(transcript, false) : string.Empty;
 
@@ -472,6 +602,10 @@ public class Level1VoiceInputManager : MonoBehaviour
         {
             Debug.LogError("[STT-QUEST] Failure reason: " + task.Exception?.GetBaseException().Message);
         }
+        else if (task.IsCanceled)
+        {
+            Debug.LogWarning("[STT-QUEST] Transcription was cancelled.");
+        }
         else if (string.IsNullOrWhiteSpace(transcript))
         {
             string reason = usingWhisperProvider ? LocalSpeechProvider.LastFailureReason : "Transcription returned empty text.";
@@ -480,6 +614,7 @@ public class Level1VoiceInputManager : MonoBehaviour
 
         if (IsValidTranscript(transcript))
         {
+            if (!chatManager.TryAdvanceVoiceTurn(token, ConversationTurnLifecycle.Phase.Reviewing)) yield break;
             Level1DebugForceAccept.LogVoice("[VOICE CONFIRM] Awaiting player approval");
             Level1DebugForceAccept.LogVoice("[STT] Transcript ready for confirm: " + transcript);
 
@@ -487,6 +622,8 @@ public class Level1VoiceInputManager : MonoBehaviour
             {
                 inputField.text = transcript;
             }
+
+            if (!chatManager.IsCurrentVoiceTurn(token)) yield break;
 
             currentState = VoiceInputState.Review;
             SetVoiceStatusText(GetReviewText());
@@ -497,8 +634,8 @@ public class Level1VoiceInputManager : MonoBehaviour
             {
                 Debug.LogWarning("[STT-QUEST] Failure reason: Transcript rejected by validation.");
             }
-            currentState = VoiceInputState.Idle;
-            SetVoiceStatusText((speechProviderOverride != null || usingWhisperProvider) ? GetIdleText() : "Could not hear clearly. Please repeat.");
+            RecoverFromVoiceFailure(token, "Sorry, I didn't catch that. Try again.");
+            yield break;
         }
 
         // Re-enable player typing after STT processes
@@ -508,7 +645,40 @@ public class Level1VoiceInputManager : MonoBehaviour
         }
     }
 
-    private IEnumerator RequestMicrophonePermissionAndStartListening()
+    private void RecoverFromVoiceFailure(ConversationTurnLifecycle.VoiceToken token, string message)
+    {
+        if (chatManager == null || !chatManager.IsCurrentVoiceTurn(token)) return;
+        if (inputField != null) inputField.text = string.Empty;
+        currentState = VoiceInputState.Idle;
+        SetVoiceStatusText(message);
+        chatManager.EndVoiceWithoutSubmission(token);
+        hudManager?.EnablePlayerTyping();
+    }
+
+    #if UNITY_EDITOR
+    // Uses the same turn-start path as LT without accessing microphone hardware.
+    public bool BeginSimulatedCapture(out ConversationTurnLifecycle.VoiceToken token)
+    {
+        bool started = TryStartVoiceTurn();
+        token = activeVoiceToken;
+        if (started) currentState = VoiceInputState.Recording;
+        return started;
+    }
+
+    // PlayMode soak tests enter the real recognition/review path without opening a microphone.
+    public bool BeginSimulatedRecognition(ConversationTurnLifecycle.VoiceToken token)
+    {
+        if (chatManager == null || !chatManager.TryAdvanceVoiceTurn(token, ConversationTurnLifecycle.Phase.Recognizing))
+            return false;
+        activeVoiceToken = token;
+        currentState = VoiceInputState.Recognizing;
+        SetVoiceStatusText("Understanding speech...");
+        StartCoroutine(PauseMenuController.RunGameplay(TranscribeAudioRoutine(null, token)));
+        return true;
+    }
+    #endif
+
+    private IEnumerator RequestMicrophonePermissionAndStartListening(ConversationTurnLifecycle.VoiceToken token)
     {
         isRequestingMicrophonePermission = true;
         SetVoiceStatusText("Microphone permission required");
@@ -522,18 +692,20 @@ public class Level1VoiceInputManager : MonoBehaviour
 
         isRequestingMicrophonePermission = false;
 
+        if (chatManager == null || !chatManager.IsCurrentVoiceTurn(token)) yield break;
+
         bool hasPermission = Application.HasUserAuthorization(UserAuthorization.Microphone);
         Level1DebugForceAccept.LogVoice("[STT-QUEST] Microphone permission: " + hasPermission);
 
         if (!hasPermission)
         {
             Debug.LogWarning("[STT-QUEST] Failure reason: Microphone permission denied.");
-            SetVoiceStatusText("Microphone permission denied");
+            RecoverFromVoiceFailure(token, "Microphone permission denied");
             yield break;
         }
 
         SetVoiceStatusText(GetIdleText());
-        StartListening();
+        BeginCapture(token);
     }
 
     private void LogMicrophoneDiagnostics()

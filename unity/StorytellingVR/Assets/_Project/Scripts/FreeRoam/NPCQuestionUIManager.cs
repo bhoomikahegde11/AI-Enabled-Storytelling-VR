@@ -165,6 +165,7 @@ public class NPCQuestionUIManager : MonoBehaviour
 
     private void AskQuestion(int index)
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (IsAnswerPlaying)
             return;
 
@@ -187,7 +188,7 @@ public class NPCQuestionUIManager : MonoBehaviour
         SetCanvasVisible(false);
 
         answerRoutine =
-            StartCoroutine(AnswerThenContinue(index));
+            StartCoroutine(PauseMenuController.RunGameplay(AnswerThenContinue(index)));
     }
 
     private IEnumerator AnswerThenContinue(int index)

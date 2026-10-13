@@ -98,14 +98,14 @@ public class SpiceTutorialManager : MonoBehaviour
 
     IEnumerator OpeningSequence()
     {
-        yield return StartCoroutine(ShowDialogueSequence(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(ShowDialogueSequence(
             customerName,
             Color.white,
             customerAudioSource,
             customerRequestClip,
             CustomerRequestLineId,
             "Could you fill one bag of " + GetRequestedSpiceName() + " for me?"
-        ));
+        )));
 
         
     }
@@ -224,29 +224,29 @@ public class SpiceTutorialManager : MonoBehaviour
 
         bagFilled = true;
         EnsureCanRunCoroutines();
-        StartCoroutine(HidePromptAfterDelay(completionPromptHoldSeconds));
+        StartCoroutine(PauseMenuController.RunGameplay(HidePromptAfterDelay(completionPromptHoldSeconds)));
         StartDialogueSequence(CompletionSequence());
     }
 
     IEnumerator CompletionSequence()
     {
-        yield return StartCoroutine(ShowDialogueSequence(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(ShowDialogueSequence(
             customerName,
             Color.white,
             customerAudioSource,
             customerThanksClip,
             CustomerThanksLineId,
             "Thank you, Merchant."
-        ));
+        )));
 
-        yield return StartCoroutine(ShowDialogueSequence(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(ShowDialogueSequence(
             "Bhaskara",
             Color.yellow,
             narratorAudioSource,
             narratorCompletedClip,
             NarratorCompletedLineId,
             "Good. You have learned how to identify the spices and prepare them for trade. Now, the customers will arrive. Handle them as you have been taught."
-        ));
+        )));
 
         if (GameManager.Instance != null)
         {
@@ -418,7 +418,7 @@ public class SpiceTutorialManager : MonoBehaviour
             StopCoroutine(dialogueCoroutine);
         }
 
-        dialogueCoroutine = StartCoroutine(RunDialogueSequence(sequence));
+        dialogueCoroutine = StartCoroutine(PauseMenuController.RunGameplay(RunDialogueSequence(sequence)));
     }
 
     void EnsureCanRunCoroutines()
@@ -436,7 +436,7 @@ public class SpiceTutorialManager : MonoBehaviour
 
     IEnumerator RunDialogueSequence(IEnumerator sequence)
     {
-        yield return StartCoroutine(sequence);
+        yield return StartCoroutine(PauseMenuController.RunGameplay(sequence));
         dialogueCoroutine = null;
     }
 

@@ -117,7 +117,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         {
             SetItemInteraction(lampRayInteractable, lampOrVase, false);
             SetItemInteraction(compassRayInteractable, foreignTrinket, false);
-            StartCoroutine(EnforceInitialInteractionLock());
+            StartCoroutine(PauseMenuController.RunGameplay(EnforceInitialInteractionLock()));
         }
     }
 
@@ -193,6 +193,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         MeeraInspectableItem item
     )
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (!inspectionSequenceActive)
         {
             Debug.Log(
@@ -234,9 +235,9 @@ public class MeeraInspectionSequenceController : MonoBehaviour
             return;
         }
 
-        StartCoroutine(
+        StartCoroutine(PauseMenuController.RunGameplay(
             InspectItemSequence(item)
-        );
+        ));
     }
 
     private IEnumerator InspectItemSequence(
@@ -369,7 +370,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
                 "NarratorUIManager.Instance is missing."
             );
 
-            yield return new WaitForSecondsRealtime(
+            yield return PauseMenuController.WaitRealtime(
                 normalItemDialogueDuration
             );
         }
@@ -399,7 +400,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
                 "NarratorUIManager.Instance is missing."
             );
 
-            yield return new WaitForSecondsRealtime(
+            yield return PauseMenuController.WaitRealtime(
                 bookDialogueDuration
             );
 
@@ -415,7 +416,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
             playerThought
         );
 
-        yield return new WaitForSecondsRealtime(
+        yield return PauseMenuController.WaitRealtime(
             pauseBetweenBookLines
         );
 
@@ -427,7 +428,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
             meeraLine
         );
 
-        yield return new WaitForSecondsRealtime(
+        yield return PauseMenuController.WaitRealtime(
             pauseBetweenBookLines
         );
 
@@ -491,7 +492,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
 
         onAllItemsInspected?.Invoke();
 
-        StartCoroutine(PostInspectionQuestionFlow());
+        StartCoroutine(PauseMenuController.RunGameplay(PostInspectionQuestionFlow()));
     }
 
     public void ResetInspectionSequence()
@@ -652,7 +653,7 @@ public class MeeraInspectionSequenceController : MonoBehaviour
         }
         else
         {
-            yield return new WaitForSecondsRealtime(3f);
+            yield return PauseMenuController.WaitRealtime(3f);
         }
 
         if (meeraNPCInteraction != null)

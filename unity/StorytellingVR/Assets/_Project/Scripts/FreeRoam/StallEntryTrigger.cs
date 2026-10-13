@@ -31,6 +31,7 @@ public class StallEntryTrigger : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (!playerInside)
             return;
 

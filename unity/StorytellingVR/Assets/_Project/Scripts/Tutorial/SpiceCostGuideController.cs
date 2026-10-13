@@ -19,6 +19,7 @@ public class SpiceCostGuideController : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (!guideUnlocked)
             return;
 

@@ -32,6 +32,7 @@ public class VRInspectRotate : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (rightHandAnchor == null)
             return;
 

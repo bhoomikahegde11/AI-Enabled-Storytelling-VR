@@ -72,7 +72,7 @@ public class SpiceIntroSequence : MonoBehaviour
 
     private void Start()
     {
-        StartCoroutine(PlaySequence());
+        StartCoroutine(PauseMenuController.RunGameplay(PlaySequence()));
     }
 
     private IEnumerator PlaySequence()

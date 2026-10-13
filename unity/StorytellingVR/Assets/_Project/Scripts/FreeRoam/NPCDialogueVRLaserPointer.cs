@@ -102,6 +102,7 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         EnsureButtonColliders();
 
         if (!IsControllerConnected())

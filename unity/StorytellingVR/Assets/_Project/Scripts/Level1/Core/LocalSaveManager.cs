@@ -45,6 +45,11 @@ public class LocalSaveManager
     public const string DefaultCurrentSceneName = "";
     public const int DefaultProgressionIndex = -1;
 
+    #if UNITY_EDITOR
+    // Test fixtures can isolate Level 1's real save writes from the developer's profile.
+    public static string EditorTestSaveDirectoryOverride { get; set; }
+    #endif
+
     private readonly string savePath;
     public string SavePath => savePath;
 
@@ -137,6 +142,7 @@ public class LocalSaveManager
     public static string GetActiveSaveDirectory()
     {
         #if UNITY_EDITOR
+        if (!string.IsNullOrEmpty(EditorTestSaveDirectoryOverride)) return EditorTestSaveDirectoryOverride;
         return Path.Combine(Application.dataPath, "_Project", "SaveStates", "Level1");
         #else
         return Application.persistentDataPath;

@@ -89,7 +89,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         PrepareInitialState();
 
         if (playIntroOnStart)
-            activeSequence = StartCoroutine(IntroSequence());
+            activeSequence = StartCoroutine(PauseMenuController.RunGameplay(IntroSequence()));
     }
 
     private void ResolveMissingReferences()
@@ -132,7 +132,7 @@ public class FreeRoamStoryManager : MonoBehaviour
     {
         transitionInProgress = true;
 
-        yield return new WaitForSecondsRealtime(startupDelay);
+        yield return PauseMenuController.WaitRealtime(startupDelay);
 
         SetStage(StoryStage.Intro);
 
@@ -145,7 +145,7 @@ public class FreeRoamStoryManager : MonoBehaviour
             5f
         );
 
-        yield return new WaitForSecondsRealtime(0.5f);
+        yield return PauseMenuController.WaitRealtime(0.5f);
 
         yield return PlayNarration(
             "NARRATOR_FREEROAM_INTRO_02",
@@ -190,7 +190,7 @@ public class FreeRoamStoryManager : MonoBehaviour
             "Learn to move using teleport"
         );
 
-        yield return new WaitForSecondsRealtime(1.5f);
+        yield return PauseMenuController.WaitRealtime(1.5f);
 
         SetStage(StoryStage.TalkToLocal);
 
@@ -278,7 +278,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         );
 
         // Let the foreigner's conversation visually settle.
-        yield return new WaitForSecondsRealtime(0.8f);
+        yield return PauseMenuController.WaitRealtime(0.8f);
 
         // Meera calls from somewhere nearby.
         // Her identity remains hidden for now.
@@ -290,7 +290,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         );
 
         // Small pause between the distant call and narrator response.
-        yield return new WaitForSecondsRealtime(0.6f);
+        yield return PauseMenuController.WaitRealtime(0.6f);
 
         yield return PlayNarration(
             "NARRATOR_INTERESTING_STALL_01",
@@ -539,9 +539,9 @@ public class FreeRoamStoryManager : MonoBehaviour
             return;
         }
 
-        activeSequence = StartCoroutine(
+        activeSequence = StartCoroutine(PauseMenuController.RunGameplay(
             ManagedSequence(sequence)
-        );
+        ));
     }
 
     private IEnumerator ManagedSequence(IEnumerator sequence)
@@ -550,7 +550,7 @@ public class FreeRoamStoryManager : MonoBehaviour
 
         Debug.Log("[FREE ROAM STORY] Managed sequence START");
 
-        yield return StartCoroutine(sequence);
+        yield return StartCoroutine(PauseMenuController.RunGameplay(sequence));
 
         Debug.Log("[FREE ROAM STORY] Managed sequence END");
 
@@ -579,7 +579,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         else
         {
             Debug.Log($"[{speaker}] {line}");
-            yield return new WaitForSecondsRealtime(duration);
+            yield return PauseMenuController.WaitRealtime(duration);
         }
     }
 
@@ -599,7 +599,7 @@ public class FreeRoamStoryManager : MonoBehaviour
         else
         {
             Debug.Log($"[{speaker}] {line}");
-            yield return new WaitForSecondsRealtime(duration);
+            yield return PauseMenuController.WaitRealtime(duration);
         }
     }
 

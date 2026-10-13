@@ -87,6 +87,7 @@ public class NPCInteraction : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (!playerNearby && !inConversation)
             return;
 
@@ -165,7 +166,7 @@ public class NPCInteraction : MonoBehaviour
             indicator.Hide();
 
         conversationRoutine =
-            StartCoroutine(ConversationFlowRoutine());
+            StartCoroutine(PauseMenuController.RunGameplay(ConversationFlowRoutine()));
 
         Debug.Log(
             $"[NPC] Conversation started for {storyNPCType}."
@@ -403,7 +404,7 @@ public class NPCInteraction : MonoBehaviour
         else
         {
             conversationRoutine =
-                StartCoroutine(ConversationFlowRoutine());
+                StartCoroutine(PauseMenuController.RunGameplay(ConversationFlowRoutine()));
 
             Debug.Log(
                 "[NPC] Question conversation started (with opening dialogue)."
@@ -431,7 +432,7 @@ public class NPCInteraction : MonoBehaviour
         if (NPCQuestionUIManager.Instance != null)
             NPCQuestionUIManager.Instance.Close();
 
-        StartCoroutine(ClosingConversationRoutine());
+        StartCoroutine(PauseMenuController.RunGameplay(ClosingConversationRoutine()));
 
         Debug.Log("[NPC] Closing dialogue started.");
     }

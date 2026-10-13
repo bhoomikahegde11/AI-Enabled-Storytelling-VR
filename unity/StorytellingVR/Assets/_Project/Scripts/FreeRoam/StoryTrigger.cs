@@ -43,6 +43,7 @@ public class StoryTrigger : MonoBehaviour
     [ContextMenu("Trigger Story Event")]
     public void TriggerStoryEvent()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (hasTriggered && triggerOnlyOnce)
             return;
 

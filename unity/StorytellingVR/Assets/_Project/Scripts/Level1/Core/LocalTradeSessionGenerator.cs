@@ -24,7 +24,9 @@ public class LocalTradeSessionGenerator
 {
     private static readonly string[] WealthTypes = { "Low", "Medium", "High", "Very High" };
     private static readonly int[] QuantityOptions = { 280, 560, 1400, 2800 };
-    private static readonly string[] SpiceKeys = { "pepper", "clove", "cinnamon", "cardamom" };
+    private static readonly string[] SpiceKeys = { "pepper", "cinnamon", "cardamom" };
+    public static IReadOnlyList<string> PhysicalTradeSpiceKeys { get; } = System.Array.AsReadOnly(SpiceKeys);
+    private string previousCharacterId;
     private readonly DialogueCharacterRegistry dialogueCharacterRegistry = new DialogueCharacterRegistry();
 
     public LocalGeneratedTradeSession Generate(MarketManager marketManager, LocalProfileData profile, MarketEventData activeEvent, string forcedCharacterId = "")
@@ -46,6 +48,7 @@ public class LocalTradeSessionGenerator
         }
 
         string buyerName = selectedCharacter != null ? selectedCharacter.displayName : "Abdul Rahman";
+        previousCharacterId = selectedCharacter?.characterId;
         string buyerOrigin = selectedCharacter != null ? selectedCharacter.buyerOrigin : "Arab Caravan Trader";
         string buyerPersonality = GetEffectivePersonalityForReputation(
             selectedCharacter != null ? selectedCharacter.buyerPersonality : "Friendly",
@@ -92,7 +95,9 @@ public class LocalTradeSessionGenerator
 
     private DialogueCharacterProfile GetWeightedCharacterForReputation(int reputation)
     {
-        IReadOnlyList<DialogueCharacterProfile> supportedProfiles = dialogueCharacterRegistry.GetSupportedCharacterProfiles();
+        var supportedProfiles = new List<DialogueCharacterProfile>(dialogueCharacterRegistry.GetSupportedCharacterProfiles());
+        if (supportedProfiles.Count > 1)
+            supportedProfiles.RemoveAll(character => character.characterId == previousCharacterId);
         if (supportedProfiles == null || supportedProfiles.Count == 0)
         {
             return dialogueCharacterRegistry.GetRandomRegisteredCharacter();

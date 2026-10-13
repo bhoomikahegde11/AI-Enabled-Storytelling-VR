@@ -22,5 +22,17 @@ public enum DialogueScenario
     TransactionSuccess,
     TransactionFailure,
     TimePressure,
-    Unknown
+    Unknown,
+    // Presentation-only distinctions; appended to preserve existing enum values.
+    AskSellerPrice,
+    QuantityChanged,
+    OfferReason,
+    AskName,
+    AskOrigin,
+    WeatherQuestion,
+    HistoryKing,
+    HistoryTemple,
+    IdleReminderFirst,
+    IdleReminderSecond,
+    HostileWarning
 }

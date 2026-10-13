@@ -148,12 +148,13 @@ public class TutorialManager : MonoBehaviour
         if (hudManager != null)
             hudManager.HideCurrentTrade();
 
-        StartCoroutine(TutorialSequence());
+        StartCoroutine(PauseMenuController.RunGameplay(TutorialSequence()));
     }
 
 
     void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if ((OVRInput.GetDown(OVRInput.Button.Four) ||
              Input.GetKeyDown(KeyCode.Y)) &&
             hudManager != null)
@@ -244,7 +245,7 @@ public class TutorialManager : MonoBehaviour
         // RAHIM ARRIVES
         //--------------------------------------------------
 
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogueSequenceWithTimings(
                 "Rahim",
                 customerAudioSource,
@@ -267,30 +268,30 @@ public class TutorialManager : MonoBehaviour
                     8.8f
                 }
             )
-        );
+        ));
 
 
         //--------------------------------------------------
         // CURRENT TRADE PANEL TUTORIAL
         //--------------------------------------------------
 
-        yield return StartCoroutine(TeachCurrentTradePanel());
+        yield return StartCoroutine(PauseMenuController.RunGameplay(TeachCurrentTradePanel()));
 
 
         //--------------------------------------------------
         // STALL OWNER EXPLAINS TRADING
         //--------------------------------------------------
 
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
     MerchantExplainNegotiationSequence()
-);
+));
 
 
         //--------------------------------------------------
         // STALL OWNER ASKS PLAYER TO TRY HIGH PRICE
         //--------------------------------------------------
 
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogueSequence(
                 TutorialMerchantSpeaker,
                 merchantAudioSource,
@@ -299,7 +300,7 @@ public class TutorialManager : MonoBehaviour
 
                 "Let me show you what happens when a merchant asks for too much. Offer Rahim 70 Varahas and watch how he responds."
             )
-        );
+        ));
 
 
         //--------------------------------------------------
@@ -334,7 +335,7 @@ public class TutorialManager : MonoBehaviour
         // MERCHANT EXPLAINS WHY PLAYER SHOULD CHECK TRADE
         //--------------------------------------------------
 
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogueSequence(
                 TutorialMerchantSpeaker,
                 merchantAudioSource,
@@ -343,7 +344,7 @@ public class TutorialManager : MonoBehaviour
 
                 "Before you answer, consider what Rahim has asked for. A wise merchant always remembers what his goods have cost him before naming a price."
             )
-        );
+        ));
 
 
         //--------------------------------------------------
@@ -361,11 +362,11 @@ public class TutorialManager : MonoBehaviour
         // MERCHANT EXPLAINS THE PANEL
         //--------------------------------------------------
 
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogueSequence(
                 "Narrator", merchantAudioSource, merchantExplainTradePanelClip, NarratorExplainTradePanelLineId, "The Current Trade panel shows the customer's request and the cost of the spice. You can check it whenever you need."
             )
-        );
+        ));
     }
 
 
@@ -421,9 +422,9 @@ public class TutorialManager : MonoBehaviour
 
             ChangeRespect(-40);
 
-            StartCoroutine(
+            StartCoroutine(PauseMenuController.RunGameplay(
                 HighPriceReactionSequence(offer)
-            );
+            ));
         }
         else
         {
@@ -445,7 +446,7 @@ public class TutorialManager : MonoBehaviour
         // RAHIM REACTS
         //--------------------------------------------------
 
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogueSequence(
                 "Rahim",
                 customerAudioSource,
@@ -455,14 +456,14 @@ public class TutorialManager : MonoBehaviour
                 "That price is outrageous, merchant.",
                 "Surely you can offer something more reasonable."
             )
-        );
+        ));
 
 
         //--------------------------------------------------
         // STALL OWNER EXPLAINS THE CONSEQUENCE
         //--------------------------------------------------
 
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogueSequence(
                 TutorialMerchantSpeaker,
                 merchantAudioSource,
@@ -471,7 +472,7 @@ public class TutorialManager : MonoBehaviour
 
                 "You see? Ask for too much and you risk losing the customer's trust. Your Reputation has fallen. Profit matters, but a merchant known for unfair prices will soon lose customers. Try again. This time, choose a fairer price while still earning a profit."
             )
-        );
+        ));
 
 
         //--------------------------------------------------
@@ -496,32 +497,32 @@ public class TutorialManager : MonoBehaviour
 
         if (offer >= 22 && offer <= 30)
         {
-            StartCoroutine(
+            StartCoroutine(PauseMenuController.RunGameplay(
                 FairPriceSequence(offer)
-            );
+            ));
         }
         else if (offer > 30)
         {
             ChangeRespect(-20);
 
-            StartCoroutine(
+            StartCoroutine(PauseMenuController.RunGameplay(
                 TooHighAgainSequence(offer)
-            );
+            ));
         }
         else if (offer < 18)
         {
             coins += offer;
             UpdateMoneyUI();
 
-            StartCoroutine(
+            StartCoroutine(PauseMenuController.RunGameplay(
                 TooLowSequence(offer)
-            );
+            ));
         }
         else
         {
-            StartCoroutine(
+            StartCoroutine(PauseMenuController.RunGameplay(
                 FairPriceSequence(offer)
-            );
+            ));
         }
     }
 
@@ -536,7 +537,7 @@ public class TutorialManager : MonoBehaviour
         // RAHIM ACCEPTS
         //--------------------------------------------------
 
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogueSequence(
                 "Rahim",
                 customerAudioSource,
@@ -546,7 +547,7 @@ public class TutorialManager : MonoBehaviour
                 "Hmm... that seems much more reasonable.",
                 "Very well. I accept your offer."
             )
-        );
+        ));
 
 
         //--------------------------------------------------
@@ -563,7 +564,7 @@ public class TutorialManager : MonoBehaviour
         // STALL OWNER CONCLUDES TUTORIAL
         //--------------------------------------------------
 
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogueSequence(
                 TutorialMerchantSpeaker,
                 merchantAudioSource,
@@ -572,7 +573,7 @@ public class TutorialManager : MonoBehaviour
 
                 "Well done. You earned a profit without sacrificing the customer's trust. Remember that balance. A good merchant builds wealth, but a great merchant builds a reputation as well."
             )
-        );
+        ));
 
         FinishTutorial();
     }
@@ -588,7 +589,7 @@ public class TutorialManager : MonoBehaviour
         // RAHIM REACTS
         //--------------------------------------------------
 
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogueSequence(
                 "Rahim",
                 customerAudioSource,
@@ -598,14 +599,14 @@ public class TutorialManager : MonoBehaviour
                 "That price is still too expensive.",
                 "At those rates, I may take my business elsewhere."
             )
-        );
+        ));
 
 
         //--------------------------------------------------
         // STALL OWNER GIVES ADVICE
         //--------------------------------------------------
 
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogueSequence(
                 TutorialMerchantSpeaker,
                 merchantAudioSource,
@@ -614,7 +615,7 @@ public class TutorialManager : MonoBehaviour
 
                 "Still too high. Your Reputation continues to fall. Remember, the cardamom cost us 18 Varahas. Try a price closer to 25 Varahas."
             )
-        );
+        ));
 
 
         //--------------------------------------------------
@@ -639,7 +640,7 @@ public class TutorialManager : MonoBehaviour
         // RAHIM ACCEPTS
         //--------------------------------------------------
 
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogueSequence(
                 "Rahim",
                 customerAudioSource,
@@ -649,7 +650,7 @@ public class TutorialManager : MonoBehaviour
                 "That is a very generous offer.",
                 "I happily accept your price."
             )
-        );
+        ));
 
 
         //--------------------------------------------------
@@ -666,7 +667,7 @@ public class TutorialManager : MonoBehaviour
         // STALL OWNER EXPLAINS LOW PROFIT
         //--------------------------------------------------
 
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogueSequence(
                 TutorialMerchantSpeaker,
                 merchantAudioSource,
@@ -675,7 +676,7 @@ public class TutorialManager : MonoBehaviour
 
                 "Rahim is certainly pleased, but look at what you earned. Selling below your cost may satisfy a customer, but it cannot sustain a merchant. You must protect your profit while still treating customers fairly."
             )
-        );
+        ));
 
         FinishTutorial();
     }
@@ -769,7 +770,7 @@ public class TutorialManager : MonoBehaviour
     }
     IEnumerator MerchantExplainNegotiationSequence()
     {
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogueSequence(
                 TutorialMerchantSpeaker,
                 merchantAudioSource,
@@ -778,7 +779,7 @@ public class TutorialManager : MonoBehaviour
 
                 "Rahim wants one veesai of cardamom. It cost us 18 Varahas. You should earn a profit, but do not forget that a merchant's reputation matters too. Treat customers unfairly, and word will travel quickly through the market."
             )
-        );
+        ));
 
         if (hudManager != null)
         {
@@ -786,7 +787,7 @@ public class TutorialManager : MonoBehaviour
             hudManager.PulseRespectPanel(3f);
         }
 
-        yield return StartCoroutine(
+        yield return StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogueSequence(
                 "Narrator",
                 merchantAudioSource,
@@ -795,7 +796,7 @@ public class TutorialManager : MonoBehaviour
 
                 "To your left, you can keep track of your Reputation, while your earnings are shown to your right. Watch them closely - both will change with the choices you make while trading."
             )
-        );
+        ));
     }
     private void ShowTutorialDialogue(
     string speaker,

@@ -59,6 +59,7 @@ public class CoinInteraction : MonoBehaviour
 
     void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (
             OVRInput.GetDown(
                 OVRInput.Button.PrimaryIndexTrigger,
@@ -76,6 +77,7 @@ public class CoinInteraction : MonoBehaviour
 
     public void TakeCoin()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (instructionPrompt != null)
         {
             instructionPrompt.Hide();
@@ -96,9 +98,7 @@ public class CoinInteraction : MonoBehaviour
             coinCollider.enabled = false;
 
 
-        StartCoroutine(
-            MoveToInspectMode()
-        );
+        StartCoroutine(PauseMenuController.RunGameplay(MoveToInspectMode()));
     }
 
 

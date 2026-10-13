@@ -183,6 +183,7 @@ public class Level1HUDManager : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         // Toggle ledger with TAB key (ignored if player is typing in inputField)
         if (Input.GetKeyDown(KeyCode.Tab))
         {
@@ -380,6 +381,18 @@ public class Level1HUDManager : MonoBehaviour
         if (inputVisibilityCoroutine != null)
         {
             StopCoroutine(inputVisibilityCoroutine);
+            inputVisibilityCoroutine = null;
+        }
+
+        if (!isActiveAndEnabled)
+        {
+            if (inputCanvasGroup != null)
+            {
+                inputCanvasGroup.alpha = visible ? 1f : 0f;
+                inputCanvasGroup.interactable = visible;
+                inputCanvasGroup.blocksRaycasts = visible;
+            }
+            return;
         }
 
         inputVisibilityCoroutine = StartCoroutine(FadePlayerInputPanelRoutine(visible));
@@ -825,6 +838,14 @@ public class Level1HUDManager : MonoBehaviour
             if (reputationAnimCoroutine != null)
             {
                 StopCoroutine(reputationAnimCoroutine);
+                reputationAnimCoroutine = null;
+            }
+
+            if (!isActiveAndEnabled)
+            {
+                reputationSlider.value = respect;
+                if (reputationRankText != null) reputationRankText.text = GetReputationRank(respect);
+                return;
             }
 
             reputationAnimCoroutine =
@@ -1128,6 +1149,7 @@ public class Level1HUDManager : MonoBehaviour
     {
         if (tradeCompletePanel == null) return;
         tradeCompletePanel.SetActive(true);
+        string buyer = !string.IsNullOrWhiteSpace(transaction?.buyer_name) ? transaction.buyer_name : "Customer";
 
         if (tradeTitleText != null)
         {
@@ -1135,7 +1157,7 @@ public class Level1HUDManager : MonoBehaviour
         }
         if (tradeRewardText != null)
         {
-            tradeRewardText.text = isSuccess ? $"+{transaction.earned} Varahas" : "Customer Left";
+            tradeRewardText.text = isSuccess ? $"+{transaction.earned} Varahas" : $"{buyer} Left";
         }
         if (tradeItemText != null)
         {
@@ -1150,7 +1172,7 @@ public class Level1HUDManager : MonoBehaviour
             }
             else
             {
-                tradeSummaryText.text = "NO DEAL\n\nCustomer Left\n\nNo goods exchanged";
+                tradeSummaryText.text = $"NO DEAL\n\n{buyer} Left\n\nNo goods exchanged";
             }
         }
 
@@ -1327,8 +1349,6 @@ public class Level1HUDManager : MonoBehaviour
     {
         if (trade == null) return;
 
-        LocalTradeState activeTrade = Level1GameState.Instance != null ? Level1GameState.Instance.ActiveTrade : null;
-        int buyerMaxOffer = activeTrade != null ? activeTrade.maxBuyerPrice : 0;
         int profitIfAccepted = trade.npc_offer - trade.market_value;
 
         if (tradeSpiceText != null)
@@ -1338,9 +1358,7 @@ public class Level1HUDManager : MonoBehaviour
 
         if (tradeNPCOfferText != null)
         {
-            tradeNPCOfferText.text = buyerMaxOffer > 0
-                ? $"NPC Offer:\n{trade.npc_offer} Varahas\nBuyer Max:\n{buyerMaxOffer} Varahas"
-                : $"NPC Offer:\n{trade.npc_offer} Varahas";
+            tradeNPCOfferText.text = $"NPC Offer:\n{trade.npc_offer} Varahas";
         }
 
         if (tradeMarketValueText != null)

@@ -6,6 +6,13 @@ public class BagReceiver : MonoBehaviour
     public ChatManager chatManager;
 
     private bool completed = false;
+    private TradeTermsSnapshot marketplaceAgreement;
+
+    public void BindMarketplaceOrder(TradeTermsSnapshot agreement)
+    {
+        completed = false;
+        marketplaceAgreement = agreement;
+    }
 
     private void Awake()
     {
@@ -17,6 +24,7 @@ public class BagReceiver : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (completed)
             return;
 
@@ -27,7 +35,9 @@ public class BagReceiver : MonoBehaviour
 
         ScooperFill scooper = ScooperFill.Instance;
 
-        if (scooper == null)
+        // A hand/controller/other collider cannot deliver whatever happens to be in the global scooper.
+        if (scooper == null ||
+            (other.GetComponentInParent<ScooperFill>() != scooper && other.GetComponentInChildren<ScooperFill>() != scooper))
         {
             Debug.Log("Scooper doesn't exist!");
             return;
@@ -37,8 +47,13 @@ public class BagReceiver : MonoBehaviour
         Debug.Log("Scooper Filled: " + scooper.IsFilled());
         Debug.Log("Current Spice: " + scooper.currentSpice);
 
-        bool tutorialModeActive = OrderManager.Instance != null && OrderManager.Instance.tutorialMode;
-        bool pendingMarketplaceFulfillment = chatManager != null && chatManager.HasPendingFulfillment;
+        OrderManager orderManager = OrderManager.Instance;
+        if (orderManager == null) return;
+        bool tutorialModeActive = orderManager.tutorialMode;
+        bool pendingMarketplaceFulfillment = chatManager != null && chatManager.HasPendingFulfillment &&
+            ReferenceEquals(chatManager.CurrentPendingFulfillment.acceptedTerms, marketplaceAgreement) &&
+            orderManager.MarketplaceOrder != null && orderManager.MarketplaceOrder.BelongsTo(
+                Level1GameState.ExistingInstance?.ActiveTrade, marketplaceAgreement);
 
         if (!tutorialModeActive && !pendingMarketplaceFulfillment)
         {
@@ -51,7 +66,8 @@ public class BagReceiver : MonoBehaviour
             Debug.Log("Scooper Empty");
             return;
         }
-        if (scooper.currentSpice != OrderManager.Instance.requestedSpice)
+        SpiceType expectedSpice = tutorialModeActive ? orderManager.requestedSpice : orderManager.MarketplaceOrder.Spice;
+        if (scooper.currentSpice != expectedSpice)
         {
             Debug.Log("Wrong Spice!");
 
@@ -71,6 +87,14 @@ public class BagReceiver : MonoBehaviour
             return;
         }
 
+        SpiceType deliveredSpice = scooper.currentSpice;
+        if (!tutorialModeActive)
+        {
+            if (!orderManager.TryDeliverMarketplaceScoop(marketplaceAgreement, deliveredSpice, scooper.IsFilled()))
+                return;
+            scooper.EmptyScooper(); // Consume the scoop before completion callbacks can deliver it twice.
+        }
+
         completed = true;
 
         Debug.Log("Correct Spice");
@@ -80,17 +104,17 @@ public class BagReceiver : MonoBehaviour
         OVRInput.Controller.RTouch
     );
 
-        customer.FillBag(scooper.currentSpice);
+        if (customer != null) customer.FillBag(deliveredSpice);
         scooper.EmptyScooper();
 
-        if (SpiceTutorialManager.Instance != null)
+        if (tutorialModeActive && SpiceTutorialManager.Instance != null)
             SpiceTutorialManager.Instance.NotifyCorrectBagFilled();
 
-        if (chatManager != null)
+        if (!tutorialModeActive && chatManager != null)
         {
             if (chatManager.HasPendingFulfillment)
             {
-                chatManager.CompleteAcceptedFulfillment();
+                chatManager.CompleteAcceptedFulfillment(marketplaceAgreement);
             }
             else
             {
@@ -98,10 +122,6 @@ public class BagReceiver : MonoBehaviour
             }
         }
 
-        if (OrderManager.Instance != null)
-        {
-            OrderManager.Instance.CompleteMarketplaceFulfillment();
-        }
 
 
         StartCoroutine(StopHaptics());
@@ -121,5 +141,6 @@ public class BagReceiver : MonoBehaviour
     public void ResetBag()
     {
         completed = false;
+        marketplaceAgreement = null;
     }
 }

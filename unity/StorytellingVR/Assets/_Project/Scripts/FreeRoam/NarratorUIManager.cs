@@ -90,9 +90,9 @@ public class NarratorUIManager : MonoBehaviour
     {
         StopCurrentRoutine();
 
-        currentRoutine = StartCoroutine(
+        currentRoutine = StartCoroutine(PauseMenuController.RunGameplay(
             NarrationRoutine(speaker, subtitle, null)
-        );
+        ));
     }
 
     public void ShowNarration(
@@ -103,9 +103,9 @@ public class NarratorUIManager : MonoBehaviour
     {
         StopCurrentRoutine();
 
-        currentRoutine = StartCoroutine(
+        currentRoutine = StartCoroutine(PauseMenuController.RunGameplay(
             NarrationRoutine(speaker, subtitle, lineId)
-        );
+        ));
     }
 
     /// <summary>
@@ -119,9 +119,9 @@ public class NarratorUIManager : MonoBehaviour
     {
         StopCurrentRoutine();
 
-        currentRoutine = StartCoroutine(
+        currentRoutine = StartCoroutine(PauseMenuController.RunGameplay(
             NarrationRoutine(speaker, subtitle, null)
-        );
+        ));
 
         yield return currentRoutine;
 
@@ -136,9 +136,9 @@ public class NarratorUIManager : MonoBehaviour
     {
         StopCurrentRoutine();
 
-        currentRoutine = StartCoroutine(
+        currentRoutine = StartCoroutine(PauseMenuController.RunGameplay(
             NarrationRoutine(speaker, subtitle, lineId)
-        );
+        ));
 
         yield return currentRoutine;
 
@@ -155,9 +155,9 @@ public class NarratorUIManager : MonoBehaviour
     {
         StopCurrentRoutine();
 
-        currentRoutine = StartCoroutine(
+        currentRoutine = StartCoroutine(PauseMenuController.RunGameplay(
             NarrationRoutine(speaker, fullText, null)
-        );
+        ));
 
         yield return currentRoutine;
 
@@ -171,9 +171,9 @@ public class NarratorUIManager : MonoBehaviour
     {
         StopCurrentRoutine();
 
-        currentRoutine = StartCoroutine(
+        currentRoutine = StartCoroutine(PauseMenuController.RunGameplay(
             NarrationRoutine(speaker, fullText, lineId)
-        );
+        ));
 
         yield return currentRoutine;
 
@@ -181,9 +181,9 @@ public class NarratorUIManager : MonoBehaviour
     }
 
     private IEnumerator NarrationRoutine(
-        string speaker,
-        string fullText,
-        string lineId)
+    string speaker,
+    string fullText,
+    string lineId)
     {
         if (string.IsNullOrWhiteSpace(fullText))
             yield break;
@@ -193,48 +193,44 @@ public class NarratorUIManager : MonoBehaviour
         if (speakerText != null)
             speakerText.text = speaker;
 
-        Debug.Log($"[VOICE] Request lineId={(string.IsNullOrEmpty(lineId) ? "NULL" : lineId)}");
-        Debug.Log($"[VOICE] Database assigned={(voiceDatabase != null)}");
-        Debug.Log($"[VOICE] AudioSource assigned={(dialogueVoiceSource != null)}");
-
-        StopCurrentVoice();
-        if (!string.IsNullOrEmpty(lineId) && voiceDatabase != null && dialogueVoiceSource != null)
-        {
-            AudioClip clip = voiceDatabase.GetAudioClip(lineId);
-            Debug.Log($"[VOICE] Lookup success={(clip != null)}");
-            if (clip != null)
-            {
-                Debug.Log($"[VOICE] Clip={clip.name}");
-                dialogueVoiceSource.clip = clip;
-                Debug.Log($"[VOICE] AudioSource active={dialogueVoiceSource.gameObject.activeInHierarchy} enabled={dialogueVoiceSource.enabled} volume={dialogueVoiceSource.volume}");
-                Debug.Log("[VOICE] Calling Play");
-                dialogueVoiceSource.Play();
-                Debug.Log($"[VOICE] isPlaying after Play={dialogueVoiceSource.isPlaying}");
-            }
-            else
-            {
-                Debug.LogWarning($"[NarratorUIManager] Missing audio clip for lineId: {lineId}");
-            }
-        }
-
         string[] lines = fullText.Split(
             new[] { "\r\n", "\r", "\n" },
             System.StringSplitOptions.RemoveEmptyEntries
         );
 
-        // Prevent a trigger already being held from instantly
-        // completing the first line.
+        // Prevent a trigger that was already being held from
+        // immediately skipping the first line.
         bool previousPressed = GetContinueButtonPressed();
 
-        foreach (string rawLine in lines)
+        for (int i = 0; i < lines.Length; i++)
         {
-            string line = rawLine.Trim();
+            string line = lines[i].Trim();
 
             if (string.IsNullOrWhiteSpace(line))
                 continue;
 
+            // Get the audio for THIS subtitle line.
+            AudioClip clip = null;
+
+            if (!string.IsNullOrEmpty(lineId) &&
+                voiceDatabase != null &&
+                dialogueVoiceSource != null)
+            {
+                string audioLineId = $"{lineId}_{i + 1:00}";
+
+                clip = voiceDatabase.GetAudioClip(audioLineId);
+
+                Debug.Log(
+                    $"[VOICE] Subtitle line {i + 1}: '{line}' | " +
+                    $"Audio ID: {audioLineId} | " +
+                    $"Found: {clip != null}"
+                );
+            }
+
+            // Show subtitle and play its corresponding audio.
             yield return TypeAndWaitForLine(
                 line,
+                clip,
                 previousPressed,
                 pressedState =>
                 {
@@ -242,7 +238,7 @@ public class NarratorUIManager : MonoBehaviour
                 }
             );
 
-            // One frame of separation between lines.
+            // Small separation between lines.
             yield return null;
         }
 
@@ -250,25 +246,48 @@ public class NarratorUIManager : MonoBehaviour
     }
 
     private IEnumerator TypeAndWaitForLine(
-        string line,
-        bool startingPressedState,
-        System.Action<bool> updatePressedState)
+    string line,
+    AudioClip clip,
+    bool startingPressedState,
+    System.Action<bool> updatePressedState)
     {
         if (subtitleText == null)
             yield break;
 
+        // Show the subtitle.
         subtitleText.text = line;
         subtitleText.maxVisibleCharacters = 0;
 
-        // TMP needs to calculate the text layout before we can
-        // reliably read the visible character count.
+        // Force TMP to calculate the text.
         subtitleText.ForceMeshUpdate();
 
         TMP_TextInfo textInfo = subtitleText.textInfo;
         int totalCharacters = textInfo.characterCount;
 
+        // Start the audio for THIS subtitle line.
+        StopCurrentVoice();
+
+        if (clip != null && dialogueVoiceSource != null)
+        {
+            dialogueVoiceSource.clip = clip;
+            dialogueVoiceSource.Play();
+
+            Debug.Log($"[VOICE] Playing clip: {clip.name}");
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"[VOICE] No audio clip found for subtitle: '{line}'"
+            );
+        }
+
         bool previousPressed = startingPressedState;
+
         bool textCompletedInstantly = false;
+
+        // --------------------------------------------------
+        // TYPEWRITER EFFECT
+        // --------------------------------------------------
 
         for (int visibleCount = 0;
              visibleCount < totalCharacters;
@@ -302,22 +321,23 @@ public class NarratorUIManager : MonoBehaviour
                     GetContinueButtonPressed();
 
                 bool freshPress =
-                    currentlyPressed &&
-                    !previousPressed;
+                    currentlyPressed && !previousPressed;
 
                 previousPressed = currentlyPressed;
                 updatePressedState?.Invoke(previousPressed);
 
+                // First press reveals the line and interrupts its voice.
                 if (freshPress)
                 {
                     subtitleText.maxVisibleCharacters =
                         totalCharacters;
 
+                    StopCurrentVoice();
                     textCompletedInstantly = true;
                     break;
                 }
 
-                elapsed += Time.unscaledDeltaTime;
+                elapsed += PauseMenuController.GameplayUnscaledDeltaTime;
                 yield return null;
             }
 
@@ -328,15 +348,19 @@ public class NarratorUIManager : MonoBehaviour
                 visibleCount + 1;
         }
 
-        // Ensure the complete line is visible.
+        // Make sure the entire subtitle is visible.
         subtitleText.maxVisibleCharacters =
             totalCharacters;
 
         if (!waitForManualContinue && !autoAdvance)
+        {
+            while (dialogueVoiceSource != null && dialogueVoiceSource.isPlaying)
+                yield return null;
+            StopCurrentVoice();
             yield break;
+        }
 
-        // If the trigger was used to reveal the whole line,
-        // require it to be released before it can advance.
+        // A held press cannot advance this line or the next one.
         while (GetContinueButtonPressed())
         {
             previousPressed = true;
@@ -348,21 +372,14 @@ public class NarratorUIManager : MonoBehaviour
         updatePressedState?.Invoke(false);
 
         if (waitForManualContinue && !continueTutorialTaught)
-        {
             ShowContinueTutorialPrompt();
-        }
 
         float completedLineElapsed = 0f;
         bool advanceLine = false;
-
         while (!advanceLine)
         {
-            bool currentlyPressed =
-                GetContinueButtonPressed();
-
-            bool freshPress =
-                currentlyPressed &&
-                !previousPressed;
+            bool currentlyPressed = GetContinueButtonPressed();
+            bool freshPress = currentlyPressed && !previousPressed;
 
             if (waitForManualContinue && freshPress)
             {
@@ -382,20 +399,20 @@ public class NarratorUIManager : MonoBehaviour
             if (autoAdvance)
             {
                 completedLineElapsed +=
-                    Time.unscaledDeltaTime;
+                    PauseMenuController.GameplayUnscaledDeltaTime;
 
-                if (completedLineElapsed >= autoAdvanceDelay)
-                {
+                // Let a recorded line finish even when it exceeds the delay.
+                if (completedLineElapsed >= autoAdvanceDelay &&
+                    (dialogueVoiceSource == null || !dialogueVoiceSource.isPlaying))
                     advanceLine = true;
-                }
             }
 
             yield return null;
         }
 
         HideContinueTutorialPrompt();
+        StopCurrentVoice();
 
-        // Prevent a held trigger from skipping the next line.
         while (GetContinueButtonPressed())
         {
             updatePressedState?.Invoke(true);
@@ -506,6 +523,7 @@ public class NarratorUIManager : MonoBehaviour
 
     private bool GetContinueButtonPressed()
     {
+        if (PauseMenuController.GameplayInputBlocked) return false;
 #if UNITY_EDITOR
         if (allowEditorInput)
         {

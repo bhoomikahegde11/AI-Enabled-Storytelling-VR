@@ -21,6 +21,7 @@ public class ScooperToggle : MonoBehaviour
 
     void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         // Trigger held
         if (OVRInput.Get(OVRInput.RawButton.RIndexTrigger))
         {

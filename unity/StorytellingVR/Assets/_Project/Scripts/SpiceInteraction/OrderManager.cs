@@ -15,14 +15,18 @@ public class OrderManager : MonoBehaviour
     public SpiceType requestedSpice;
 
     private HandBagAnimation handBagAnimation;
-    private bool marketplaceFulfillmentActive;
+    private HandBagAnimation handoffTemplate;
+    private MarketplaceFulfillmentOrder marketplaceOrder;
 
-    public bool IsMarketplaceFulfillmentActive => marketplaceFulfillmentActive;
+    public bool IsMarketplaceFulfillmentActive => marketplaceOrder != null;
+    public MarketplaceFulfillmentOrder MarketplaceOrder => marketplaceOrder;
+    public SpiceType ExpectedSpice => marketplaceOrder?.Spice ?? requestedSpice;
 
     void Awake()
     {
         Instance = this;
-        handBagAnimation = FindFirstObjectByType<HandBagAnimation>();
+        handoffTemplate = FindTemplateHandBagAnimation(null);
+        handBagAnimation = handoffTemplate;
     }
 
     void Start()
@@ -35,22 +39,25 @@ public class OrderManager : MonoBehaviour
 
     public void SetRequestedSpice(SpiceType spice)
     {
-        requestedSpice = spice;
+        if (marketplaceOrder == null) requestedSpice = spice;
     }
 
-    public bool BeginMarketplaceFulfillment(string spiceName)
+    public bool BeginMarketplaceFulfillment(TradeTermsSnapshot agreement)
     {
-        tutorialMode = false;
-
-        SpiceType mappedSpice = MapSpiceName(spiceName);
-        if (mappedSpice == SpiceType.None)
+        SpiceType mappedSpice = MapSpiceName(agreement?.SpiceKey);
+        if (mappedSpice == SpiceType.None || agreement.Price <= 0 || agreement.QuantityGrams <= 0 ||
+            !ReferenceEquals(agreement.Source.AcceptedTerms, agreement) || agreement.Source.SettlementClaimed ||
+            !ReferenceEquals(agreement.Source, Level1GameState.ExistingInstance?.ActiveTrade))
         {
-            Debug.LogWarning("[OrderManager] Could not map negotiated spice to a scoopable spice: " + spiceName);
+            Debug.LogWarning("[OrderManager] Cannot fulfill invalid or unsupported accepted terms.");
             return false;
         }
+        if (ReferenceEquals(marketplaceOrder?.Agreement, agreement)) return true;
+        tutorialMode = false;
+        CancelMarketplaceFulfillment();
 
         requestedSpice = mappedSpice;
-        marketplaceFulfillmentActive = true;
+        marketplaceOrder = new MarketplaceFulfillmentOrder(agreement);
 
         handBagAnimation = PrepareMarketplaceCustomerHandoff();
 
@@ -62,6 +69,8 @@ public class OrderManager : MonoBehaviour
         if (handBagAnimation != null)
         {
             handBagAnimation.StartOrder();
+            handBagAnimation.BindMarketplaceAgreement(agreement);
+            handBagAnimation.bagReceiver?.BindMarketplaceOrder(agreement);
         }
         else
         {
@@ -73,18 +82,32 @@ public class OrderManager : MonoBehaviour
 
     public void CompleteMarketplaceFulfillment()
     {
-        marketplaceFulfillmentActive = false;
+        marketplaceOrder = null;
+        requestedSpice = SpiceType.None;
         Debug.Log("[OrderManager] Marketplace fulfillment completed. Awaiting next customer reset.");
     }
 
     public void CancelMarketplaceFulfillment()
     {
-        marketplaceFulfillmentActive = false;
+        marketplaceOrder = null;
+        requestedSpice = tutorialMode ? tutorialSpice : SpiceType.None;
         ResetReusableFulfillmentState();
         Debug.Log("[OrderManager] Marketplace fulfillment state reset.");
     }
 
-    private static SpiceType MapSpiceName(string spiceName)
+    public bool TryDeliverMarketplaceScoop(TradeTermsSnapshot agreement, SpiceType spice, bool scoopFilled)
+    {
+        return marketplaceOrder != null && marketplaceOrder.TryDeliver(
+            Level1GameState.ExistingInstance?.ActiveTrade, agreement, spice, scoopFilled);
+    }
+
+    public bool CanCompleteMarketplaceFulfillment(TradeTermsSnapshot agreement)
+    {
+        return marketplaceOrder != null && marketplaceOrder.CanComplete(
+            Level1GameState.ExistingInstance?.ActiveTrade, agreement);
+    }
+
+    public static SpiceType MapSpiceName(string spiceName)
     {
         if (string.IsNullOrWhiteSpace(spiceName))
         {
@@ -111,7 +134,8 @@ public class OrderManager : MonoBehaviour
             return null;
         }
 
-        HandBagAnimation template = FindTemplateHandBagAnimation(activeCustomer);
+        if (handoffTemplate == null) handoffTemplate = FindTemplateHandBagAnimation(activeCustomer);
+        HandBagAnimation template = handoffTemplate;
         if (template == null)
         {
             Debug.LogWarning("[OrderManager] Could not find tutorial handoff template for marketplace customer setup.");
@@ -147,7 +171,8 @@ public class OrderManager : MonoBehaviour
         HandBagAnimation[] allHandoffs = FindObjectsByType<HandBagAnimation>(FindObjectsSortMode.None);
         foreach (HandBagAnimation handoff in allHandoffs)
         {
-            if (handoff != null && handoff.gameObject != activeCustomer)
+            if (handoff != null && !handoff.UsesMarketplaceCustomerVisuals && handoff.gameObject != activeCustomer &&
+                handoff.handBag != null && handoff.bagReceiver != null && handoff.bagFillPosition != null)
             {
                 return handoff;
             }
@@ -158,12 +183,11 @@ public class OrderManager : MonoBehaviour
 
     private void ResetReusableFulfillmentState()
     {
-        if (handBagAnimation != null)
-        {
-            handBagAnimation.ResetHandoffState();
-        }
+        // Stop this order's actors before reassigning their shared bag, without touching unrelated handoffs.
+        if (handBagAnimation != null) handBagAnimation.ResetHandoffState();
+        if (handoffTemplate != null && handoffTemplate != handBagAnimation) handoffTemplate.ResetHandoffState();
 
-        BagReceiver bagReceiver = FindFirstObjectByType<BagReceiver>();
+        BagReceiver bagReceiver = handBagAnimation != null ? handBagAnimation.bagReceiver : handoffTemplate?.bagReceiver;
         if (bagReceiver != null)
         {
             bagReceiver.ResetBag();
@@ -173,5 +197,10 @@ public class OrderManager : MonoBehaviour
         {
             ScooperFill.Instance.ResetScooper();
         }
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
     }
 }

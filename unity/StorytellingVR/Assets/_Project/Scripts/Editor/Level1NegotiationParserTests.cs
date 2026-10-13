@@ -22,6 +22,115 @@ public class Level1NegotiationParserTests
         return CreateTrade(173, 200);
     }
 
+    [TestCase("Lakshmi Amma")]
+    [TestCase("Abdul Rahman")]
+    [TestCase("Francisco de Almeida")]
+    [TestCase("Chinnamma Naik")]
+    [TestCase("Saraswati Chetti")]
+    [TestCase("Father Penteado")]
+    public void NaturalIdentityQuestion_IsSharedAcrossCharacters(string buyerName)
+    {
+        var manager = new NegotiationStateManager();
+        manager.ResetState(111);
+        manager.SetExpectedReplyState(ExpectedReplyState.ExpectAcceptOrCounter, "test");
+        var trade = CreateTrade();
+        trade.buyerName = buyerName;
+
+        var input = manager.ClassifyInput("Who are you?", trade);
+
+        Assert.AreEqual(NegotiationIntent.GENERAL_DIALOGUE, input.intent);
+        Assert.AreEqual(ParseReason.GeneralDialogue, input.parseReason);
+        Assert.IsFalse(input.needsClarification);
+        Assert.IsFalse(input.hasSellerPrice);
+        Assert.IsNull(input.acceptedOffer);
+    }
+
+    [TestCase(ExpectedReplyState.ExpectOfferPrice)]
+    [TestCase(ExpectedReplyState.ExpectQuantity)]
+    [TestCase(ExpectedReplyState.ExpectAcceptOrCounter)]
+    public void SocialQuestion_PreservesOutstandingNegotiationState(ExpectedReplyState expectedState)
+    {
+        var manager = new NegotiationStateManager();
+        manager.ResetState(111, 8);
+        manager.SetExpectedReplyState(expectedState, "test");
+        var trade = CreateTrade();
+        trade.buyerPatience = 8;
+        trade.negotiationInitialized = true;
+
+        var input = manager.ClassifyInput("Where are you from?", trade);
+        var result = manager.ProcessLocalTurn(input, trade, new RuleBasedNPCBrain());
+
+        Assert.AreEqual(NegotiationIntent.GENERAL_DIALOGUE, input.intent);
+        Assert.AreEqual(expectedState, manager.CurrentExpectedReplyState);
+        Assert.AreEqual(0, manager.CurrentRound);
+        Assert.AreEqual(8, trade.buyerPatience);
+        Assert.AreEqual(111, trade.npcOffer);
+        Assert.AreEqual(280, trade.quantityGrams);
+        Assert.IsNull(trade.AcceptedTerms);
+        Assert.IsFalse(result.isAccepted);
+        Assert.IsFalse(result.isFinished);
+        Assert.IsFalse(result.requiresClarification);
+    }
+
+    [TestCase("I accept if you include delivery")]
+    [TestCase("I accept if you tell me your name")]
+    [TestCase("I accept, but where are you from?")]
+    public void AttachedSocialOrDeliveryTerms_DoNotBypassAcceptanceClarification(string text)
+    {
+        var manager = new NegotiationStateManager();
+        manager.ResetState(111, 8);
+        manager.SetExpectedReplyState(ExpectedReplyState.ExpectAcceptOrCounter, "test");
+        var trade = CreateTrade();
+        trade.buyerPatience = 8;
+        trade.negotiationInitialized = true;
+
+        var input = manager.ClassifyInput(text, trade);
+        var result = manager.ProcessLocalTurn(input, trade, new RuleBasedNPCBrain());
+
+        Assert.AreEqual(NegotiationIntent.CLARIFICATION, input.intent);
+        Assert.IsTrue(input.needsClarification);
+        Assert.IsTrue(result.requiresClarification);
+        Assert.IsFalse(result.isAccepted);
+        Assert.IsNull(trade.AcceptedTerms);
+        Assert.AreEqual(111, trade.npcOffer);
+        Assert.AreEqual(8, trade.buyerPatience);
+        Assert.AreEqual(0, manager.CurrentRound);
+    }
+
+    [TestCase("what is your offer?", NegotiationIntent.PRICE_QUERY)]
+    [TestCase("what is your budget?", NegotiationIntent.QUERY_BUYER_BUDGET)]
+    [TestCase("what quantity do you want?", NegotiationIntent.QUANTITY_QUERY)]
+    [TestCase("what spice what price", NegotiationIntent.PRICE_QUERY)]
+    [TestCase("what price for the temple?", NegotiationIntent.PRICE_QUERY)]
+    [TestCase("what about 140", NegotiationIntent.COUNTER)]
+    public void NegotiationQuestions_KeepTheirExistingIntent(string text, NegotiationIntent expectedIntent)
+    {
+        var manager = new NegotiationStateManager();
+        manager.ResetState(111);
+        manager.SetExpectedReplyState(ExpectedReplyState.ExpectAcceptOrCounter, "test");
+
+        var input = manager.ClassifyInput(text, CreateTrade());
+
+        Assert.AreEqual(expectedIntent, input.intent);
+        Assert.IsFalse(input.needsClarification);
+        Assert.IsNull(input.acceptedOffer);
+        if (expectedIntent == NegotiationIntent.COUNTER) Assert.AreEqual(140, input.sellerPrice);
+    }
+
+    [TestCase("where is your price of 140?")]
+    [TestCase("who named that price of 140?")]
+    public void QuestionWordsAlone_DoNotMakePriceSpeechGeneralDialogue(string text)
+    {
+        var manager = new NegotiationStateManager();
+        manager.ResetState(111);
+        manager.SetExpectedReplyState(ExpectedReplyState.ExpectAcceptOrCounter, "test");
+
+        var input = manager.ClassifyInput(text, CreateTrade());
+
+        Assert.AreNotEqual(NegotiationIntent.GENERAL_DIALOGUE, input.intent);
+        Assert.AreNotEqual(NegotiationIntent.ACCEPT, input.intent);
+    }
+
     [TestCase("no go away")]
     [TestCase("go away")]
     [TestCase("please leave")]
@@ -532,6 +641,69 @@ public class Level1NegotiationParserTests
 
         Assert.AreEqual(NegotiationIntent.ACCEPT, result.intent);
         Assert.AreEqual(173, result.acceptanceTarget);
+    }
+
+    [TestCase("ok fine ill take it")]
+    [TestCase("okay, fine, I'll take it")]
+    [TestCase("yes deal")]
+    public void ClearSpokenAgreement_AcceptsOnlyTheCurrentOffer(string text)
+    {
+        var manager = new NegotiationStateManager();
+        manager.ResetState(111, 8);
+        manager.SetExpectedReplyState(ExpectedReplyState.ExpectAcceptOrCounter, "test");
+        var trade = CreateTrade();
+        trade.spiceKey = "cardamom";
+        trade.spiceDisplayName = "Cardamom";
+        trade.quantityGrams = 560;
+        trade.quantityLabel = "2 Seers (~560g)";
+        trade.buyerPatience = 8;
+        trade.negotiationInitialized = true;
+
+        var input = manager.ClassifyInput(text, trade);
+        var decision = manager.ProcessLocalTurn(input, trade, new RuleBasedNPCBrain());
+
+        Assert.AreEqual(NegotiationIntent.ACCEPT, input.intent);
+        Assert.AreEqual(111, input.acceptanceTarget);
+        Assert.IsFalse(input.needsClarification);
+        Assert.IsTrue(decision.isAccepted);
+        Assert.IsNotNull(trade.AcceptedTerms);
+        Assert.AreEqual(111, trade.AcceptedTerms.Price);
+        Assert.AreEqual(560, trade.AcceptedTerms.QuantityGrams);
+        Assert.AreEqual("cardamom", trade.AcceptedTerms.SpiceKey);
+    }
+
+    [TestCase("no it seems fine lets confirm it")]
+    [TestCase("ok fine ill take it if you include delivery")]
+    public void AmbiguousOrConditionalAcceptance_RemainsClarification(string text)
+    {
+        var manager = new NegotiationStateManager();
+        manager.ResetState(111, 8);
+        manager.SetExpectedReplyState(ExpectedReplyState.ExpectAcceptOrCounter, "test");
+        var trade = CreateTrade();
+        trade.buyerPatience = 8;
+        trade.negotiationInitialized = true;
+
+        var input = manager.ClassifyInput(text, trade);
+        var decision = manager.ProcessLocalTurn(input, trade, new RuleBasedNPCBrain());
+
+        Assert.AreEqual(NegotiationIntent.CLARIFICATION, input.intent);
+        Assert.IsTrue(input.needsClarification);
+        Assert.IsFalse(decision.isAccepted);
+        Assert.IsNull(trade.AcceptedTerms);
+        Assert.AreEqual(111, trade.npcOffer);
+    }
+
+    [Test]
+    public void NegatedIllTakeIt_DoesNotAccept()
+    {
+        var manager = new NegotiationStateManager();
+        manager.ResetState(111);
+        manager.SetExpectedReplyState(ExpectedReplyState.ExpectAcceptOrCounter, "test");
+
+        var input = manager.ClassifyInput("no ill take it", CreateTrade());
+
+        Assert.AreNotEqual(NegotiationIntent.ACCEPT, input.intent);
+        Assert.IsNull(input.acceptedOffer);
     }
 
     [Test]

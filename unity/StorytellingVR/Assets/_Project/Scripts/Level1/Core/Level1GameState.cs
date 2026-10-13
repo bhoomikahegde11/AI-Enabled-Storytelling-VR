@@ -28,7 +28,8 @@ public enum ClarificationKind
     AmbiguousAcceptOrCounter,
     HistoricalPriceOnly,
     MultipleActionablePrices,
-    FulfillmentExpected
+    FulfillmentExpected,
+    UnresolvedTerms
 }
 
 public enum TradeSpeaker
@@ -49,8 +50,88 @@ public class TradeOfferRecord
     public string sourceText;
 }
 
+// The terms of an outstanding/accepted offer, independent of subsequent mutable state.
+public sealed class TradeTermsSnapshot
+{
+    public LocalTradeState Source { get; }
+    public string SpiceKey { get; }
+    public string SpiceName { get; }
+    public string QuantityLabel { get; }
+    public int QuantityGrams { get; }
+    public int Price { get; }
+    public int MarketValue { get; }
+    public string BuyerName { get; }
+    public string BuyerOrigin { get; }
+
+    public TradeTermsSnapshot(LocalTradeState trade, int price, int quantityGrams, string quantityLabel, int marketValue)
+    {
+        Source = trade;
+        SpiceKey = trade.spiceKey;
+        SpiceName = trade.spiceDisplayName;
+        BuyerName = trade.buyerName;
+        BuyerOrigin = trade.buyerOrigin;
+        Price = price;
+        QuantityGrams = quantityGrams;
+        QuantityLabel = quantityLabel;
+        MarketValue = marketValue;
+    }
+
+    public static TradeTermsSnapshot Capture(LocalTradeState trade)
+    {
+        return new TradeTermsSnapshot(trade, trade.npcOffer, trade.quantityGrams, trade.quantityLabel, trade.marketValue);
+    }
+}
+
 public class LocalTradeState
 {
+    public bool negotiationInitialized;
+    public TradeTermsSnapshot AcceptedTerms { get; private set; }
+    public bool SettlementClaimed { get; internal set; }
+
+    // Backend/debug acceptance uses the same frozen contract as the local decision path.
+    public bool BindAcceptedTerms(TradeTermsSnapshot terms)
+    {
+        if (terms == null || !ReferenceEquals(terms.Source, this) || SettlementClaimed ||
+            terms.Price <= 0 || terms.QuantityGrams <= 0)
+            return false;
+        if (AcceptedTerms != null) return ReferenceEquals(AcceptedTerms, terms);
+        AcceptedTerms = terms;
+        return true;
+    }
+
+    // Only a validated brain decision reaches this commit boundary. Candidates remain on the input/result.
+    public void ApplyDecision(RuleBasedNPCBrainResult result)
+    {
+        if (AcceptedTerms != null || result == null || result.requiresClarification || result.walkedAway)
+            return;
+
+        if (result.acceptedTerms != null)
+        {
+            if (!ReferenceEquals(result.acceptedTerms.Source, this))
+                return;
+            if (!BindAcceptedTerms(result.acceptedTerms)) return;
+            spiceKey = AcceptedTerms.SpiceKey;
+            spiceDisplayName = AcceptedTerms.SpiceName;
+            quantityGrams = AcceptedTerms.QuantityGrams;
+            quantityLabel = AcceptedTerms.QuantityLabel;
+            marketValue = AcceptedTerms.MarketValue;
+        }
+        else if (result.commitsQuantity)
+        {
+            quantityGrams = result.resolvedQuantityGrams;
+            quantityLabel = result.quantityLabel;
+            marketValue = result.marketValue;
+        }
+
+        previousNpcOffer = npcOffer;
+        npcOffer = AcceptedTerms != null ? AcceptedTerms.Price : Mathf.Max(0, result.updatedOffer);
+        lastSpeaker = TradeSpeaker.NPC;
+        npcOfferHistory.Add(new TradeOfferRecord
+        {
+            speaker = TradeSpeaker.NPC, value = npcOffer, turnIndex = turnIndex,
+            wasAccepted = result.isAccepted, sourceText = result.replyText
+        });
+    }
     public string spiceKey;
     public string spiceDisplayName;
     public int quantityGrams;
@@ -125,8 +206,15 @@ public class Level1GameState : MonoBehaviour
         {
             if (instance == null)
             {
-                GameObject host = new GameObject("Level1GameState");
-                instance = host.AddComponent<Level1GameState>();
+                Level1GameState authoredState = FindFirstObjectByType<Level1GameState>();
+                if (authoredState != null)
+                {
+                    authoredState.InitializeSingleton();
+                }
+                else
+                {
+                    CreateStateRoot(null);
+                }
             }
 
             return instance;
@@ -166,16 +254,59 @@ public class Level1GameState : MonoBehaviour
 
     private void Awake()
     {
+        InitializeSingleton();
+    }
+
+    private void InitializeSingleton()
+    {
         if (instance != null && instance != this)
         {
-            Destroy(gameObject);
+            RemoveStateComponent();
+            return;
+        }
+
+        if (instance == this) return;
+        // Older/shared hosts must never carry their gameplay hierarchy into persistence.
+        if (transform.childCount != 0 || GetComponents<Component>().Length != 2)
+        {
+            CreateStateRoot(this);
+            RemoveStateComponent();
             return;
         }
 
         instance = this;
-        DontDestroyOnLoad(gameObject);
+        transform.SetParent(null, true);
+        if (Application.isPlaying) DontDestroyOnLoad(gameObject);
         ValidateMarketDayDuration();
         EnsureInitialized();
+    }
+
+    private static void CreateStateRoot(Level1GameState configuration)
+    {
+        GameObject host = new GameObject(nameof(Level1GameState));
+        host.SetActive(false);
+        Level1GameState state = host.AddComponent<Level1GameState>();
+        if (configuration != null)
+        {
+            state.marketDayDurationSeconds = configuration.marketDayDurationSeconds;
+            #if UNITY_EDITOR
+            state.debugForceCharacterId = configuration.debugForceCharacterId;
+            #endif
+        }
+        state.InitializeSingleton();
+        host.SetActive(true);
+    }
+
+    private void RemoveStateComponent()
+    {
+        enabled = false;
+        if (Application.isPlaying) Destroy(this);
+        else DestroyImmediate(this);
+    }
+
+    private void OnDestroy()
+    {
+        if (instance == this) instance = null;
     }
 
     private void OnValidate()
@@ -197,6 +328,8 @@ public class Level1GameState : MonoBehaviour
         profile = localSaveManager.LoadProfile(marketManager);
         playerState.LoadFrom(profile.global_metrics.total_varahas, profile.global_metrics.reputation);
         initialized = true;
+        // A tutorial can load the profile before the market clock starts; keep its saved remaining time authoritative.
+        ApplyLoadedMarketDayStateWithoutStartingRoutine();
     }
 
     public void StartMarketDay()
@@ -415,6 +548,8 @@ public class Level1GameState : MonoBehaviour
             buyerTrust = session.buyerTrust,
             buyerFrustration = session.buyerFrustration,
             buyerDesperation = session.buyerDesperation,
+            negotiationInitialized = true,
+            minIncrement = Mathf.Max(2, Mathf.RoundToInt(marketManager.CalculateMarketValue(spiceKey, session.quantityGrams, activeEvent) * 0.02f)),
             referencePrice = lastDealReferencePrice
         };
 
@@ -430,16 +565,16 @@ public class Level1GameState : MonoBehaviour
 
         return new CurrentTrade
         {
-            spice = activeTrade.spiceDisplayName,
-            quantity = activeTrade.quantityLabel,
-            npc_offer = activeTrade.npcOffer,
-            market_value = activeTrade.marketValue
+            spice = activeTrade.AcceptedTerms != null ? activeTrade.AcceptedTerms.SpiceName : activeTrade.spiceDisplayName,
+            quantity = activeTrade.AcceptedTerms != null ? activeTrade.AcceptedTerms.QuantityLabel : activeTrade.quantityLabel,
+            npc_offer = activeTrade.AcceptedTerms != null ? activeTrade.AcceptedTerms.Price : activeTrade.npcOffer,
+            market_value = activeTrade.AcceptedTerms != null ? activeTrade.AcceptedTerms.MarketValue : activeTrade.marketValue
         };
     }
 
     public void UpdateActiveTradeOffer(int npcOffer)
     {
-        if (activeTrade == null)
+        if (activeTrade == null || activeTrade.AcceptedTerms != null)
         {
             return;
         }
@@ -461,7 +596,7 @@ public class Level1GameState : MonoBehaviour
 
     public void UpdateActiveTradeQuantity(int quantityGrams)
     {
-        if (activeTrade == null)
+        if (activeTrade == null || activeTrade.AcceptedTerms != null)
         {
             return;
         }
@@ -476,7 +611,10 @@ public class Level1GameState : MonoBehaviour
     {
         EnsureInitialized();
 
-        if (activeTrade == null)
+        bool accepting = string.Equals(action, "ACCEPT", StringComparison.OrdinalIgnoreCase);
+        if (activeTrade == null || activeTrade.SettlementClaimed ||
+            (accepting && !CanSettleAcceptedTrade(activeTrade.AcceptedTerms)) ||
+            (!accepting && activeTrade.AcceptedTerms != null))
         {
             return new LocalTradeOutcome
             {
@@ -487,20 +625,32 @@ public class Level1GameState : MonoBehaviour
             };
         }
 
+        LocalTradeState settlingTrade = activeTrade;
+        TradeTermsSnapshot accepted = settlingTrade.AcceptedTerms;
+        if (accepted != null && string.Equals(action, "ACCEPT", StringComparison.OrdinalIgnoreCase))
+        {
+            finalPrice = accepted.Price;
+            finalQuantityGrams = accepted.QuantityGrams;
+        }
+
+        // Claim before reward/save or external callbacks can re-enter settlement.
+        settlingTrade.SettlementClaimed = true;
+        activeTrade = null;
         LocalTradeOutcome outcome = transactionManager.ApplyTrade(
             playerState,
             profile,
             marketManager,
-            activeTrade.spiceKey,
+            accepted != null ? accepted.SpiceKey : settlingTrade.spiceKey,
             finalPrice,
             finalQuantityGrams,
             trust,
             frustration,
             outOfWorldCount,
             action,
-            activeTrade.marketValue,
-            activeTrade.buyerName,
-            activeTrade.buyerOrigin
+            accepted != null ? accepted.MarketValue : settlingTrade.marketValue,
+            accepted != null ? accepted.BuyerName : settlingTrade.buyerName,
+            accepted != null ? accepted.BuyerOrigin : settlingTrade.buyerOrigin,
+            accepted?.QuantityLabel
         );
 
         if (string.Equals(action, "ACCEPT", System.StringComparison.OrdinalIgnoreCase) && finalPrice > 0)
@@ -509,8 +659,32 @@ public class Level1GameState : MonoBehaviour
         }
 
         SaveProfileToDisk();
-        activeTrade = null;
         return outcome;
+    }
+
+    public LocalTradeOutcome ResolveAcceptedTrade(TradeTermsSnapshot agreement, float trust, float frustration, int outOfWorldCount)
+    {
+        if (agreement == null || !ReferenceEquals(agreement.Source, activeTrade) ||
+            !ReferenceEquals(activeTrade?.AcceptedTerms, agreement))
+            return new LocalTradeOutcome { currentMoney = CurrentMoney, currentReputation = CurrentReputation };
+        return ResolveTradeFromBackend("ACCEPT", agreement.Price, agreement.QuantityGrams, trust, frustration, outOfWorldCount);
+    }
+
+    public bool CanSettleAcceptedTrade(TradeTermsSnapshot agreement)
+    {
+        if (agreement == null || !ReferenceEquals(agreement.Source, activeTrade) ||
+            !ReferenceEquals(activeTrade?.AcceptedTerms, agreement) || activeTrade.SettlementClaimed)
+            return false;
+        if (OrderManager.Instance != null && OrderManager.Instance.CanCompleteMarketplaceFulfillment(agreement))
+            return true;
+        // Preserve the existing hardware-free Editor soak. Runtime release always needs delivery.
+        #if UNITY_EDITOR
+        return OrderManager.Instance == null || Level1DebugForceAccept.ShouldBypassScoopFulfillment();
+        #elif DEVELOPMENT_BUILD
+        return Level1DebugForceAccept.ShouldBypassScoopFulfillment();
+        #else
+        return false;
+        #endif
     }
 
     private void OnApplicationPause(bool pauseStatus)
@@ -597,7 +771,7 @@ public class Level1GameState : MonoBehaviour
             MarketDayTickEvent?.Invoke(marketDayRemainingSeconds);
         }
 
-        marketDayTimerCoroutine = StartCoroutine(MarketDayTimerRoutine());
+        marketDayTimerCoroutine = StartCoroutine(PauseMenuController.RunGameplay(MarketDayTimerRoutine()));
     }
 
     private void SyncMarketDayTimerToProfile()

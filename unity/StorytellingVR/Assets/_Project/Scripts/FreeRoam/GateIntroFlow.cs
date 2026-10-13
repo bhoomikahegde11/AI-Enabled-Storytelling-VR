@@ -46,10 +46,12 @@ public class GateIntroFlow : MonoBehaviour
     [Header("Transition")]
     [SerializeField] private ScreenFader screenFader;
 
-    private IEnumerator Start()
+    private IEnumerator Start() => PauseMenuController.RunGameplay(ArrivalSequence());
+
+    private IEnumerator ArrivalSequence()
     {
         // 1. Scene begins. Player gets a short silent moment.
-        yield return new WaitForSecondsRealtime(startupSilentDelay);
+        yield return PauseMenuController.WaitRealtime(startupSilentDelay);
 
         // Optional objective
         if (ObjectiveUIManager.Instance != null)
@@ -77,7 +79,7 @@ public class GateIntroFlow : MonoBehaviour
         }
 
         // 7. Small pause.
-        yield return new WaitForSecondsRealtime(postLookPause);
+        yield return PauseMenuController.WaitRealtime(postLookPause);
 
         // 8. Play a sequence of narrator lines, one after another.
         if (NarratorUIManager.Instance != null)
@@ -90,7 +92,7 @@ public class GateIntroFlow : MonoBehaviour
                     line.text
                 );
                 
-                yield return new WaitForSecondsRealtime(betweenNarrationLines);
+                yield return PauseMenuController.WaitRealtime(betweenNarrationLines);
             }
         }
         else
@@ -99,7 +101,7 @@ public class GateIntroFlow : MonoBehaviour
         }
 
         // 11. After narration completes, pause briefly.
-        yield return new WaitForSecondsRealtime(postNarrationPause);
+        yield return PauseMenuController.WaitRealtime(postNarrationPause);
 
         // 12. Fade the screen to WHITE.
         if (screenFader != null)
@@ -126,15 +128,21 @@ public class GateIntroFlow : MonoBehaviour
         if (playerHeadCamera == null)
         {
             Debug.LogWarning("[GATE INTRO] playerHeadCamera is not assigned. Waiting a default time instead.");
-            yield return new WaitForSecondsRealtime(3f);
+            yield return PauseMenuController.WaitRealtime(3f);
             yield break;
         }
 
         float initialYaw = playerHeadCamera.eulerAngles.y;
         float maxDeviation = 0f;
+        int resumeVersion = PauseMenuController.ResumeVersion;
 
         while (maxDeviation < lookAroundThresholdDegrees)
         {
+            if (resumeVersion != PauseMenuController.ResumeVersion)
+            {
+                initialYaw = playerHeadCamera.eulerAngles.y;
+                resumeVersion = PauseMenuController.ResumeVersion;
+            }
             float currentYaw = playerHeadCamera.eulerAngles.y;
             float delta = Mathf.Abs(Mathf.DeltaAngle(initialYaw, currentYaw));
             if (delta > maxDeviation)

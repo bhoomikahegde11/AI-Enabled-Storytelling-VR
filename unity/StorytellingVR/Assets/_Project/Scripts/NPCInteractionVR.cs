@@ -36,11 +36,13 @@ public class NPCInteractionVR : MonoBehaviour
 
     public void OpenDialogue(SelectEnterEventArgs args)
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         OpenDialogue();
     }
 
     public void OpenDialogue()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (dialoguePanel != null)
         {
             dialoguePanel.SetActive(true);

@@ -82,6 +82,7 @@ public class MainMenuVRLaserPointer : MonoBehaviour
 
     private void OnDisable()
     {
+        if (lineRenderer != null) lineRenderer.enabled = false;
         ClearHover();
         OVRInput.SetControllerVibration(0f, 0f, OvrController);
     }
