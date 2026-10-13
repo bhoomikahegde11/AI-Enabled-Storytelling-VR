@@ -1,742 +1,480 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using Oculus.Interaction;
+using Oculus.Interaction.Locomotion;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+[DisallowMultipleComponent, DefaultExecutionOrder(-30000)]
 public sealed class PauseMenuController : MonoBehaviour
 {
-    private const string PauseCanvasName = "PauseMenuCanvas";
-    private const string PausePanelName = "PauseMenuPanel";
-    private const string PauseLaserName = "PauseMenuLaserPointer";
-    private const float MenuDistance = 1.35f;
-    private const float MenuVerticalOffset = -0.05f;
-    private const float MenuFollowSmoothing = 18f;
-    private const float CanvasScale = 0.0015f;
-    private const float TriggerThreshold = 0.75f;
-    private const string RightControllerAnchorName = "RightControllerAnchor";
-    private const string RightHandAnchorName = "RightHandAnchor";
-    private const string RightTouchControllerWorldName = "right_touch_controller_world";
-
     private static PauseMenuController instance;
-
-    private Camera currentMainCamera;
-    private Transform currentRightControllerAnchor;
-    private Canvas pauseCanvas;
-    private RectTransform pauseCanvasRect;
-    private GameObject pausePanel;
-    private Button resumeButton;
-    private Button returnToMainMenuButton;
-    private PauseMenuLaserPointer pauseLaserPointer;
-    private Behaviour[] suspendedSceneLasers;
-    private bool[] suspendedSceneLaserStates;
-    private bool isPaused;
-    private float previousTimeScale = 1f;
-    private CursorLockMode previousCursorLockMode;
-    private bool previousCursorVisible;
+    private GameManager owner;
+    private PauseMenuView view;
+    private Camera sceneCamera;
+    private OVRCameraRig rig;
+    private LineRenderer rayLine;
+    private Material rayMaterial;
+    private bool isPaused, releaseInput, exiting;
+    private bool previousAudioPause, previousCursorVisible;
+    private float previousTimeScale, pausedAt, pausedDuration, releaseAfter;
+    private CursorLockMode previousCursorLock;
+    private bool toggleHeld, selectionHeld;
+    private int resumeVersion;
+    public static int ResumeVersion => instance != null ? instance.resumeVersion : 0;
+    private readonly Dictionary<Behaviour, bool> suspended = new Dictionary<Behaviour, bool>();
+    private readonly Dictionary<Animator, AnimatorUpdateMode> animatorModes = new Dictionary<Animator, AnimatorUpdateMode>();
+    private readonly Dictionary<AudioSource, bool> audioModes = new Dictionary<AudioSource, bool>();
+    private readonly List<Rigidbody> releasedBodies = new List<Rigidbody>();
 
     public bool IsPaused => isPaused;
+    public bool IsReady => true;
+    public static bool GameplaySuspended => instance != null && (instance.isPaused || instance.exiting);
+    public static bool GameplayInputBlocked => GameplaySuspended ||
+        (instance != null && instance.releaseInput) ||
+        (GameManager.ExistingInstance != null && GameManager.ExistingInstance.IsLoading);
+    public static float GameplayUnscaledDeltaTime => GameplaySuspended ? 0f : Time.unscaledDeltaTime;
+    public static float GameplayUnscaledTime => Time.unscaledTime - (instance == null ? 0f :
+        instance.pausedDuration + (instance.isPaused ? Time.unscaledTime - instance.pausedAt : 0f));
+
+    public static IEnumerator WaitForGameplay()
+    {
+        while (GameplaySuspended) yield return null;
+    }
+
+    // Gate coroutine continuations without disabling story components or discarding their state.
+    public static IEnumerator RunGameplay(IEnumerator routine)
+    {
+        try
+        {
+            while (true)
+            {
+                while (GameplaySuspended) yield return null;
+                if (!routine.MoveNext()) yield break;
+                if (routine.Current is IEnumerator nested) yield return RunGameplay(nested);
+                else yield return routine.Current;
+            }
+        }
+        finally { (routine as IDisposable)?.Dispose(); }
+    }
+
+    public static IEnumerator WaitRealtime(float seconds)
+    {
+        float elapsed = 0f;
+        while (elapsed < seconds || GameplaySuspended)
+        {
+            yield return null;
+            elapsed += GameplayUnscaledDeltaTime;
+        }
+    }
+
+    // Shared by hardware polling and EditMode edge tests.
+    public static bool FreshPress(bool pressed, ref bool held)
+    {
+        bool fresh = pressed && !held;
+        held = pressed;
+        return fresh;
+    }
+
+    public static bool FreshTriggerPress(float value, ref bool held) =>
+        FreshPress(value >= (held ? 0.15f : 0.75f), ref held);
+
+    internal bool InitializeOwnership(GameManager manager)
+    {
+        if (manager == null || manager != GameManager.ExistingInstance || manager.gameObject != gameObject ||
+            (instance != null && instance != this))
+        {
+            enabled = false;
+            if (Application.isPlaying) Destroy(this); else DestroyImmediate(this);
+            return false;
+        }
+        owner = manager;
+        instance = this;
+        return true;
+    }
 
     private void Awake()
     {
-        if (instance != null && instance != this)
-        {
-            Debug.Log("[PAUSE] Duplicate PauseMenuController detected. Destroying duplicate component.");
-            Destroy(this);
-            return;
-        }
-
-        instance = this;
-        Debug.Log($"[PAUSE] Controller Awake on '{gameObject.name}'.");
-
-        BuildPauseMenu();
-        HidePauseMenuVisuals();
-        RebindSceneReferences();
+        var manager = GetComponent<GameManager>();
+        if (manager == null) InitializeOwnership(null);
+        else if (manager == GameManager.ExistingInstance) InitializeOwnership(manager);
     }
 
     private void OnEnable()
     {
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
         SceneManager.sceneLoaded += HandleSceneLoaded;
-    }
-
-    private void Start()
-    {
-        HidePauseMenuVisuals();
-        RebindSceneReferences();
-    }
-
-    private void Update()
-    {
-        if (IsPauseBlockedInCurrentScene())
-        {
-            if (isPaused)
-            {
-                ForceClosePauseMenu(resetTimeScaleToOne: true);
-            }
-
-            return;
-        }
-
-        if (ShouldTogglePause())
-        {
-            TogglePause();
-        }
-
-        if (!isPaused)
-        {
-            return;
-        }
-
-        if (currentMainCamera == null || !currentMainCamera.isActiveAndEnabled)
-        {
-            RebindSceneReferences();
-        }
-
-        PositionPauseMenu();
-
-        if (pauseLaserPointer == null && currentRightControllerAnchor != null)
-        {
-            AttachPauseLaserPointer();
-        }
+        toggleHeld = ReadToggle();
     }
 
     private void OnDisable()
     {
         SceneManager.sceneLoaded -= HandleSceneLoaded;
+        CloseImmediately();
     }
 
     private void OnDestroy()
     {
-        if (instance == this)
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
+        CloseImmediately();
+        if (instance == this) instance = null;
+        if (rayMaterial != null)
         {
-            instance = null;
-        }
-
-        if (isPaused)
-        {
-            Time.timeScale = 1f;
+            if (Application.isPlaying) Destroy(rayMaterial); else DestroyImmediate(rayMaterial);
         }
     }
 
-    private void HandleSceneLoaded(Scene scene, LoadSceneMode loadSceneMode)
+    private void Update()
     {
-        Debug.Log($"[PAUSE] Scene loaded: {scene.name}");
-        RebindSceneReferences();
-
-        if (string.Equals(scene.name, GameManager.DefaultMainMenuSceneName, System.StringComparison.Ordinal))
+        if (instance != this) return;
+        if (FreshPress(ReadToggle(), ref toggleHeld))
         {
-            ForceClosePauseMenu(resetTimeScaleToOne: true);
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
-            return;
+            if (isPaused) ResumeGameplay(); else PauseGameplay();
         }
-
-        if (isPaused)
+        if (releaseInput && !isPaused && !exiting && owner != null && !owner.IsLoading &&
+            Time.unscaledTime >= releaseAfter && ControlsReleased())
         {
-            CaptureAndDisableSceneLasers();
-            PositionPauseMenu(snapToTarget: true);
-            AttachPauseLaserPointer();
+            releaseInput = false;
+            RestoreSceneComponents();
         }
-        else
+        if (isPaused && view == null) ResumeGameplay();
+        if (isPaused && !IsDesktop() && (sceneCamera == null || !sceneCamera.isActiveAndEnabled))
         {
-            HidePauseMenuVisuals();
-            DetachPauseLaserPointer();
+            RebindSceneReferences();
+            if (sceneCamera == null) ResumeGameplay();
+            else if (view != null) { view.ConfigureCamera(sceneCamera, IsDesktop()); if (!IsDesktop()) PositionMenu(); }
         }
+        if (view != null) view.Tick(isPaused, Time.unscaledDeltaTime);
     }
 
-    private bool ShouldTogglePause()
+    private static bool ReadToggle()
     {
-        bool escapePressed = false;
+        bool pressed = false;
+#if UNITY_EDITOR
+        pressed = Input.GetKey(KeyCode.F10) || Input.GetKey(KeyCode.Escape);
+#endif
+#if UNITY_ANDROID && !UNITY_EDITOR
+        pressed |= OVRInput.Get(OVRInput.Button.Start, OVRInput.Controller.LTouch);
+#else
+        if (OVRManager.isHmdPresent) pressed |= OVRInput.Get(OVRInput.Button.Start, OVRInput.Controller.LTouch);
+#endif
+        return pressed;
+    }
 
-        if (Application.isEditor || Application.platform == RuntimePlatform.WindowsPlayer)
-        {
-            escapePressed = Input.GetKeyDown(KeyCode.Escape);
-            if (escapePressed)
-            {
-                Debug.Log("[PAUSE] Escape detected");
-            }
-        }
+    private static bool IsDesktop()
+    {
+#if UNITY_EDITOR
+        return !OVRManager.isHmdPresent;
+#else
+        return false;
+#endif
+    }
 
-        bool questStartPressed = OVRInput.GetDown(OVRInput.Button.Start);
-        return escapePressed || questStartPressed;
+    private static bool ControlsReleased()
+    {
+#if UNITY_EDITOR
+        if (Input.GetMouseButton(0) || Input.GetKey(KeyCode.F10) || Input.GetKey(KeyCode.Escape) ||
+            Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.Return) || Input.GetKey(KeyCode.V) ||
+            Input.GetKey(KeyCode.R) || Input.GetKey(KeyCode.Tab) || Input.GetKey(KeyCode.X) || Input.GetKey(KeyCode.N)) return false;
+#endif
+        if (!OVRManager.isHmdPresent) return true;
+        return !OVRInput.Get(OVRInput.Button.One | OVRInput.Button.Two | OVRInput.Button.Three | OVRInput.Button.Four | OVRInput.Button.Start, OVRInput.Controller.Touch) &&
+            OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.LTouch) < 0.15f &&
+            OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.RTouch) < 0.15f &&
+            OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.LTouch) < 0.15f &&
+            OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.RTouch) < 0.15f &&
+            OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.LTouch).sqrMagnitude < 0.04f &&
+            OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.RTouch).sqrMagnitude < 0.04f;
     }
 
     private bool IsPauseBlockedInCurrentScene()
     {
-        string activeSceneName = SceneManager.GetActiveScene().name;
-        return string.Equals(activeSceneName, GameManager.DefaultMainMenuSceneName, System.StringComparison.Ordinal);
+        return !CanPauseInScene(SceneManager.GetActiveScene().name);
     }
 
-    private void TogglePause()
-    {
-        Debug.Log("[PAUSE] Toggle requested");
-
-        if (isPaused)
-        {
-            ResumeGameplay();
-            return;
-        }
-
-        PauseGameplay();
-    }
+    private bool CanPauseInScene(string sceneName) => owner != null && !owner.IsLoading && !exiting && owner.IsGameplayScene(sceneName);
 
     private void PauseGameplay()
     {
-        if (isPaused)
-        {
-            return;
-        }
+        TryPause();
+    }
 
-        if (IsPauseBlockedInCurrentScene())
+    public bool TryPause()
+    {
+        if (instance != this || !isActiveAndEnabled || isPaused || releaseInput || IsPauseBlockedInCurrentScene()) return false;
+        try
         {
-            Debug.Log($"[PAUSE] Pause blocked because: active scene is '{SceneManager.GetActiveScene().name}'.");
-            return;
+            RebindSceneReferences();
+            if ((!IsDesktop() && sceneCamera == null) || !EnsureView()) return false;
+            view.ConfigureCamera(sceneCamera, IsDesktop());
+            view.Open(SceneManager.GetActiveScene().name, IsDesktop());
+            if (!IsDesktop()) PositionMenu();
+            selectionHeld = IsDesktop() ? Input.GetMouseButton(0) : OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.RTouch) >= 0.15f;
+            CapturePauseState();
+            SuspendSceneComponents();
+            foreach (var voice in FindObjectsByType<Level1VoiceInputManager>(FindObjectsSortMode.None)) voice.OnGlobalPause();
+            foreach (var voice in FindObjectsByType<VoiceRecognitionManager>(FindObjectsSortMode.None)) voice.OnGlobalPause();
+            foreach (var native in FindObjectsByType<AndroidNativeTtsProvider>(FindObjectsSortMode.None)) native.StopSpeaking();
+            OVRInput.SetControllerVibration(0f, 0f, OVRInput.Controller.LTouch);
+            OVRInput.SetControllerVibration(0f, 0f, OVRInput.Controller.RTouch);
+            return true;
         }
+        catch (Exception error)
+        {
+            CloseImmediately(); // An incomplete UI or failed dependency must never strand the global clock.
+            Debug.LogError("[PAUSE] Could not open the menu: " + error.Message);
+            return false;
+        }
+    }
 
-        RebindSceneReferences();
+    private void CapturePauseState()
+    {
         previousTimeScale = Time.timeScale;
+        previousAudioPause = AudioListener.pause;
+        previousCursorLock = Cursor.lockState;
         previousCursorVisible = Cursor.visible;
-        previousCursorLockMode = Cursor.lockState;
-
+        pausedAt = Time.unscaledTime;
         isPaused = true;
         Time.timeScale = 0f;
-
-        CaptureAndDisableSceneLasers();
-        ShowPauseMenuVisuals();
-        PositionPauseMenu(snapToTarget: true);
-        AttachPauseLaserPointer();
-
-        Cursor.visible = true;
+        AudioListener.pause = true;
         Cursor.lockState = CursorLockMode.None;
-        Debug.Log($"[PAUSE] Paused. CanvasCreated={pauseCanvas != null}, CanvasActive={(pauseCanvas != null && pauseCanvas.gameObject.activeSelf)}");
+        Cursor.visible = IsDesktop();
     }
 
-    private void ResumeGameplay()
+    private bool EnsureView()
     {
-        if (!isPaused)
+        if (view != null && view.IsValid) return true;
+        if (view != null) Destroy(view.gameObject);
+        view = null;
+        var prefab = Resources.Load<GameObject>("GlobalPauseMenu");
+        if (prefab == null)
         {
-            return;
+            Debug.LogError("[PAUSE] Resources/GlobalPauseMenu prefab is missing; gameplay remains running.");
+            return false;
         }
+        var host = Instantiate(prefab, transform, false);
+        view = host.GetComponent<PauseMenuView>();
+        if (view == null || !view.IsValid)
+        {
+            Debug.LogError("[PAUSE] Pause menu references are incomplete; gameplay remains running.");
+            Destroy(host);
+            view = null;
+            return false;
+        }
+        view.Bind(ResumeGameplay, ConfirmRestart, ConfirmReturn);
+        return true;
+    }
 
+    public void ResumeGameplay()
+    {
+        if (!isPaused) return;
+        RestoreClockAndAudio();
+        RestorePresentationModes();
+        releaseInput = true;
+        releaseAfter = Time.unscaledTime + 0.15f;
+        if (view != null) view.ClearHover();
+        if (rayLine != null) rayLine.enabled = false;
+    }
+
+    private void RestoreClockAndAudio()
+    {
+        if (!isPaused) return;
+        pausedDuration += Time.unscaledTime - pausedAt;
         isPaused = false;
+        ++resumeVersion;
         Time.timeScale = previousTimeScale;
-
-        HidePauseMenuVisuals();
-        DetachPauseLaserPointer();
-        RestoreSceneLasers();
-
+        AudioListener.pause = previousAudioPause;
+        Cursor.lockState = previousCursorLock;
         Cursor.visible = previousCursorVisible;
-        Cursor.lockState = previousCursorLockMode;
-        Debug.Log("[PAUSE] Resumed");
     }
 
-    private void ReturnToMainMenu()
+    private void ConfirmRestart()
     {
-        ForceClosePauseMenu(resetTimeScaleToOne: true);
-        GameManager.Instance.LoadSceneByName(GameManager.DefaultMainMenuSceneName);
+        if (isPaused && owner != null) owner.RestartCurrentScene();
     }
 
-    private void ForceClosePauseMenu(bool resetTimeScaleToOne)
+    private void ConfirmReturn()
     {
-        isPaused = false;
-        Time.timeScale = resetTimeScaleToOne ? 1f : previousTimeScale;
-        previousTimeScale = 1f;
+        if (isPaused && owner != null) owner.ReturnToMainMenu();
+    }
 
-        HidePauseMenuVisuals();
-        DetachPauseLaserPointer();
-        RestoreSceneLasers();
+    internal void PrepareForTransition()
+    {
+        exiting = true;
+        if (suspended.Count == 0 && Application.isPlaying) SuspendSceneComponents();
+        RestoreClockAndAudio();
+        RestorePresentationModes();
+        if (view != null) view.HideImmediately();
+        if (rayLine != null) rayLine.enabled = false;
+        foreach (var voice in FindObjectsByType<Level1VoiceInputManager>(FindObjectsSortMode.None)) voice.CancelForSceneExit();
+        foreach (var voice in FindObjectsByType<VoiceRecognitionManager>(FindObjectsSortMode.None)) voice.CancelForSceneExit();
+        foreach (var chat in FindObjectsByType<ChatManager>(FindObjectsSortMode.None)) chat.ResetConversationUI();
+    }
 
-        Cursor.visible = previousCursorVisible;
-        Cursor.lockState = previousCursorLockMode;
+    internal void FinishTransition()
+    {
+        exiting = false;
+        // Outgoing scene objects have been destroyed; restore only surviving references.
+        RestoreSceneComponents();
+        if (Application.isPlaying) SuspendSceneComponents(); // Fence the destination rig until the menu trigger is released.
+        releaseInput = true;
+        releaseAfter = Time.unscaledTime + 0.15f;
+        RebindSceneReferences();
+    }
+
+    private void CloseImmediately()
+    {
+        RestoreClockAndAudio();
+        exiting = releaseInput = false;
+        RestoreSceneComponents();
+        if (view != null) view.HideImmediately();
+        if (rayLine != null) rayLine.enabled = false;
+    }
+
+    private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (instance != this || mode != LoadSceneMode.Single) return;
+        RestoreClockAndAudio();
+        if (view != null) view.HideImmediately();
+        if (!exiting) FinishTransition();
+        RebindSceneReferences();
     }
 
     private void RebindSceneReferences()
     {
-        currentMainCamera = ResolveMainCamera();
-        currentRightControllerAnchor = ResolveRightControllerAnchor();
-
-        if (pauseCanvas != null)
+        sceneCamera = Camera.main;
+        rig = sceneCamera != null ? sceneCamera.GetComponentInParent<OVRCameraRig>() : null;
+        if (rig == null) rig = FindFirstObjectByType<OVRCameraRig>();
+        if (rig != null && rig.centerEyeAnchor != null)
         {
-            pauseCanvas.worldCamera = currentMainCamera;
+            var eye = rig.centerEyeAnchor.GetComponent<Camera>();
+            if (eye != null && eye.isActiveAndEnabled) sceneCamera = eye;
         }
+        if (sceneCamera == null)
+            foreach (var candidate in FindObjectsByType<Camera>(FindObjectsSortMode.None))
+                if (candidate.isActiveAndEnabled) { sceneCamera = candidate; break; }
     }
 
-    private Camera ResolveMainCamera()
+    private void PositionMenu()
     {
-        if (Camera.main != null)
+        Vector3 forward = Vector3.ProjectOnPlane(sceneCamera.transform.forward, Vector3.up).normalized;
+        if (forward.sqrMagnitude < 0.01f) forward = Vector3.forward;
+        float distance = 1.4f;
+        foreach (var hit in Physics.SphereCastAll(sceneCamera.transform.position, 0.15f, forward, 1.55f,
+            Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
         {
-            return Camera.main;
+            if (hit.distance < 0.2f || hit.transform.IsChildOf(view.transform) ||
+                (rig != null && hit.transform.IsChildOf(rig.transform))) continue;
+            distance = Mathf.Min(distance, Mathf.Max(0.65f, hit.distance - 0.15f));
         }
-
-        Camera[] cameras = Object.FindObjectsByType<Camera>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
-
-        foreach (Camera cameraInstance in cameras)
-        {
-            if (cameraInstance != null && cameraInstance.isActiveAndEnabled)
-            {
-                return cameraInstance;
-            }
-        }
-
-        return null;
+        view.transform.SetPositionAndRotation(sceneCamera.transform.position + forward * distance - Vector3.up * 0.05f,
+            Quaternion.LookRotation(forward, Vector3.up));
     }
 
-    private Transform ResolveRightControllerAnchor()
+    private void SuspendSceneComponents()
     {
-        Transform[] transforms = Object.FindObjectsByType<Transform>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None);
-
-        Transform fallbackRightHandAnchor = null;
-        Transform fallbackTouchController = null;
-
-        foreach (Transform candidate in transforms)
+        foreach (var grab in FindObjectsByType<Grabbable>(FindObjectsSortMode.None))
         {
-            if (candidate == null)
-            {
-                continue;
-            }
-
-            string candidateName = candidate.name;
-
-            if (string.Equals(candidateName, RightControllerAnchorName, System.StringComparison.Ordinal))
-            {
-                return candidate;
-            }
-
-            if (fallbackRightHandAnchor == null &&
-                string.Equals(candidateName, RightHandAnchorName, System.StringComparison.Ordinal))
-            {
-                fallbackRightHandAnchor = candidate;
-            }
-
-            if (fallbackTouchController == null &&
-                string.Equals(candidateName, RightTouchControllerWorldName, System.StringComparison.Ordinal))
-            {
-                fallbackTouchController = candidate;
-            }
+            if (grab.SelectingPointsCount == 0) continue;
+            var body = grab.GetComponentInParent<Rigidbody>(true);
+            if (body != null) releasedBodies.Add(body);
         }
-
-        return fallbackRightHandAnchor != null ? fallbackRightHandAnchor : fallbackTouchController;
+        var components = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        // Disconnect sinks before cancelling selection: snap-turn broadcasters can fire on unselect.
+        foreach (var component in components)
+            if (component is LocomotionEventsConnection) SuspendBehaviour(component);
+        foreach (var component in components)
+            if ((component is ILocomotionEventBroadcaster && !(component is IInteractor)) ||
+                component is FirstPersonLocomotor || component is OVRPlayerController) SuspendBehaviour(component);
+        foreach (var component in components)
+            if (component is IInteractor || component is BaseInputModule ||
+                component is NPCDialogueVRLaserPointer || component is MainMenuVRLaserPointer) SuspendBehaviour(component);
+        foreach (var animator in FindObjectsByType<Animator>(FindObjectsSortMode.None))
+        {
+            if (animator.updateMode != AnimatorUpdateMode.UnscaledTime) continue;
+            animatorModes[animator] = animator.updateMode;
+            animator.updateMode = AnimatorUpdateMode.Normal;
+        }
+        foreach (var audio in FindObjectsByType<AudioSource>(FindObjectsSortMode.None))
+        {
+            audioModes[audio] = audio.ignoreListenerPause;
+            audio.ignoreListenerPause = false;
+        }
+        StopReleasedBodyThrows();
     }
 
-    private void BuildPauseMenu()
+    private void SuspendBehaviour(Behaviour component)
     {
-        GameObject canvasObject = new GameObject(PauseCanvasName, typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
-        canvasObject.transform.SetParent(transform, false);
-
-        pauseCanvasRect = canvasObject.GetComponent<RectTransform>();
-        pauseCanvasRect.sizeDelta = new Vector2(900f, 560f);
-        pauseCanvasRect.localScale = Vector3.one * CanvasScale;
-
-        pauseCanvas = canvasObject.GetComponent<Canvas>();
-        pauseCanvas.renderMode = RenderMode.WorldSpace;
-        pauseCanvas.sortingOrder = 5000;
-
-        GameObject panelObject = CreateUiObject(PausePanelName, canvasObject.transform);
-        pausePanel = panelObject;
-
-        Image panelImage = panelObject.AddComponent<Image>();
-        panelImage.color = new Color(0.08f, 0.08f, 0.08f, 0.94f);
-
-        RectTransform panelRect = panelObject.GetComponent<RectTransform>();
-        panelRect.sizeDelta = new Vector2(900f, 560f);
-
-        CreateLabel("Title", panelObject.transform, "Paused", 54, new Vector2(0f, 180f), new Vector2(620f, 90f));
-        CreateLabel("Subtitle", panelObject.transform, "Gameplay is frozen while this menu is open.", 24, new Vector2(0f, 90f), new Vector2(720f, 60f));
-
-        resumeButton = CreateButton("ResumeButton", panelObject.transform, "Resume", new Vector2(0f, -20f));
-        returnToMainMenuButton = CreateButton("ReturnToMainMenuButton", panelObject.transform, "Return To Main Menu", new Vector2(0f, -145f));
-
-        resumeButton.onClick.AddListener(ResumeGameplay);
-        returnToMainMenuButton.onClick.AddListener(ReturnToMainMenu);
+        if (!suspended.ContainsKey(component)) suspended.Add(component, component.enabled);
+        component.enabled = false;
     }
 
-    private void ShowPauseMenuVisuals()
+    private void StopReleasedBodyThrows()
     {
-        if (pauseCanvas == null)
-        {
-            return;
-        }
-
-        pauseCanvas.gameObject.SetActive(true);
-        pausePanel.SetActive(true);
-        pauseCanvas.worldCamera = currentMainCamera;
+        foreach (var body in releasedBodies)
+            if (body != null && !body.isKinematic) { body.linearVelocity = Vector3.zero; body.angularVelocity = Vector3.zero; }
     }
 
-    private void HidePauseMenuVisuals()
+    private void RestoreSceneComponents()
     {
-        if (pauseCanvas != null)
-        {
-            pauseCanvas.gameObject.SetActive(false);
-        }
-
-        if (pausePanel != null)
-        {
-            pausePanel.SetActive(false);
-        }
+        StopReleasedBodyThrows();
+        foreach (var entry in suspended) if (entry.Key != null) entry.Key.enabled = entry.Value;
+        suspended.Clear(); releasedBodies.Clear();
+        RestorePresentationModes();
     }
 
-    private void PositionPauseMenu(bool snapToTarget = false)
+    private void RestorePresentationModes()
     {
-        if (!isPaused || pauseCanvasRect == null || currentMainCamera == null)
-        {
-            return;
-        }
-
-        Transform cameraTransform = currentMainCamera.transform;
-        Vector3 forward = cameraTransform.forward;
-        forward.y = 0f;
-
-        if (forward.sqrMagnitude < 0.001f)
-        {
-            forward = cameraTransform.forward;
-        }
-
-        forward.Normalize();
-
-        Vector3 targetPosition =
-            cameraTransform.position +
-            (forward * MenuDistance) +
-            (cameraTransform.up * MenuVerticalOffset);
-
-        Quaternion targetRotation = Quaternion.LookRotation(targetPosition - cameraTransform.position, Vector3.up);
-
-        if (snapToTarget)
-        {
-            pauseCanvasRect.position = targetPosition;
-            pauseCanvasRect.rotation = targetRotation;
-            return;
-        }
-
-        pauseCanvasRect.position = Vector3.Lerp(
-            pauseCanvasRect.position,
-            targetPosition,
-            Time.unscaledDeltaTime * MenuFollowSmoothing);
-
-        pauseCanvasRect.rotation = Quaternion.Slerp(
-            pauseCanvasRect.rotation,
-            targetRotation,
-            Time.unscaledDeltaTime * MenuFollowSmoothing);
+        foreach (var entry in animatorModes) if (entry.Key != null) entry.Key.updateMode = entry.Value;
+        foreach (var entry in audioModes) if (entry.Key != null) entry.Key.ignoreListenerPause = entry.Value;
+        animatorModes.Clear(); audioModes.Clear();
     }
 
-    private void AttachPauseLaserPointer()
+    private void LateUpdate()
     {
-        DetachPauseLaserPointer();
-
-        if (!isPaused || currentRightControllerAnchor == null)
+        if (instance != this) return;
+        if (isPaused || releaseInput) StopReleasedBodyThrows();
+        if (!isPaused || view == null || (!IsDesktop() && sceneCamera == null)) return;
+        bool desktop = IsDesktop();
+        bool fresh = desktop ? FreshPress(Input.GetMouseButton(0), ref selectionHeld) :
+            FreshTriggerPress(OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.RTouch), ref selectionHeld);
+        Button target = null;
+        if (desktop) target = view.HitMouse(Input.mousePosition);
+        else if (rig != null && rig.rightControllerAnchor != null)
         {
-            return;
+            Transform anchor = rig.rightControllerAnchor;
+            Ray ray = new Ray(anchor.position, anchor.forward);
+            target = view.HitRay(ray, out Vector3 end);
+            EnsureRay();
+            if (rayLine != null)
+            {
+                rayLine.enabled = true;
+                rayLine.SetPosition(0, ray.origin);
+                rayLine.SetPosition(1, end);
+            }
         }
-
-        pauseLaserPointer = currentRightControllerAnchor.gameObject.AddComponent<PauseMenuLaserPointer>();
-        pauseLaserPointer.Initialize(resumeButton, returnToMainMenuButton);
+        view.Hover(target);
+        if (fresh && target != null) view.Press(target);
     }
 
-    private void DetachPauseLaserPointer()
+    private void EnsureRay()
     {
-        if (pauseLaserPointer == null)
-        {
-            return;
-        }
-
-        Destroy(pauseLaserPointer);
-        pauseLaserPointer = null;
-    }
-
-    private void CaptureAndDisableSceneLasers()
-    {
-        RestoreSceneLasers();
-
-        List<Behaviour> lasersToSuspend = new List<Behaviour>();
-
-        NPCDialogueVRLaserPointer[] gameplayLasers = Object.FindObjectsByType<NPCDialogueVRLaserPointer>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
-
-        foreach (NPCDialogueVRLaserPointer gameplayLaser in gameplayLasers)
-        {
-            if (gameplayLaser != null)
-            {
-                lasersToSuspend.Add(gameplayLaser);
-            }
-        }
-
-        suspendedSceneLasers = lasersToSuspend.ToArray();
-        suspendedSceneLaserStates = new bool[suspendedSceneLasers.Length];
-
-        for (int i = 0; i < suspendedSceneLasers.Length; i++)
-        {
-            suspendedSceneLaserStates[i] = suspendedSceneLasers[i].enabled;
-            suspendedSceneLasers[i].enabled = false;
-        }
-    }
-
-    private void RestoreSceneLasers()
-    {
-        if (suspendedSceneLasers == null || suspendedSceneLaserStates == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < suspendedSceneLasers.Length; i++)
-        {
-            if (suspendedSceneLasers[i] != null)
-            {
-                suspendedSceneLasers[i].enabled = suspendedSceneLaserStates[i];
-            }
-        }
-
-        suspendedSceneLasers = null;
-        suspendedSceneLaserStates = null;
-    }
-
-    private static GameObject CreateUiObject(string objectName, Transform parent)
-    {
-        GameObject gameObject = new GameObject(objectName, typeof(RectTransform));
-        gameObject.transform.SetParent(parent, false);
-        return gameObject;
-    }
-
-    private static Font GetBuiltinFont()
-    {
-        return Resources.GetBuiltinResource<Font>("Arial.ttf");
-    }
-
-    private static void CreateLabel(string objectName, Transform parent, string textValue, int fontSize, Vector2 anchoredPosition, Vector2 size)
-    {
-        GameObject labelObject = CreateUiObject(objectName, parent);
-        RectTransform labelRect = labelObject.GetComponent<RectTransform>();
-        labelRect.sizeDelta = size;
-        labelRect.anchoredPosition = anchoredPosition;
-
-        Text text = labelObject.AddComponent<Text>();
-        text.font = GetBuiltinFont();
-        text.fontSize = fontSize;
-        text.alignment = TextAnchor.MiddleCenter;
-        text.color = Color.white;
-        text.text = textValue;
-    }
-
-    private static Button CreateButton(string objectName, Transform parent, string buttonText, Vector2 anchoredPosition)
-    {
-        GameObject buttonObject = CreateUiObject(objectName, parent);
-        RectTransform buttonRect = buttonObject.GetComponent<RectTransform>();
-        buttonRect.sizeDelta = new Vector2(360f, 88f);
-        buttonRect.anchoredPosition = anchoredPosition;
-
-        Image buttonImage = buttonObject.AddComponent<Image>();
-        buttonImage.color = new Color(0.79f, 0.64f, 0.34f, 1f);
-
-        Button button = buttonObject.AddComponent<Button>();
-        ColorBlock colors = button.colors;
-        colors.normalColor = new Color(0.79f, 0.64f, 0.34f, 1f);
-        colors.highlightedColor = new Color(0.95f, 0.82f, 0.5f, 1f);
-        colors.pressedColor = new Color(0.65f, 0.51f, 0.25f, 1f);
-        colors.selectedColor = colors.highlightedColor;
-        colors.disabledColor = new Color(0.35f, 0.35f, 0.35f, 0.8f);
-        button.colors = colors;
-        button.targetGraphic = buttonImage;
-
-        BoxCollider buttonCollider = buttonObject.AddComponent<BoxCollider>();
-        buttonCollider.isTrigger = true;
-        buttonCollider.center = Vector3.zero;
-        buttonCollider.size = new Vector3(buttonRect.sizeDelta.x, buttonRect.sizeDelta.y, 8f);
-
-        GameObject labelObject = CreateUiObject("Label", buttonObject.transform);
-        RectTransform labelRect = labelObject.GetComponent<RectTransform>();
-        labelRect.anchorMin = Vector2.zero;
-        labelRect.anchorMax = Vector2.one;
-        labelRect.offsetMin = Vector2.zero;
-        labelRect.offsetMax = Vector2.zero;
-
-        Text labelText = labelObject.AddComponent<Text>();
-        labelText.font = GetBuiltinFont();
-        labelText.fontSize = 30;
-        labelText.alignment = TextAnchor.MiddleCenter;
-        labelText.color = Color.black;
-        labelText.text = buttonText;
-
-        return button;
-    }
-
-    private sealed class PauseMenuLaserPointer : MonoBehaviour
-    {
-        private readonly List<Button> buttons = new List<Button>();
-
-        private LineRenderer lineRenderer;
-        private Button currentHoverButton;
-        private bool wasTriggerPressed;
-
-        public void Initialize(params Button[] buttonTargets)
-        {
-            buttons.Clear();
-
-            foreach (Button buttonTarget in buttonTargets)
-            {
-                if (buttonTarget != null)
-                {
-                    buttons.Add(buttonTarget);
-                }
-            }
-
-            EnsureLineRenderer();
-        }
-
-        private void OnEnable()
-        {
-            EnsureLineRenderer();
-            wasTriggerPressed = OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.RTouch) >= TriggerThreshold;
-        }
-
-        private void Update()
-        {
-            if (buttons.Count == 0)
-            {
-                HideLine();
-                UpdateHoverButton(null);
-                return;
-            }
-
-            Vector3 origin = transform.position;
-            Vector3 direction = transform.forward;
-            Button hitButton = FindButtonHit(origin, direction, out RaycastHit hitInfo);
-
-            UpdateHoverButton(hitButton);
-            UpdateLine(origin, hitButton != null ? hitInfo.point : origin + direction * 2f, hitButton != null);
-            HandleTrigger(hitButton);
-        }
-
-        private void OnDisable()
-        {
-            UpdateHoverButton(null);
-            HideLine();
-        }
-
-        private void OnDestroy()
-        {
-            UpdateHoverButton(null);
-
-            if (lineRenderer != null)
-            {
-                Destroy(lineRenderer.gameObject);
-            }
-        }
-
-        private void EnsureLineRenderer()
-        {
-            if (lineRenderer != null)
-            {
-                return;
-            }
-
-            GameObject lineObject = new GameObject(PauseLaserName);
-            lineObject.transform.SetParent(transform, false);
-
-            lineRenderer = lineObject.AddComponent<LineRenderer>();
-            lineRenderer.useWorldSpace = true;
-            lineRenderer.positionCount = 2;
-            lineRenderer.startWidth = 0.01f;
-            lineRenderer.endWidth = 0.01f;
-            lineRenderer.alignment = LineAlignment.View;
-            lineRenderer.numCapVertices = 4;
-            lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-            lineRenderer.startColor = Color.white;
-            lineRenderer.endColor = Color.white;
-            lineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            lineRenderer.receiveShadows = false;
-            lineRenderer.enabled = false;
-        }
-
-        private Button FindButtonHit(Vector3 origin, Vector3 direction, out RaycastHit closestHit)
-        {
-            closestHit = default;
-
-            RaycastHit[] hits = Physics.RaycastAll(
-                origin,
-                direction,
-                8f,
-                Physics.DefaultRaycastLayers,
-                QueryTriggerInteraction.Collide);
-
-            System.Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
-
-            foreach (RaycastHit hit in hits)
-            {
-                Button button = hit.collider.GetComponentInParent<Button>();
-                if (button == null || !buttons.Contains(button) || !button.isActiveAndEnabled || !button.interactable)
-                {
-                    continue;
-                }
-
-                closestHit = hit;
-                return button;
-            }
-
-            return null;
-        }
-
-        private void HandleTrigger(Button hitButton)
-        {
-            bool triggerPressed = OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.RTouch) >= TriggerThreshold;
-            bool freshPress = triggerPressed && !wasTriggerPressed;
-
-            if (freshPress && hitButton != null)
-            {
-                hitButton.onClick.Invoke();
-            }
-
-            wasTriggerPressed = triggerPressed;
-        }
-
-        private void UpdateHoverButton(Button newHoverButton)
-        {
-            if (currentHoverButton == newHoverButton)
-            {
-                return;
-            }
-
-            ApplyButtonHoverState(currentHoverButton, false);
-            currentHoverButton = newHoverButton;
-            ApplyButtonHoverState(currentHoverButton, true);
-        }
-
-        private static void ApplyButtonHoverState(Button button, bool hovered)
-        {
-            if (button == null || button.targetGraphic == null)
-            {
-                return;
-            }
-
-            ColorBlock colors = button.colors;
-            button.targetGraphic.color = hovered ? colors.highlightedColor : colors.normalColor;
-        }
-
-        private void UpdateLine(Vector3 start, Vector3 end, bool visible)
-        {
-            if (lineRenderer == null)
-            {
-                return;
-            }
-
-            lineRenderer.enabled = visible;
-
-            if (!visible)
-            {
-                return;
-            }
-
-            lineRenderer.SetPosition(0, start);
-            lineRenderer.SetPosition(1, end);
-        }
-
-        private void HideLine()
-        {
-            if (lineRenderer != null)
-            {
-                lineRenderer.enabled = false;
-            }
-        }
+        if (rayLine != null) return;
+        var material = Resources.Load<Material>("PauseMenuRay");
+        if (material == null) return;
+        var host = new GameObject("Pause Menu Ray");
+        host.transform.SetParent(transform, false);
+        rayLine = host.AddComponent<LineRenderer>();
+        rayMaterial = new Material(material);
+        rayLine.sharedMaterial = rayMaterial;
+        rayLine.positionCount = 2;
+        rayLine.startWidth = 0.002f; rayLine.endWidth = 0.001f;
+        rayLine.useWorldSpace = true;
+        rayLine.numCapVertices = 3;
+        rayLine.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        rayLine.receiveShadows = false;
     }
 }

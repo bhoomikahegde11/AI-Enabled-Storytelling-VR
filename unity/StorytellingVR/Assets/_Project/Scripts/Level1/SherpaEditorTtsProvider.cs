@@ -135,7 +135,7 @@ public class SherpaEditorTtsProvider : MonoBehaviour, INpcTtsProvider, ICharacte
 
         StopSpeaking();
 
-        activeSpeakRoutine = StartCoroutine(SpeakRoutine(text, characterId));
+        activeSpeakRoutine = StartCoroutine(PauseMenuController.RunGameplay(SpeakRoutine(text, characterId)));
 #else
         Debug.Log("[TTS] SherpaEditorTtsProvider is Editor-only and does nothing on this platform");
         NotifyPlaybackFailed("SherpaEditorTtsProvider is Editor-only");

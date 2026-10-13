@@ -73,7 +73,7 @@ public class BazaarFeedbackManager : MonoBehaviour
             StopCoroutine(thinkingCoroutine);
         }
 
-        thinkingCoroutine = StartCoroutine(ThinkingBehaviourRoutine(npcAnimator, npcTextElement, allowFillers));
+        thinkingCoroutine = StartCoroutine(PauseMenuController.RunGameplay(ThinkingBehaviourRoutine(npcAnimator, npcTextElement, allowFillers)));
     }
 
     private IEnumerator ThinkingBehaviourRoutine(Animator animator, TMP_Text textElement, bool allowFillers)

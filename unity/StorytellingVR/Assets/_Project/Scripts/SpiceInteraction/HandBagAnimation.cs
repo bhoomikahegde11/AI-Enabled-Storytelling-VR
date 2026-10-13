@@ -64,7 +64,7 @@ public class HandBagAnimation : MonoBehaviour
 
         if (OrderManager.Instance != null && OrderManager.Instance.tutorialMode)
         {
-            StartCoroutine(StartOrderRoutine());
+            StartCoroutine(PauseMenuController.RunGameplay(StartOrderRoutine()));
         }
     }
 
@@ -210,7 +210,7 @@ public class HandBagAnimation : MonoBehaviour
             StopCoroutine(bagFillCoroutine);
         }
 
-        bagFillCoroutine = StartCoroutine(FillAndReturn());
+        bagFillCoroutine = StartCoroutine(PauseMenuController.RunGameplay(FillAndReturn()));
     }
     IEnumerator FillAndReturn()
     {
@@ -374,7 +374,7 @@ public class HandBagAnimation : MonoBehaviour
             StopCoroutine(bagMoveCoroutine);
         }
 
-        bagMoveCoroutine = StartCoroutine(RunBagMoveRoutine(routine));
+        bagMoveCoroutine = StartCoroutine(PauseMenuController.RunGameplay(RunBagMoveRoutine(routine)));
     }
 
     private IEnumerator RunBagMoveRoutine(IEnumerator routine)

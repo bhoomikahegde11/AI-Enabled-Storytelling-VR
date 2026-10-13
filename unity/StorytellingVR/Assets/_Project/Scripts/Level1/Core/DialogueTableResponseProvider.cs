@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 // Standalone VR dialogue system uses deterministic rule engine + expandable dialogue tables.
@@ -34,6 +35,58 @@ public class DialogueTableResponseProvider
     }
 
     private readonly DialogueCharacterRegistry registry = new DialogueCharacterRegistry();
+    private LocalTradeState recentCharacterTrade;
+    private readonly Queue<string> recentCharacterTemplates = new Queue<string>();
+
+    public static bool IsLakshmi(LocalTradeState trade)
+    {
+        return trade != null && DialogueCharacterRegistry.NormalizeCharacterId(trade.buyerName) == "lakshmi_amma";
+    }
+
+    public static bool UsesAuthoredPresentation(LocalTradeState trade)
+    {
+        return trade != null && UsesAuthoredPresentation(DialogueCharacterRegistry.NormalizeCharacterId(trade.buyerName));
+    }
+
+    public static bool UsesAuthoredPresentation(string characterId)
+    {
+        return characterId == "lakshmi_amma" || characterId == "chinnamma_naik" ||
+            characterId == "saraswati_chetti" || characterId == "abdul_rahman" ||
+            characterId == "francisco_de_almeida" || characterId == "father_penteado";
+    }
+
+    // These hooks render existing events; they do not start or advance negotiation/idle stages.
+    public string GetIdleReminder(LocalTradeState trade, string fallback, int stage, bool terminal)
+    {
+        if (!UsesAuthoredPresentation(trade)) return fallback;
+        return GetPresentation(trade, terminal ? DialogueScenario.TransactionFailure :
+            stage == 2 ? DialogueScenario.IdleReminderSecond : DialogueScenario.IdleReminderFirst, fallback);
+    }
+
+    public string GetTransactionSuccess(LocalTradeState trade)
+    {
+        if (!UsesAuthoredPresentation(trade) || trade.AcceptedTerms == null || !trade.SettlementClaimed) return string.Empty;
+        return GetPresentation(trade, DialogueScenario.TransactionSuccess, "Thank you, merchant.");
+    }
+
+    private string GetPresentation(LocalTradeState trade, DialogueScenario scenario, string fallback)
+    {
+        try
+        {
+            PrepareCharacterHistory(trade);
+            DialogueContext context = BuildContext(null, trade, new RuleBasedNPCBrainResult { replyText = fallback }, 1);
+            context.scenario = scenario;
+            string level;
+            string template = FindTemplate(context, registry.FindCharacter(context.characterId), out level);
+            return string.IsNullOrWhiteSpace(template) ? fallback : ReplacePlaceholders(template, context);
+        }
+        catch (Exception ex)
+        {
+            if (Level1DebugForceAccept.VerboseLogsEnabled())
+                Debug.LogWarning("[DIALOGUE-TABLE] Presentation fallback: " + ex.Message);
+            return fallback;
+        }
+    }
 
     public string GetGreeting(LocalTradeState trade, int reputation, bool isRepeatCustomer)
     {
@@ -70,6 +123,7 @@ public class DialogueTableResponseProvider
                 ruleReply = "Greetings, merchant."
             };
 
+            PrepareCharacterHistory(trade);
             CharacterDialogueSet characterSet = registry.FindCharacter(context.characterId);
             string matchLevel;
             string template = FindTemplate(context, characterSet, out matchLevel);
@@ -89,7 +143,7 @@ public class DialogueTableResponseProvider
     public string GetReply(NegotiationInput input, LocalTradeState trade, RuleBasedNPCBrainResult brainResult, int roundCount)
     {
         string fallbackReply = brainResult != null ? brainResult.replyText : string.Empty;
-        if (brainResult == null || brainResult.requiresClarification)
+        if (brainResult == null || (brainResult.requiresClarification && !UsesAuthoredPresentation(trade)))
         {
             return fallbackReply;
         }
@@ -97,6 +151,9 @@ public class DialogueTableResponseProvider
         try
         {
             DialogueContext context = BuildContext(input, trade, brainResult, roundCount);
+            PrepareCharacterHistory(trade);
+            if (UsesAuthoredPresentation(trade))
+                context.scenario = MapAuthoredScenario(input, brainResult, context.scenario, context.characterId);
             CharacterDialogueSet characterSet = registry.FindCharacter(context.characterId);
             string matchLevel;
             string template = FindTemplate(context, characterSet, out matchLevel);
@@ -137,6 +194,12 @@ public class DialogueTableResponseProvider
 
     private string FindTemplate(DialogueContext context, CharacterDialogueSet characterSet, out string matchLevel)
     {
+        if (UsesAuthoredPresentation(context.characterId) && characterSet != null)
+        {
+            matchLevel = "Character matching restrictions + recent variation";
+            return FindRestrictedTemplate(characterSet.lines, context);
+        }
+
         if (characterSet != null)
         {
             string exactTemplate = TryFindTemplate(characterSet.lines, context, requireAllBuckets: true);
@@ -170,6 +233,173 @@ public class DialogueTableResponseProvider
 
         matchLevel = "Rule reply fallback";
         return null;
+    }
+
+    private void PrepareCharacterHistory(LocalTradeState trade)
+    {
+        if (ReferenceEquals(recentCharacterTrade, trade)) return;
+        recentCharacterTrade = trade;
+        recentCharacterTemplates.Clear();
+    }
+
+    private string FindRestrictedTemplate(List<DialogueLine> lines, DialogueContext context)
+    {
+        var highMatches = new List<string>();
+        var moodMatches = new List<string>();
+        var genericMatches = new List<string>();
+
+        foreach (DialogueLine line in lines)
+        {
+            if (line == null || line.scenario != context.scenario ||
+                (!string.IsNullOrEmpty(line.characterId) && line.characterId != context.characterId) ||
+                !MatchesBucket(line.reputationBucket, context.reputationBucket) ||
+                !MatchesBucket(line.patienceBucket, context.patienceBucket) ||
+                !MatchesBucket(line.desperationBucket, context.desperationBucket) ||
+                !MatchesBucket(line.roundBucket, context.roundBucket) ||
+                !MatchesBucket(line.personalityBucket, context.personalityBucket) || line.templates == null)
+                continue;
+
+            // Low patience takes precedence over a general personality variant, never the reverse.
+            int specificity = (line.patienceBucket.HasValue ? 2 : 0) +
+                (line.personalityBucket.HasValue ? 1 : 0) + (line.roundBucket.HasValue ? 1 : 0) +
+                (line.reputationBucket.HasValue ? 1 : 0) + (line.desperationBucket.HasValue ? 1 : 0);
+
+            if (specificity >= 2)
+            {
+                foreach (string template in line.templates)
+                    if (!string.IsNullOrWhiteSpace(template) && !highMatches.Contains(template)) highMatches.Add(template);
+            }
+            else if (specificity == 1)
+            {
+                foreach (string template in line.templates)
+                    if (!string.IsNullOrWhiteSpace(template) && !moodMatches.Contains(template)) moodMatches.Add(template);
+            }
+            else
+            {
+                foreach (string template in line.templates)
+                    if (!string.IsNullOrWhiteSpace(template) && !genericMatches.Contains(template)) genericMatches.Add(template);
+            }
+        }
+
+        // When low patience or high-specificity constraint matches, strictly use those matches.
+        if (highMatches.Count > 0)
+        {
+            return SelectFromBucket(highMatches);
+        }
+
+        // Only HOLD blends mood and generic wording. Other scenarios keep their mood-specific priority.
+        if (context.scenario == DialogueScenario.BuyerHoldsFirm && moodMatches.Count > 0 && genericMatches.Count > 0)
+        {
+            List<string> unusedMood = moodMatches.FindAll(t => !recentCharacterTemplates.Contains(t));
+            List<string> unusedGeneric = genericMatches.FindAll(t => !recentCharacterTemplates.Contains(t));
+
+            string selectedTemplate = null;
+            if (unusedMood.Count > 0 && unusedGeneric.Count > 0)
+            {
+                selectedTemplate = UnityEngine.Random.value < 0.70f
+                    ? unusedMood[UnityEngine.Random.Range(0, unusedMood.Count)]
+                    : unusedGeneric[UnityEngine.Random.Range(0, unusedGeneric.Count)];
+            }
+            else if (unusedMood.Count > 0)
+            {
+                selectedTemplate = unusedMood[UnityEngine.Random.Range(0, unusedMood.Count)];
+            }
+            else if (unusedGeneric.Count > 0)
+            {
+                selectedTemplate = unusedGeneric[UnityEngine.Random.Range(0, unusedGeneric.Count)];
+            }
+
+            if (selectedTemplate != null)
+            {
+                RecordRecentTemplate(selectedTemplate);
+                return selectedTemplate;
+            }
+
+            var combined = new List<string>(moodMatches);
+            foreach (var g in genericMatches)
+            {
+                if (!combined.Contains(g)) combined.Add(g);
+            }
+            return SelectFromBucket(combined);
+        }
+
+        if (moodMatches.Count > 0)
+        {
+            return SelectFromBucket(moodMatches);
+        }
+
+        if (genericMatches.Count > 0)
+        {
+            return SelectFromBucket(genericMatches);
+        }
+
+        return null; // Preserve precise rule reply if no safe character line exists.
+    }
+
+    private string SelectFromBucket(List<string> candidates)
+    {
+        List<string> unused;
+        do
+        {
+            unused = candidates.FindAll(template => !recentCharacterTemplates.Contains(template));
+            if (unused.Count == 0) recentCharacterTemplates.Dequeue();
+        } while (unused.Count == 0);
+
+        string selected = unused[UnityEngine.Random.Range(0, unused.Count)];
+        RecordRecentTemplate(selected);
+        return selected;
+    }
+
+    private void RecordRecentTemplate(string selected)
+    {
+        recentCharacterTemplates.Enqueue(selected);
+        while (recentCharacterTemplates.Count > 4) recentCharacterTemplates.Dequeue();
+    }
+
+    private static DialogueScenario MapAuthoredScenario(NegotiationInput input, RuleBasedNPCBrainResult result, DialogueScenario scenario, string characterId)
+    {
+        if (result.requiresClarification) return DialogueScenario.UnclearSpeech;
+        if (result.isFinished || result.isAccepted || result.walkedAway || input == null) return scenario;
+        switch (input.intent)
+        {
+            case NegotiationIntent.GREETING:
+                return DialogueScenario.SocialGreeting; // A greeting mid-visit is not a repeat customer visit.
+            case NegotiationIntent.ITEM_QUERY:
+                if (result.nextExpectedReplyState == ExpectedReplyState.ExpectOfferPrice) return DialogueScenario.AskSellerPrice;
+                return input.asksCurrentOffer ? DialogueScenario.AskBuyerBudget : DialogueScenario.AskWhatBuyerWants;
+            case NegotiationIntent.PRICE_QUERY:
+                return input.asksReason && !input.asksItem ? DialogueScenario.OfferReason : DialogueScenario.AskBuyerBudget;
+            case NegotiationIntent.QUERY_BUYER_BUDGET:
+                // Price-pressure questions already carry asksReason; preserve Lakshmi's verified mapping.
+                return (characterId == "chinnamma_naik" || characterId == "saraswati_chetti" ||
+                    characterId == "abdul_rahman" || characterId == "francisco_de_almeida" ||
+                    characterId == "father_penteado") && input.asksReason
+                    ? DialogueScenario.OfferReason : scenario;
+            case NegotiationIntent.CONTINUE:
+                return DialogueScenario.AskBuyerBudget;
+            case NegotiationIntent.QUANTITY_CHANGE:
+                return result.commitsQuantity ? DialogueScenario.QuantityChanged : DialogueScenario.Unknown;
+            case NegotiationIntent.REJECT:
+                return result.updatedOffer > result.previousOffer ? scenario : DialogueScenario.PlayerRejectedBuyerOffer;
+            case NegotiationIntent.HOSTILE:
+                return DialogueScenario.HostileWarning;
+            case NegotiationIntent.SOCIAL:
+            case NegotiationIntent.GENERAL_DIALOGUE:
+                string text = input.normalizedText ?? string.Empty;
+                if (HasWord(text, "weather|rain|sun|sunshine")) return DialogueScenario.WeatherQuestion;
+                if (HasWord(text, "name") || Regex.IsMatch(text, @"^who\s+are(?:\s+you)?$", RegexOptions.IgnoreCase)) return DialogueScenario.AskName;
+                if (HasWord(text, "king|krishnadevaraya")) return DialogueScenario.HistoryKing;
+                if (HasWord(text, "temple|virupaksha")) return DialogueScenario.HistoryTemple;
+                if (HasWord(text, "where|origin|from")) return DialogueScenario.AskOrigin;
+                if (HasWord(text, "history|city|hampi|vijayanagara|market|bazaar")) return DialogueScenario.HistoryQuestion;
+                return DialogueScenario.SocialGreeting;
+        }
+        return scenario;
+    }
+
+    private static bool HasWord(string text, string words)
+    {
+        return Regex.IsMatch(text, @"\b(" + words + @")\b", RegexOptions.IgnoreCase);
     }
 
     private static string TryFindTemplate(List<DialogueLine> lines, DialogueContext context, bool requireAllBuckets, bool onlyRoundAndPersonality = false)
@@ -261,6 +491,7 @@ public class DialogueTableResponseProvider
         int minimumPrice = trade != null ? trade.maxBuyerPrice : counterPrice;
         int finalPrice = brainResult.resolvedPrice > 0 ? brainResult.resolvedPrice : counterPrice;
 
+        TradeTermsSnapshot accepted = UsesAuthoredPresentation(trade) ? brainResult.acceptedTerms ?? trade.AcceptedTerms : null;
         return new DialogueContext
         {
             characterId = DialogueCharacterRegistry.NormalizeCharacterId(trade != null ? trade.buyerName : string.Empty),
@@ -272,11 +503,13 @@ public class DialogueTableResponseProvider
             roundBucket = ToRoundBucket(roundCount),
             personalityBucket = ToPersonalityBucket(trade != null ? trade.buyerPersonality : string.Empty),
             buyerName = !string.IsNullOrWhiteSpace(trade != null ? trade.buyerName : string.Empty) ? trade.buyerName : "Customer",
-            spiceName = !string.IsNullOrWhiteSpace(trade != null ? trade.spiceDisplayName : string.Empty) ? trade.spiceDisplayName.ToLowerInvariant() : "spice",
-            quantityLabel = !string.IsNullOrWhiteSpace(trade != null ? trade.quantityLabel : string.Empty) ? trade.quantityLabel : "this lot",
+            spiceName = accepted != null ? Safe(accepted.SpiceName, "spice").ToLowerInvariant() :
+                !string.IsNullOrWhiteSpace(trade != null ? trade.spiceDisplayName : string.Empty) ? trade.spiceDisplayName.ToLowerInvariant() : "spice",
+            quantityLabel = accepted != null ? accepted.QuantityLabel :
+                !string.IsNullOrWhiteSpace(trade != null ? trade.quantityLabel : string.Empty) ? trade.quantityLabel : "this lot",
             offeredPrice = offeredPrice,
             counterPrice = counterPrice,
-            finalPrice = finalPrice,
+            finalPrice = accepted != null ? accepted.Price : finalPrice,
             currentBuyerOffer = currentBuyerOffer,
             minimumPrice = minimumPrice,
             currency = "varahas",
@@ -297,7 +530,7 @@ public class DialogueTableResponseProvider
 
         if (brainResult.isAccepted || string.Equals(brainResult.resolutionAction, "ACCEPT", StringComparison.OrdinalIgnoreCase))
         {
-            return roundCount <= 1 ? DialogueScenario.SellerPriceAccepted : DialogueScenario.PlayerAcceptedDeal;
+            return intent == NegotiationIntent.ACCEPT ? DialogueScenario.PlayerAcceptedDeal : DialogueScenario.SellerPriceAccepted;
         }
 
         if (brainResult.walkedAway || string.Equals(brainResult.resolutionAction, "WALK_AWAY", StringComparison.OrdinalIgnoreCase))

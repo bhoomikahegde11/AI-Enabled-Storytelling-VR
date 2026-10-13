@@ -17,7 +17,8 @@ public class ScreenFader : MonoBehaviour
 
         while (a < 1)
         {
-            a += Time.deltaTime * speed;
+            if (fadeImage == null) yield break;
+            a += FadeDeltaTime * speed;
 
 
             fadeImage.color = new Color(
@@ -41,7 +42,8 @@ public class ScreenFader : MonoBehaviour
 
         while (a > 0)
         {
-            a -= Time.deltaTime * speed;
+            if (fadeImage == null) yield break;
+            a -= FadeDeltaTime * speed;
 
 
             fadeImage.color = new Color(
@@ -55,4 +57,7 @@ public class ScreenFader : MonoBehaviour
             yield return null;
         }
     }
+
+    private static float FadeDeltaTime => GameManager.ExistingInstance != null && GameManager.ExistingInstance.IsLoading && Time.timeScale <= 0f
+        ? Time.unscaledDeltaTime : Time.deltaTime;
 }

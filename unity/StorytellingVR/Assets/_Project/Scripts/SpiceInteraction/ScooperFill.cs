@@ -27,6 +27,7 @@ public class ScooperFill : MonoBehaviour
 
     void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         // Not inside any sack
         if (!insideSack)
             return;
@@ -102,11 +103,13 @@ public class ScooperFill : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         RefreshZoneState(FindSpiceZone(other));
     }
 
     private void OnTriggerStay(Collider other)
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         RefreshZoneState(FindSpiceZone(other));
     }
 

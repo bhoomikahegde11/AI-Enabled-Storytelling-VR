@@ -107,7 +107,7 @@ public class DialogueCharacterRegistry
             new DialogueCharacterProfile("lakshmi_amma", "Lakshmi Amma", "Local Household Buyer", "Friendly"),
             new DialogueCharacterProfile("chinnamma_naik", "Chinnamma Naik", "Vijayanagara Wholesale Spice Buyer", "Strict"),
             new DialogueCharacterProfile("saraswati_chetti", "Saraswati Chetti", "Local Vijayanagara Retail Shop Owner", "Friendly"),
-            new DialogueCharacterProfile("father_penteado", "Father Penteado", "Jesuit Missionary", "Normal")
+            new DialogueCharacterProfile("father_penteado", "Father Penteado", "Portuguese Cleric", "Normal")
         };
     }
 

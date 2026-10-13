@@ -3,6 +3,7 @@ using TMPro;
 using Oculus.Voice;
 using System.Text.RegularExpressions;
 using System.Collections;
+using Meta.WitAi.Requests;
 
 public class VoiceRecognitionManager : MonoBehaviour
 {
@@ -26,6 +27,7 @@ public class VoiceRecognitionManager : MonoBehaviour
     private int pendingOffer;
     private string offerHint = "a price";
     private Color promptBaseColor;
+    private int requestGeneration;
 
     
     void Start()
@@ -39,34 +41,11 @@ public class VoiceRecognitionManager : MonoBehaviour
             promptBaseColor = voicePromptText.color;
         }
         Debug.Log("VOICE MANAGER STARTED");
-
-    
-
-    voiceExperience.VoiceEvents.OnStartListening.AddListener(() =>
-    {
-        Debug.Log("STARTED LISTENING");
-    });
-
-    voiceExperience.VoiceEvents.OnStoppedListening.AddListener(() =>
-    {
-        Debug.Log("STOPPED LISTENING");
-        StartCoroutine(ResetVoiceState());
-    });
-
-    voiceExperience.VoiceEvents.OnPartialTranscription.AddListener((text) =>
-    {
-        Debug.Log("PARTIAL: " + text);
-    });
-
-    voiceExperience.VoiceEvents.OnFullTranscription.AddListener((text) =>
-    {
-        Debug.Log("FULL: " + text);
-        OnTranscription(text);
-    });
     }
 
     private void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (!requireTriggerAndConfirm || !waitingForInput)
             return;
 
@@ -103,21 +82,21 @@ public class VoiceRecognitionManager : MonoBehaviour
         offerHint = string.IsNullOrWhiteSpace(priceHint) ? "a price" : priceHint;
         hasPendingOffer = false;
         pendingOffer = 0;
+        waitingForInput = true;
 
         if (requireTriggerAndConfirm)
         {
-            waitingForInput = true;
             SetPrompt("Hold LEFT TRIGGER, say " + offerHint + ", then release.");
             return;
         }
 
-        StartCoroutine(StartFreshListening());
+        StartCoroutine(PauseMenuController.RunGameplay(StartFreshListening()));
     }
 
     void OnTranscription(string transcription)
     {
         Debug.Log("TRANSCRIPTION  WAS RECEIVED: " + transcription);
-        if (!waitingForInput)
+        if (PauseMenuController.GameplayInputBlocked || !waitingForInput)
             return;
 
         Debug.Log("Player said: " + transcription);
@@ -147,25 +126,74 @@ public class VoiceRecognitionManager : MonoBehaviour
         {
             SetPrompt("I did not hear a price. Hold LEFT TRIGGER and try again.");
 
-            StartCoroutine(ClearPromptAfterDelay());
+            StartCoroutine(PauseMenuController.RunGameplay(ClearPromptAfterDelay()));
             if (!requireTriggerAndConfirm)
-                StartCoroutine(RestartListening());
+                StartCoroutine(PauseMenuController.RunGameplay(RestartListening()));
         }
     }
 
     private void BeginListeningForPrice()
     {
-        if (isListeningForPrice || voiceExperience == null)
+        if (PauseMenuController.GameplayInputBlocked || isListeningForPrice || voiceExperience == null)
             return;
 
         isListeningForPrice = true;
         SetPrompt("Listening... say " + offerHint + ".");
-        voiceExperience.Activate();
+        ActivateRequest();
     }
+
+    private void ActivateRequest()
+    {
+        if (voiceExperience == null || PauseMenuController.GameplayInputBlocked) return;
+        int generation = ++requestGeneration;
+        var events = new VoiceServiceRequestEvents();
+        events.OnFullTranscription.AddListener(text => ReceiveTranscription(generation, text));
+        events.OnStopListening.AddListener(request =>
+        {
+            if (this != null && generation == requestGeneration && !PauseMenuController.GameplaySuspended)
+                StartCoroutine(PauseMenuController.RunGameplay(ResetVoiceState(generation)));
+        });
+        voiceExperience.Activate(events);
+    }
+
+    private void ReceiveTranscription(int generation, string text)
+    {
+        if (this == null || !isActiveAndEnabled || generation != requestGeneration ||
+            PauseMenuController.GameplayInputBlocked) return;
+        OnTranscription(text);
+    }
+
+    public void OnGlobalPause()
+    {
+        ++requestGeneration; // Invalidate aborted requests even after a new capture starts on Resume.
+        StopAllCoroutines();
+        if (voiceExperience != null) voiceExperience.DeactivateAndAbortRequest();
+        isListeningForPrice = false;
+        if (waitingForInput && !hasPendingOffer)
+            SetPrompt("Capture cancelled. Hold LEFT TRIGGER (or V) to try again.");
+        if (waitingForInput && !requireTriggerAndConfirm && !hasPendingOffer)
+            StartCoroutine(PauseMenuController.RunGameplay(ResumeAutomaticListening()));
+    }
+
+    private IEnumerator ResumeAutomaticListening()
+    {
+        while (PauseMenuController.GameplayInputBlocked) yield return null;
+        if (waitingForInput && !hasPendingOffer) ActivateRequest();
+    }
+
+    public void CancelForSceneExit()
+    {
+        ++requestGeneration;
+        waitingForInput = isListeningForPrice = hasPendingOffer = false;
+        StopAllCoroutines();
+        if (voiceExperience != null) voiceExperience.DeactivateAndAbortRequest();
+    }
+
+    private void OnDestroy() => CancelForSceneExit();
 
     private void ConfirmPendingOffer()
     {
-        if (!hasPendingOffer)
+        if (PauseMenuController.GameplayInputBlocked || !hasPendingOffer)
             return;
 
         SubmitOffer(pendingOffer);
@@ -238,24 +266,25 @@ public class VoiceRecognitionManager : MonoBehaviour
     }
     IEnumerator RestartListening()
     {
-        waitingForInput = false ;
+        ++requestGeneration;
         voiceExperience.Deactivate();
         yield return new WaitForSeconds(1.0f);
         waitingForInput = true;
-        voiceExperience.Activate();
+        ActivateRequest();
     }
     IEnumerator StartFreshListening()
     {
+        ++requestGeneration;
         voiceExperience.Deactivate();
         yield return new WaitForSeconds(0.5f);
         waitingForInput = true;
         Debug.Log("Listening for player price");
-        voiceExperience.Activate();
+        ActivateRequest();
     }
-    IEnumerator ResetVoiceState()
+    IEnumerator ResetVoiceState(int generation)
     {
         yield return new WaitForSeconds(0.5f);
-        voiceExperience.Deactivate();
+        if (generation == requestGeneration && voiceExperience != null) voiceExperience.Deactivate();
     }
     IEnumerator ClearPromptAfterDelay()
     {

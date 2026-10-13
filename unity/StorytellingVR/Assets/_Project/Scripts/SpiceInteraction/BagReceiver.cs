@@ -24,6 +24,7 @@ public class BagReceiver : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (completed)
             return;
 

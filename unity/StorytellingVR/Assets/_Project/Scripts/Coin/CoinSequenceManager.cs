@@ -46,6 +46,7 @@ public class CoinSequenceManager : MonoBehaviour
 
     void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (!sequenceStarted || switching)
             return;
 
@@ -87,7 +88,7 @@ public class CoinSequenceManager : MonoBehaviour
             return;
         }
 
-        StartCoroutine(SwitchCoin());
+        StartCoroutine(PauseMenuController.RunGameplay(SwitchCoin()));
     }
 
     IEnumerator SwitchCoin()

@@ -611,7 +611,8 @@ public class NegotiationStateManager
             return Finish("greeting");
         }
 
-        if (ContainsAnyPhrase(text, "who are you", "where from", "how is weather", "how weather", "who is king", "what is your name", "tell me about"))
+        if (IsKnownSocialQuestion(rawSemanticText) ||
+            ContainsAnyPhrase(text, "who are you", "where from", "how is weather", "how weather", "who is king", "what is your name", "tell me about"))
         {
             result.intent = NegotiationIntent.GENERAL_DIALOGUE;
             result.socialSubIntent = DetectSocialSubIntent(text);
@@ -2388,7 +2389,8 @@ public class NegotiationStateManager
                 "let us do it",
                 "we have a deal",
                 "you have a deal") ||
-            ContainsAnyPhrase(text, "i accept", "sounds good", "that works", "i take it", "that work"))
+            ContainsAnyPhrase(text, "i accept", "sounds good", "that works", "i take it", "that work") ||
+            Regex.IsMatch(rawText, @"^\s*(?:(?:ok|okay|fine|yes|alright)\s+)*ill\s+take\s+it[.!]?\s*$"))
         {
             return true;
         }
@@ -2576,6 +2578,9 @@ public class NegotiationStateManager
         // Unknown complements ('I accept on Monday') must not disappear into an agreement.
         Match acceptanceClause = Regex.Match(input.normalizedText ?? string.Empty, @"\b(?:accept|accepted|agree|agreed|yes|yeah|okay|ok|fine|deal)\b(?<tail>.*)$");
         string acceptanceTail = acceptanceClause.Groups["tail"].Value;
+        // Speech recognition often drops the apostrophe in "I'll take it". This is a
+        // complete acceptance clause, while any words after it still need scrutiny.
+        acceptanceTail = Regex.Replace(acceptanceTail, @"\b(?:ill|i\s+ll|i\s+will|i)\s+take\s+it\b", string.Empty);
         if (accepting && trade != null && input.expectedReplyState == ExpectedReplyState.ExpectAcceptOrCounter &&
             input.acceptanceTarget == trade.npcOffer && input.referencedPrices.Contains(trade.npcOffer))
         {
@@ -2909,7 +2914,8 @@ public class NegotiationStateManager
         return intent == NegotiationIntent.ITEM_QUERY ||
                intent == NegotiationIntent.PRICE_QUERY ||
                intent == NegotiationIntent.QUANTITY_QUERY ||
-               intent == NegotiationIntent.QUERY_BUYER_BUDGET;
+               intent == NegotiationIntent.QUERY_BUYER_BUDGET ||
+               intent == NegotiationIntent.GENERAL_DIALOGUE;
     }
 
     private static bool IsTerminalIntent(NegotiationIntent intent, bool hasHardRejection)
@@ -3624,6 +3630,19 @@ public class NegotiationStateManager
             "what can you offer",
             "how much will you pay",
             "how much will you give");
+    }
+
+    private static bool IsKnownSocialQuestion(string rawText)
+    {
+        // Match the whole semantic transcript before filler removal ("you", "me", "the").
+        // Anchors exclude attached acceptance, prices and conditions; trade parsing still runs first.
+        return Regex.IsMatch(rawText,
+            @"^(?:please\s+)?(?:" +
+            @"(?:what\s+is|what\s+s|whats)\s+your\s+name|who\s+are\s+you|" +
+            @"(?:(?:can|could|would)\s+you\s+)?tell\s+me\s+(?:your\s+name|about\s+(?:the|this)\s+temple)|" +
+            @"where\s+(?:are\s+you\s+|do\s+you\s+come\s+)?from|are\s+you\s+from\s+here|" +
+            @"who\s+is\s+(?:(?:the|our)\s+)?king|where\s+is\s+(?:the|this)\s+temple|" +
+            @"what\s+(?:temple\s+is\s+this|is\s+this\s+temple))(?:\s+please)?$");
     }
 
     private static string DetectSocialSubIntent(string text)

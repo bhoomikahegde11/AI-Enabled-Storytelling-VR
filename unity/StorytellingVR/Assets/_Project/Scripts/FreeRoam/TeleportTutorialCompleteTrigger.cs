@@ -10,6 +10,7 @@ public class TeleportTutorialCompleteTrigger : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         Debug.Log("[TELEPORT TUTORIAL] Trigger entered by: " + other.name);
 
         if (completed)
@@ -84,7 +85,7 @@ public class TeleportTutorialCompleteTrigger : MonoBehaviour
             );
         }
 
-        StartCoroutine(ShowNextObjectiveRoutine());
+        StartCoroutine(PauseMenuController.RunGameplay(ShowNextObjectiveRoutine()));
     }
 
     private bool IsPlayer(Collider other)
@@ -103,7 +104,7 @@ public class TeleportTutorialCompleteTrigger : MonoBehaviour
 
     private IEnumerator ShowNextObjectiveRoutine()
     {
-        yield return new WaitForSecondsRealtime(2f);
+        yield return PauseMenuController.WaitRealtime(2f);
 
         if (ObjectiveUIManager.Instance != null)
         {

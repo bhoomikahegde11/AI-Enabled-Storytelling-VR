@@ -202,6 +202,25 @@ public class Level1VoiceInputManager : MonoBehaviour
         SetVoiceStatusText(GetIdleText());
     }
 
+    public void OnGlobalPause()
+    {
+        // Recognition already in flight may finish, but its coroutine waits before publishing review.
+        if (currentState != VoiceInputState.Recording && !isRequestingMicrophonePermission) return;
+        chatManager?.EndVoiceWithoutSubmission(activeVoiceToken);
+        StopAllCoroutines();
+        isRequestingMicrophonePermission = false;
+        InvalidateVoiceWork(); // End capture without trimming, transcribing or submitting it.
+        if (chatManager != null && chatManager.IsWaitingForPlayer) hudManager?.EnablePlayerTyping();
+    }
+
+    public void CancelForSceneExit()
+    {
+        chatManager?.EndVoiceWithoutSubmission(activeVoiceToken);
+        StopAllCoroutines();
+        isRequestingMicrophonePermission = false;
+        InvalidateVoiceWork();
+    }
+
     private void Start()
     {
         // 1. Auto-discover references if not assigned in Inspector
@@ -247,6 +266,7 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         // Auto-discover voiceStatusText if it is null (in case hudManager initialized later)
         if (voiceStatusText == null && hudManager != null)
         {
@@ -346,14 +366,14 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     public void StartListening()
     {
-        if (isListening || isRequestingMicrophonePermission) return;
+        if (PauseMenuController.GameplayInputBlocked || isListening || isRequestingMicrophonePermission) return;
 
         if (!TryStartVoiceTurn()) return;
 
         if (!Application.HasUserAuthorization(UserAuthorization.Microphone))
         {
             Debug.LogWarning("[STT-QUEST] Failure reason: Microphone permission not granted. Requesting permission.");
-            StartCoroutine(RequestMicrophonePermissionAndStartListening(activeVoiceToken));
+            StartCoroutine(PauseMenuController.RunGameplay(RequestMicrophonePermissionAndStartListening(activeVoiceToken)));
             return;
         }
 
@@ -362,7 +382,7 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     private bool TryStartVoiceTurn()
     {
-        if (chatManager == null) return false;
+        if (PauseMenuController.GameplayInputBlocked || chatManager == null) return false;
         if (currentState == VoiceInputState.Review)
         {
             // LT replaces only this interaction's current review; never clear a resolved or responding turn.
@@ -375,6 +395,7 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     private void BeginCapture(ConversationTurnLifecycle.VoiceToken token)
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (chatManager == null || !chatManager.IsCurrentVoiceTurn(token)) return;
 
         Level1DebugForceAccept.LogVoice("[STT] Recording started");
@@ -430,6 +451,7 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     public void StopListening()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (!isListening) return;
 
         isListening = false;
@@ -488,7 +510,7 @@ public class Level1VoiceInputManager : MonoBehaviour
             {
                 SaveRecordingDebug(trimmedClip);
             }
-            StartCoroutine(TranscribeAudioRoutine(trimmedClip, activeVoiceToken));
+            StartCoroutine(PauseMenuController.RunGameplay(TranscribeAudioRoutine(trimmedClip, activeVoiceToken)));
         }
         else
         {
@@ -651,7 +673,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         activeVoiceToken = token;
         currentState = VoiceInputState.Recognizing;
         SetVoiceStatusText("Understanding speech...");
-        StartCoroutine(TranscribeAudioRoutine(null, token));
+        StartCoroutine(PauseMenuController.RunGameplay(TranscribeAudioRoutine(null, token)));
         return true;
     }
     #endif

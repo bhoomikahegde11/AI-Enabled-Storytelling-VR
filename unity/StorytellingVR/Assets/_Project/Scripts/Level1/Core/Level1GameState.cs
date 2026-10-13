@@ -206,8 +206,15 @@ public class Level1GameState : MonoBehaviour
         {
             if (instance == null)
             {
-                GameObject host = new GameObject("Level1GameState");
-                instance = host.AddComponent<Level1GameState>();
+                Level1GameState authoredState = FindFirstObjectByType<Level1GameState>();
+                if (authoredState != null)
+                {
+                    authoredState.InitializeSingleton();
+                }
+                else
+                {
+                    CreateStateRoot(null);
+                }
             }
 
             return instance;
@@ -247,16 +254,59 @@ public class Level1GameState : MonoBehaviour
 
     private void Awake()
     {
+        InitializeSingleton();
+    }
+
+    private void InitializeSingleton()
+    {
         if (instance != null && instance != this)
         {
-            Destroy(gameObject);
+            RemoveStateComponent();
+            return;
+        }
+
+        if (instance == this) return;
+        // Older/shared hosts must never carry their gameplay hierarchy into persistence.
+        if (transform.childCount != 0 || GetComponents<Component>().Length != 2)
+        {
+            CreateStateRoot(this);
+            RemoveStateComponent();
             return;
         }
 
         instance = this;
-        DontDestroyOnLoad(gameObject);
+        transform.SetParent(null, true);
+        if (Application.isPlaying) DontDestroyOnLoad(gameObject);
         ValidateMarketDayDuration();
         EnsureInitialized();
+    }
+
+    private static void CreateStateRoot(Level1GameState configuration)
+    {
+        GameObject host = new GameObject(nameof(Level1GameState));
+        host.SetActive(false);
+        Level1GameState state = host.AddComponent<Level1GameState>();
+        if (configuration != null)
+        {
+            state.marketDayDurationSeconds = configuration.marketDayDurationSeconds;
+            #if UNITY_EDITOR
+            state.debugForceCharacterId = configuration.debugForceCharacterId;
+            #endif
+        }
+        state.InitializeSingleton();
+        host.SetActive(true);
+    }
+
+    private void RemoveStateComponent()
+    {
+        enabled = false;
+        if (Application.isPlaying) Destroy(this);
+        else DestroyImmediate(this);
+    }
+
+    private void OnDestroy()
+    {
+        if (instance == this) instance = null;
     }
 
     private void OnValidate()
@@ -278,6 +328,8 @@ public class Level1GameState : MonoBehaviour
         profile = localSaveManager.LoadProfile(marketManager);
         playerState.LoadFrom(profile.global_metrics.total_varahas, profile.global_metrics.reputation);
         initialized = true;
+        // A tutorial can load the profile before the market clock starts; keep its saved remaining time authoritative.
+        ApplyLoadedMarketDayStateWithoutStartingRoutine();
     }
 
     public void StartMarketDay()
@@ -719,7 +771,7 @@ public class Level1GameState : MonoBehaviour
             MarketDayTickEvent?.Invoke(marketDayRemainingSeconds);
         }
 
-        marketDayTimerCoroutine = StartCoroutine(MarketDayTimerRoutine());
+        marketDayTimerCoroutine = StartCoroutine(PauseMenuController.RunGameplay(MarketDayTimerRoutine()));
     }
 
     private void SyncMarketDayTimerToProfile()

@@ -183,6 +183,7 @@ public class Level1HUDManager : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         // Toggle ledger with TAB key (ignored if player is typing in inputField)
         if (Input.GetKeyDown(KeyCode.Tab))
         {
@@ -380,6 +381,18 @@ public class Level1HUDManager : MonoBehaviour
         if (inputVisibilityCoroutine != null)
         {
             StopCoroutine(inputVisibilityCoroutine);
+            inputVisibilityCoroutine = null;
+        }
+
+        if (!isActiveAndEnabled)
+        {
+            if (inputCanvasGroup != null)
+            {
+                inputCanvasGroup.alpha = visible ? 1f : 0f;
+                inputCanvasGroup.interactable = visible;
+                inputCanvasGroup.blocksRaycasts = visible;
+            }
+            return;
         }
 
         inputVisibilityCoroutine = StartCoroutine(FadePlayerInputPanelRoutine(visible));
@@ -825,6 +838,14 @@ public class Level1HUDManager : MonoBehaviour
             if (reputationAnimCoroutine != null)
             {
                 StopCoroutine(reputationAnimCoroutine);
+                reputationAnimCoroutine = null;
+            }
+
+            if (!isActiveAndEnabled)
+            {
+                reputationSlider.value = respect;
+                if (reputationRankText != null) reputationRankText.text = GetReputationRank(respect);
+                return;
             }
 
             reputationAnimCoroutine =

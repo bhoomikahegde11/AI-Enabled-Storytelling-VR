@@ -54,6 +54,7 @@ public class Level1DebugForceAccept : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         #if UNITY_EDITOR || DEVELOPMENT_BUILD
         // TEMP DEBUG: Heartbeat log every 2 seconds so we can confirm Update is executing.
         if (enableVerboseLogs && Time.unscaledTime >= nextHeartbeatLogTime)

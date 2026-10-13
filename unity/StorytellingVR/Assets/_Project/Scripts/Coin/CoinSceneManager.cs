@@ -56,9 +56,9 @@ public class CoinSceneManager : MonoBehaviour
             coinSequence.OnCoinSequenceFinished += EndCoinTutorial;
         }
 
-        StartCoroutine(
+        StartCoroutine(PauseMenuController.RunGameplay(
             StartCoinScene()
-        );
+        ));
     }
 
 
@@ -108,9 +108,9 @@ public class CoinSceneManager : MonoBehaviour
 
     public void NarrateVaraha()
     {
-        StartCoroutine(
+        StartCoroutine(PauseMenuController.RunGameplay(
             VarahaRoutine()
-        );
+        ));
     }
 
 
@@ -137,23 +137,23 @@ public class CoinSceneManager : MonoBehaviour
 
     public void NarrateKasu()
     {
-        StartCoroutine(
+        StartCoroutine(PauseMenuController.RunGameplay(
             ShowDialogue(
                 "Narrator",
                 "The Kasu, by contrast, is a smaller bronze coin commonly used for everyday transactions in the marketplace.",
                 NarratorKasuLineId,
                 kasuClip
             )
-        );
+        ));
     }
 
 
 
     void EndCoinTutorial()
     {
-        StartCoroutine(
+        StartCoroutine(PauseMenuController.RunGameplay(
             EndDialogue()
-        );
+        ));
     }
 
 

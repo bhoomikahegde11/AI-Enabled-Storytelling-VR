@@ -27,15 +27,11 @@ public class GameManager : MonoBehaviour
     [Header("Scene Flow")]
     [SerializeField] private string bootstrapSceneName = DefaultBootstrapSceneName;
     [SerializeField] private string mainMenuSceneName = DefaultMainMenuSceneName;
-    [SerializeField] private string[] scenes =
-    {
-        DefaultIntroSceneName,
-        DefaultGameplaySceneName
-    };
+    [SerializeField] private string[] scenes = (string[])DefaultSceneOrder.Clone();
     [SerializeField] private ScreenFader fader;
 
     [Header("Persistent Controllers")]
-    [SerializeField] private bool enablePauseMenuController;
+    [SerializeField] private bool enablePauseMenuController = true;
 
     [Header("Skip")]
     private bool yButtonHeld;
@@ -55,53 +51,85 @@ public class GameManager : MonoBehaviour
     private bool isLoading;
     private bool runtimeStateInitialized;
 
+    public static GameManager ExistingInstance => instance;
+
+    #if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void EnsureEditorSceneEntry()
+    {
+        // Direct Play uses the same manager, without redirecting the selected scene.
+        _ = Instance;
+    }
+    #endif
+
     public static GameManager Instance
     {
         get
         {
             if (instance == null)
             {
-                instance = FindFirstObjectByType<GameManager>();
-                if (instance == null)
+                GameManager existing = FindFirstObjectByType<GameManager>();
+                if (existing != null)
+                {
+                    existing.InitializeSingleton();
+                }
+                else
                 {
                     GameObject host = new GameObject(nameof(GameManager));
-                    instance = host.AddComponent<GameManager>();
+                    host.AddComponent<GameManager>().InitializeSingleton();
                     Debug.Log("[SCENE FLOW] Runtime GameManager instance created.");
                 }
             }
 
             instance.InitializeRuntimeState();
             instance.EnsurePersistentControllers();
+            instance.ResolveTransitionFader();
             return instance;
         }
     }
 
     public string CurrentSceneName => currentSceneName;
     public int CurrentProgressionIndex => currentIndex;
+    public bool IsLoading => isLoading;
+    public bool IsGameplayScene(string sceneName) => GetProgressionIndex(sceneName) >= 0;
 
     private void Awake()
     {
+        InitializeSingleton();
+    }
+
+    private void InitializeSingleton()
+    {
         if (instance != null && instance != this)
         {
-            Destroy(gameObject);
+            enabled = false;
+            if (Application.isPlaying) Destroy(gameObject);
+            else DestroyImmediate(gameObject);
             return;
         }
 
+        if (instance == this) return;
         instance = this;
-        DontDestroyOnLoad(gameObject);
+        transform.SetParent(null, true);
+        if (Application.isPlaying) DontDestroyOnLoad(gameObject);
         InitializeRuntimeState();
         EnsurePersistentControllers();
-        Debug.Log("[SCENE FLOW] Bootstrap loaded");
+        ResolveTransitionFader();
+        Debug.Log("[SCENE FLOW] GameManager initialized.");
     }
 
     private void OnEnable()
     {
-        SceneManager.sceneLoaded += HandleSceneLoaded;
+        if (instance == this)
+        {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+        }
     }
 
     private void Start()
     {
-        if (ShouldLoadMainMenuOnStart())
+        if (instance == this && ShouldLoadMainMenuOnStart())
         {
             Debug.Log($"[SCENE FLOW] Bootstrap -> {mainMenuSceneName}");
             LoadSceneByName(mainMenuSceneName);
@@ -110,14 +138,18 @@ public class GameManager : MonoBehaviour
 
     private void OnDisable()
     {
-        if (instance == this)
-        {
-            SceneManager.sceneLoaded -= HandleSceneLoaded;
-        }
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
+    }
+
+    private void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
+        if (instance == this) instance = null;
     }
 
     private void Update()
     {
+        if (instance != this || PauseMenuController.GameplayInputBlocked) return;
         InputDevice leftHand = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
 
         bool yPressed = false;
@@ -202,7 +234,7 @@ public class GameManager : MonoBehaviour
 
     public void LoadNextScene()
     {
-        if (isLoading)
+        if (isLoading || PauseMenuController.GameplaySuspended)
         {
             return;
         }
@@ -225,7 +257,18 @@ public class GameManager : MonoBehaviour
         LoadSceneByName(scenes[nextIndex]);
     }
 
-    public void LoadSceneByName(string sceneName)
+    public void RestartCurrentScene()
+    {
+        if (!isLoading && IsGameplayScene(SceneManager.GetActiveScene().name))
+            LoadSceneByName(SceneManager.GetActiveScene().name, abandonCurrentWork: true);
+    }
+
+    public void ReturnToMainMenu()
+    {
+        if (!isLoading) LoadSceneByName(mainMenuSceneName, abandonCurrentWork: true);
+    }
+
+    public void LoadSceneByName(string sceneName, bool abandonCurrentWork = false)
     {
         if (isLoading)
         {
@@ -239,6 +282,11 @@ public class GameManager : MonoBehaviour
         }
 
         string targetSceneName = sceneName.Trim();
+        if (!Application.CanStreamedLevelBeLoaded(targetSceneName))
+        {
+            Debug.LogError("[SCENE FLOW] Scene is not available in the build scene list: " + targetSceneName);
+            return; // Do not abandon local work or write progression for an unavailable destination.
+        }
         int targetIndex = GetProgressionIndex(targetSceneName);
         if (targetIndex >= 0)
         {
@@ -254,7 +302,7 @@ public class GameManager : MonoBehaviour
             Debug.LogWarning($"[SCENE FLOW] Loading non-progression scene '{targetSceneName}'. Progression index reset to -1.");
         }
 
-        StartCoroutine(LoadRoutine(targetSceneName));
+        StartCoroutine(LoadRoutine(targetSceneName, abandonCurrentWork || targetSceneName == mainMenuSceneName));
     }
 
     // Level 1 uses Y for its ledger; it must not also advance the scene/progression.
@@ -274,46 +322,64 @@ public class GameManager : MonoBehaviour
         LoadNextScene();
     }
 
-    private IEnumerator LoadRoutine(string targetSceneName)
+    private IEnumerator LoadRoutine(string targetSceneName, bool abandonCurrentWork)
     {
         isLoading = true;
-
-        if (Level1GameState.ExistingInstance != null)
+        PauseMenuController pause = GetComponent<PauseMenuController>();
+        try
         {
-            Level1GameState.ExistingInstance.SaveProfileToDisk();
+            pause?.PrepareForTransition();
+
+            PreserveCommittedProgress(abandonCurrentWork);
+
+            int targetIndex = GetProgressionIndex(targetSceneName);
+            if (targetIndex >= 0)
+            {
+                PersistProgressionState(targetSceneName, targetIndex);
+            }
+
+            ResolveTransitionFader();
+            if (fader != null)
+            {
+                yield return fader.FadeOut();
+            }
+
+            Debug.Log("[SCENE FLOW] Loading " + targetSceneName);
+
+            AsyncOperation loadOperation = null;
+            try { loadOperation = SceneManager.LoadSceneAsync(targetSceneName); }
+            catch (System.Exception error) { Debug.LogError("[SCENE FLOW] Scene load failed: " + error.Message); }
+            if (loadOperation == null)
+            {
+                Debug.LogError("[SCENE FLOW] Failed to start loading scene '" + targetSceneName + "'.");
+                if (fader != null) yield return fader.FadeIn();
+                yield break;
+            }
+
+            yield return loadOperation;
+
+            Debug.Log("[SCENE FLOW] " + targetSceneName + " loaded");
+
+            ResolveTransitionFader();
+            if (fader != null)
+            {
+                yield return fader.FadeIn();
+            }
+
         }
-
-        int targetIndex = GetProgressionIndex(targetSceneName);
-        if (targetIndex >= 0)
+        finally
         {
-            PersistProgressionState(targetSceneName, targetIndex);
-        }
-
-        if (fader != null)
-        {
-            yield return fader.FadeOut();
-        }
-
-        Debug.Log("[SCENE FLOW] Loading " + targetSceneName);
-
-        AsyncOperation loadOperation = SceneManager.LoadSceneAsync(targetSceneName);
-        if (loadOperation == null)
-        {
-            Debug.LogError("[SCENE FLOW] Failed to start loading scene '" + targetSceneName + "'.");
             isLoading = false;
-            yield break;
+            pause?.FinishTransition();
         }
+    }
 
-        yield return loadOperation;
-
-        Debug.Log("[SCENE FLOW] " + targetSceneName + " loaded");
-
-        if (fader != null)
-        {
-            yield return fader.FadeIn();
-        }
-
-        isLoading = false;
+    private void PreserveCommittedProgress(bool abandonCurrentWork)
+    {
+        var state = Level1GameState.ExistingInstance;
+        if (state == null) return;
+        state.SaveProfileToDisk();
+        if (abandonCurrentWork) state.ReloadProfileFromDisk();
     }
 
     private void InitializeRuntimeState()
@@ -330,16 +396,50 @@ public class GameManager : MonoBehaviour
 
     private void EnsurePersistentControllers()
     {
-        if (!enablePauseMenuController)
+        PauseMenuController controller = GetComponent<PauseMenuController>();
+        if (controller == null)
         {
-            return;
-        }
-
-        if (GetComponent<PauseMenuController>() == null)
-        {
-            gameObject.AddComponent<PauseMenuController>();
+            controller = gameObject.AddComponent<PauseMenuController>();
             Debug.Log("[SCENE FLOW] Added missing PauseMenuController to persistent GameManager.");
         }
+
+        if (controller.InitializeOwnership(this))
+        {
+            // Component activation and gameplay readiness are deliberately separate.
+            controller.enabled = enablePauseMenuController;
+        }
+    }
+
+    private ScreenFader ResolveTransitionFader()
+    {
+        if (fader == null)
+        {
+            // Never adopt a story sequence's independent scene-local fader.
+            fader = GetComponentInChildren<ScreenFader>(true);
+        }
+
+        if (fader != null && !fader.transform.IsChildOf(transform))
+        {
+            // Bootstrap authors the fade canvas as a separate root.
+            Canvas canvas = fader.GetComponentInParent<Canvas>(true);
+            if (canvas != null && canvas.transform.parent == null)
+            {
+                canvas.transform.SetParent(transform, true);
+            }
+        }
+
+        if (fader != null && (!fader.transform.IsChildOf(transform) || fader.fadeImage == null))
+        {
+            fader = null;
+        }
+
+        if (fader != null && fader.fadeImage != null)
+        {
+            // A transparent persistent overlay must not intercept scene UI rays.
+            fader.fadeImage.raycastTarget = false;
+        }
+
+        return fader;
     }
 
     private void EnsureSceneDefaults()
@@ -402,6 +502,7 @@ public class GameManager : MonoBehaviour
     private void HandleSceneLoaded(Scene scene, LoadSceneMode loadSceneMode)
     {
         SyncCurrentScene(scene.name);
+        ResolveTransitionFader();
     }
 
     private void SyncCurrentScene(string sceneName)

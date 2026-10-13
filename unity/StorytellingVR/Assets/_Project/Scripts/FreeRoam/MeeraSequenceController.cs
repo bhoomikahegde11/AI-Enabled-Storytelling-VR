@@ -109,9 +109,9 @@ public class MeeraSequenceController : MonoBehaviour
         // Meera's introduction.
         SetInspectionRayEnabled(false);
 
-        activeRoutine = StartCoroutine(
+        activeRoutine = StartCoroutine(PauseMenuController.RunGameplay(
             IntroductionRoutine()
-        );
+        ));
     }
 
     private IEnumerator IntroductionRoutine()
@@ -158,7 +158,7 @@ public class MeeraSequenceController : MonoBehaviour
                 greetingLine
             );
 
-            yield return new WaitForSecondsRealtime(
+            yield return PauseMenuController.WaitRealtime(
                 pauseBetweenLines
             );
 
@@ -172,13 +172,13 @@ public class MeeraSequenceController : MonoBehaviour
         {
             Debug.Log($"[{speakerName}] {greetingLine}");
 
-            yield return new WaitForSecondsRealtime(4f);
+            yield return PauseMenuController.WaitRealtime(4f);
 
             Debug.Log(
                 $"[{speakerName}] {inspectionInvitation}"
             );
 
-            yield return new WaitForSecondsRealtime(4f);
+            yield return PauseMenuController.WaitRealtime(4f);
         }
 
         currentState =

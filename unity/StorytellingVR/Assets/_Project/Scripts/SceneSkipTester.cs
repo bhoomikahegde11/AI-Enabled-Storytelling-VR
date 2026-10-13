@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.XR;
 
 public class SceneSkipTester : MonoBehaviour
@@ -7,16 +8,16 @@ public class SceneSkipTester : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.N))
-        {
-            SkipScene();
-        }
+        if (PauseMenuController.GameplayInputBlocked) return;
+        // Keyboard skip lives only in GameManager (F8, Editor/debug); a letter key here fired while typing in chat.
 
         InputDevice rightHand = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
 
         if (rightHand.TryGetFeatureValue(CommonUsages.secondaryButton, out bool bPressed))
         {
-            if (bPressed && !bWasPressed)
+            // Same scene gate as the Y skip: Level 1 uses B for voice reset.
+            if (bPressed && !bWasPressed &&
+                GameManager.ControllerSceneSkipAllowedIn(SceneManager.GetActiveScene().name))
             {
                 SkipScene();
             }

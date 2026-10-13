@@ -8,7 +8,14 @@ namespace StorytellingVR.Tutorial
 {
     public static class TutorialDialogueUIHelper
     {
-        public static IEnumerator PlayDialogue(
+        public static IEnumerator PlayDialogue(TMP_Text subtitleText, AudioSource audioSource, AudioClip clip,
+            string[] lines, Func<bool> isTriggerPressed, Action onFinished = null)
+        {
+            return PauseMenuController.RunGameplay(PlayDialogueRoutine(subtitleText, audioSource, clip, lines,
+                () => !PauseMenuController.GameplayInputBlocked && isTriggerPressed != null && isTriggerPressed(), onFinished));
+        }
+
+        private static IEnumerator PlayDialogueRoutine(
             TMP_Text subtitleText,
             AudioSource audioSource,
             AudioClip clip,
@@ -71,7 +78,7 @@ namespace StorytellingVR.Tutorial
                         {
                             bool currentlyPressed = isTriggerPressed != null && isTriggerPressed.Invoke();
 #if UNITY_EDITOR
-                            if (Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0)) currentlyPressed = true;
+                            if (!PauseMenuController.GameplayInputBlocked && (Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0))) currentlyPressed = true;
 #endif
                             bool freshPress = currentlyPressed && !previousPressed;
                             previousPressed = currentlyPressed;
@@ -83,7 +90,7 @@ namespace StorytellingVR.Tutorial
                                 break;
                             }
 
-                            elapsed += Time.unscaledDeltaTime;
+                            elapsed += PauseMenuController.GameplayUnscaledDeltaTime;
                             yield return null;
                         }
 
@@ -115,7 +122,7 @@ namespace StorytellingVR.Tutorial
                 {
                     bool currentlyPressed = isTriggerPressed != null && isTriggerPressed.Invoke();
 #if UNITY_EDITOR
-                    if (Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0)) currentlyPressed = true;
+                    if (!PauseMenuController.GameplayInputBlocked && (Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0))) currentlyPressed = true;
 #endif
                     bool freshPress = currentlyPressed && !previousPressed;
 
@@ -158,6 +165,7 @@ namespace StorytellingVR.Tutorial
 
         public static bool GetRightTriggerPressed()
         {
+            if (PauseMenuController.GameplayInputBlocked) return false;
             InputDevice rightHand = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
             bool pressed = false;
             rightHand.TryGetFeatureValue(CommonUsages.triggerButton, out pressed);

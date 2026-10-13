@@ -148,6 +148,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.GameplayInputBlocked) return;
         if (!playerInside || sequenceStarted || sequenceComplete)
             return;
 
@@ -156,7 +157,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         if (xPressed && !buttonHeld)
         {
             buttonHeld = true;
-            StartCoroutine(RunSequence());
+            StartCoroutine(PauseMenuController.RunGameplay(RunSequence()));
         }
 
         if (!xPressed)
@@ -257,9 +258,9 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
 
         stallArrivalDialoguePlayed = true;
 
-        StartCoroutine(
+        StartCoroutine(PauseMenuController.RunGameplay(
             StallArrivalDialogueSequence(onDialogueFinished)
-        );
+        ));
     }
 
     private IEnumerator StallArrivalDialogueSequence(
@@ -299,12 +300,12 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         else
         {
             Debug.Log($"[{speaker}] {text}");
-            yield return new WaitForSecondsRealtime(2f);
+            yield return PauseMenuController.WaitRealtime(2f);
         }
 
         if (lineGap > 0f)
         {
-            yield return new WaitForSecondsRealtime(lineGap);
+            yield return PauseMenuController.WaitRealtime(lineGap);
         }
 
         // Return to idle after merchant finishes speaking

@@ -9,6 +9,37 @@ using TMPro;
 
 public class Level1FulfillmentTests
 {
+    [Test]
+    public void InactiveHudAppliesRespectAndInputVisibilityWithoutStartingCoroutines()
+    {
+        var host = new GameObject("Level1_HUD");
+        host.SetActive(false);
+        try
+        {
+            var hud = host.AddComponent<Level1HUDManager>();
+            var slider = new GameObject("Respect slider").AddComponent<UnityEngine.UI.Slider>();
+            slider.transform.SetParent(host.transform);
+            slider.maxValue = 100f;
+            var group = new GameObject("Input panel").AddComponent<CanvasGroup>();
+            group.transform.SetParent(host.transform);
+            hud.reputationSlider = slider;
+            typeof(Level1HUDManager).GetField("inputCanvasGroup", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(hud, group);
+
+            hud.UpdateRespect(55);
+            Assert.AreEqual(55f, slider.value);
+            hud.HidePlayerInputPanel();
+            Assert.AreEqual(0f, group.alpha);
+            Assert.IsFalse(group.interactable);
+            Assert.IsFalse(group.blocksRaycasts);
+            hud.ShowPlayerInputPanel();
+            Assert.AreEqual(1f, group.alpha);
+            Assert.IsTrue(group.interactable);
+            Assert.IsTrue(group.blocksRaycasts);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(host); }
+    }
+
     private static LocalTradeState AcceptedTrade(int grams = 560)
     {
         var trade = new LocalTradeState { spiceKey = "pepper", spiceDisplayName = "Pepper",

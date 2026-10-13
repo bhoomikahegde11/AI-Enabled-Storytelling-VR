@@ -194,7 +194,7 @@ public class MarketplaceManager : MonoBehaviour
         // 6. Reset NPC position and begin lifecycle loop
         ResetNPCToSpawnPoint();
         Level1GameState.Instance.StartMarketDay();
-        marketDayStartupCoroutine = StartCoroutine(WaitForMarketDayThenStartLifecycle());
+        marketDayStartupCoroutine = StartCoroutine(PauseMenuController.RunGameplay(WaitForMarketDayThenStartLifecycle()));
     }
 
     private void OnValidate()
@@ -426,7 +426,7 @@ public class MarketplaceManager : MonoBehaviour
         Level1DebugForceAccept.LogTrade("[MARKET LOOP] Customer spawned and approaching stall.");
 
         // 2. Move NPC to Trade Point and wait until reached
-        yield return StartCoroutine(WalkToDestinationRoutine(tradePoint.position));
+        yield return StartCoroutine(PauseMenuController.RunGameplay(WalkToDestinationRoutine(tradePoint.position)));
 
         // 3. NPC Arrived at Stall - Orient smoothly
         buyerNPC.transform.rotation = tradePoint.rotation;
@@ -492,7 +492,7 @@ public class MarketplaceManager : MonoBehaviour
 
         negotiationWasAccepted = wasAccepted;
         Level1DebugForceAccept.LogTrade($"[MARKET LOOP] Customer leaving stall. Accepted={wasAccepted}");
-        StartCoroutine(ExitLifecycleRoutine());
+        StartCoroutine(PauseMenuController.RunGameplay(ExitLifecycleRoutine()));
     }
 
     private IEnumerator ExitLifecycleRoutine()
@@ -572,7 +572,7 @@ public class MarketplaceManager : MonoBehaviour
         }
 
         // 3. Move NPC to BuyerExitPoint and wait until reached
-        yield return StartCoroutine(WalkToDestinationRoutine(exitPoint.position));
+        yield return StartCoroutine(PauseMenuController.RunGameplay(WalkToDestinationRoutine(exitPoint.position)));
 
         // 4. Now reset/clear conversation UI text and show approaching/waiting state
         if (chatManager != null)
@@ -586,7 +586,7 @@ public class MarketplaceManager : MonoBehaviour
         // 5. Wait for a respect-based delay before spawning next customer
         if (!Level1GameState.Instance.MarketDayEnded)
         {
-            yield return StartCoroutine(NextCustomerCountdownRoutine(nextCustomerGap));
+            yield return StartCoroutine(PauseMenuController.RunGameplay(NextCustomerCountdownRoutine(nextCustomerGap)));
         }
 
         // 6. Hide conversation canvas during teleportation step
@@ -603,7 +603,7 @@ public class MarketplaceManager : MonoBehaviour
         // 8. Repeat lifecycle loop
         if (!Level1GameState.Instance.MarketDayEnded)
         {
-            StartCoroutine(StartBargainingLifecycle());
+            StartCoroutine(PauseMenuController.RunGameplay(StartBargainingLifecycle()));
         }
         else
         {
@@ -709,7 +709,7 @@ public class MarketplaceManager : MonoBehaviour
 
         Level1DebugForceAccept.LogVerbose($"[MARKET LOOP] Starting idle patience tracking. Patience={buyerPatience}, first={firstReminderSeconds}s, second={secondReminderSeconds}s, walkAway={walkAwaySeconds}s");
 
-        negotiationIdleCoroutine = StartCoroutine(NegotiationIdleRoutine());
+        negotiationIdleCoroutine = StartCoroutine(PauseMenuController.RunGameplay(NegotiationIdleRoutine()));
     }
 
     public void StopNegotiationTimer()
@@ -773,7 +773,7 @@ public class MarketplaceManager : MonoBehaviour
                     if (chatManager != null)
                     {
                         idleReminderStartedAt = Time.time;
-                        chatManager.PlayNegotiationIdleReminder(SecondReminderLines[Random.Range(0, SecondReminderLines.Length)]);
+                        chatManager.PlayNegotiationIdleReminder(SecondReminderLines[Random.Range(0, SecondReminderLines.Length)], 2);
                     }
                 }
                 else if (idleSeconds >= walkAwaySeconds)
@@ -798,7 +798,7 @@ public class MarketplaceManager : MonoBehaviour
     private IEnumerator NextCustomerCountdownRoutine(float nextCustomerGap)
     {
         StopNextCustomerCountdown();
-        nextCustomerCountdownCoroutine = StartCoroutine(NextCustomerCountdownDisplayRoutine(nextCustomerGap));
+        nextCustomerCountdownCoroutine = StartCoroutine(PauseMenuController.RunGameplay(NextCustomerCountdownDisplayRoutine(nextCustomerGap)));
         float elapsed = 0f;
         while (elapsed < nextCustomerGap)
         {
@@ -878,7 +878,7 @@ public class MarketplaceManager : MonoBehaviour
 
         Level1DebugForceAccept.LogTrade("[MARKET LOOP] Market day active. Starting negotiable customer lifecycle.");
 
-        StartCoroutine(StartBargainingLifecycle());
+        StartCoroutine(PauseMenuController.RunGameplay(StartBargainingLifecycle()));
     }
 
     private void ConfigureNegotiationPatience(int buyerPatience)

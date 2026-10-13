@@ -90,9 +90,9 @@ public class NarratorUIManager : MonoBehaviour
     {
         StopCurrentRoutine();
 
-        currentRoutine = StartCoroutine(
+        currentRoutine = StartCoroutine(PauseMenuController.RunGameplay(
             NarrationRoutine(speaker, subtitle, null)
-        );
+        ));
     }
 
     public void ShowNarration(
@@ -103,9 +103,9 @@ public class NarratorUIManager : MonoBehaviour
     {
         StopCurrentRoutine();
 
-        currentRoutine = StartCoroutine(
+        currentRoutine = StartCoroutine(PauseMenuController.RunGameplay(
             NarrationRoutine(speaker, subtitle, lineId)
-        );
+        ));
     }
 
     /// <summary>
@@ -119,9 +119,9 @@ public class NarratorUIManager : MonoBehaviour
     {
         StopCurrentRoutine();
 
-        currentRoutine = StartCoroutine(
+        currentRoutine = StartCoroutine(PauseMenuController.RunGameplay(
             NarrationRoutine(speaker, subtitle, null)
-        );
+        ));
 
         yield return currentRoutine;
 
@@ -136,9 +136,9 @@ public class NarratorUIManager : MonoBehaviour
     {
         StopCurrentRoutine();
 
-        currentRoutine = StartCoroutine(
+        currentRoutine = StartCoroutine(PauseMenuController.RunGameplay(
             NarrationRoutine(speaker, subtitle, lineId)
-        );
+        ));
 
         yield return currentRoutine;
 
@@ -155,9 +155,9 @@ public class NarratorUIManager : MonoBehaviour
     {
         StopCurrentRoutine();
 
-        currentRoutine = StartCoroutine(
+        currentRoutine = StartCoroutine(PauseMenuController.RunGameplay(
             NarrationRoutine(speaker, fullText, null)
-        );
+        ));
 
         yield return currentRoutine;
 
@@ -171,9 +171,9 @@ public class NarratorUIManager : MonoBehaviour
     {
         StopCurrentRoutine();
 
-        currentRoutine = StartCoroutine(
+        currentRoutine = StartCoroutine(PauseMenuController.RunGameplay(
             NarrationRoutine(speaker, fullText, lineId)
-        );
+        ));
 
         yield return currentRoutine;
 
@@ -317,7 +317,7 @@ public class NarratorUIManager : MonoBehaviour
                     break;
                 }
 
-                elapsed += Time.unscaledDeltaTime;
+                elapsed += PauseMenuController.GameplayUnscaledDeltaTime;
                 yield return null;
             }
 
@@ -382,7 +382,7 @@ public class NarratorUIManager : MonoBehaviour
             if (autoAdvance)
             {
                 completedLineElapsed +=
-                    Time.unscaledDeltaTime;
+                    PauseMenuController.GameplayUnscaledDeltaTime;
 
                 if (completedLineElapsed >= autoAdvanceDelay)
                 {
@@ -506,6 +506,7 @@ public class NarratorUIManager : MonoBehaviour
 
     private bool GetContinueButtonPressed()
     {
+        if (PauseMenuController.GameplayInputBlocked) return false;
 #if UNITY_EDITOR
         if (allowEditorInput)
         {

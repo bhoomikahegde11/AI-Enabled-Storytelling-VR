@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 
+// Historical filename and class retained for the active Saraswati Chetti character.
 public static class SiddharthChettiDialogue
 {
     public static CharacterDialogueSet Create()
@@ -10,363 +11,227 @@ public static class SiddharthChettiDialogue
             NpcPersonalityBucket.Friendly,
             new List<DialogueLine>
             {
-                new DialogueLine(DialogueScenario.CustomerGreeting, new[]
-                {
-                    "Greetings, merchant. Saraswati Chetti seeks {quantityLabel} of {spiceName} for the bazaar trade.",
-                    "I am Saraswati Chetti, and I have come for {quantityLabel} of {spiceName} to fill my shop jars.",
-                    "Well met. I need {quantityLabel} of {spiceName} for the day's selling.",
-                    "My shelves would welcome some good {spiceName} before the bazaar grows crowded.",
-                    "I came for {spiceName}, merchant, and in enough measure to keep customers smiling.",
-                    "Saraswati Chetti is here for {quantityLabel} of {spiceName}. Let us see what your stall offers."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.RepeatCustomerGreeting, new[]
-                {
-                    "We meet again, friend. Let us see whether today brings a kinder bargain.",
-                    "Back to your stall again, am I? Good. Let us talk business.",
-                    "We know each other now. That should make this easier.",
-                    "Here I am again, merchant. Let us see if the price smiles on us today.",
-                    "Another day, another bargain, friend.",
-                    "I return for more stock. Let us settle it briskly."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.AskWhatBuyerWants, new[]
-                {
-                    "I want {quantityLabel} of {spiceName} for my customers in the bazaar lanes.",
-                    "The {spiceName} will sell well if the price leaves me a margin worth smiling over.",
-                    "I seek {quantityLabel} of {spiceName} for the front of my shop.",
-                    "It is {spiceName} I need, and enough of it to keep the jars full from dawn to dusk.",
-                    "My customers ask for good {spiceName}, so that is what I seek.",
-                    "I came for {spiceName}, merchant, and in proper measure for resale."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.AskBuyerBudget, new[]
-                {
-                    "I can safely spend {currentBuyerOffer} {currency} and still keep my little shop running.",
-                    "My purse reaches {currentBuyerOffer} {currency} for this purchase.",
-                    "My working figure is {currentBuyerOffer} {currency}.",
-                    "I can lay down {currentBuyerOffer} {currency} and still keep a margin.",
-                    "For this lot, {currentBuyerOffer} {currency} is a sensible price.",
-                    "I can offer {currentBuyerOffer} {currency} without hurting the books."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.AskQuantity, new[]
-                {
+                Line(DialogueScenario.CustomerGreeting,
+                    "Namaskaram, merchant. I am Saraswati Chetti. I need {quantityLabel} of {spiceName} for my shop.",
+                    "Saraswati Chetti. I am looking for {quantityLabel} of {spiceName}; what is your price?",
+                    "Good day. My customers ask for {spiceName}, and I need {quantityLabel}.",
+                    "I have come for {quantityLabel} of {spiceName}. Let us see if the price suits the goods."),
+                Line(DialogueScenario.RepeatCustomerGreeting,
+                    "We meet at your stall again. What have you brought today?",
+                    "I remember your stall, merchant. Let us discuss today's {spiceName}.",
+                    "Back again for {spiceName}. Let us agree on terms for {quantityLabel}.",
+                    "Another visit, another set of figures. Shall we begin?"),
+                Line(DialogueScenario.AskWhatBuyerWants,
                     "I need {quantityLabel} of {spiceName} for my shop.",
-                    "My quantity is {quantityLabel} of {spiceName}.",
-                    "Set me down for {quantityLabel} of {spiceName}.",
-                    "For resale, I want {quantityLabel} of {spiceName}.",
-                    "My shop jars need {quantityLabel} of {spiceName}.",
-                    "The amount I seek is {quantityLabel} of {spiceName}.",
-                    "I will take {quantityLabel} of {spiceName} for the bazaar."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.SellerPriceTooHigh, new[]
-                {
-                    "{offeredPrice} {currency} is too hard on a shopkeeper's margin.",
-                    "That price leaves too little room for me to resell fairly.",
-                    "No, friend, that cuts too deep into my margin.",
-                    "That figure is too heavy for a man who must sell again tomorrow.",
-                    "I cannot keep customers and pay that price as well.",
-                    "I will not take {offeredPrice} {currency}. There is no room left in it.",
-                    "That price squeezes the life out of the bargain."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.SellerPriceTooHigh, new[]
-                {
-                    "That price is steep, friend, though I would still rather trade with you.",
-                    "{offeredPrice} {currency} is too much for my little shop, but we can keep talking.",
-                    "You ask too high, merchant, though I am willing to work toward a fairer number."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.High, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.SellerPriceTooHigh, new[]
-                {
-                    "That price is too high for a practical reseller.",
-                    "{offeredPrice} {currency} leaves me too little room to sell well.",
-                    "No, friend, that figure is still too heavy for my books."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.SellerPriceTooHigh, new[]
-                {
-                    "That price is too high, and my customers will not wait forever.",
-                    "{offeredPrice} {currency} is too much. Speak faster if we are to finish.",
-                    "You ask too high, merchant, and I must get back to my stall."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.SellerPriceSlightlyHigh, new[]
-                {
-                    "You ask a touch too much, friend. Could we meet at {counterPrice} {currency}?",
-                    "Come a little lower, and {counterPrice} {currency} will do.",
-                    "You are close, merchant, but not close enough. I can offer {counterPrice} {currency}.",
-                    "Trim it a little, and {counterPrice} {currency} will keep us both smiling.",
-                    "That price is nearly there. {counterPrice} {currency} would be fairer.",
-                    "A small step down, friend, and {counterPrice} {currency} will settle it.",
-                    "My side of the scale says {counterPrice} {currency}."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.SellerPriceSlightlyHigh, new[]
-                {
-                    "We are close, friend. I could settle gladly at {counterPrice} {currency}.",
-                    "Your price is near enough. Let us meet at {counterPrice} {currency} and keep goodwill.",
-                    "A small step lower to {counterPrice} {currency} would keep both our stalls happy."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.High, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.SellerPriceSlightlyHigh, new[]
-                {
-                    "You are close, merchant. I can do {counterPrice} {currency}.",
-                    "{counterPrice} {currency} is the practical figure for my resale.",
-                    "Come a shade lower, friend, and {counterPrice} {currency} will settle it."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.SellerPriceSlightlyHigh, new[]
-                {
-                    "We are close, but quickly now. {counterPrice} {currency}.",
-                    "A faster end would be {counterPrice} {currency}, merchant.",
-                    "I can do {counterPrice} {currency}, but I cannot linger from my stall."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.SellerPriceAccepted, new[]
-                {
-                    "That is workable for me. Let us close the bargain.",
-                    "A fair enough price. I can accept that.",
-                    "Yes, that will serve my trade well enough.",
-                    "Good. That price leaves room for both of us.",
-                    "That will do nicely, merchant.",
-                    "I can work with that figure.",
-                    "Very well. Let us close on that."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.SellerPriceBelowExpected, new[]
-                {
-                    "That is friendlier than I expected, merchant.",
-                    "You speak a lower number than I feared. That gladdens a buyer.",
-                    "Ah, that is kinder than I had prepared for.",
-                    "You surprise me, friend. That price is lighter than expected.",
-                    "That is better than I feared I would hear.",
-                    "A pleasant figure, merchant. Lower than I expected.",
-                    "That price sits easier than I thought it would."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.SellerPriceBelowExpected, new[]
-                {
-                    "That is kindly said, friend. I will remember such fairness.",
-                    "You ask less than I expected, and that does a shopkeeper's heart good.",
-                    "That is a welcome surprise, merchant."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.High, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.SellerPriceBelowExpected, new[]
-                {
-                    "That is lower than I expected, and useful.",
-                    "A fair surprise, friend. That sits better with my books.",
-                    "You speak more reasonably than I expected."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.SellerPriceBelowExpected, new[]
-                {
-                    "That is lower than expected. Good. Let us settle it quickly.",
-                    "A welcome price, friend. It saves me time and worry.",
-                    "You speak better than I feared, merchant. Let us finish now."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.BuyerCounterFirst, new[]
-                {
-                    "Let me begin at {counterPrice} {currency}, if that seems fair.",
-                    "My first counter is {counterPrice} {currency} for the lot.",
-                    "I will start at {counterPrice} {currency}.",
-                    "My opening answer is {counterPrice} {currency}, friend.",
-                    "Let us begin the bargaining at {counterPrice} {currency}.",
-                    "I place {counterPrice} {currency} before you to start.",
-                    "First offer from me: {counterPrice} {currency}."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.BuyerCounterMiddle, new[]
-                {
-                    "We are getting warmer. I can offer {counterPrice} {currency}.",
-                    "I will stretch to {counterPrice} {currency} to keep this trade alive.",
-                    "We are coming together now. {counterPrice} {currency} is my next step.",
-                    "I can move to {counterPrice} {currency}, and that is a fair stretch.",
-                    "That is closer. I will go to {counterPrice} {currency}.",
-                    "Let me come up a little more, to {counterPrice} {currency}.",
-                    "I still want this lot, so I offer {counterPrice} {currency}."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.BuyerCounterMiddle, new[]
-                {
-                    "In goodwill, I can offer {counterPrice} {currency}.",
-                    "Let us keep this cheerful and fair. {counterPrice} {currency}.",
-                    "I will come to {counterPrice} {currency}, friend, so we may trade well together."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.High, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.BuyerCounterMiddle, new[]
-                {
-                    "We are drawing near. I can offer {counterPrice} {currency}.",
-                    "{counterPrice} {currency} is my next sensible step.",
-                    "I move to {counterPrice} {currency}, merchant."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.BuyerCounterMiddle, new[]
-                {
-                    "I can offer {counterPrice} {currency}, but let us not drag this out.",
-                    "{counterPrice} {currency} is my next step, friend. My stall still needs me.",
-                    "Be quick now. I can come to {counterPrice} {currency}."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Middle, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.BuyerCounterFinal, new[]
-                {
-                    "Friend, {counterPrice} {currency} is the furthest I can sensibly go.",
-                    "This must be my last step: {counterPrice} {currency}.",
-                    "That is my last figure, {counterPrice} {currency}.",
-                    "I can go no further and still keep a margin. {counterPrice} {currency}.",
-                    "My last word is {counterPrice} {currency}.",
-                    "No more steps from me. {counterPrice} {currency} is final.",
-                    "That is the end of my road on price: {counterPrice} {currency}."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.BuyerCounterFinal, new[]
-                {
-                    "This is my last step, given in friendship: {counterPrice} {currency}.",
-                    "{counterPrice} {currency} is as far as I can go and still smile at the trade.",
-                    "Friend, I end at {counterPrice} {currency}. Let us close well if we can."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.High, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.BuyerCounterFinal, new[]
-                {
-                    "{counterPrice} {currency} is my final figure.",
-                    "I stop at {counterPrice} {currency}, merchant.",
-                    "This is my last offer, friend: {counterPrice} {currency}."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.BuyerCounterFinal, new[]
-                {
-                    "{counterPrice} {currency} is my last step, and my stall cannot wait longer.",
-                    "I end at {counterPrice} {currency}, friend. Customers may already be looking for me.",
-                    "This is my last offer: {counterPrice} {currency}. Decide quickly now."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.BuyerHoldsFirm, new[]
-                {
-                    "I must stay at {currentBuyerOffer} {currency}, or my books will curse me later.",
-                    "My offer holds at {currentBuyerOffer} {currency}.",
-                    "No, friend, I stay at {currentBuyerOffer} {currency}.",
-                    "My books stop at {currentBuyerOffer} {currency}.",
-                    "That is where I must stand: {currentBuyerOffer} {currency}.",
-                    "I hold firm at {currentBuyerOffer} {currency}.",
-                    "I cannot push beyond {currentBuyerOffer} {currency} and still trade well."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.BuyerHoldsFirm, new[]
-                {
-                    "I hold at {currentBuyerOffer} {currency}, though I would rather keep this friendly.",
-                    "{currentBuyerOffer} {currency} is my limit, but I hope you see the fairness in it.",
-                    "My offer remains {currentBuyerOffer} {currency}. I would still rather part well."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.High, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.BuyerHoldsFirm, new[]
-                {
-                    "I must hold at {currentBuyerOffer} {currency}, merchant.",
-                    "{currentBuyerOffer} {currency} remains my sensible limit.",
-                    "No further, friend. {currentBuyerOffer} {currency} is where I stand."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.BuyerHoldsFirm, new[]
-                {
-                    "I hold at {currentBuyerOffer} {currency}, and my stall still calls me back.",
-                    "{currentBuyerOffer} {currency} is my limit, friend. Let us not linger longer.",
-                    "No more from me, merchant. {currentBuyerOffer} {currency}, and we must finish."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.PlayerAcceptedDeal, new[]
-                {
-                    "Excellent. We are agreed at {finalPrice} {currency}.",
-                    "Then let us finish it at {finalPrice} {currency} and part content.",
-                    "Good. We settle at {finalPrice} {currency}.",
-                    "A fine end to it. {finalPrice} {currency} it is.",
-                    "Agreed, merchant. Let the bargain stand at {finalPrice} {currency}.",
-                    "That will do nicely. We close at {finalPrice} {currency}.",
-                    "Very good. {finalPrice} {currency} finishes the matter."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.PlayerRejectedBuyerOffer, new[]
-                {
-                    "A pity. I had hoped we would find common ground.",
-                    "Then my offer does not please you today.",
-                    "Ah well, then we do not meet on price.",
-                    "So be it. My offer falls short for you.",
-                    "That is a shame. I thought we were close.",
-                    "Then the bargain slips away from us today.",
-                    "You do not care for my terms, it seems."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.HistoryQuestion, new[]
-                {
-                    "The bazaar carries many tales, but my concern today is this trade.",
-                    "Stories can wait a moment. First let us settle the {spiceName}.",
-                    "There is always a story in the bazaar, but I still need stock for my shop.",
-                    "Talk of old days can wait. Let us finish the buying first.",
-                    "I know many market tales, friend, but today I need good {spiceName} on my shelves.",
-                    "The city is full of stories. My shop is full only when I buy well.",
-                    "First the spice, then the stories."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.SocialGreeting, new[]
-                {
-                    "Well met, merchant. Now let us see if kindness can lead to a fair price.",
-                    "You speak warmly, and I thank you. Shall we return to the bargain?",
-                    "A cheerful word is always welcome. So is a fair price.",
-                    "You are kind, friend. Now let us see what the bargain says.",
-                    "Good to hear a warm voice in the market. Let us talk terms.",
-                    "Well met indeed. Now, what price do we make of this?",
-                    "Pleasant words help the day along. A good bargain helps even more."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.OffTopic, new[]
-                {
-                    "Let us keep our minds on trade, friend.",
-                    "The shop must be stocked, so let us speak of {spiceName} and price.",
-                    "I would rather keep to the bargain, merchant.",
-                    "My customers wait on good stock, not wandering talk.",
-                    "Let us return to {spiceName} and the coin that follows it.",
-                    "The spice jars do not fill themselves, friend.",
-                    "Speak of trade, not straying matters."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.UnclearSpeech, new[]
-                {
-                    "I could not follow that over the market noise. {ruleReply}",
-                    "Your words blurred together for me. {ruleReply}",
-                    "Say that again, friend. {ruleReply}",
-                    "The market swallowed your meaning. {ruleReply}",
-                    "I missed that in the noise. {ruleReply}",
-                    "Speak a little clearer for me. {ruleReply}",
-                    "Your words ran together, merchant. {ruleReply}"
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.TransactionSuccess, new[]
-                {
-                    "A pleasing bargain. My customers will be glad of this purchase.",
-                    "Good trade, merchant. May your stall stay busy and my shop stay fuller.",
-                    "That will keep my shelves happy for a while.",
-                    "A fine purchase. My customers will thank me for it.",
-                    "Good business for both of us, friend.",
-                    "Well done. This stock will move well in my shop.",
-                    "A tidy bargain. I leave satisfied."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.TransactionFailure, new[]
-                {
-                    "Then we part without a sale, though I bear no grudge.",
-                    "No bargain today. Perhaps another market hour will be kinder.",
-                    "Then I leave without stock today.",
-                    "So be it. I will seek another stall.",
-                    "No sale, then. The market is wide enough.",
-                    "Ah well, perhaps the next bargain will be kinder.",
-                    "Then we part without business this time."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.TransactionFailure, new[]
-                {
-                    "Then we part without trade, friend, though I still wish you good custom.",
-                    "No bargain today, yet I would rather leave on friendly terms.",
-                    "So be it. Another market hour may treat us better."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.High, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.TransactionFailure, new[]
-                {
-                    "Then we part without agreement today.",
-                    "No purchase this time, merchant.",
-                    "So be it, friend. The bargain does not close."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Medium, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.TransactionFailure, new[]
-                {
-                    "Then I must part now, friend. My stall still needs me.",
-                    "No bargain today, and I must return to my customers.",
-                    "So be it, merchant. Time has thinned, and we still have no trade."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.TimePressure, new[]
-                {
-                    "I cannot linger too long away from my shop. Decide soon.",
-                    "Time presses on me, friend. Let us finish this quickly.",
-                    "My stall needs me back soon, merchant.",
-                    "Come now, friend, I cannot leave the shop unattended all day.",
-                    "Let us finish this before my customers wander off.",
-                    "Time is moving, and so is the market. Decide soon.",
-                    "I must get back to my stall. Give me your answer."
-                }, "saraswati_chetti"),
-                new DialogueLine(DialogueScenario.TimePressure, new[]
-                {
-                    "Friend, my customers will drift away if I linger longer. Decide now.",
-                    "My stall cannot wait on me much longer. Let us finish quickly.",
-                    "My time is nearly spent, merchant. Speak your answer at once."
-                }, "saraswati_chetti", PlayerReputationBucket.Neutral, NpcPatienceBucket.Low, NpcDesperationBucket.Medium, RoundBucket.Final, NpcPersonalityBucket.Friendly),
-                new DialogueLine(DialogueScenario.Unknown, new[]
-                {
-                    "{ruleReply}",
-                    "Speak a little clearer, friend. {ruleReply}",
-                    "I am not sure what you mean there. {ruleReply}",
-                    "Say it plainly for me. {ruleReply}",
-                    "Your meaning slips past me. {ruleReply}",
-                    "Let us be clear with each other. {ruleReply}"
-                }, "saraswati_chetti")
+                    "It is {spiceName} I came to purchase, {quantityLabel} of it.",
+                    "My customers have been asking for {spiceName}. I seek {quantityLabel}.",
+                    "{quantityLabel} of {spiceName}, provided the quality holds up."),
+                Line(DialogueScenario.AskBuyerBudget,
+                    "My offer stands at {currentBuyerOffer} {currency} for this lot.",
+                    "I have weighed the quantity. {currentBuyerOffer} {currency} is my figure.",
+                    "For the {quantityLabel} of {spiceName} in your measure, my figure is {currentBuyerOffer} {currency}.",
+                    "At present I can justify {currentBuyerOffer} {currency}."),
+                Line(DialogueScenario.AskQuantity,
+                    "I require {quantityLabel} of {spiceName}.",
+                    "The measure I asked for is {quantityLabel}.",
+                    "Set aside {quantityLabel} of {spiceName}; let our figures be exact.",
+                    "{quantityLabel}, merchant. The quantity matters as much as the price."),
+                Line(DialogueScenario.AskSellerPrice,
+                    "You know my quantity. What price do you ask for it?",
+                    "Let me hear your price for {quantityLabel} of {spiceName}.",
+                    "The measure is clear; the price is yours to name.",
+                    "I have told you what I need. What is your asking price?"),
+                Line(DialogueScenario.QuantityChanged,
+                    "Then we are discussing {quantityLabel} of {spiceName}. Let us price that quantity.",
+                    "I have the new measure: {quantityLabel}. What is your price for it?",
+                    "Very well, {quantityLabel} of {spiceName}. That changes what we must weigh.",
+                    "The quantity is now {quantityLabel}; I will judge the price against that."),
+                Line(DialogueScenario.SellerPriceTooHigh,
+                    "{offeredPrice} {currency} is beyond what I can justify for this measure. My offer is {counterPrice} {currency}.",
+                    "That price asks my customers to bear too much. I remain at {counterPrice} {currency}.",
+                    "Tell me what warrants {offeredPrice} {currency}; I cannot pay it as it stands.",
+                    "I have counted the measure twice. {offeredPrice} {currency} is still too high."),
+                Line(DialogueScenario.SellerPriceSlightlyHigh,
+                    "{offeredPrice} {currency} needs a stronger case. My figure is {counterPrice} {currency}.",
+                    "I can follow your reasoning only as far as {counterPrice} {currency}.",
+                    "The asking price is above what I can justify. I remain at {counterPrice} {currency}.",
+                    "The quality may be sound, but {offeredPrice} {currency} is more than I will pay."),
+                Line(DialogueScenario.SellerPriceBelowExpected,
+                    "That is lower than I expected. Are you certain of such a figure?",
+                    "A low price can be welcome, but a calculating buyer always wonders why.",
+                    "You ask less than I expected. Is there a reason for so modest a sum?",
+                    "An unusual figure. I do not simply take a cheap offer without understanding the reason."),
+                Line(DialogueScenario.BuyerCounterFirst,
+                    "For this {quantityLabel}, I can offer {counterPrice} {currency}. What do you think?",
+                    "Let me put {counterPrice} {currency} before you for the lot.",
+                    "I have considered the measure. My offer is {counterPrice} {currency}.",
+                    "We can begin at {counterPrice} {currency}; tell me where your figure differs."),
+                Line(DialogueScenario.BuyerCounterMiddle,
+                    "Your case has merit. I can increase my offer to {counterPrice} {currency}.",
+                    "I have revised the figure to {counterPrice} {currency}. Will that answer?",
+                    "The gap is narrower now: I offer {counterPrice} {currency}.",
+                    "I can move to {counterPrice} {currency} after hearing your argument."),
+                Line(DialogueScenario.BuyerCounterFinal,
+                    "I have reconsidered the figures. My offer is now {counterPrice} {currency}.",
+                    "For the measure we have discussed, I can move to {counterPrice} {currency}.",
+                    "You have drawn another step from me: {counterPrice} {currency}. What is your answer?",
+                    "After weighing your point, I offer {counterPrice} {currency} now."),
+                Line(DialogueScenario.BuyerHoldsFirm,
+                    "My figure remains {counterPrice} {currency}; the measure has not changed.",
+                    "I have heard you, but my offer is still {counterPrice} {currency}.",
+                    "Give me a reason to revise it. Until then, {counterPrice} {currency} stands.",
+                    "The argument has moved; the price has not. I remain at {counterPrice} {currency}.",
+                    "I am keeping my offer at {counterPrice} {currency}. What do you propose?"),
+                Line(DialogueScenario.SellerPriceAccepted,
+                    "Avunu, the price is agreed: {finalPrice} {currency} for {quantityLabel} of {spiceName}. Please bring the goods.",
+                    "{finalPrice} {currency} suits the {quantityLabel} of {spiceName}. Bring the goods, please.",
+                    "We have terms: {quantityLabel} of {spiceName} at {finalPrice} {currency}. Please prepare the delivery.",
+                    "I accept {finalPrice} {currency} for {quantityLabel} of {spiceName}. The goods are still to come."),
+                Line(DialogueScenario.PlayerAcceptedDeal,
+                    "Then we agree on {finalPrice} {currency} for {quantityLabel} of {spiceName}. Bring it over.",
+                    "The price is settled at {finalPrice} {currency}. Please bring over the {quantityLabel} of {spiceName}.",
+                    "I accept these terms: {finalPrice} {currency}, {quantityLabel} of {spiceName}. Please measure it out.",
+                    "Our figures agree at {finalPrice} {currency}. Please bring the {quantityLabel} of {spiceName}."),
+                Line(DialogueScenario.PlayerRejectedBuyerOffer,
+                    "My figure does not persuade you. What price would?",
+                    "You refuse that offer. Give me a figure to consider.",
+                    "Then tell me where your calculation differs from mine.",
+                    "We have no agreement yet. State the price you want."),
+                Line(DialogueScenario.OfferReason,
+                    "I must resell this lot in my shop. At {currentBuyerOffer} {currency}, the measure still makes sense.",
+                    "I judge the quality and what my customers will pay. That gives me {currentBuyerOffer} {currency}.",
+                    "My offer of {currentBuyerOffer} {currency} accounts for the quantity and the work of selling it.",
+                    "There is a second sale after this one. That is why I offer {currentBuyerOffer} {currency}."),
+                Line(DialogueScenario.AskName,
+                    "Saraswati Chetti. I keep a shop here and buy what my customers ask for.",
+                    "My name is Saraswati Chetti. I prefer to know the person behind a price.",
+                    "Saraswati Chetti, merchant. You may remember the name when we strike a bargain.",
+                    "I am Saraswati Chetti. Now, tell me how you judge this lot."),
+                Line(DialogueScenario.AskOrigin,
+                    "My shop is here in Vijayanagara. I know its buyers better than its distant roads.",
+                    "I do business in Vijayanagara's markets; that is the part of my story I can tell you.",
+                    "Vijayanagara is where I keep my shop, merchant.",
+                    "I sell here in Vijayanagara. My customers teach me plenty about this market."),
+                Line(DialogueScenario.WeatherQuestion,
+                    "Dry storage matters more to my spice than a bright sky.",
+                    "Rain changes a market day quickly. The measure and price still need attention.",
+                    "I watch the weather, but I watch the condition of my stock more closely."),
+                Line(DialogueScenario.HistoryKing,
+                    "Krishnadevaraya is the king. I know my customers better than court affairs.",
+                    "Our ruler is Krishnadevaraya. What reaches my shop is news from the bazaar.",
+                    "Krishnadevaraya rules here. My daily calculations are rather smaller than his."),
+                Line(DialogueScenario.HistoryTemple,
+                    "Virupaksha's temple stands by a busy bazaar. Follow the traders and you will find your way.",
+                    "You mean Virupaksha's temple. Its market brings many buyers past these stalls.",
+                    "The bazaar before Virupaksha's temple is hard to miss when business is lively."),
+                Line(DialogueScenario.HistoryQuestion,
+                    "A city is easier to understand through what its people buy and sell.",
+                    "Vijayanagara draws many kinds of trade. My own knowledge begins at the shop counter.",
+                    "I can tell you what sells in this bazaar. For older histories, ask someone who keeps them.",
+                    "Look at the market and you will see how far goods travel to reach this city."),
+                Line(DialogueScenario.SocialGreeting,
+                    "Namaskaram. A clear answer is as welcome as a courteous one.",
+                    "Good to speak with you. Tell me what you think of this lot.",
+                    "Courtesy makes bargaining easier to hear, even when the prices differ.",
+                    "You have my attention, merchant. I am listening."),
+                Line(DialogueScenario.OffTopic,
+                    "That is beyond what I know. Shall we return to the {spiceName}?",
+                    "An interesting turn, though it does not answer the price of this lot.",
+                    "I can speak to the measure before us. What did you want to know about it?",
+                    "We may discuss that another time. For now, I am buying {spiceName}."),
+                Line(DialogueScenario.HostileWarning,
+                    "I will consider a price, not an insult. Speak plainly and respectfully.",
+                    "There is no need for that tone. State your objection to the offer.",
+                    "A careful measure deserves a careful word. Try again without the insult."),
+                Line(DialogueScenario.UnclearSpeech,
+                    "Konchem more detail, please: {ruleReply}",
+                    "One point is uncertain. {ruleReply}",
+                    "Let us be precise. {ruleReply}",
+                    "I need to hear the exact terms. {ruleReply}"),
+                Line(DialogueScenario.Unknown, "{ruleReply}"),
+                Line(DialogueScenario.TransactionSuccess,
+                    "The goods are received and the measure is right. Thank you, merchant.",
+                    "The delivery matches our terms. A careful trade; you have my thanks.",
+                    "Well measured and delivered. I am pleased with this purchase.",
+                    "I have the {spiceName} now. You kept your word, and I appreciate it."),
+                Line(DialogueScenario.TransactionFailure,
+                    "We have not found terms. I will try another stall.",
+                    "The figures do not meet. I am leaving without a purchase.",
+                    "No bargain today. I will return to my shop.",
+                    "I cannot take this lot on those terms. Good day, merchant."),
+                Line(DialogueScenario.TimePressure,
+                    "I must return to my shop soon. Give me a clear answer.",
+                    "We have discussed the measure. Can we decide on the price?",
+                    "My customers will not wait all day; let us settle the question."),
+                Line(DialogueScenario.IdleReminderFirst,
+                    "Merchant? I am waiting for your figure.",
+                    "Take a moment, then tell me what you think of my offer.",
+                    "Have you considered the measure? I am ready for your answer."),
+                Line(DialogueScenario.IdleReminderSecond,
+                    "I need an answer now; my shop is waiting.",
+                    "We cannot bargain by silence. Do you have a price?",
+                    "Please give me your decision. I have other buying to do."),
+                Mood(DialogueScenario.BuyerHoldsFirm, NpcPersonalityBucket.Friendly,
+                    "I enjoy a careful bargain. My figure is still {counterPrice} {currency}.",
+                    "You make a thoughtful case, but I remain at {counterPrice} {currency}.",
+                    "We can discuss the figures further. My offer stays at {counterPrice} {currency}.",
+                    "I am listening, though the number remains {counterPrice} {currency}.",
+                    "You may yet persuade me; for now I hold at {counterPrice} {currency}."),
+                Mood(DialogueScenario.BuyerHoldsFirm, NpcPersonalityBucket.Normal,
+                    "My offer remains {counterPrice} {currency}. What is your counter?",
+                    "The measure still supports {counterPrice} {currency} in my reckoning.",
+                    "I have checked it again: still {counterPrice} {currency}.",
+                    "I have considered it. The offer is still {counterPrice} {currency}.",
+                    "That argument does not alter my offer of {counterPrice} {currency}."),
+                Mood(DialogueScenario.BuyerHoldsFirm, NpcPersonalityBucket.Strict,
+                    "I have checked the measure. My offer stays at {counterPrice} {currency}.",
+                    "Repeating a price does not explain it. I remain at {counterPrice} {currency}.",
+                    "I require a reason to move. Until then, {counterPrice} {currency}.",
+                    "No change in my offer: {counterPrice} {currency}.",
+                    "I have heard the demand. The figure remains {counterPrice} {currency}."),
+                Mood(DialogueScenario.BuyerHoldsFirm, NpcPersonalityBucket.Impatient,
+                    "Still {counterPrice} {currency}. Your answer, please.",
+                    "My offer is unchanged at {counterPrice} {currency}. Be direct.",
+                    "{counterPrice} {currency} remains the figure. We need a decision.",
+                    "I have no revised offer. It is {counterPrice} {currency}.",
+                    "I remain at {counterPrice} {currency}. What do you say?"),
+                Low(DialogueScenario.BuyerHoldsFirm,
+                    "My patience is short, but my offer is unchanged: {counterPrice} {currency}.",
+                    "Still {counterPrice} {currency}. I need a clear answer soon.",
+                    "My figure remains {counterPrice} {currency}; I cannot wait much longer.",
+                    "We know the quantity. The offer is still {counterPrice} {currency}.",
+                    "I am holding at {counterPrice} {currency}. Please decide."),
+                Low(DialogueScenario.SellerPriceTooHigh,
+                    "{offeredPrice} {currency} is too high. My offer stays at {counterPrice} {currency}; answer soon.",
+                    "I cannot justify that figure, and I have little time left.",
+                    "Your price remains too high. I need a different answer now."),
+                Low(DialogueScenario.BuyerCounterMiddle,
+                    "I can increase to {counterPrice} {currency}. Please answer promptly.",
+                    "My revised offer is {counterPrice} {currency}; time is short.",
+                    "I have moved to {counterPrice} {currency}. Let us decide."),
+                Low(DialogueScenario.SocialGreeting,
+                    "A courteous word is welcome. I do need to return to my shop soon.",
+                    "Thank you. Now please give me your answer on the trade.",
+                    "We can speak more another day. I need a decision now."),
+                Low(DialogueScenario.TransactionFailure,
+                    "My time is spent. I will seek the goods elsewhere.",
+                    "We have no bargain, and I must return to my shop.",
+                    "I cannot wait longer on these terms. I am leaving.")
             });
+    }
+
+    private static DialogueLine Line(DialogueScenario scenario, params string[] templates)
+    {
+        return new DialogueLine(scenario, templates, "saraswati_chetti");
+    }
+
+    private static DialogueLine Mood(DialogueScenario scenario, NpcPersonalityBucket personality, params string[] templates)
+    {
+        return new DialogueLine(scenario, templates, "saraswati_chetti", personalityBucket: personality);
+    }
+
+    private static DialogueLine Low(DialogueScenario scenario, params string[] templates)
+    {
+        return new DialogueLine(scenario, templates, "saraswati_chetti", patienceBucket: NpcPatienceBucket.Low);
     }
 }

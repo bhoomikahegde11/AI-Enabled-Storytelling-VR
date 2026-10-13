@@ -83,7 +83,7 @@ public class AudioManager : MonoBehaviour
         StopAllCoroutines();
 
         isDownloading = true;
-        StartCoroutine(DownloadAndPlayAudioRoutine(url));
+        StartCoroutine(PauseMenuController.RunGameplay(DownloadAndPlayAudioRoutine(url)));
     }
 
     public bool TrySpeakText(string text)
@@ -182,7 +182,7 @@ public class AudioManager : MonoBehaviour
                 {
                     audioSource.clip = clip;
                     audioSource.Play();
-                    StartCoroutine(MonitorAudioPlayback(clip.length));
+                    StartCoroutine(PauseMenuController.RunGameplay(MonitorAudioPlayback(clip.length)));
                 }
                 else
                 {
