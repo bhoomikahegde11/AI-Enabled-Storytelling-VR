@@ -186,18 +186,36 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        if (Level1GameState.ExistingInstance != null)
-        {
-            Level1GameState.ExistingInstance.ResetProfileToDefaults();
-        }
-        else
-        {
-            LocalSaveManager.DeleteActiveProfile();
-        }
+        bool created = Level1GameState.ExistingInstance != null
+            ? Level1GameState.ExistingInstance.ResetProfileToDefaults()
+            : new LocalSaveManager().CreateFreshProfile();
+        if (!created) return;
 
         currentIndex = -1;
         Debug.Log($"[SCENE FLOW] Starting new journey at index 0: {scenes[0]}");
         LoadSceneByName(scenes[0]);
+    }
+
+    public bool TryStartNewJourneyInSlot(int slot, string saveName, string characterName, string gender, bool overwriteConfirmed)
+    {
+        if (isLoading || !LocalSaveManager.IsValidSlot(slot) || scenes == null || scenes.Length == 0 ||
+            !Application.CanStreamedLevelBeLoaded(scenes[0])) return false;
+        if (LocalSaveManager.SlotHasAnyData(slot) && !overwriteConfirmed) return false;
+
+        int previousSlot = LocalSaveManager.ActiveSlot;
+        LocalSaveManager.SelectSlot(slot);
+        bool created = new LocalSaveManager().CreateFreshProfile(saveName, characterName, gender);
+        if (!created)
+        {
+            RestoreActiveSlot(previousSlot);
+            return false;
+        }
+
+        Level1GameState.ExistingInstance?.ReloadProfileFromDisk();
+        ApplyPlayerIdentity(saveName, characterName, gender);
+        currentIndex = -1;
+        LoadSceneByName(scenes[0]);
+        return true;
     }
 
     public void ContinueJourney()
@@ -215,13 +233,16 @@ public class GameManager : MonoBehaviour
 
         if (!LocalSaveManager.ActiveProfileExists())
         {
-            Debug.Log("[SCENE FLOW] No save found for Continue. Falling back to New Journey.");
-            StartNewJourney();
+            Debug.LogWarning("[SCENE FLOW] No save found for Continue.");
             return;
         }
 
         LocalSaveManager saveManager = new LocalSaveManager();
-        LocalProfileData profile = saveManager.LoadProfile();
+        if (!saveManager.TryLoadExistingProfile(out LocalProfileData profile))
+        {
+            Debug.LogError("[SCENE FLOW] Continue failed because the profile cannot be read.");
+            return;
+        }
         if (!TryResolveContinueScene(profile, out string targetScene, out int targetIndex))
         {
             Debug.LogError("[SCENE FLOW] Continue failed because the save does not reference a canonical progression scene.");
@@ -230,6 +251,40 @@ public class GameManager : MonoBehaviour
 
         Debug.Log($"[SCENE FLOW] Continue resolved '{targetScene}' to index {targetIndex}");
         LoadSceneByName(targetScene);
+    }
+
+    public bool TryContinueJourneyInSlot(int slot)
+    {
+        if (isLoading || !LocalSaveManager.IsValidSlot(slot) ||
+            !LocalSaveManager.TryLoadSlot(slot, out LocalProfileData profile) ||
+            !TryResolveContinueScene(profile, out string targetScene, out _) ||
+            !Application.CanStreamedLevelBeLoaded(targetScene)) return false;
+
+        LocalSaveManager.SelectSlot(slot);
+        Level1GameState.ExistingInstance?.ReloadProfileFromDisk();
+        ApplyPlayerIdentity(profile.save_name, profile.character_name, profile.selected_gender);
+        LoadSceneByName(targetScene);
+        return true;
+    }
+
+    public bool TryGetContinueScene(LocalProfileData profile, out string sceneName)
+    {
+        return TryResolveContinueScene(profile, out sceneName, out _) &&
+               Application.CanStreamedLevelBeLoaded(sceneName);
+    }
+
+    private static void RestoreActiveSlot(int slot)
+    {
+        if (slot == 0) LocalSaveManager.ClearActiveSlot();
+        else LocalSaveManager.SelectSlot(slot);
+    }
+
+    private static void ApplyPlayerIdentity(string saveName, string characterName, string gender)
+    {
+        PlayerPrefs.SetString(MainMenuSaveFlow.SaveNameKey, string.IsNullOrWhiteSpace(saveName) ? "Journey" : saveName);
+        PlayerPrefs.SetString(MainMenuSaveFlow.CharacterNameKey, string.IsNullOrWhiteSpace(characterName) ? "Merchant" : characterName);
+        PlayerPrefs.SetString(MainMenuSaveFlow.GenderKey, string.IsNullOrWhiteSpace(gender) ? "Male" : gender);
+        PlayerPrefs.Save();
     }
 
     public void LoadNextScene()
@@ -333,10 +388,6 @@ public class GameManager : MonoBehaviour
             PreserveCommittedProgress(abandonCurrentWork);
 
             int targetIndex = GetProgressionIndex(targetSceneName);
-            if (targetIndex >= 0)
-            {
-                PersistProgressionState(targetSceneName, targetIndex);
-            }
 
             ResolveTransitionFader();
             if (fader != null)
@@ -360,6 +411,10 @@ public class GameManager : MonoBehaviour
             yield return loadOperation;
 
             Debug.Log("[SCENE FLOW] " + targetSceneName + " loaded");
+
+            // A destination becomes a resume checkpoint only after Unity has loaded it.
+            if (targetIndex >= 0)
+                PersistProgressionState(targetSceneName, targetIndex);
 
             ResolveTransitionFader();
             if (fader != null)
@@ -550,6 +605,14 @@ public class GameManager : MonoBehaviour
         {
             targetIndex = savedIndex;
             targetScene = scenes[targetIndex];
+            return true;
+        }
+
+        // A newly created slot may exist before its first scene transition finishes.
+        if (string.IsNullOrEmpty(savedScene) && savedIndex == LocalSaveManager.DefaultProgressionIndex)
+        {
+            targetIndex = 0;
+            targetScene = scenes[0];
             return true;
         }
 

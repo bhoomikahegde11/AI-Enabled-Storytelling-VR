@@ -441,6 +441,11 @@ public class Level1GameState : MonoBehaviour
     public void SaveProfileToDisk()
     {
         EnsureInitialized();
+        if (localSaveManager.SavePath != LocalSaveManager.GetActiveSavePath())
+        {
+            Debug.LogError("[SAVE] Active journey changed before Level1GameState was rebound; stale profile was not saved.");
+            return;
+        }
         RefreshProgressionFieldsFromDisk();
         SyncMarketDayTimerToProfile();
         localSaveManager.SaveProfile(profile);
@@ -451,6 +456,10 @@ public class Level1GameState : MonoBehaviour
     {
         EnsureInitialized();
 
+        // The state is persistent, but the selected journey can change in Main Menu.
+        if (localSaveManager.SavePath != LocalSaveManager.GetActiveSavePath())
+            localSaveManager = new LocalSaveManager();
+
         profile = localSaveManager.LoadProfile(marketManager);
         playerState.LoadFrom(profile.global_metrics.total_varahas, profile.global_metrics.reputation);
         activeTrade = null;
@@ -460,11 +469,14 @@ public class Level1GameState : MonoBehaviour
         ApplyLoadedMarketDayStateWithoutStartingRoutine();
     }
 
-    public void ResetProfileToDefaults()
+    public bool ResetProfileToDefaults(string saveName = "", string characterName = "", string gender = "Male")
     {
         EnsureInitialized();
-        localSaveManager.DeleteProfile();
+        if (localSaveManager.SavePath != LocalSaveManager.GetActiveSavePath())
+            localSaveManager = new LocalSaveManager();
+        if (!localSaveManager.CreateFreshProfile(saveName, characterName, gender)) return false;
         ReloadProfileFromDisk();
+        return true;
     }
 
     public void SyncTradeFromBackend(string buyerName, string buyerOrigin, string spiceName, string quantityLabel, int quantityGrams, int npcOffer, MarketEventData backendEvent)
@@ -689,7 +701,7 @@ public class Level1GameState : MonoBehaviour
 
     private void OnApplicationPause(bool pauseStatus)
     {
-        if (pauseStatus)
+        if (pauseStatus && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != GameManager.DefaultMainMenuSceneName)
         {
             SaveProfileToDisk();
         }
@@ -697,7 +709,7 @@ public class Level1GameState : MonoBehaviour
 
     private void OnApplicationFocus(bool hasFocus)
     {
-        if (!hasFocus)
+        if (!hasFocus && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != GameManager.DefaultMainMenuSceneName)
         {
             SaveProfileToDisk();
         }
