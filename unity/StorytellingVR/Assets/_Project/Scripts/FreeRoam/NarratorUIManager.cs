@@ -198,6 +198,11 @@ public class NarratorUIManager : MonoBehaviour
             System.StringSplitOptions.RemoveEmptyEntries
         );
 
+        // TEMP diagnostics
+        Debug.Log($"[VOICE] lineId={(string.IsNullOrEmpty(lineId) ? "NULL" : lineId)}");
+        Debug.Log($"[VOICE] database assigned={(voiceDatabase != null)}");
+        Debug.Log($"[VOICE] audio source assigned={(dialogueVoiceSource != null)}");
+
         // Prevent a trigger that was already being held from
         // immediately skipping the first line.
         bool previousPressed = GetContinueButtonPressed();
@@ -210,20 +215,20 @@ public class NarratorUIManager : MonoBehaviour
                 continue;
 
             // Get the audio for THIS subtitle line.
+            // Part 1 = the original line ID (unsplit clips), parts 2+ =
+            // split clips. A null clip for a later part lets an unsplit
+            // clip keep playing across subtitle pages.
             AudioClip clip = null;
 
             if (!string.IsNullOrEmpty(lineId) &&
                 voiceDatabase != null &&
                 dialogueVoiceSource != null)
             {
-                string audioLineId = $"{lineId}_{i + 1:00}";
-
-                clip = voiceDatabase.GetAudioClip(audioLineId);
+                clip = ResolveVoiceClip(lineId.Trim(), i + 1);
 
                 Debug.Log(
-                    $"[VOICE] Subtitle line {i + 1}: '{line}' | " +
-                    $"Audio ID: {audioLineId} | " +
-                    $"Found: {clip != null}"
+                    $"[VOICE] part {i + 1} clip lookup={(clip != null ? "SUCCESS" : "NULL")} " +
+                    $"clip={(clip != null ? clip.name : "-")}"
                 );
             }
 
@@ -264,21 +269,15 @@ public class NarratorUIManager : MonoBehaviour
         TMP_TextInfo textInfo = subtitleText.textInfo;
         int totalCharacters = textInfo.characterCount;
 
-        // Start the audio for THIS subtitle line.
-        StopCurrentVoice();
-
+        // Start the audio for THIS subtitle line (if it has its own clip;
+        // otherwise let an unsplit clip from a previous page continue).
         if (clip != null && dialogueVoiceSource != null)
         {
+            StopCurrentVoice();
             dialogueVoiceSource.clip = clip;
             dialogueVoiceSource.Play();
 
-            Debug.Log($"[VOICE] Playing clip: {clip.name}");
-        }
-        else
-        {
-            Debug.LogWarning(
-                $"[VOICE] No audio clip found for subtitle: '{line}'"
-            );
+            Debug.Log($"[VOICE] Play called: {clip.name}");
         }
 
         bool previousPressed = startingPressedState;
@@ -420,6 +419,25 @@ public class NarratorUIManager : MonoBehaviour
         }
 
         updatePressedState?.Invoke(false);
+    }
+
+    /// <summary>
+    /// Finds the clip for subtitle part N of a line ID.
+    /// Part 1: original ID (e.g. X_01), else X_01_01.
+    /// Part N>1: X_01_0N, else X_01._0N (naming used by some split clips).
+    /// </summary>
+    private AudioClip ResolveVoiceClip(string lineId, int part)
+    {
+        string suffix = part.ToString("00");
+
+        if (part == 1)
+        {
+            return voiceDatabase.GetAudioClip(lineId) ??
+                   voiceDatabase.GetAudioClip($"{lineId}_{suffix}");
+        }
+
+        return voiceDatabase.GetAudioClip($"{lineId}_{suffix}") ??
+               voiceDatabase.GetAudioClip($"{lineId}._{suffix}");
     }
 
     private void BeginDialoguePresentation()

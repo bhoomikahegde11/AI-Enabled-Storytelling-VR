@@ -20,7 +20,10 @@ public class EpilogueStoryManager : MonoBehaviour
     public EpilogueStage currentStage = EpilogueStage.BhaskaraPaycheck;
 
     [Header("Configuration")]
-    public string presentDaySceneName = "PresentDayEnding";
+    [Tooltip("Final ending scene loaded after the book is selected.")]
+    public string endingSceneName = "Epilogue_ModernStudyRoom";
+    [Tooltip("Matches ModernStudyRoomIntroController's whiteout duration.")]
+    public float whiteFadeDuration = 1.2f;
     public int bookPrice = 10;
     public int defaultPaycheck = 15;
 
@@ -368,16 +371,26 @@ public class EpilogueStoryManager : MonoBehaviour
         if (teleportManager != null)
             teleportManager.DisableAll();
 
+        meeraDirectionalIndicator?.Hide();
+
         if (fader == null)
             fader =
                 FindFirstObjectByType<ScreenFader>();
 
         if (fader != null)
         {
-            // Existing epilogue transition kept unchanged here.
+            // Fade the (persistent) ScreenFader to full white.
+            // It is left white on purpose: GameManager's FadeOut is then a
+            // no-op, the load happens under white, and ModernStudyRoomEndingController
+            // restores the fader colour to black once the load has finished.
+            float originalSpeed = fader.speed;
             fader.fadeColor = Color.white;
+            fader.speed = 1f / Mathf.Max(0.01f, whiteFadeDuration);
+            fader.RepositionToCamera();
 
             yield return fader.FadeOut();
+
+            fader.speed = originalSpeed;
         }
 
         currentStage =
@@ -386,7 +399,7 @@ public class EpilogueStoryManager : MonoBehaviour
         if (GameManager.Instance != null)
         {
             GameManager.Instance.LoadSceneByName(
-                presentDaySceneName
+                endingSceneName
             );
         }
         else
