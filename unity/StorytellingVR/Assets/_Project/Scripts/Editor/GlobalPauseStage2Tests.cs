@@ -495,15 +495,27 @@ public class GlobalPauseStage2Tests
         Assert.IsFalse(LocalSaveManager.ActiveProfileExists());
     }
 
-    [Test]
-    public void TransitionFadeStopsSafelyIfItsImageIsDestroyedMidFade()
+    [TestCase(false)]
+    [TestCase(true)]
+    public void TransitionFadeStopsSafelyIfItsImageIsDestroyedMidFade(bool fadingIn)
     {
         var host = Host("transition overlay fixture");
         var fader = host.AddComponent<ScreenFader>();
         fader.fadeImage = host.AddComponent<UnityEngine.UI.Image>();
-        var fade = fader.FadeOut();
+        fader.fadeImage.color = new Color(0f, 0f, 0f, 0.5f);
+        fader.speed = 0f; // Keep the routine in progress regardless of EditMode delta time.
+        var fade = fadingIn ? fader.FadeIn() : fader.FadeOut();
         Assert.IsTrue(fade.MoveNext());
         Object.DestroyImmediate(fader.fadeImage);
+        Assert.IsFalse(fade.MoveNext());
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void TransitionFadeStopsSafelyIfItsImageIsAlreadyMissing(bool fadingIn)
+    {
+        var fader = Host("missing transition image fixture").AddComponent<ScreenFader>();
+        var fade = fadingIn ? fader.FadeIn() : fader.FadeOut();
         Assert.IsFalse(fade.MoveNext());
     }
 

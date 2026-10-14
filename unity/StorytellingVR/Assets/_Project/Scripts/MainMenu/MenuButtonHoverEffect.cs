@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -7,10 +8,12 @@ using UnityEngine.UI;
 public class MenuButtonHoverEffect : MonoBehaviour,
     IPointerEnterHandler,
     IPointerExitHandler,
-    IPointerClickHandler
+    IPointerClickHandler, IPointerDownHandler, IPointerUpHandler, ISelectHandler, IDeselectHandler
 {
     [Header("Visual Target")]
     [SerializeField] private Image targetImage;
+    [Tooltip("Main Menu only: animate the label, keeping the XR collider and button root fixed.")]
+    [SerializeField] private bool stableHitbox;
 
     [Header("Colors")]
     [SerializeField] private Color normalColor = Color.white;
@@ -26,6 +29,11 @@ public class MenuButtonHoverEffect : MonoBehaviour,
     private Color targetColor;
     private bool isHovered;
     private Coroutine clickRoutine;
+    private Selectable selectable;
+    private RectTransform label;
+    private Vector3 labelScale;
+    private bool isSelected, isPressed;
+    private float pressUntil;
 
     private void Awake()
     {
@@ -33,6 +41,13 @@ public class MenuButtonHoverEffect : MonoBehaviour,
             targetImage = GetComponent<Image>();
 
         originalScale = transform.localScale;
+        if (stableHitbox)
+        {
+            selectable = GetComponent<Selectable>();
+            TMP_Text text = GetComponentInChildren<TMP_Text>(true);
+            label = text != null ? text.rectTransform : null;
+            if (label != null) labelScale = label.localScale;
+        }
         targetScale = originalScale;
         targetColor = normalColor;
 
@@ -42,6 +57,11 @@ public class MenuButtonHoverEffect : MonoBehaviour,
 
     private void Update()
     {
+        if (stableHitbox)
+        {
+            AdvanceVisuals(Time.unscaledDeltaTime);
+            return;
+        }
         transform.localScale = Vector3.Lerp(
             transform.localScale,
             targetScale,
@@ -55,6 +75,30 @@ public class MenuButtonHoverEffect : MonoBehaviour,
                 targetColor,
                 animationSpeed * Time.unscaledDeltaTime
             );
+        }
+    }
+
+    internal void AdvanceVisuals(float unscaledDeltaTime)
+    {
+        bool available = selectable == null || selectable.IsInteractable();
+        bool highlighted = available && (isHovered || isSelected);
+        // The last click may remain visible during an outgoing fade, whose input is already blocked.
+        bool pressed = isPressed || Time.unscaledTime < pressUntil;
+        float amount = pressed ? 0.985f : highlighted ? 1.018f : 1f;
+        float t = 1f - Mathf.Exp(-animationSpeed * Mathf.Max(0f, unscaledDeltaTime));
+        if (label != null)
+        {
+            Vector3 target = labelScale * amount;
+            Vector3 next = Vector3.Lerp(label.localScale, target, t);
+            if ((next - target).sqrMagnitude < 0.000001f) next = target;
+            if (label.localScale != next) label.localScale = next;
+        }
+        if (targetImage != null)
+        {
+            Color target = pressed ? new Color(0.88f, 0.81f, 0.65f, 1f) : highlighted ? hoverColor : normalColor;
+            Color next = Color.Lerp(targetImage.color, target, t);
+            if (Mathf.Abs(next.r - target.r) + Mathf.Abs(next.g - target.g) + Mathf.Abs(next.b - target.b) < 0.001f) next = target;
+            if (targetImage.color != next) targetImage.color = next;
         }
     }
 
@@ -82,10 +126,32 @@ public class MenuButtonHoverEffect : MonoBehaviour,
 
     public void OnPointerClick(PointerEventData eventData)
     {
+        if (stableHitbox)
+        {
+            pressUntil = Time.unscaledTime + 0.09f; // Quest sends click directly, without pointer down/up.
+            return;
+        }
         if (clickRoutine != null)
             StopCoroutine(clickRoutine);
 
         clickRoutine = StartCoroutine(PlayClickEffect());
+    }
+
+    public void OnPointerDown(PointerEventData eventData) { if (stableHitbox) isPressed = true; }
+    public void OnPointerUp(PointerEventData eventData) { if (stableHitbox) isPressed = false; }
+    public void OnSelect(BaseEventData eventData)
+    {
+        if (stableHitbox) isSelected = EventSystem.current != null && EventSystem.current.currentSelectedGameObject == gameObject;
+    }
+    public void OnDeselect(BaseEventData eventData) { if (stableHitbox) isSelected = false; }
+
+    private void OnDisable()
+    {
+        if (!stableHitbox) return; // Preserve the existing effects in the other storytelling scenes.
+        isHovered = isSelected = isPressed = false;
+        pressUntil = 0f;
+        if (label != null) label.localScale = labelScale;
+        if (targetImage != null) targetImage.color = normalColor;
     }
 
     private IEnumerator PlayClickEffect()

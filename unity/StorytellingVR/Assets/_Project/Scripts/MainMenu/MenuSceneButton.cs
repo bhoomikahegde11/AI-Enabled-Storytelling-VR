@@ -11,7 +11,7 @@ public class MenuSceneButton : MonoBehaviour
     {
         if (mainMenuSaveFlow != null)
         {
-            Debug.Log($"{nameof(MenuSceneButton)} on '{gameObject.name}' opening save select flow.");
+            Debug.Log($"{nameof(MenuSceneButton)} on '{gameObject.name}' opening New Journey form.");
             mainMenuSaveFlow.OpenSaveSelect();
             return;
         }

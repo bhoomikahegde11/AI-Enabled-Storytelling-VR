@@ -336,6 +336,12 @@ public class Level1GameState : MonoBehaviour
     {
         EnsureInitialized();
 
+        // Direct Editor entry and legacy scene flow can bypass GameManager's entry boundary.
+        // Never mistake an already-saved Level 1 checkpoint for the start of an attempt.
+        if (profile.level1_entry == null &&
+            !string.Equals(profile.current_scene, GameManager.DefaultGameplaySceneName, StringComparison.Ordinal))
+            CaptureLevel1EntrySnapshot(false);
+
         if (MarketDayStarted || MarketDayEnded)
         {
             return;
@@ -467,6 +473,76 @@ public class Level1GameState : MonoBehaviour
         lastDealReferencePrice = 0;
         StopMarketDayTimerRoutine();
         ApplyLoadedMarketDayStateWithoutStartingRoutine();
+    }
+
+    public bool CaptureLevel1EntrySnapshot(bool replaceExisting)
+    {
+        EnsureInitialized();
+        if (localSaveManager.SavePath != LocalSaveManager.GetActiveSavePath() ||
+            !localSaveManager.TryLoadExistingProfile(out LocalProfileData saved)) return false;
+        if (saved.level1_entry != null && !replaceExisting)
+        {
+            profile.level1_entry = saved.level1_entry;
+            return true;
+        }
+
+        saved.level1_entry = new Level1EntrySnapshotData
+        {
+            varahas = saved.global_metrics.total_varahas,
+            reputation = saved.global_metrics.reputation,
+            inventory = CopyInventory(saved.inventory),
+            shiftStats = CopyShiftStats(saved.shift_stats),
+            completedLevels = new List<string>(saved.global_metrics.completed_levels ?? new List<string>())
+        };
+        if (!localSaveManager.SaveProfile(saved)) return false;
+        profile.level1_entry = saved.level1_entry;
+        return true;
+    }
+
+    public bool RestoreLevel1EntrySnapshot()
+    {
+        EnsureInitialized();
+        if (localSaveManager.SavePath != LocalSaveManager.GetActiveSavePath() ||
+            !localSaveManager.TryLoadExistingProfile(out LocalProfileData saved)) return false;
+
+        Level1EntrySnapshotData entry = saved.level1_entry;
+        if (entry == null || entry.inventory == null || entry.inventory.Count == 0 || entry.shiftStats == null ||
+            entry.completedLevels == null)
+        {
+            Debug.LogError("[MARKET DAY] Level 1 entry snapshot is unavailable; restart was cancelled without changing the save.");
+            return false;
+        }
+
+        saved.global_metrics.total_varahas = entry.varahas;
+        saved.global_metrics.reputation = entry.reputation;
+        saved.global_metrics.completed_levels = new List<string>(entry.completedLevels);
+        saved.inventory = CopyInventory(entry.inventory);
+        saved.shift_stats = CopyShiftStats(entry.shiftStats);
+        saved.remainingMarketDaySeconds = MarketDayDurationSeconds;
+        saved.hasSavedMarketDayTimer = true;
+        if (!localSaveManager.SaveProfile(saved)) return false;
+
+        ReloadProfileFromDisk(); // Clears active terms, event, reference price and the old timer routine.
+        return true;
+    }
+
+    private static List<InventoryEntry> CopyInventory(List<InventoryEntry> source)
+    {
+        var copy = new List<InventoryEntry>();
+        if (source != null)
+            foreach (InventoryEntry item in source)
+                if (item != null) copy.Add(new InventoryEntry { spiceKey = item.spiceKey, grams = item.grams });
+        return copy;
+    }
+
+    private static ShiftStatsData CopyShiftStats(ShiftStatsData source)
+    {
+        return source == null ? new ShiftStatsData() : new ShiftStatsData
+        {
+            shifts_completed = source.shifts_completed,
+            total_varahas_earned = source.total_varahas_earned,
+            total_deals_made = source.total_deals_made
+        };
     }
 
     public bool ResetProfileToDefaults(string saveName = "", string characterName = "", string gender = "Male")

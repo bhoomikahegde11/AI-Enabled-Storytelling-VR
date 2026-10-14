@@ -161,6 +161,10 @@ public class ModernStudyRoomIntroController : MonoBehaviour
     [SerializeField]
     private bool _editorLiveFollowHoverTarget = false;
 
+    [Header("Opening Guidance")]
+    [SerializeField]
+    private ModernStudyRoomBookGuidance _bookGuidance;
+
     private bool _hasStarted;
     private bool _isHovering;
     private bool _isFloatingSequenceActive;
@@ -314,6 +318,7 @@ public class ModernStudyRoomIntroController : MonoBehaviour
         }
 
         _hasStarted = true;
+        _bookGuidance?.HideForCinematic();
         _blastComplete = false;
         _transitionAudioStarted = false;
         _loggedTransitionAudioLead = false;
