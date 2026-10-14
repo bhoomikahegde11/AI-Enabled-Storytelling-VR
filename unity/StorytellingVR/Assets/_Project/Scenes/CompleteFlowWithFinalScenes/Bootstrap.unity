@@ -160,8 +160,8 @@ MonoBehaviour:
   - NewTransactionTutorial
   - NewCoinScene
   - SpicesInteraction
-  - Level1_MainLoopUpdated
-  - Level1_MainLoopUpdated
+  - Epilogue_BookPurchase
+  - Epilogue_ModernStudyRoom
   fader: {fileID: 1819468858}
   enablePauseMenuController: 1
   enableDeveloperSceneSkip: 1
