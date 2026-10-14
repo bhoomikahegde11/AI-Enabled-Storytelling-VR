@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections.Generic;
 
 public class MainMenuVRLaserPointer : MonoBehaviour
 {
@@ -33,6 +34,31 @@ public class MainMenuVRLaserPointer : MonoBehaviour
     private GameObject currentHoverObject;
     private bool wasTriggerPressed;
     private Coroutine hapticRoutine;
+    private bool triggerArmed;
+    private PointerEventData pointerEventData;
+    private Selectable[] selectableBuffer = new Selectable[32];
+    private RaycastHit[] hitBuffer = new RaycastHit[32];
+    private readonly Dictionary<Selectable, CachedTarget> targetLookup = new Dictionary<Selectable, CachedTarget>();
+    private readonly Dictionary<Collider, CachedTarget> hitLookup = new Dictionary<Collider, CachedTarget>();
+    private readonly List<CachedTarget> targets = new List<CachedTarget>();
+    private int cacheVersion;
+    private float nextHierarchyRefresh;
+    private Material lineMaterial;
+
+    private sealed class CachedTarget
+    {
+        public Selectable Selectable;
+        public RectTransform Transform;
+        public BoxCollider Collider;
+        public TMP_InputField InputField;
+        public Graphic Graphic;
+        public Canvas Canvas;
+        public Transform Parent;
+        public Rect Rect;
+        public int SeenVersion;
+        public readonly List<Canvas> Canvases = new List<Canvas>();
+        public readonly List<CanvasGroup> Groups = new List<CanvasGroup>();
+    }
 
     private OVRInput.Controller OvrController =>
         controllerHand == ControllerHand.Left
@@ -46,7 +72,6 @@ public class MainMenuVRLaserPointer : MonoBehaviour
     {
         eventSystem = EventSystem.current;
         EnsureLineRenderer();
-        SyncSelectableColliders();
 
         Debug.Log($"{nameof(MainMenuVRLaserPointer)} initialized on '{gameObject.name}' for {controllerHand} controller.");
     }
@@ -59,16 +84,13 @@ public class MainMenuVRLaserPointer : MonoBehaviour
 
     private void Update()
     {
-        SyncSelectableColliders();
-
         if (!IsControllerConnected())
         {
-            if (lineRenderer != null)
-                lineRenderer.enabled = false;
-
-            ClearHover();
+            ResetPointerState();
             return;
         }
+
+        SyncSelectableColliders();
 
         Vector3 origin = transform.position;
         Vector3 direction = transform.forward;
@@ -82,9 +104,37 @@ public class MainMenuVRLaserPointer : MonoBehaviour
 
     private void OnDisable()
     {
+        ResetPointerState();
+        OVRInput.SetControllerVibration(0f, 0f, OvrController);
+    }
+
+    private void ResetPointerState()
+    {
         if (lineRenderer != null) lineRenderer.enabled = false;
         ClearHover();
+        triggerArmed = false;
+        wasTriggerPressed = false;
+        StopHaptics();
+    }
+
+    private void StopHaptics()
+    {
+        if (hapticRoutine == null) return;
+        StopCoroutine(hapticRoutine);
+        hapticRoutine = null;
         OVRInput.SetControllerVibration(0f, 0f, OvrController);
+    }
+
+    private void OnDestroy()
+    {
+        targetLookup.Clear();
+        hitLookup.Clear();
+        targets.Clear();
+        if (lineMaterial != null)
+        {
+            if (Application.isPlaying) Destroy(lineMaterial);
+            else DestroyImmediate(lineMaterial);
+        }
     }
 
     private void EnsureLineRenderer()
@@ -101,7 +151,8 @@ public class MainMenuVRLaserPointer : MonoBehaviour
         lineRenderer.receiveShadows = false;
         lineRenderer.alignment = LineAlignment.View;
         lineRenderer.numCapVertices = 4;
-        lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
+        lineMaterial = new Material(Shader.Find("Sprites/Default"));
+        lineRenderer.sharedMaterial = lineMaterial;
         lineRenderer.startColor = idleColor;
         lineRenderer.endColor = idleColor;
         lineRenderer.enabled = false;
@@ -109,87 +160,124 @@ public class MainMenuVRLaserPointer : MonoBehaviour
 
     private void SyncSelectableColliders()
     {
-        Canvas[] canvases = Resources.FindObjectsOfTypeAll<Canvas>();
-        if (canvases == null || canvases.Length == 0)
+        if (Selectable.allSelectableCount > selectableBuffer.Length)
+            System.Array.Resize(ref selectableBuffer, Mathf.NextPowerOfTwo(Selectable.allSelectableCount));
+        int count = Selectable.AllSelectablesNoAlloc(selectableBuffer);
+        cacheVersion++;
+        bool changed = false;
+        bool refreshHierarchy = Time.unscaledTime >= nextHierarchyRefresh;
+        if (refreshHierarchy) nextHierarchyRefresh = Time.unscaledTime + 0.5f;
+
+        // The registry includes newly enabled/cloned slots, without visiting inactive panels or scene canvases.
+        for (int i = 0; i < count; i++)
         {
-            Debug.LogWarning($"{nameof(MainMenuVRLaserPointer)} could not find any canvases to prepare menu colliders.");
-            return;
-        }
-
-        bool foundAnySelectable = false;
-
-        foreach (Canvas canvas in canvases)
-        {
-            if (canvas == null)
-                continue;
-
-            if (!canvas.gameObject.scene.IsValid())
-                continue;
-
-            Selectable[] selectables = canvas.GetComponentsInChildren<Selectable>(true);
-            foreach (Selectable selectable in selectables)
+            Selectable selectable = selectableBuffer[i];
+            if (selectable == null || selectable.gameObject.scene != gameObject.scene) continue;
+            if (!targetLookup.TryGetValue(selectable, out CachedTarget target))
             {
-                if (selectable == null)
-                    continue;
-
-                RectTransform rectTransform = selectable.GetComponent<RectTransform>();
-                if (rectTransform == null)
-                    continue;
-
-                BoxCollider boxCollider = selectable.GetComponent<BoxCollider>();
-                if (boxCollider == null)
-                {
-                    boxCollider = selectable.gameObject.AddComponent<BoxCollider>();
-                    Debug.Log($"{nameof(MainMenuVRLaserPointer)} added runtime BoxCollider to '{selectable.gameObject.name}'.");
-                }
-
-                Rect rect = rectTransform.rect;
-                boxCollider.center = new Vector3(rect.center.x, rect.center.y, 0f);
-                boxCollider.size = new Vector3(Mathf.Abs(rect.width), Mathf.Abs(rect.height), 0.02f);
-                boxCollider.isTrigger = true;
-                boxCollider.enabled = IsSelectableRaycastable(selectable);
-                foundAnySelectable = true;
+                var rect = selectable.transform as RectTransform;
+                if (rect == null || selectable.GetComponentInParent<Canvas>() == null) continue;
+                target = new CachedTarget { Selectable = selectable, Transform = rect };
+                targetLookup.Add(selectable, target);
+                targets.Add(target);
+                RefreshHierarchy(target);
+                changed = true;
             }
+            target.SeenVersion = cacheVersion;
+            Graphic graphic = selectable.targetGraphic;
+            if (refreshHierarchy || target.Parent != target.Transform.parent || target.Graphic != graphic ||
+                (graphic != null && target.Canvas != graphic.canvas))
+            {
+                RefreshHierarchy(target);
+                changed = true;
+            }
+            if (target.Collider == null)
+            {
+                target.Collider = selectable.GetComponent<BoxCollider>();
+                if (target.Collider == null) target.Collider = selectable.gameObject.AddComponent<BoxCollider>();
+                target.Collider.isTrigger = true;
+                UpdateColliderRect(target);
+                changed = true;
+            }
+            else if (target.Rect != target.Transform.rect) UpdateColliderRect(target);
+            bool available = IsSelectableRaycastable(target);
+            if (target.Collider.enabled != available) target.Collider.enabled = available;
         }
-
-        if (!foundAnySelectable)
+        for (int i = targets.Count - 1; i >= 0; i--)
         {
-            Debug.LogWarning($"{nameof(MainMenuVRLaserPointer)} found canvases but no selectable menu controls to prepare.");
-            return;
+            CachedTarget target = targets[i];
+            if (target.SeenVersion == cacheVersion) continue;
+            if (target.Collider != null) target.Collider.enabled = false;
+            targetLookup.Remove(target.Selectable);
+            targets.RemoveAt(i);
+            changed = true;
         }
+        if (changed) hitLookup.Clear();
+        // Do not retain dead registry entries in unused buffer positions.
+        System.Array.Clear(selectableBuffer, count, selectableBuffer.Length - count);
+    }
+
+    private static void RefreshHierarchy(CachedTarget target)
+    {
+        target.Parent = target.Transform.parent;
+        target.Graphic = target.Selectable.targetGraphic;
+        target.Canvas = target.Graphic != null ? target.Graphic.canvas : target.Selectable.GetComponentInParent<Canvas>();
+        target.Transform.GetComponentsInParent(true, target.Canvases);
+        target.Transform.GetComponentsInParent(true, target.Groups);
+        target.InputField = target.Selectable.GetComponentInParent<TMP_InputField>();
+    }
+
+    private static void UpdateColliderRect(CachedTarget target)
+    {
+        target.Rect = target.Transform.rect;
+        target.Collider.center = new Vector3(target.Rect.center.x, target.Rect.center.y, 0f);
+        target.Collider.size = new Vector3(Mathf.Abs(target.Rect.width), Mathf.Abs(target.Rect.height), 0.02f);
     }
 
     private Selectable FindSelectableHit(Vector3 origin, Vector3 direction, out RaycastHit closestHit)
     {
         closestHit = default;
-        RaycastHit[] hits = Physics.RaycastAll(origin, direction, maxDistance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
-
-        if (hits.Length == 0)
-            return null;
-
-        System.Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
-
-        foreach (RaycastHit hit in hits)
+        int count;
+        while (true)
         {
-            TMP_InputField inputField = hit.collider.GetComponentInParent<TMP_InputField>();
-            if (inputField == null || !IsSelectableRaycastable(inputField))
-                continue;
-
-            closestHit = hit;
-            return inputField;
+            count = Physics.RaycastNonAlloc(origin, direction, hitBuffer, maxDistance,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
+            if (count < hitBuffer.Length) break;
+            // A full non-alloc buffer is unordered and may omit the closest target; grow and retry.
+            System.Array.Resize(ref hitBuffer, hitBuffer.Length * 2);
         }
-
-        foreach (RaycastHit hit in hits)
+        Selectable nearest = null;
+        TMP_InputField nearestInput = null;
+        RaycastHit inputHit = default;
+        float nearestDistance = float.PositiveInfinity, inputDistance = float.PositiveInfinity;
+        for (int i = 0; i < count; i++)
         {
-            Selectable selectable = hit.collider.GetComponentInParent<Selectable>();
-            if (selectable == null || !IsSelectableRaycastable(selectable))
-                continue;
-
-            closestHit = hit;
-            return selectable;
+            RaycastHit hit = hitBuffer[i];
+            if (!hitLookup.TryGetValue(hit.collider, out CachedTarget target))
+            {
+                TMP_InputField input = hit.collider.GetComponentInParent<TMP_InputField>();
+                Selectable selectable = input != null ? input : hit.collider.GetComponentInParent<Selectable>();
+                target = selectable != null && targetLookup.TryGetValue(selectable, out CachedTarget cached) ? cached : null;
+                hitLookup[hit.collider] = target;
+            }
+            if (target == null || !IsSelectableRaycastable(target)) continue;
+            if (target.InputField != null && targetLookup.TryGetValue(target.InputField, out CachedTarget inputTarget) &&
+                IsSelectableRaycastable(inputTarget) && hit.distance < inputDistance)
+            {
+                nearestInput = target.InputField;
+                inputDistance = hit.distance;
+                inputHit = hit;
+            }
+            if (hit.distance < nearestDistance)
+            {
+                nearest = target.Selectable;
+                nearestDistance = hit.distance;
+                closestHit = hit;
+            }
         }
-
-        return null;
+        // Preserve the existing input-field priority, selecting the closest valid hit within each category.
+        if (nearestInput != null) { closestHit = inputHit; return nearestInput; }
+        return nearest;
     }
 
     private void UpdateHoverTarget(GameObject newHoverObject)
@@ -218,8 +306,11 @@ public class MainMenuVRLaserPointer : MonoBehaviour
     {
         bool isTriggerPressed = OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OvrController) >= triggerThreshold;
 
-        if (isTriggerPressed && !wasTriggerPressed && hoverTarget != null)
+        if (ConsumeTriggerPress(isTriggerPressed) && hoverTarget != null)
         {
+            Selectable selectable = hoverTarget.GetComponent<Selectable>();
+            if (selectable == null || !targetLookup.TryGetValue(selectable, out CachedTarget target) ||
+                !IsSelectableRaycastable(target)) return;
             PointerEventData eventData = CreatePointerEventData();
             LogClickTarget(hoverTarget.name);
 
@@ -257,19 +348,27 @@ public class MainMenuVRLaserPointer : MonoBehaviour
             }
         }
 
-        wasTriggerPressed = isTriggerPressed;
+    }
+
+    private bool ConsumeTriggerPress(bool pressed)
+    {
+        bool fresh = triggerArmed && pressed && !wasTriggerPressed;
+        if (!pressed) triggerArmed = true;
+        wasTriggerPressed = pressed;
+        return fresh;
     }
 
     private PointerEventData CreatePointerEventData()
     {
-        if (eventSystem == null)
-            eventSystem = EventSystem.current;
-
-        return new PointerEventData(eventSystem)
+        if (pointerEventData == null || eventSystem != EventSystem.current)
         {
-            button = PointerEventData.InputButton.Left,
-            pointerId = PointerId
-        };
+            eventSystem = EventSystem.current;
+            pointerEventData = new PointerEventData(eventSystem);
+        }
+        pointerEventData.Reset();
+        pointerEventData.button = PointerEventData.InputButton.Left;
+        pointerEventData.pointerId = PointerId;
+        return pointerEventData;
     }
 
     private void UpdateLine(Vector3 start, Vector3 end, bool isHoveringButton)
@@ -290,15 +389,15 @@ public class MainMenuVRLaserPointer : MonoBehaviour
 
     private void ClearHover()
     {
-        if (currentHoverObject == null)
-            return;
-
-        ExecuteEvents.ExecuteHierarchy(currentHoverObject, CreatePointerEventData(), ExecuteEvents.pointerExitHandler);
+        GameObject previous = currentHoverObject;
         currentHoverObject = null;
+        if (previous != null)
+            ExecuteEvents.ExecuteHierarchy(previous, CreatePointerEventData(), ExecuteEvents.pointerExitHandler);
     }
 
-    private static bool IsSelectableRaycastable(Selectable selectable)
+    private static bool IsSelectableRaycastable(CachedTarget target)
     {
+        Selectable selectable = target.Selectable;
         if (selectable == null)
             return false;
 
@@ -315,15 +414,14 @@ public class MainMenuVRLaserPointer : MonoBehaviour
                 return false;
         }
 
-        Canvas[] parentCanvases = selectable.GetComponentsInParent<Canvas>(true);
-        foreach (Canvas parentCanvas in parentCanvases)
+        if (target.Canvases.Count == 0) return false;
+        foreach (Canvas parentCanvas in target.Canvases)
         {
             if (parentCanvas == null || !parentCanvas.enabled || !parentCanvas.gameObject.activeInHierarchy)
                 return false;
         }
 
-        CanvasGroup[] canvasGroups = selectable.GetComponentsInParent<CanvasGroup>(true);
-        foreach (CanvasGroup canvasGroup in canvasGroups)
+        foreach (CanvasGroup canvasGroup in target.Groups)
         {
             if (canvasGroup == null || !canvasGroup.enabled)
                 continue;
@@ -344,7 +442,7 @@ public class MainMenuVRLaserPointer : MonoBehaviour
 
     private void PlayHapticPulse(float amplitude, float duration)
     {
-        if (!IsControllerConnected())
+        if (amplitude <= 0f || !IsControllerConnected())
             return;
 
         if (hapticRoutine != null)

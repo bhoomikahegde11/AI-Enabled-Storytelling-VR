@@ -199,20 +199,12 @@ public class GameManager : MonoBehaviour
     public bool TryStartNewJourneyInSlot(int slot, string saveName, string characterName, string gender, bool overwriteConfirmed)
     {
         if (isLoading || !LocalSaveManager.IsValidSlot(slot) || scenes == null || scenes.Length == 0 ||
-            !Application.CanStreamedLevelBeLoaded(scenes[0])) return false;
-        if (LocalSaveManager.SlotHasAnyData(slot) && !overwriteConfirmed) return false;
-
-        int previousSlot = LocalSaveManager.ActiveSlot;
-        LocalSaveManager.SelectSlot(slot);
-        bool created = new LocalSaveManager().CreateFreshProfile(saveName, characterName, gender);
-        if (!created)
-        {
-            RestoreActiveSlot(previousSlot);
+            !Application.CanStreamedLevelBeLoaded(scenes[0]) ||
+            !LocalSaveManager.TryCreateJourneyInSlot(slot, saveName, characterName, gender, overwriteConfirmed))
             return false;
-        }
 
         Level1GameState.ExistingInstance?.ReloadProfileFromDisk();
-        ApplyPlayerIdentity(saveName, characterName, gender);
+        ApplyPlayerIdentity(saveName.Trim(), characterName.Trim(), gender);
         currentIndex = -1;
         LoadSceneByName(scenes[0]);
         return true;
@@ -273,12 +265,6 @@ public class GameManager : MonoBehaviour
                Application.CanStreamedLevelBeLoaded(sceneName);
     }
 
-    private static void RestoreActiveSlot(int slot)
-    {
-        if (slot == 0) LocalSaveManager.ClearActiveSlot();
-        else LocalSaveManager.SelectSlot(slot);
-    }
-
     private static void ApplyPlayerIdentity(string saveName, string characterName, string gender)
     {
         PlayerPrefs.SetString(MainMenuSaveFlow.SaveNameKey, string.IsNullOrWhiteSpace(saveName) ? "Journey" : saveName);
@@ -314,8 +300,13 @@ public class GameManager : MonoBehaviour
 
     public void RestartCurrentScene()
     {
-        if (!isLoading && IsGameplayScene(SceneManager.GetActiveScene().name))
-            LoadSceneByName(SceneManager.GetActiveScene().name, abandonCurrentWork: true);
+        if (isLoading) return;
+        string sceneName = SceneManager.GetActiveScene().name;
+        if (!IsGameplayScene(sceneName)) return;
+        if (!Application.CanStreamedLevelBeLoaded(sceneName)) return;
+        if (sceneName == DefaultGameplaySceneName && !Level1GameState.Instance.RestoreLevel1EntrySnapshot())
+            return; // Do not reload into a partially reset or unsaved attempt.
+        LoadSceneByName(sceneName, abandonCurrentWork: true);
     }
 
     public void ReturnToMainMenu()
@@ -386,6 +377,20 @@ public class GameManager : MonoBehaviour
             pause?.PrepareForTransition();
 
             PreserveCommittedProgress(abandonCurrentWork);
+
+            // A new Level 1 visit gets its own entry baseline. Continue and Restart retain
+            // the baseline already stored in the selected save slot.
+            if (targetSceneName == DefaultGameplaySceneName && currentSceneName != DefaultGameplaySceneName)
+            {
+                var saves = new LocalSaveManager();
+                if (!saves.TryLoadExistingProfile(out LocalProfileData saved) ||
+                    (saved.current_scene != DefaultGameplaySceneName &&
+                     !Level1GameState.Instance.CaptureLevel1EntrySnapshot(true)))
+                {
+                    Debug.LogError("[SCENE FLOW] Cannot enter Level 1 without saving its restart baseline.");
+                    yield break;
+                }
+            }
 
             int targetIndex = GetProgressionIndex(targetSceneName);
 

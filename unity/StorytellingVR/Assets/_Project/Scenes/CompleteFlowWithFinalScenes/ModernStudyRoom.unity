@@ -12980,6 +12980,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2147001002}
   - component: {fileID: 2147001003}
+  - component: {fileID: 2147001004}
   m_Layer: 0
   m_Name: ModernStudyRoomIntroController
   m_TagString: Untagged
@@ -13087,6 +13088,34 @@ MonoBehaviour:
   _influencePulseSpeedMaximum: 4
   _enableEditorDebugTrigger: 0
   _editorLiveFollowHoverTarget: 0
+  _bookGuidance: {fileID: 2147001004}
+--- !u!114 &2147001004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147001001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74e9689f56b34d59b71fd9fa1d7b6216, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  playerCamera: {fileID: 2087172839}
+  leftController: {fileID: 258342522}
+  rightController: {fileID: 1102603100}
+  bookCollider: {fileID: 1919096101}
+  bookGrabbable: {fileID: 1919096103}
+  bookInteractable: {fileID: 1919096104}
+  font: {fileID: 11400000, guid: d8bab806c555092448924b788a84844f, type: 2}
+  dustMaterial: {fileID: 2100000, guid: e823cd5b5d27c0f4b8256e7c12ee3e6d, type: 2}
+  objectiveOffset: {x: -0.65, y: 0.38, z: 1.6}
+  labelBobAmplitude: 0.015
+  labelBobPeriod: 2.6
+  headEnterDistance: 1.25
+  headExitDistance: 1.45
+  handEnterDistance: 0.25
+  handExitDistance: 0.35
 --- !u!1 &2147001011
 GameObject:
   m_ObjectHideFlags: 0

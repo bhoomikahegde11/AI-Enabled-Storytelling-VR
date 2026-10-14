@@ -27,6 +27,16 @@ public class ShiftStatsData
 }
 
 [Serializable]
+public class Level1EntrySnapshotData
+{
+    public int varahas;
+    public int reputation;
+    public List<InventoryEntry> inventory = new List<InventoryEntry>();
+    public ShiftStatsData shiftStats = new ShiftStatsData();
+    public List<string> completedLevels = new List<string>();
+}
+
+[Serializable]
 public class LocalProfileData
 {
     public GlobalMetricsData global_metrics = new GlobalMetricsData();
@@ -37,6 +47,10 @@ public class LocalProfileData
     public bool intro_completed;
     public float remainingMarketDaySeconds;
     public bool hasSavedMarketDayTimer;
+    public Level1EntrySnapshotData level1_entry;
+    // JsonUtility's inline class serialization cannot preserve null by itself.
+    public int level1_entry_format;
+    public bool level1_entry_present;
     public string save_name = "";
     public string character_name = "";
     public string selected_gender = "Male";
@@ -108,15 +122,18 @@ public class LocalSaveManager
         return LoadProfile(new MarketManager());
     }
 
-    public void SaveProfile(LocalProfileData profile)
+    public bool SaveProfile(LocalProfileData profile)
     {
-        WriteProfile(profile, false);
+        return WriteProfile(profile, false);
     }
 
     public bool CreateFreshProfile(string saveName = "", string characterName = "", string gender = "Male")
     {
+        string journeyName = (saveName ?? string.Empty).Trim();
+        if (ActiveSlot > 0 && (journeyName.Length == 0 || FindJourneyNameConflict(journeyName, ActiveSlot) != 0))
+            return false;
         LocalProfileData fresh = CreateDefaultProfile(new MarketManager());
-        fresh.save_name = saveName ?? "";
+        fresh.save_name = ActiveSlot > 0 ? journeyName : saveName ?? ""; // Keep the legacy Editor profile format.
         fresh.character_name = characterName ?? "";
         fresh.selected_gender = string.IsNullOrWhiteSpace(gender) ? "Male" : gender;
         return WriteProfile(fresh, true);
@@ -139,6 +156,8 @@ public class LocalSaveManager
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(savePath));
+            profile.level1_entry_format = 1;
+            profile.level1_entry_present = profile.level1_entry != null;
             string json = JsonUtility.ToJson(profile, true);
             File.WriteAllText(tempPath, json);
 
@@ -233,6 +252,50 @@ public class LocalSaveManager
         return File.Exists(path) || File.Exists(path + ".bak") || File.Exists(path + ".tmp");
     }
 
+    public static int FirstEmptySlot()
+    {
+        for (int slot = 1; slot <= SlotCount; slot++)
+            if (!SlotHasAnyData(slot)) return slot;
+        return 0;
+    }
+
+    // Returns the occupied slot with the same real saved name, or zero if none exists.
+    // Older unnamed profiles do not acquire an invented name during this check.
+    public static int FindJourneyNameConflict(string proposedName, int excludingSlot = 0)
+    {
+        string candidate = (proposedName ?? string.Empty).Trim();
+        if (candidate.Length == 0) return 0;
+        for (int slot = 1; slot <= SlotCount; slot++)
+        {
+            if (slot == excludingSlot || !SlotHasAnyData(slot) || !TryLoadSlot(slot, out LocalProfileData profile))
+                continue;
+            if (string.Equals(candidate, (profile.save_name ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase))
+                return slot;
+        }
+        return 0;
+    }
+
+    public static bool TryCreateJourneyInSlot(int slot, string journeyName, string characterName,
+        string gender, bool overwriteConfirmed)
+    {
+        journeyName = (journeyName ?? string.Empty).Trim();
+        characterName = (characterName ?? string.Empty).Trim();
+        if (!IsValidSlot(slot) || journeyName.Length == 0 || characterName.Length == 0 ||
+            string.IsNullOrWhiteSpace(gender) || FindJourneyNameConflict(journeyName, slot) != 0)
+            return false;
+
+        // A .bak/.tmp or unreadable slot is occupied, never an automatic vacancy.
+        if (SlotHasAnyData(slot) &&
+            (!overwriteConfirmed || !TryLoadSlot(slot, out _))) return false;
+
+        int previousSlot = ActiveSlot;
+        SelectSlot(slot);
+        if (new LocalSaveManager().CreateFreshProfile(journeyName, characterName, gender)) return true;
+        if (previousSlot == 0) ClearActiveSlot();
+        else SelectSlot(previousSlot);
+        return false;
+    }
+
     public static bool TryLoadSlot(int slot, out LocalProfileData profile)
     {
         return TryReadProfile(GetSlotSavePath(slot), out profile);
@@ -271,6 +334,20 @@ public class LocalSaveManager
             LocalProfileData parsed = JsonUtility.FromJson<LocalProfileData>(json);
             if (parsed == null || parsed.global_metrics == null || parsed.inventory == null || parsed.shift_stats == null)
                 return false;
+            if (parsed.level1_entry_format == 1)
+            {
+                if (!parsed.level1_entry_present) parsed.level1_entry = null;
+            }
+            else if (parsed.level1_entry_format == 0)
+            {
+                // Older real captures contain the market inventory. An empty inline object
+                // is the null serialization artifact, not a recoverable entry baseline.
+                Level1EntrySnapshotData entry = parsed.level1_entry;
+                if (entry == null || entry.inventory == null || entry.inventory.Count == 0 ||
+                    entry.shiftStats == null || entry.completedLevels == null)
+                    parsed.level1_entry = null;
+            }
+            else return false; // Do not rewrite an unknown future snapshot format.
             profile = parsed;
             return true;
         }

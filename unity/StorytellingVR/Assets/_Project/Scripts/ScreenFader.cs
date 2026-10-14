@@ -64,6 +64,7 @@ public class ScreenFader : MonoBehaviour
 
     public IEnumerator FadeOut()
     {
+        if (fadeImage == null) yield break;
         float a = fadeImage.color.a;
 
         while (a < 1f)
@@ -84,6 +85,7 @@ public class ScreenFader : MonoBehaviour
 
     public IEnumerator FadeIn()
     {
+        if (fadeImage == null) yield break;
         float a = fadeImage.color.a;
 
         while (a > 0f)
