@@ -24,7 +24,7 @@ public class EpilogueStoryManager : MonoBehaviour
     public string endingSceneName = "Epilogue_ModernStudyRoom";
     [Tooltip("Matches ModernStudyRoomIntroController's whiteout duration.")]
     public float whiteFadeDuration = 1.2f;
-    public int bookPrice = 10;
+    public int bookPrice = 18;
     public int defaultPaycheck = 15;
 
     [Header("UI")]
@@ -98,21 +98,10 @@ public class EpilogueStoryManager : MonoBehaviour
 
         if (NarratorUIManager.Instance != null)
         {
-            // Separate clip 1
+            // Exactly matches the single recorded BHASKARA_EPILOGUE_01.wav.
             yield return NarratorUIManager.Instance.PlayNarration(
-                "BHASKARA_EPILOGUE_01",
-                "Bhaskara",
-                "You handled yourself well today.",
-                3f
-            );
-
-            // Separate clip 2
-            yield return NarratorUIManager.Instance.PlayNarration(
-                "BHASKARA_EPILOGUE_02",
-                "Bhaskara",
-                "Here—your share. You've earned it.",
-                3f
-            );
+                "BHASKARA_EPILOGUE_01", "Bhaskara",
+                "You did well today. Here is your share of the earnings.", 5f);
         }
         else
         {
@@ -156,7 +145,7 @@ public class EpilogueStoryManager : MonoBehaviour
             yield return NarratorUIManager.Instance.PlayNarration(
                 "NARRATOR_EPILOGUE_01",
                 "Narrator",
-                "With your earnings in hand, there's one thing left to do. Return to Meera and buy the book.",
+                "With enough Varahas now in hand, perhaps it is finally time to return to Meera.",
                 6f
             );
         }
@@ -230,7 +219,7 @@ public class EpilogueStoryManager : MonoBehaviour
             yield return NarratorUIManager.Instance.PlayNarration(
                 "MEERA_EPILOGUE_01",
                 "Meera",
-                "You came back. I had a feeling you would.",
+                "You came back.",
                 4f
             );
         }
@@ -239,13 +228,13 @@ public class EpilogueStoryManager : MonoBehaviour
             yield return new WaitForSeconds(3f);
         }
 
-        if (teleportManager != null)
-            teleportManager.EnableGroup("General");
-
-        // Purchase input is now allowed.
-        meeraTrigger?.EnablePurchaseInput();
-
+        // Meera's greeting is complete.
+        // Continue directly to the purchase without requiring X.
         sequenceRunning = false;
+
+        Debug.Log("[EPILOGUE] Automatically beginning book purchase.");
+
+        yield return MeeraPurchaseSequence();
     }
 
     // ─── MEERA INTERACTED / PURCHASE ─────────────────────────────────────────
@@ -268,21 +257,16 @@ public class EpilogueStoryManager : MonoBehaviour
         if (teleportManager != null)
             teleportManager.DisableAll();
 
-        /*
-         * No prerecorded player line.
-         *
-         * Pressing X already communicates the player's decision
-         * to purchase the book.
-         */
-
         if (NarratorUIManager.Instance != null)
         {
+            // PLAYER_EPILOGUE_01 can be subtitle-only if no WAV was created.
             yield return NarratorUIManager.Instance.PlayNarration(
-                "MEERA_EPILOGUE_02",
-                "Meera",
-                $"Ten Varahas, as promised. The book is yours.",
-                4f
-            );
+                "PLAYER_EPILOGUE_01", "You",
+                "I'd like to buy that book.", 3f);
+
+            yield return NarratorUIManager.Instance.PlayNarration(
+                "MEERA_EPILOGUE_02", "Meera",
+                $"It is yours for {bookPrice} Varahas.", 4f);
         }
         else
         {
@@ -325,7 +309,7 @@ public class EpilogueStoryManager : MonoBehaviour
             yield return NarratorUIManager.Instance.PlayNarration(
                 "MEERA_EPILOGUE_03",
                 "Meera",
-                "Take it. Perhaps now you'll understand why it found you.",
+                "Take it. Perhaps it will answer your questions.",
                 5f
             );
         }
@@ -336,14 +320,31 @@ public class EpilogueStoryManager : MonoBehaviour
 
         // ── Advance to OpenBook ───────────────────────────────────────────────
 
-        currentStage =
-            EpilogueStage.OpenBook;
+        currentStage = EpilogueStage.OpenBook;
 
-        objectiveUI?.SetObjective(
-            "Take the book"
-        );
+        objectiveUI?.SetObjective("Take the book");
 
-        endingBookInteraction?.Enable();
+        if (endingBookInteraction != null)
+        {
+            endingBookInteraction.Enable();
+            Debug.Log("[EPILOGUE BOOK] OpenBook reached; interaction enabled.");
+        }
+        else
+        {
+            Debug.LogError(
+                "[EPILOGUE BOOK] EndingBookInteraction reference is missing on EpilogueStoryManager."
+            );
+        }
+
+        // NEW: Show the book selection tutorial prompt
+        if (TutorialPromptUIManager.Instance != null)
+        {
+            TutorialPromptUIManager.Instance.ShowPrompt(
+                "Take the Book",
+                "Point at the book and press Right Trigger to take it.",
+                this
+            );
+        }
 
         if (teleportManager != null)
             teleportManager.EnableGroup("General");
@@ -355,14 +356,17 @@ public class EpilogueStoryManager : MonoBehaviour
 
     public void NotifyBookInteracted()
     {
+        Debug.Log($"[EPILOGUE BOOK] NotifyBookInteracted received. Stage={currentStage}");
         if (currentStage != EpilogueStage.OpenBook)
+        {
+            Debug.LogWarning($"[EPILOGUE BOOK] Ignored: expected OpenBook, got {currentStage}.");
             return;
+        }
 
-        currentStage =
-            EpilogueStage.Transitioning;
-
+        currentStage = EpilogueStage.Transitioning;
         objectiveUI?.HideObjective();
-
+        endingBookInteraction?.Disable();
+        Debug.Log("[EPILOGUE BOOK] Transition accepted. Starting white fade.");
         StartCoroutine(TransitionSequence());
     }
 
@@ -396,19 +400,16 @@ public class EpilogueStoryManager : MonoBehaviour
         currentStage =
             EpilogueStage.Complete;
 
-        if (GameManager.Instance != null)
+        Debug.Log($"[EPILOGUE BOOK] Loading scene '{endingSceneName}'.");
+        if (GameManager.ExistingInstance != null)
         {
-            GameManager.Instance.LoadSceneByName(
-                endingSceneName
-            );
+            GameManager.ExistingInstance.LoadSceneByName(endingSceneName);
         }
         else
         {
-            Debug.LogWarning(
-                "[EPILOGUE] GameManager not found — " +
-                "scene will not transition until it is added " +
-                "to the scene list."
-            );
+            // Direct Editor testing without Bootstrap: load the authored ending scene.
+            Debug.LogWarning("[EPILOGUE BOOK] Bootstrap GameManager absent; using direct scene-load fallback.");
+            SceneManager.LoadScene(endingSceneName);
         }
     }
 }

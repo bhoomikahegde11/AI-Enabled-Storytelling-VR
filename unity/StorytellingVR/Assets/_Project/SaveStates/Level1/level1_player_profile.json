@@ -1,7 +1,7 @@
 {
     "global_metrics": {
         "reputation": 50,
-        "total_varahas": 150,
+        "total_varahas": 180,
         "completed_levels": []
     },
     "inventory": [
@@ -32,6 +32,19 @@
     "intro_completed": true,
     "remainingMarketDaySeconds": 2000.0,
     "hasSavedMarketDayTimer": true,
+    "level1_entry": {
+        "varahas": 0,
+        "reputation": 0,
+        "inventory": [],
+        "shiftStats": {
+            "shifts_completed": 0,
+            "total_varahas_earned": 0,
+            "total_deals_made": 0
+        },
+        "completedLevels": []
+    },
+    "level1_entry_format": 1,
+    "level1_entry_present": false,
     "save_name": "",
     "character_name": "",
     "selected_gender": "Male"
