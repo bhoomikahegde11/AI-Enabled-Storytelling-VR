@@ -9513,13 +9513,13 @@ MonoBehaviour:
   narratorAudioSource: {fileID: 0}
   customerAudioSource: {fileID: 0}
   voiceDatabase: {fileID: 11400000, guid: 70f75dc8456948e28f6b6b691a7b2c3f, type: 2}
-  customerRequestClip: {fileID: 0}
-  narratorScooperAppearedClip: {fileID: 0}
-  narratorScoopedClip: {fileID: 0}
-  narratorWrongSpiceClip: {fileID: 0}
-  narratorWrongBagClip: {fileID: 0}
-  customerThanksClip: {fileID: 0}
-  narratorCompletedClip: {fileID: 0}
+  customerRequestClip: {fileID: 8300000, guid: d086afa6f419d734a95544e446a4fc54, type: 3}
+  narratorScooperAppearedClip: {fileID: 8300000, guid: e7354e396050d3c4ba9f3b6d72b9d83b, type: 3}
+  narratorScoopedClip: {fileID: 8300000, guid: 930a2fb7ed086b24c96639b5cb5727d1, type: 3}
+  narratorWrongSpiceClip: {fileID: 8300000, guid: ecd94de626606b84da77de5ba2090a49, type: 3}
+  narratorWrongBagClip: {fileID: 8300000, guid: c72e79990ecaaa149a9bde2f65e29b76, type: 3}
+  customerThanksClip: {fileID: 8300000, guid: c47a8d505b63a5145babdab18c334132, type: 3}
+  narratorCompletedClip: {fileID: 8300000, guid: 2121f7ee21d6ded48a14e81cb56f2897, type: 3}
   promptPanel: {fileID: 3000000001}
   promptText: {fileID: 3000000008}
   instructionPromptManager: {fileID: 0}

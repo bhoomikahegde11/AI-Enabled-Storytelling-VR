@@ -9868,7 +9868,7 @@ MonoBehaviour:
   currentStage: 3
   endingSceneName: Epilogue_ModernStudyRoom
   whiteFadeDuration: 1.2
-  bookPrice: 10
+  bookPrice: 18
   defaultPaycheck: 15
   walletHUD: {fileID: 0}
   objectiveUI: {fileID: 23441724}
