@@ -24,20 +24,27 @@ public class BackgroundNPCConversation : MonoBehaviour
 
     private IEnumerator RandomConversation()
     {
+        // Give every NPC a different starting time.
+        animator.SetBool(IsTalking, false);
+
+        yield return new WaitForSeconds(
+            Random.Range(0f, maxIdleTime + minIdleTime)
+        );
+
         while (true)
         {
-            // Stand idle for a random amount of time
-            animator.SetBool(IsTalking, false);
-
-            yield return new WaitForSeconds(
-                Random.Range(minIdleTime, maxIdleTime)
-            );
-
-            // Talk for a random amount of time
+            // Start talking
             animator.SetBool(IsTalking, true);
 
             yield return new WaitForSeconds(
                 Random.Range(minTalkingTime, maxTalkingTime)
+            );
+
+            // Stop talking
+            animator.SetBool(IsTalking, false);
+
+            yield return new WaitForSeconds(
+                Random.Range(minIdleTime, maxIdleTime)
             );
         }
     }
