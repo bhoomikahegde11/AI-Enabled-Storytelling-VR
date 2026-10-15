@@ -362,7 +362,10 @@ public class EpilogueStoryManager : MonoBehaviour
             Debug.LogWarning($"[EPILOGUE BOOK] Ignored: expected OpenBook, got {currentStage}.");
             return;
         }
-
+        if (TutorialPromptUIManager.Instance != null)
+        {
+            TutorialPromptUIManager.Instance.HidePrompt(this);
+        }
         currentStage = EpilogueStage.Transitioning;
         objectiveUI?.HideObjective();
         endingBookInteraction?.Disable();
