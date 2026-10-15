@@ -13109,7 +13109,10 @@ MonoBehaviour:
   bookInteractable: {fileID: 1919096104}
   font: {fileID: 11400000, guid: d8bab806c555092448924b788a84844f, type: 2}
   dustMaterial: {fileID: 2100000, guid: e823cd5b5d27c0f4b8256e7c12ee3e6d, type: 2}
-  objectiveOffset: {x: -0.65, y: 0.38, z: 1.6}
+  objectiveOffset: {x: 0, y: -0.12, z: 1.15}
+  announcementFadeIn: 0.4
+  announcementHold: 3
+  announcementFadeOut: 0.5
   labelBobAmplitude: 0.015
   labelBobPeriod: 2.6
   headEnterDistance: 1.25

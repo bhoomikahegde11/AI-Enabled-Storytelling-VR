@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.IO;
 using System.Reflection;
 using NUnit.Framework;
@@ -133,6 +134,125 @@ public class Level1RestartStateTests
     }
 
     [Test]
+    public void FreshAttemptHasOneFifteenMinuteClockAndTutorialSavesDoNotStartIt()
+    {
+        Assert.AreEqual(900f, state.MarketDayDurationSeconds);
+        Assert.AreEqual(900f, state.MarketDayRemainingSeconds);
+        Assert.IsFalse(state.MarketDayStarted);
+        state.SaveProfileToDisk();
+        Assert.IsFalse(new LocalSaveManager().LoadProfile().hasSavedMarketDayTimer);
+    }
+
+    [TestCase(180f)]
+    [TestCase(1200f)]
+    public void CustomInspectorDurationIsNotClampedToOldDebugMinimum(float seconds)
+    {
+        TimerField("marketDayDurationSeconds").SetValue(state, seconds);
+        TimerInvoke("OnValidate");
+        Assert.AreEqual(seconds, state.MarketDayDurationSeconds);
+        Assert.AreEqual(seconds, state.MarketDayRemainingSeconds);
+        Assert.IsFalse(state.MarketDayStarted);
+        Assert.IsTrue(state.RestoreLevel1EntrySnapshot());
+        Assert.AreEqual(seconds, state.MarketDayRemainingSeconds);
+    }
+
+    [Test]
+    public void SceneConfigurationOverridesTutorialDefaultButPreservesContinueAndActiveClock()
+    {
+        GameObject configurationHost = new GameObject("scene timer configuration");
+        configurationHost.SetActive(false);
+        try
+        {
+            var configuration = configurationHost.AddComponent<Level1GameState>();
+            TimerField("marketDayDurationSeconds").SetValue(configuration, 1200f);
+            var saves = new LocalSaveManager();
+            LocalProfileData continued = saves.LoadProfile();
+            continued.hasSavedMarketDayTimer = true;
+            continued.remainingMarketDaySeconds = 1050f;
+            Assert.IsTrue(saves.SaveProfile(continued));
+            state.ReloadProfileFromDisk();
+            TimerInvoke("ApplySceneTimerConfiguration", configuration);
+            Assert.AreEqual(1200f, state.MarketDayDurationSeconds);
+            Assert.AreEqual(1050f, state.MarketDayRemainingSeconds);
+            TimerInvoke("OnValidate");
+            Assert.AreEqual(1050f, state.MarketDayRemainingSeconds);
+
+            SetRunningClock(650f);
+            TimerField("marketDayDurationSeconds").SetValue(configuration, 180f);
+            TimerInvoke("ApplySceneTimerConfiguration", configuration);
+            Assert.AreEqual(1200f, state.MarketDayDurationSeconds);
+            Assert.AreEqual(650f, state.MarketDayRemainingSeconds);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(configurationHost); }
+    }
+
+    [Test]
+    public void CustomersSettlementsAndWalkAwayShareTheSameRemainingTime()
+    {
+        SetRunningClock(650f);
+        float startedAt = (float)TimerField("marketDayStartedAt").GetValue(state);
+        for (int customer = 0; customer < 2; customer++)
+        {
+            state.PrepareForNewCustomer();
+            state.StartMarketDay(); // Repeated starts are idempotent.
+            state.SyncTradeFromBackend("Lakshmi Amma", "Hampi", "Pepper", "2 Seers (~560g)", 560, 173, null);
+            if (customer == 0)
+            {
+                TradeTermsSnapshot terms = TradeTermsSnapshot.Capture(state.ActiveTrade);
+                Assert.IsTrue(state.ActiveTrade.BindAcceptedTerms(terms));
+                Assert.IsTrue(state.ResolveAcceptedTrade(terms, 0.7f, 0.2f, 0).isSuccess);
+            }
+            else Assert.IsFalse(state.ResolveTradeFromBackend("WALK_AWAY", 0, 560, 0f, 0.8f, 0).isSuccess);
+            Assert.AreEqual(650f, state.MarketDayRemainingSeconds);
+            Assert.AreEqual(startedAt, TimerField("marketDayStartedAt").GetValue(state));
+        }
+        Assert.AreEqual(650f, new LocalSaveManager().LoadProfile().remainingMarketDaySeconds);
+    }
+
+    [Test]
+    public void TimerExpiresAndCompletionCanBeClaimedOnlyOnce()
+    {
+        GameObject marketplaceHost = new GameObject("market completion fixture");
+        marketplaceHost.SetActive(false);
+        try
+        {
+            var marketplace = marketplaceHost.AddComponent<MarketplaceManager>();
+            typeof(MarketplaceManager).GetField("marketDayState", BindingFlags.NonPublic | BindingFlags.Instance)
+                .SetValue(marketplace, state);
+            MethodInfo claim = typeof(MarketplaceManager).GetMethod("TryClaimMarketDayCompletion", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsFalse((bool)claim.Invoke(marketplace, null));
+            int endings = 0;
+            state.MarketDayEndedEvent += () => endings++;
+            SetRunningClock(0f);
+            IEnumerator timer = (IEnumerator)TimerInvoke("MarketDayTimerRoutine");
+            Assert.IsFalse(timer.MoveNext());
+            state.EndMarketDay();
+            state.StartMarketDay();
+            Assert.AreEqual(1, endings);
+            Assert.AreEqual(0f, state.MarketDayRemainingSeconds);
+            Assert.IsTrue(state.MarketDayEnded);
+            Assert.IsTrue((bool)claim.Invoke(marketplace, null));
+            Assert.IsFalse((bool)claim.Invoke(marketplace, null));
+            Assert.AreEqual(250, state.CurrentMoney);
+            Assert.AreEqual(61, state.CurrentReputation);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(marketplaceHost); }
+    }
+
+    private static FieldInfo TimerField(string name) => typeof(Level1GameState)
+        .GetField(name, BindingFlags.NonPublic | BindingFlags.Instance);
+
+    private object TimerInvoke(string method, params object[] arguments) => typeof(Level1GameState)
+        .GetMethod(method, BindingFlags.NonPublic | BindingFlags.Instance).Invoke(state, arguments);
+
+    private void SetRunningClock(float remaining)
+    {
+        TimerField("<MarketDayStarted>k__BackingField").SetValue(state, true);
+        TimerField("marketDayRemainingSeconds").SetValue(state, remaining);
+        TimerField("marketDayStartedAt").SetValue(state, Time.time - (state.MarketDayDurationSeconds - remaining));
+    }
+
+    [Test]
     public void ReloadForContinueKeepsCommittedProgressUntilRestartIsRequested()
     {
         LocalProfileData progress = new LocalSaveManager().LoadProfile();
@@ -171,8 +291,12 @@ public class Level1RestartStateTests
         LocalProfileData nextEntry = new LocalSaveManager().LoadProfile();
         nextEntry.global_metrics.total_varahas = 390;
         nextEntry.global_metrics.reputation = 72;
+        nextEntry.hasSavedMarketDayTimer = true;
+        nextEntry.remainingMarketDaySeconds = 20f;
         Assert.IsTrue(new LocalSaveManager().SaveProfile(nextEntry));
         Assert.IsTrue(state.CaptureLevel1EntrySnapshot(true));
+        Assert.AreEqual(state.MarketDayDurationSeconds, state.MarketDayRemainingSeconds);
+        Assert.IsFalse(new LocalSaveManager().LoadProfile().hasSavedMarketDayTimer);
 
         LocalProfileData progress = new LocalSaveManager().LoadProfile();
         progress.global_metrics.total_varahas = 900;

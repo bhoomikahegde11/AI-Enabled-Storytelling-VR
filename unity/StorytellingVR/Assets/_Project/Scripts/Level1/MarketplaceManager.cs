@@ -77,6 +77,8 @@ public class MarketplaceManager : MonoBehaviour
     private Coroutine negotiationIdleCoroutine;
     private Coroutine nextCustomerCountdownCoroutine;
     private Coroutine marketDayStartupCoroutine;
+    private Level1GameState marketDayState;
+    private bool marketDayCompletionStarted;
     private bool isOriginalPlaceholderVisible = true;
     private bool keepsHipsActive = true;
     private float playerIdleStartedAt;
@@ -193,7 +195,14 @@ public class MarketplaceManager : MonoBehaviour
 
         // 6. Reset NPC position and begin lifecycle loop
         ResetNPCToSpawnPoint();
-        Level1GameState.Instance.StartMarketDay();
+        marketDayState = Level1GameState.Instance;
+        marketDayState.MarketDayEndedEvent += HandleMarketDayEnded;
+        marketDayState.StartMarketDay();
+        if (marketDayState.MarketDayEnded)
+        {
+            HandleMarketDayEnded(); // Continue from an already-expired checkpoint.
+            return;
+        }
         marketDayStartupCoroutine = StartCoroutine(PauseMenuController.RunGameplay(WaitForMarketDayThenStartLifecycle()));
     }
 
@@ -204,7 +213,22 @@ public class MarketplaceManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (marketDayState != null) marketDayState.MarketDayEndedEvent -= HandleMarketDayEnded;
         ClearInstantiatedCharacterModel();
+    }
+
+    private bool TryClaimMarketDayCompletion()
+    {
+        if (marketDayCompletionStarted || marketDayState == null || !marketDayState.MarketDayEnded)
+            return false;
+        marketDayCompletionStarted = true;
+        return true;
+    }
+
+    private void HandleMarketDayEnded()
+    {
+        if (!TryClaimMarketDayCompletion()) return;
+        GameManager.Instance.LoadSceneByName("Epilogue_BookPurchase", abandonCurrentWork: true);
     }
 
     /// <summary>

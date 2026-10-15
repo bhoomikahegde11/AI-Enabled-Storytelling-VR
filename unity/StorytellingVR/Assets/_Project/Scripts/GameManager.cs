@@ -46,6 +46,10 @@ public class GameManager : MonoBehaviour
     [SerializeField] private bool enableDeveloperSceneSkip = true;
     [SerializeField] private KeyCode developerSkipKey = KeyCode.F8;
 
+    [Header("Development Debug (Editor / Development Build Only)")]
+    [Tooltip("Allow F7 or right-controller B to skip Level 1 to Epilogue_BookPurchase. Does not complete trades or award results.")]
+    [SerializeField] private bool enableDebugSceneSkip = false;
+
     private int currentIndex = -1;
     private string currentSceneName = string.Empty;
     private bool isLoading;
@@ -166,6 +170,12 @@ public class GameManager : MonoBehaviour
         {
             yButtonHeld = false;
         }
+
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        bool keyboardSkipDown = Input.GetKeyDown(KeyCode.F7);
+        bool controllerSkipDown = OVRInput.GetDown(OVRInput.Button.Two, OVRInput.Controller.RTouch);
+        if (keyboardSkipDown || controllerSkipDown) TryDebugSkipMainLoop(keyboardInput: !controllerSkipDown);
+        #endif
 
         if (!skipSuppressed && ShouldHandleDeveloperSceneSkip() && Input.GetKeyDown(developerSkipKey))
         {
@@ -536,7 +546,47 @@ public class GameManager : MonoBehaviour
 
     private bool ShouldHandleDeveloperSceneSkip()
     {
-        return enableDeveloperSceneSkip && (Debug.isDebugBuild || Application.isEditor);
+        // Level 1 uses only the opt-in F7/B shortcut; its missing authored index makes Next unsafe.
+        return currentSceneName != DefaultGameplaySceneName &&
+            enableDeveloperSceneSkip && (Debug.isDebugBuild || Application.isEditor);
+    }
+
+    private bool CanDebugSkipMainLoop(bool keyboardInput)
+    {
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (!enableDebugSceneSkip || isLoading || skipSuppressed ||
+            PauseMenuController.GameplayInputBlocked ||
+            currentSceneName != DefaultGameplaySceneName) return false;
+
+        if (!keyboardInput) return true;
+
+        if (TouchScreenKeyboard.visible || !string.IsNullOrEmpty(Input.compositionString)) return false;
+
+        GameObject selected = UnityEngine.EventSystems.EventSystem.current != null
+            ? UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject : null;
+        if (selected != null &&
+            (selected.GetComponentInParent<TMPro.TMP_InputField>() != null ||
+             selected.GetComponentInParent<UnityEngine.UI.InputField>() != null)) return false;
+
+        // Only evaluated on the debug key-down, never as a per-frame UI scan.
+        foreach (UnityEngine.UI.Selectable control in UnityEngine.UI.Selectable.allSelectablesArray)
+        {
+            if (control is TMPro.TMP_InputField tmp && tmp.isFocused) return false;
+            if (control is UnityEngine.UI.InputField input && input.isFocused) return false;
+        }
+        return true;
+        #else
+        return false;
+        #endif
+    }
+
+    private void TryDebugSkipMainLoop(bool keyboardInput)
+    {
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (!CanDebugSkipMainLoop(keyboardInput)) return;
+        Debug.Log("[SCENE FLOW] Debug F7/B: skipping Level 1 to Epilogue_BookPurchase without awarding results.");
+        LoadSceneByName("Epilogue_BookPurchase", abandonCurrentWork: true);
+        #endif
     }
 
     private void TryDeveloperSkipCurrentScene()

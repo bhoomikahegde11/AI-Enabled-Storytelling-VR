@@ -21,6 +21,7 @@ public class ModernStudyRoomBookGuidanceTests
         host.SetActive(false);
         guidance = host.AddComponent<ModernStudyRoomBookGuidance>();
         head = new GameObject("tracked head");
+        head.transform.position = new Vector3(10000f, 2000f, 3000f); // Isolate placement queries from the open scene.
         camera = head.AddComponent<Camera>();
         book = new GameObject("offset book geometry");
         book.transform.position = new Vector3(10f, 2f, 3f);
@@ -138,11 +139,175 @@ public class ModernStudyRoomBookGuidanceTests
         Invoke("PositionGuidance");
         Assert.Less((dust.transform.position - previous - Vector3.right).magnitude, 0.001f);
 
+    }
+
+    [Test]
+    public void AnnouncementIsCenteredBelowEyeLevelAndDoesNotFollowOrRestartWithHeadMovement()
+    {
+        CreateVisualFixture();
+        Assert.IsTrue((bool)Invoke("BeginAnnouncement"));
         var objective = (RectTransform)Get("objective");
-        Vector3 cameraRelative = head.transform.InverseTransformPoint(objective.position);
-        Assert.Less(cameraRelative.x, 0f);
-        Assert.Greater(cameraRelative.y, 0f);
-        Assert.Greater(cameraRelative.z, 1f);
+        Vector3 offset = head.transform.InverseTransformPoint(objective.position);
+        Assert.AreEqual(0f, offset.x, 0.001f);
+        Assert.Less(offset.y, 0f);
+        Assert.GreaterOrEqual(offset.z, 0.85f);
+        Vector3 position = objective.position;
+        Quaternion rotation = objective.rotation;
+        Invoke("AdvanceAnnouncement", 0.2f);
+        head.transform.SetPositionAndRotation(head.transform.position + Vector3.right, Quaternion.Euler(0f, 90f, 0f));
+        Invoke("PositionGuidance");
+        Assert.IsTrue((bool)Invoke("BeginAnnouncement"));
+        Assert.AreEqual(position, objective.position);
+        Assert.AreEqual(rotation, objective.rotation);
+        Assert.AreEqual(0.2f, Get("announcementElapsed"));
+        Invoke("CreateGuidance");
+        Assert.AreEqual(2, host.GetComponentsInChildren<Canvas>(true).Length);
+    }
+
+    [Test]
+    public void MarkerStaysHiddenAndStationaryUntilAnnouncementHasCompletelyFadedOut()
+    {
+        CreateVisualFixture();
+        var cue = (RectTransform)Get("bookCue");
+        var objective = (RectTransform)Get("objective");
+        var group = objective.GetComponent<CanvasGroup>();
+        Vector3 hiddenPosition = cue.position;
+        Assert.IsFalse(cue.gameObject.activeSelf);
+        Assert.IsTrue((bool)Invoke("BeginAnnouncement"));
+        Invoke("PositionGuidance");
+        Assert.AreEqual(hiddenPosition, cue.position);
+        Invoke("AdvanceAnnouncement", 0.4f);
+        Assert.AreEqual(1f, group.alpha, 0.001f);
+        Assert.IsFalse(cue.gameObject.activeSelf);
+        Invoke("AdvanceAnnouncement", 3f);
+        Assert.IsFalse(cue.gameObject.activeSelf);
+        Invoke("AdvanceAnnouncement", 0.49f);
+        Assert.Greater(group.alpha, 0f);
+        Assert.IsFalse(cue.gameObject.activeSelf);
+        Invoke("AdvanceAnnouncement", 0.02f);
+        Assert.AreEqual(0f, group.alpha);
+        Assert.IsFalse(objective.gameObject.activeSelf);
+        Assert.IsTrue(cue.gameObject.activeSelf);
+        Assert.IsTrue((bool)Get("announcementComplete"));
+        Invoke("PositionGuidance");
+        Assert.AreNotEqual(hiddenPosition, cue.position);
+    }
+
+    [Test]
+    public void EarlySelectCancelsAnnouncementAndMarkerPermanentlyWithoutStartingCinematicItself()
+    {
+        CreateVisualFixture();
+        Invoke("BeginAnnouncement");
+        Invoke("AdvanceAnnouncement", 0.2f);
+        Invoke("HandlePointerEvent", new PointerEvent(5, PointerEventType.Select, Pose.identity));
+        Invoke("AdvanceAnnouncement", 10f);
+        Invoke("OnEnable");
+        Assert.IsFalse((bool)Invoke("BeginAnnouncement"));
+        Assert.IsFalse(((RectTransform)Get("objective")).gameObject.activeSelf);
+        Assert.IsFalse(((RectTransform)Get("bookCue")).gameObject.activeSelf);
+        Assert.IsFalse(((ParticleSystem)Get("bookDust")).gameObject.activeSelf);
+        Assert.IsFalse((bool)Get("announcementComplete"));
+        Assert.IsNull(host.GetComponent<ModernStudyRoomIntroController>(),
+            "Guidance must not create a second cinematic owner.");
+    }
+
+    [Test]
+    public void SelectionBeforeInitializationPreventsAnyGuidanceFromBeingCreated()
+    {
+        Invoke("HandlePointerEvent", new PointerEvent(5, PointerEventType.Select, Pose.identity));
+        Invoke("CreateGuidance");
+        Assert.IsNull(Get("objective"));
+        Assert.IsNull(Get("bookCue"));
+        Assert.IsNull(Get("bookDust"));
+    }
+
+    [Test]
+    public void DisableAndReenableResumeTheSameAnnouncementRatherThanCreatingOrRestartingIt()
+    {
+        CreateVisualFixture();
+        Set("ready", true);
+        Invoke("BeginAnnouncement");
+        Invoke("AdvanceAnnouncement", 0.2f);
+        var objective = (RectTransform)Get("objective");
+        Vector3 position = objective.position;
+        Invoke("OnDisable");
+        head.transform.position += Vector3.right;
+        Invoke("OnEnable");
+        Assert.IsTrue(objective.gameObject.activeSelf);
+        Assert.AreEqual(0.2f, Get("announcementElapsed"));
+        Assert.AreEqual(position, objective.position);
+        Invoke("AdvanceAnnouncement", 4f);
+        Invoke("OnDisable");
+        Invoke("OnEnable");
+        Assert.IsFalse(objective.gameObject.activeSelf);
+        Assert.IsTrue((bool)Get("announcementComplete"));
+        Assert.AreEqual(2, host.GetComponentsInChildren<Canvas>(true).Length);
+    }
+
+    [Test]
+    public void FreshSceneInstanceResetsAnnouncementStateAfterPreviousCinematic()
+    {
+        guidance.HideForCinematic();
+        var nextHost = new GameObject("reentered room guidance");
+        nextHost.SetActive(false);
+        try
+        {
+            var next = nextHost.AddComponent<ModernStudyRoomBookGuidance>();
+            Field("playerCamera").SetValue(next, camera);
+            Field("bookCollider").SetValue(next, book.GetComponent<Collider>());
+            Field("font").SetValue(next, AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(
+                "Assets/_Project/Fonts/LibertinusSerif-Regular SDF 1.asset"));
+            Field("dustMaterial").SetValue(next, AssetDatabase.LoadAssetAtPath<Material>(
+                "Packages/com.unity.render-pipelines.universal/Runtime/Materials/ParticlesUnlit.mat"));
+            var methods = BindingFlags.Instance | BindingFlags.NonPublic;
+            typeof(ModernStudyRoomBookGuidance).GetMethod("CreateGuidance", methods).Invoke(next, null);
+            Assert.IsFalse((bool)Field("announcementStarted").GetValue(next));
+            Assert.IsTrue((bool)typeof(ModernStudyRoomBookGuidance).GetMethod("BeginAnnouncement", methods).Invoke(next, null));
+            Assert.IsFalse((bool)Field("announcementComplete").GetValue(next));
+            Assert.IsFalse(((RectTransform)Field("bookCue").GetValue(next)).gameObject.activeSelf);
+        }
+        finally { Object.DestroyImmediate(nextHost); }
+    }
+
+    [Test]
+    public void PlacementUsesACloserComfortablePositionBeforeObstruction()
+    {
+        CreateVisualFixture();
+        var wall = new GameObject("temporary placement obstruction", typeof(BoxCollider));
+        try
+        {
+            wall.transform.position = head.transform.position + Vector3.forward * 1.15f;
+            wall.GetComponent<BoxCollider>().size = new Vector3(4f, 3f, 0.1f);
+            Physics.SyncTransforms();
+            Assert.IsTrue((bool)Invoke("BeginAnnouncement"));
+            var objective = (RectTransform)Get("objective");
+            Assert.Less(objective.position.z, wall.GetComponent<Collider>().bounds.min.z - 0.035f);
+            Assert.GreaterOrEqual(Vector3.Distance(objective.position, head.transform.position), 0.85f);
+        }
+        finally { Object.DestroyImmediate(wall); }
+    }
+
+    [Test]
+    public void ObstructedEntryKeepsBothStagesHiddenUntilAComfortablePositionIsAvailable()
+    {
+        CreateVisualFixture();
+        var obstruction = new GameObject("blocked entry volume", typeof(BoxCollider));
+        try
+        {
+            obstruction.transform.position = head.transform.position;
+            obstruction.GetComponent<BoxCollider>().size = Vector3.one * 4f;
+            Physics.SyncTransforms();
+            Assert.IsFalse((bool)Invoke("BeginAnnouncement"));
+            Assert.IsFalse((bool)Get("announcementStarted"));
+            Assert.IsFalse(((RectTransform)Get("objective")).gameObject.activeSelf);
+            Assert.IsFalse(((RectTransform)Get("bookCue")).gameObject.activeSelf);
+            obstruction.SetActive(false);
+            Physics.SyncTransforms();
+            Assert.IsTrue((bool)Invoke("BeginAnnouncement"));
+            Assert.IsTrue(((RectTransform)Get("objective")).gameObject.activeSelf);
+            Assert.IsFalse(((RectTransform)Get("bookCue")).gameObject.activeSelf);
+        }
+        finally { Object.DestroyImmediate(obstruction); }
     }
 
     private void CreateVisualFixture()

@@ -188,8 +188,8 @@ public class LocalTradeState
 public class Level1GameState : MonoBehaviour
 {
     private static Level1GameState instance;
-    private const float DefaultMarketDayDurationSeconds = 720f;
-    private const float MinimumMarketDayDurationSeconds = 2000f;
+    private const float DefaultMarketDayDurationSeconds = 900f;
+    private const float MinimumMarketDayDurationSeconds = 1f;
     private const float TimerAutosaveIntervalSeconds = 5f;
 
     #if UNITY_EDITOR
@@ -198,6 +198,7 @@ public class Level1GameState : MonoBehaviour
     #endif
 
     [Header("Market Day")]
+    [Tooltip("Total shared Level 1 gameplay duration. The normal Inspector displays this setting in minutes.")]
     [SerializeField] private float marketDayDurationSeconds = DefaultMarketDayDurationSeconds;
 
     public static Level1GameState Instance
@@ -261,6 +262,9 @@ public class Level1GameState : MonoBehaviour
     {
         if (instance != null && instance != this)
         {
+            // Tutorial-created persistent state must adopt the actual Level 1 scene's configuration.
+            if (gameObject.scene.name == GameManager.DefaultGameplaySceneName)
+                instance.ApplySceneTimerConfiguration(this);
             RemoveStateComponent();
             return;
         }
@@ -421,12 +425,23 @@ public class Level1GameState : MonoBehaviour
 
     private void ValidateMarketDayDuration()
     {
+        if (float.IsNaN(marketDayDurationSeconds) || float.IsInfinity(marketDayDurationSeconds))
+            marketDayDurationSeconds = DefaultMarketDayDurationSeconds;
         marketDayDurationSeconds = Mathf.Max(MinimumMarketDayDurationSeconds, marketDayDurationSeconds);
 
-        if (!MarketDayStarted || MarketDayEnded)
+        if (!MarketDayStarted && !MarketDayEnded)
         {
-            marketDayRemainingSeconds = MarketDayDurationSeconds;
+            if (initialized) ApplyLoadedMarketDayStateWithoutStartingRoutine();
+            else marketDayRemainingSeconds = MarketDayDurationSeconds;
         }
+    }
+
+    private void ApplySceneTimerConfiguration(Level1GameState configuration)
+    {
+        if (MarketDayStarted) return; // Never restart or reconfigure an active customer's shared clock.
+        marketDayDurationSeconds = configuration.marketDayDurationSeconds;
+        ValidateMarketDayDuration();
+        if (initialized) ApplyLoadedMarketDayStateWithoutStartingRoutine();
     }
 
     private static string FormatMarketDayTime(int totalSeconds)
@@ -494,8 +509,14 @@ public class Level1GameState : MonoBehaviour
             shiftStats = CopyShiftStats(saved.shift_stats),
             completedLevels = new List<string>(saved.global_metrics.completed_levels ?? new List<string>())
         };
+        saved.hasSavedMarketDayTimer = false;
+        saved.remainingMarketDaySeconds = 0f;
         if (!localSaveManager.SaveProfile(saved)) return false;
         profile.level1_entry = saved.level1_entry;
+        profile.hasSavedMarketDayTimer = false;
+        profile.remainingMarketDaySeconds = 0f;
+        StopMarketDayTimerRoutine();
+        ApplyLoadedMarketDayStateWithoutStartingRoutine();
         return true;
     }
 
@@ -864,7 +885,7 @@ public class Level1GameState : MonoBehaviour
 
     private void SyncMarketDayTimerToProfile()
     {
-        if (profile == null)
+        if (profile == null || (!MarketDayStarted && !MarketDayEnded))
         {
             return;
         }
