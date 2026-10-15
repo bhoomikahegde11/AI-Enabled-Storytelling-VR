@@ -495,6 +495,45 @@ public class GlobalPauseStage2Tests
         Assert.IsFalse(LocalSaveManager.ActiveProfileExists());
     }
 
+    [Test]
+    public void SharedMarketClockDoesNotAdvanceThroughPausedCoroutineContinuations()
+    {
+        var state = State();
+        Field(typeof(Level1GameState), "<MarketDayStarted>k__BackingField").SetValue(state, true);
+        Field(typeof(Level1GameState), "marketDayRemainingSeconds").SetValue(state, 500f);
+        var clock = PauseMenuController.RunGameplay((IEnumerator)Invoke(state, "MarketDayTimerRoutine"));
+        Invoke(pause, "CapturePauseState");
+        Field(typeof(Level1GameState), "marketDayStartedAt").SetValue(state,
+            Time.time - (state.MarketDayDurationSeconds - 490f));
+        try
+        {
+            for (int frame = 0; frame < 5; frame++) Assert.IsTrue(clock.MoveNext());
+            Assert.AreEqual(500f, state.MarketDayRemainingSeconds);
+            Assert.AreEqual(0f, Time.timeScale);
+            pause.ResumeGameplay();
+            Assert.IsTrue(clock.MoveNext());
+            Assert.AreEqual(490f, state.MarketDayRemainingSeconds, 0.01f);
+        }
+        finally { (clock as IDisposable)?.Dispose(); }
+    }
+
+    [Test]
+    public void DebugSkipEligibilityDoesNotDependOnOrExpireTheMarketClock()
+    {
+        var state = State();
+        Field(typeof(Level1GameState), "<MarketDayStarted>k__BackingField").SetValue(state, true);
+        Field(typeof(Level1GameState), "marketDayRemainingSeconds").SetValue(state, 500f);
+        Invoke(manager, "SyncCurrentScene", GameManager.DefaultGameplaySceneName);
+        Field(typeof(GameManager), "enableDebugSceneSkip").SetValue(manager, true);
+        Assert.IsTrue((bool)Invoke(manager, "CanDebugSkipMainLoop", false));
+        Assert.AreEqual(500f, state.MarketDayRemainingSeconds);
+        Assert.IsFalse(state.MarketDayEnded);
+        state.EndMarketDay();
+        Assert.IsTrue((bool)Invoke(manager, "CanDebugSkipMainLoop", false));
+        Field(typeof(GameManager), "enableDebugSceneSkip").SetValue(manager, false);
+        Assert.IsFalse((bool)Invoke(manager, "CanDebugSkipMainLoop", false));
+    }
+
     [TestCase(false)]
     [TestCase(true)]
     public void TransitionFadeStopsSafelyIfItsImageIsDestroyedMidFade(bool fadingIn)

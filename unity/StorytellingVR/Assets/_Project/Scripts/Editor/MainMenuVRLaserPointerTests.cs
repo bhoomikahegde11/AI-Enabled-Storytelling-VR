@@ -2,33 +2,40 @@ using System;
 using System.Reflection;
 using NUnit.Framework;
 using TMPro;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 public class MainMenuVRLaserPointerTests
 {
-    private Scene scene;
-    private Scene previousActiveScene;
     private GameObject root, panel;
     private Canvas canvas;
     private MainMenuVRLaserPointer pointer;
+    private Selectable[] previousSelectables;
+    private int previousSelectableCount;
+    private bool ownsSelectableRegistry;
+    private static readonly FieldInfo SelectablesField = typeof(Selectable)
+        .GetField("s_Selectables", BindingFlags.Static | BindingFlags.NonPublic);
+    private static readonly FieldInfo SelectableCountField = typeof(Selectable)
+        .GetField("s_SelectableCount", BindingFlags.Static | BindingFlags.NonPublic);
     private static readonly Vector3 Origin = new Vector3(10000f, 10000f, 10000f);
 
     [SetUp]
     public void SetUp()
     {
         Assert.IsFalse(Application.isPlaying);
-        previousActiveScene = SceneManager.GetActiveScene();
-        // Keep unsaved user scenes intact, and use default physics for the real non-alloc raycasts.
-        scene = SceneManager.CreateScene("Pointer fixture " + Guid.NewGuid().ToString("N"));
-        Assert.IsTrue(SceneManager.SetActiveScene(scene));
-        Assert.AreEqual(Physics.defaultPhysicsScene, scene.GetPhysicsScene());
+        ownsSelectableRegistry = false;
+        Assert.IsNotNull(SelectablesField);
+        Assert.IsNotNull(SelectableCountField);
+        previousSelectables = (Selectable[])SelectablesField.GetValue(null);
+        previousSelectableCount = (int)SelectableCountField.GetValue(null);
+        // Use the open scene without opening/closing/saving anything. Isolate the registry
+        // so production collider synchronization cannot touch the user's scene controls.
+        ownsSelectableRegistry = true;
+        SelectablesField.SetValue(null, new Selectable[10]);
+        SelectableCountField.SetValue(null, 0);
         root = new GameObject("isolated menu UI", typeof(RectTransform), typeof(Canvas));
-        SceneManager.MoveGameObjectToScene(root, scene);
         canvas = root.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
         root.transform.position = Origin;
@@ -40,10 +47,20 @@ public class MainMenuVRLaserPointerTests
     [TearDown]
     public void TearDown()
     {
-        if (previousActiveScene.IsValid() && previousActiveScene.isLoaded)
-            SceneManager.SetActiveScene(previousActiveScene);
-        if (scene.IsValid() && scene.isLoaded) EditorSceneManager.CloseScene(scene, true);
-        scene = default;
+        try
+        {
+            if (root != null) Object.DestroyImmediate(root);
+            root = null;
+        }
+        finally
+        {
+            if (ownsSelectableRegistry)
+            {
+                SelectablesField.SetValue(null, previousSelectables);
+                SelectableCountField.SetValue(null, previousSelectableCount);
+                ownsSelectableRegistry = false;
+            }
+        }
     }
 
     [Test]

@@ -17,6 +17,7 @@ public class GlobalLifecycleStage1Tests
     private float previousTimeScale;
     private bool previousAudioPause;
     private bool ownsFixture;
+    private UnityEngine.EventSystems.EventSystem previousEventSystem;
 
     private static readonly string[] CanonicalScenes =
     {
@@ -37,6 +38,7 @@ public class GlobalLifecycleStage1Tests
         LocalSaveManager.EditorTestSaveDirectoryOverride = saveDirectory;
         previousTimeScale = Time.timeScale;
         previousAudioPause = AudioListener.pause;
+        previousEventSystem = UnityEngine.EventSystems.EventSystem.current;
         ownsFixture = true;
     }
 
@@ -44,6 +46,14 @@ public class GlobalLifecycleStage1Tests
     public void TearDown()
     {
         if (!ownsFixture) return;
+        // Also recover registration if a test failed before entering its local try/finally.
+        foreach (GameObject host in hosts)
+        {
+            if (host == null) continue;
+            var events = host.GetComponent<UnityEngine.EventSystems.EventSystem>();
+            if (events != null && RegisteredEventSystems.Contains(events)) Invoke(events, "OnDisable");
+        }
+        if (previousEventSystem != null) UnityEngine.EventSystems.EventSystem.current = previousEventSystem;
         // A shared-host migration / lazy accessor can create a root outside the fixture list.
         if (Level1GameState.ExistingInstance != null)
         {
@@ -165,6 +175,197 @@ public class GlobalLifecycleStage1Tests
         scenes.SetValue(manager, configured);
         Invoke(manager, "EnsureSceneDefaults");
         CollectionAssert.AreEqual(configured, (string[])scenes.GetValue(manager), "Preserve nonempty authored scene configuration.");
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public void MainLoopDebugSkipDefaultsOffAndGatesKeyboardAndRightController(bool keyboardInput)
+    {
+        GameManager manager = Manager();
+        Invoke(manager, "SyncCurrentScene", GameManager.DefaultGameplaySceneName);
+        Assert.IsFalse((bool)Invoke(manager, "CanDebugSkipMainLoop", keyboardInput));
+        Invoke(manager, "TryDebugSkipMainLoop", keyboardInput);
+        Assert.IsFalse(manager.IsLoading);
+        Assert.IsFalse(LocalSaveManager.ActiveProfileExists());
+        Field(typeof(GameManager), "enableDebugSceneSkip").SetValue(manager, true);
+        Assert.IsTrue((bool)Invoke(manager, "CanDebugSkipMainLoop", keyboardInput));
+        Assert.IsFalse((bool)Invoke(manager, "ShouldHandleDeveloperSceneSkip"),
+            "The old F8 route must not bypass the Level 1 toggle or use an invalid progression index.");
+        Invoke(manager, "SyncCurrentScene", "GateIntro");
+        Assert.IsTrue((bool)Invoke(manager, "ShouldHandleDeveloperSceneSkip"),
+            "Preserve the existing developer shortcut in other scenes.");
+    }
+
+    [TestCase("Bootstrap")]
+    [TestCase("MainMenu_Optimized")]
+    [TestCase("ModernStudyRoom")]
+    [TestCase("SpicesInteraction")]
+    [TestCase("Epilogue_BookPurchase")]
+    public void MainLoopDebugSkipRejectsOtherScenesAndDoesNotChangeProgression(string scene)
+    {
+        GameManager manager = Manager();
+        Field(typeof(GameManager), "enableDebugSceneSkip").SetValue(manager, true);
+        Invoke(manager, "SyncCurrentScene", scene);
+        int index = manager.CurrentProgressionIndex;
+        Assert.IsFalse((bool)Invoke(manager, "CanDebugSkipMainLoop", true));
+        Assert.IsFalse((bool)Invoke(manager, "CanDebugSkipMainLoop", false));
+        Assert.AreEqual(index, manager.CurrentProgressionIndex);
+        Assert.IsFalse(LocalSaveManager.ActiveProfileExists());
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public void MainLoopDebugSkipRejectsLoadingAndSuppressionAndRetainsToggleAcrossScenes(bool keyboardInput)
+    {
+        GameManager manager = Manager();
+        Field(typeof(GameManager), "enableDebugSceneSkip").SetValue(manager, true);
+        Invoke(manager, "SyncCurrentScene", GameManager.DefaultGameplaySceneName);
+        Field(typeof(GameManager), "isLoading").SetValue(manager, true);
+        Assert.IsFalse((bool)Invoke(manager, "CanDebugSkipMainLoop", keyboardInput));
+        Invoke(manager, "TryDebugSkipMainLoop", keyboardInput);
+        Assert.IsTrue(manager.IsLoading);
+        Assert.IsFalse(LocalSaveManager.ActiveProfileExists());
+        Field(typeof(GameManager), "isLoading").SetValue(manager, false);
+        manager.SuppressSkip(true);
+        Assert.IsFalse((bool)Invoke(manager, "CanDebugSkipMainLoop", keyboardInput));
+        manager.SuppressSkip(false);
+        Invoke(manager, "SyncCurrentScene", "GateIntro");
+        Invoke(manager, "SyncCurrentScene", GameManager.DefaultGameplaySceneName);
+        Assert.IsTrue((bool)Invoke(manager, "CanDebugSkipMainLoop", keyboardInput));
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public void MainLoopDebugSkipRejectsPauseWithoutChangingProgression(bool keyboardInput)
+    {
+        GameManager manager = Manager();
+        Field(typeof(GameManager), "enableDebugSceneSkip").SetValue(manager, true);
+        Invoke(manager, "SyncCurrentScene", GameManager.DefaultGameplaySceneName);
+        int index = manager.CurrentProgressionIndex;
+        Invoke(manager.GetComponent<PauseMenuController>(), "CapturePauseState");
+        Assert.IsFalse((bool)Invoke(manager, "CanDebugSkipMainLoop", keyboardInput));
+        Invoke(manager, "TryDebugSkipMainLoop", keyboardInput);
+        Assert.AreEqual(index, manager.CurrentProgressionIndex);
+        Assert.IsFalse(manager.IsLoading);
+        Assert.IsFalse(LocalSaveManager.ActiveProfileExists());
+    }
+
+    [TestCase(false, false)]
+    [TestCase(false, true)]
+    [TestCase(true, false)]
+    [TestCase(true, true)]
+    public void MainLoopDebugSkipRejectsSelectedTextFieldsIncludingChildSelection(bool useTmp, bool selectChild)
+    {
+        GameManager manager = Manager();
+        Field(typeof(GameManager), "enableDebugSceneSkip").SetValue(manager, true);
+        Invoke(manager, "SyncCurrentScene", GameManager.DefaultGameplaySceneName);
+        var previous = UnityEngine.EventSystems.EventSystem.current;
+        var events = RegisteredEventSystem("isolated debug input events");
+        GameObject input = Host("selected text field");
+        if (useTmp) input.AddComponent<TMPro.TMP_InputField>();
+        else input.AddComponent<InputField>();
+        GameObject child = Host("input child");
+        child.transform.SetParent(input.transform);
+        input.SetActive(true);
+        child.SetActive(true);
+        try
+        {
+            GameObject selected = selectChild ? child : input;
+            events.SetSelectedGameObject(selected);
+            Assert.AreSame(events, UnityEngine.EventSystems.EventSystem.current);
+            Assert.AreSame(selected, events.currentSelectedGameObject);
+            Assert.IsTrue(selected.activeInHierarchy);
+            Assert.IsFalse((bool)Invoke(manager, "CanDebugSkipMainLoop", true));
+            Assert.IsTrue((bool)Invoke(manager, "CanDebugSkipMainLoop", false),
+                "Selecting the chat field must not disable the physical B debug shortcut.");
+            events.SetSelectedGameObject(null);
+            Assert.IsTrue((bool)Invoke(manager, "CanDebugSkipMainLoop", true));
+        }
+        finally
+        {
+            UnregisterEventSystem(events, previous);
+        }
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void MainLoopDebugSkipRejectsFocusedFieldsWithoutEventSystemSelection(bool useTmp)
+    {
+        GameManager manager = Manager();
+        Field(typeof(GameManager), "enableDebugSceneSkip").SetValue(manager, true);
+        Invoke(manager, "SyncCurrentScene", GameManager.DefaultGameplaySceneName);
+        GameObject input = Host("focused debug input");
+        Selectable field = useTmp ? (Selectable)input.AddComponent<TMPro.TMP_InputField>() : input.AddComponent<InputField>();
+        FieldInfo focus = field.GetType().GetField("m_AllowInput", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.IsNotNull(focus, "The fixture must establish the installed input field's real focused state.");
+        var previous = UnityEngine.EventSystems.EventSystem.current;
+        var events = RegisteredEventSystem("unselected debug input events");
+        try
+        {
+            Assert.IsNull(events.currentSelectedGameObject);
+            input.SetActive(true); // Register in the same Selectable registry used at runtime.
+            focus.SetValue(field, true);
+            Assert.IsTrue(useTmp ? ((TMPro.TMP_InputField)field).isFocused : ((InputField)field).isFocused);
+            CollectionAssert.Contains(Selectable.allSelectablesArray, field);
+            Assert.IsFalse((bool)Invoke(manager, "CanDebugSkipMainLoop", true));
+            Assert.IsTrue((bool)Invoke(manager, "CanDebugSkipMainLoop", false));
+            focus.SetValue(field, false);
+            Assert.IsTrue((bool)Invoke(manager, "CanDebugSkipMainLoop", true));
+        }
+        finally
+        {
+            focus.SetValue(field, false);
+            input.SetActive(false);
+            UnregisterEventSystem(events, previous);
+        }
+    }
+
+    private UnityEngine.EventSystems.EventSystem RegisteredEventSystem(string name)
+    {
+        var events = Host(name).AddComponent<UnityEngine.EventSystems.EventSystem>();
+        events.gameObject.SetActive(true);
+        // EventSystem is not ExecuteAlways: explicitly run its registration lifecycle in EditMode.
+        if (!RegisteredEventSystems.Contains(events)) Invoke(events, "OnEnable");
+        UnityEngine.EventSystems.EventSystem.current = events;
+        Assert.AreSame(events, UnityEngine.EventSystems.EventSystem.current);
+        return events;
+    }
+
+    private static List<UnityEngine.EventSystems.EventSystem> RegisteredEventSystems =>
+        (List<UnityEngine.EventSystems.EventSystem>)Field(typeof(UnityEngine.EventSystems.EventSystem),
+            "m_EventSystems", true).GetValue(null);
+
+    private static void UnregisterEventSystem(UnityEngine.EventSystems.EventSystem events,
+        UnityEngine.EventSystems.EventSystem previous)
+    {
+        events.SetSelectedGameObject(null);
+        events.gameObject.SetActive(false);
+        if (RegisteredEventSystems.Contains(events)) Invoke(events, "OnDisable");
+        Assert.IsFalse(RegisteredEventSystems.Contains(events));
+        if (previous != null) UnityEngine.EventSystems.EventSystem.current = previous;
+    }
+
+    [Test]
+    public void MainLoopDebugSkipInputAndTransitionHaveCompileTimeReleaseGuards()
+    {
+        string source = File.ReadAllText(Path.Combine(Application.dataPath, "_Project/Scripts/GameManager.cs"));
+        var blocks = System.Text.RegularExpressions.Regex.Matches(source,
+            @"#if UNITY_EDITOR \|\| DEVELOPMENT_BUILD(?<body>[\s\S]*?)#endif");
+        string guardedSource = string.Empty;
+        foreach (System.Text.RegularExpressions.Match block in blocks) guardedSource += block.Groups["body"].Value;
+        foreach (string operation in new[]
+        {
+            "Input.GetKeyDown(KeyCode.F7)",
+            "OVRInput.GetDown(OVRInput.Button.Two, OVRInput.Controller.RTouch)",
+            "LoadSceneByName(\"Epilogue_BookPurchase\", abandonCurrentWork: true)"
+        })
+        {
+            StringAssert.Contains(operation, guardedSource);
+            Assert.AreEqual(source.Split(new[] { operation }, StringSplitOptions.None).Length,
+                guardedSource.Split(new[] { operation }, StringSplitOptions.None).Length,
+                "Debug input and transition calls must not exist outside development compile guards.");
+        }
+        StringAssert.DoesNotContain("Input.GetKeyDown(KeyCode.N)", source);
     }
 
     [Test]
