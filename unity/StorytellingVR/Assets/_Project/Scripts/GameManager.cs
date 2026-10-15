@@ -50,6 +50,12 @@ public class GameManager : MonoBehaviour
     [Tooltip("Allow F7 or right-controller B to skip Level 1 to Epilogue_BookPurchase. Does not complete trades or award results.")]
     [SerializeField] private bool enableDebugSceneSkip = false;
 
+    #if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private bool debugRightButtonHeld;
+    private int lastDebugSkipFlags = -1;
+    private string lastDebugSkipScene;
+    #endif
+
     private int currentIndex = -1;
     private string currentSceneName = string.Empty;
     private bool isLoading;
@@ -153,7 +159,11 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        if (instance != this || PauseMenuController.GameplayInputBlocked) return;
+        if (instance != this) return;
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        PollDebugMainLoopSkip();
+        #endif
+        if (PauseMenuController.GameplayInputBlocked) return;
         InputDevice leftHand = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
 
         bool yPressed = false;
@@ -170,12 +180,6 @@ public class GameManager : MonoBehaviour
         {
             yButtonHeld = false;
         }
-
-        #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        bool keyboardSkipDown = Input.GetKeyDown(KeyCode.F7);
-        bool controllerSkipDown = OVRInput.GetDown(OVRInput.Button.Two, OVRInput.Controller.RTouch);
-        if (keyboardSkipDown || controllerSkipDown) TryDebugSkipMainLoop(keyboardInput: !controllerSkipDown);
-        #endif
 
         if (!skipSuppressed && ShouldHandleDeveloperSceneSkip() && Input.GetKeyDown(developerSkipKey))
         {
@@ -553,39 +557,94 @@ public class GameManager : MonoBehaviour
 
     private bool CanDebugSkipMainLoop(bool keyboardInput)
     {
+        return DebugSkipRejectionReason(keyboardInput) == null;
+    }
+
+    private string DebugSkipRejectionReason(bool keyboardInput)
+    {
         #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        if (!enableDebugSceneSkip || isLoading || skipSuppressed ||
-            PauseMenuController.GameplayInputBlocked ||
-            currentSceneName != DefaultGameplaySceneName) return false;
+        if (!enableDebugSceneSkip) return "Bootstrap debug toggle is OFF";
+        if (isLoading) return "scene transition is active";
+        if (skipSuppressed) return "debug skipping is suppressed";
+        if (PauseMenuController.GameplayInputBlocked) return "pause/input-release gate is active";
+        if (currentSceneName != DefaultGameplaySceneName) return "scene is not Level1_MainLoopUpdated";
 
-        if (!keyboardInput) return true;
+        if (!keyboardInput) return null;
 
-        if (TouchScreenKeyboard.visible || !string.IsNullOrEmpty(Input.compositionString)) return false;
+        if (TouchScreenKeyboard.visible || !string.IsNullOrEmpty(Input.compositionString)) return "keyboard text entry is active";
 
         GameObject selected = UnityEngine.EventSystems.EventSystem.current != null
             ? UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject : null;
         if (selected != null &&
             (selected.GetComponentInParent<TMPro.TMP_InputField>() != null ||
-             selected.GetComponentInParent<UnityEngine.UI.InputField>() != null)) return false;
+             selected.GetComponentInParent<UnityEngine.UI.InputField>() != null)) return "an input field or its child is selected";
 
         // Only evaluated on the debug key-down, never as a per-frame UI scan.
         foreach (UnityEngine.UI.Selectable control in UnityEngine.UI.Selectable.allSelectablesArray)
         {
-            if (control is TMPro.TMP_InputField tmp && tmp.isFocused) return false;
-            if (control is UnityEngine.UI.InputField input && input.isFocused) return false;
+            if (control is TMPro.TMP_InputField tmp && tmp.isFocused) return "a TMP input field is focused";
+            if (control is UnityEngine.UI.InputField input && input.isFocused) return "an input field is focused";
         }
-        return true;
+        return null;
         #else
-        return false;
+        return "debug skip is compiled out of release builds";
         #endif
     }
+
+    #if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private void PollDebugMainLoopSkip()
+    {
+        InputDevice rightHand = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
+        bool xrB = false;
+        bool xrReadable = rightHand.isValid && rightHand.TryGetFeatureValue(CommonUsages.secondaryButton, out xrB);
+        // OVR Two on RTouch maps to RawButton.B. OpenXR also exposes B as the
+        // right-hand secondaryButton, independent of OVR's cached state updates.
+        bool ovrDown = OVRInput.GetDown(OVRInput.Button.Two, OVRInput.Controller.RTouch);
+        bool ovrHeld = OVRInput.Get(OVRInput.Button.Two, OVRInput.Controller.RTouch);
+        bool controllerSkipDown = DebugRightButtonDown(ovrDown, ovrHeld, xrReadable, xrB);
+        bool keyboardSkipDown = Input.GetKeyDown(KeyCode.F7);
+
+        bool blocked = PauseMenuController.GameplayInputBlocked;
+        int flags = (enableDebugSceneSkip ? 1 : 0) | (isLoading ? 2 : 0) |
+            (skipSuppressed ? 4 : 0) | (blocked ? 8 : 0) | (xrReadable ? 16 : 0);
+        if (flags != lastDebugSkipFlags || currentSceneName != lastDebugSkipScene)
+        {
+            Debug.Log($"[DEBUG SKIP] GameManager Update active (instance={GetInstanceID()}, development={Debug.isDebugBuild}, editor={Application.isEditor}): toggle={enableDebugSceneSkip}, scene='{currentSceneName}', activeScene='{SceneManager.GetActiveScene().name}', loading={isLoading}, suppressed={skipSuppressed}, inputBlocked={blocked}, rightXRReadable={xrReadable}");
+            lastDebugSkipFlags = flags;
+            lastDebugSkipScene = currentSceneName;
+        }
+        if (controllerSkipDown)
+            Debug.Log($"[DEBUG SKIP] Right B down detected: OVRDown={ovrDown}, OVRHeld={ovrHeld}, XRSecondary={xrB}, XRReadable={xrReadable}");
+        if (keyboardSkipDown || controllerSkipDown)
+            TryDebugSkipMainLoop(keyboardInput: !controllerSkipDown);
+    }
+
+    private bool DebugRightButtonDown(bool ovrDown, bool ovrHeld, bool xrReadable, bool xrPressed)
+    {
+        bool pressed = ovrDown || ovrHeld || (xrReadable && xrPressed);
+        bool down = pressed && !debugRightButtonHeld;
+        debugRightButtonHeld = pressed;
+        return down;
+    }
+    #endif
 
     private void TryDebugSkipMainLoop(bool keyboardInput)
     {
         #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        if (!CanDebugSkipMainLoop(keyboardInput)) return;
-        Debug.Log("[SCENE FLOW] Debug F7/B: skipping Level 1 to Epilogue_BookPurchase without awarding results.");
+        string reason = DebugSkipRejectionReason(keyboardInput);
+        if (reason != null)
+        {
+            Debug.Log($"[DEBUG SKIP] {(keyboardInput ? "F7" : "Right B")} rejected: {reason}.");
+            return;
+        }
+        if (!Application.CanStreamedLevelBeLoaded("Epilogue_BookPurchase"))
+        {
+            Debug.Log("[DEBUG SKIP] Transition rejected: Epilogue_BookPurchase is not available in this build.");
+            return;
+        }
+        Debug.Log("[DEBUG SKIP] Accepted; requesting Epilogue_BookPurchase through GameManager without awarding results.");
         LoadSceneByName("Epilogue_BookPurchase", abandonCurrentWork: true);
+        Debug.Log($"[DEBUG SKIP] Transition {(isLoading ? "started" : "did not start; inspect SCENE FLOW errors")}.");
         #endif
     }
 

@@ -345,6 +345,39 @@ public class GlobalLifecycleStage1Tests
         if (previous != null) UnityEngine.EventSystems.EventSystem.current = previous;
     }
 
+    [TestCase(true, false, false, false)]
+    [TestCase(false, true, false, false)]
+    [TestCase(false, false, true, true)]
+    [TestCase(true, true, true, true)]
+    public void MainLoopDebugBUsesEitherBackendAndOnlyOneEdgePerHold(bool ovrDown, bool ovrHeld, bool xrReadable, bool xrPressed)
+    {
+        GameManager manager = Manager();
+        Assert.IsTrue((bool)Invoke(manager, "DebugRightButtonDown", ovrDown, ovrHeld, xrReadable, xrPressed));
+        Assert.IsFalse((bool)Invoke(manager, "DebugRightButtonDown", ovrDown, ovrHeld, xrReadable, xrPressed));
+        Assert.IsFalse((bool)Invoke(manager, "DebugRightButtonDown", false, false, false, false));
+        Assert.IsTrue((bool)Invoke(manager, "DebugRightButtonDown", ovrDown, ovrHeld, xrReadable, xrPressed));
+    }
+
+    [Test]
+    public void MainLoopDebugBIgnoresUnreadableXRAndDoesNotReplayBlockedPress()
+    {
+        GameManager manager = Manager();
+        Invoke(manager, "SyncCurrentScene", GameManager.DefaultGameplaySceneName);
+        Assert.IsFalse((bool)Invoke(manager, "DebugRightButtonDown", false, false, false, true));
+        Assert.IsTrue((bool)Invoke(manager, "DebugRightButtonDown", false, false, true, true));
+        Assert.IsFalse((bool)Invoke(manager, "CanDebugSkipMainLoop", false));
+        StringAssert.Contains("toggle is OFF", (string)Invoke(manager, "DebugSkipRejectionReason", false));
+        Field(typeof(GameManager), "enableDebugSceneSkip").SetValue(manager, true);
+        Assert.IsTrue((bool)Invoke(manager, "CanDebugSkipMainLoop", false));
+        Assert.IsFalse((bool)Invoke(manager, "DebugRightButtonDown", false, false, true, true),
+            "Enabling the toggle while B is held must require a release and a new press.");
+        Field(typeof(GameManager), "isLoading").SetValue(manager, true);
+        StringAssert.Contains("transition", (string)Invoke(manager, "DebugSkipRejectionReason", false));
+        Invoke(manager, "TryDebugSkipMainLoop", false);
+        Assert.IsTrue(manager.IsLoading);
+        Assert.IsFalse(LocalSaveManager.ActiveProfileExists());
+    }
+
     [Test]
     public void MainLoopDebugSkipInputAndTransitionHaveCompileTimeReleaseGuards()
     {
@@ -357,6 +390,8 @@ public class GlobalLifecycleStage1Tests
         {
             "Input.GetKeyDown(KeyCode.F7)",
             "OVRInput.GetDown(OVRInput.Button.Two, OVRInput.Controller.RTouch)",
+            "InputDevices.GetDeviceAtXRNode(XRNode.RightHand)",
+            "rightHand.TryGetFeatureValue(CommonUsages.secondaryButton, out xrB)",
             "LoadSceneByName(\"Epilogue_BookPurchase\", abandonCurrentWork: true)"
         })
         {
