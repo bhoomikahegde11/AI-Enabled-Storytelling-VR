@@ -5,15 +5,15 @@ public class SpiceData
 {
     public string key;
     public string displayName;
-    public int basePricePerKg;
+    public int basePricePerVeesai;
     public float marketMultiplier;
     public int startingInventoryGrams;
 
-    public SpiceData(string key, string displayName, int basePricePerKg, float marketMultiplier, int startingInventoryGrams)
+    public SpiceData(string key, string displayName, int basePricePerVeesai, float marketMultiplier, int startingInventoryGrams)
     {
         this.key = key;
         this.displayName = displayName;
-        this.basePricePerKg = basePricePerKg;
+        this.basePricePerVeesai = basePricePerVeesai;
         this.marketMultiplier = marketMultiplier;
         this.startingInventoryGrams = startingInventoryGrams;
     }

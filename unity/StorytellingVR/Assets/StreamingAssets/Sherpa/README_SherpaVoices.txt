@@ -13,7 +13,7 @@ Future intent:
 Included voices:
 1. en_IN_female
    Local Indian female voice for:
-   - Lakshmi Amma
+   - Lakshmamma
    - Chinnamma Naik
    - Saraswati Chetti
 

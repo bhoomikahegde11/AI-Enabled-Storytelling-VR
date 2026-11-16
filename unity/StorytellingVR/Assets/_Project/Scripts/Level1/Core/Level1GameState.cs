@@ -121,6 +121,13 @@ public class LocalTradeState
             quantityGrams = result.resolvedQuantityGrams;
             quantityLabel = result.quantityLabel;
             marketValue = result.marketValue;
+            preciseMarketValue = result.preciseMarketValue;
+            if (result.requotedCeiling > 0)
+            {
+                startingNpcOffer = result.requotedOpeningOffer;
+                maxBuyerPrice = result.requotedCeiling;
+                minIncrement = Mathf.Max(1, Mathf.RoundToInt(preciseMarketValue * 0.02f));
+            }
         }
 
         previousNpcOffer = npcOffer;
@@ -142,6 +149,8 @@ public class LocalTradeState
     public int startingNpcOffer;
     public int npcOffer;
     public int marketValue;
+    public float preciseMarketValue;
+    public int availableStockGrams = int.MaxValue;
     public int previousNpcOffer;
     public int repeatedRejectedPrice;
     public int repeatedPriceQueries;
@@ -154,6 +163,8 @@ public class LocalTradeState
     public int lastPlayerPrice;
     public int lastSellerPrice;
     public int maxBuyerPrice;
+    public float openingOfferMultiplier;
+    public float buyerCeilingMultiplier;
     public int minIncrement;
     public int buyerPatience;
     public int lowPriceCount;
@@ -618,6 +629,8 @@ public class Level1GameState : MonoBehaviour
             npcOffer = npcOffer,
             previousNpcOffer = npcOffer,
             marketValue = marketManager.CalculateMarketValue(spiceData.key, safeQuantity, activeEvent),
+            preciseMarketValue = marketManager.CalculateMarketValueExact(spiceData.key, safeQuantity, activeEvent),
+            availableStockGrams = marketManager.AvailableStock(profile.inventory, spiceData.key),
             referencePrice = lastDealReferencePrice
         };
     }
@@ -636,6 +649,11 @@ public class Level1GameState : MonoBehaviour
         #else
         LocalGeneratedTradeSession session = localTradeSessionGenerator.Generate(marketManager, profile, activeEvent);
         #endif
+        if (session == null)
+        {
+            activeTrade = null;
+            return null;
+        }
         string spiceKey = marketManager.NormalizeSpiceKey(session.spiceName);
         marketManager.TryGetSpice(spiceKey, out SpiceData spiceData);
 
@@ -652,13 +670,17 @@ public class Level1GameState : MonoBehaviour
             npcOffer = session.startingOffer,
             previousNpcOffer = session.startingOffer,
             marketValue = marketManager.CalculateMarketValue(spiceKey, session.quantityGrams, activeEvent),
+            preciseMarketValue = marketManager.CalculateMarketValueExact(spiceKey, session.quantityGrams, activeEvent),
+            availableStockGrams = marketManager.AvailableStock(profile.inventory, spiceKey),
             maxBuyerPrice = session.maxAcceptablePrice,
+            openingOfferMultiplier = session.openingOfferMultiplier,
+            buyerCeilingMultiplier = session.buyerCeilingMultiplier,
             buyerPatience = session.buyerPatience,
             buyerTrust = session.buyerTrust,
             buyerFrustration = session.buyerFrustration,
             buyerDesperation = session.buyerDesperation,
             negotiationInitialized = true,
-            minIncrement = Mathf.Max(2, Mathf.RoundToInt(marketManager.CalculateMarketValue(spiceKey, session.quantityGrams, activeEvent) * 0.02f)),
+            minIncrement = Mathf.Max(1, Mathf.RoundToInt(marketManager.CalculateMarketValueExact(spiceKey, session.quantityGrams, activeEvent) * 0.02f)),
             referencePrice = lastDealReferencePrice
         };
 
@@ -672,12 +694,16 @@ public class Level1GameState : MonoBehaviour
             return null;
         }
 
+        var terms = activeTrade.AcceptedTerms;
         return new CurrentTrade
         {
-            spice = activeTrade.AcceptedTerms != null ? activeTrade.AcceptedTerms.SpiceName : activeTrade.spiceDisplayName,
-            quantity = activeTrade.AcceptedTerms != null ? activeTrade.AcceptedTerms.QuantityLabel : activeTrade.quantityLabel,
-            npc_offer = activeTrade.AcceptedTerms != null ? activeTrade.AcceptedTerms.Price : activeTrade.npcOffer,
-            market_value = activeTrade.AcceptedTerms != null ? activeTrade.AcceptedTerms.MarketValue : activeTrade.marketValue
+            buyer_name = terms?.BuyerName ?? activeTrade.buyerName,
+            spice = terms?.SpiceName ?? activeTrade.spiceDisplayName,
+            quantity = terms?.QuantityLabel ?? activeTrade.quantityLabel,
+            npc_offer = terms?.Price ?? activeTrade.npcOffer,
+            market_value = terms?.MarketValue ?? activeTrade.marketValue,
+            base_cost = marketManager.CalculateBaseValue(terms?.SpiceKey ?? activeTrade.spiceKey, terms?.QuantityGrams ?? activeTrade.quantityGrams),
+            agreement_locked = terms != null
         };
     }
 
@@ -710,10 +736,13 @@ public class Level1GameState : MonoBehaviour
             return;
         }
 
-        int safeQuantity = Mathf.Max(1, quantityGrams);
+        if (quantityGrams <= 0 || quantityGrams > activeTrade.availableStockGrams)
+            return;
+        int safeQuantity = quantityGrams;
         activeTrade.quantityGrams = safeQuantity;
         activeTrade.quantityLabel = marketManager.FormatTraditionalQuantity(safeQuantity);
         activeTrade.marketValue = marketManager.CalculateMarketValue(activeTrade.spiceKey, safeQuantity, activeEvent);
+        activeTrade.preciseMarketValue = marketManager.CalculateMarketValueExact(activeTrade.spiceKey, safeQuantity, activeEvent);
     }
 
     public LocalTradeOutcome ResolveTradeFromBackend(string action, int finalPrice, int finalQuantityGrams, float trust, float frustration, int outOfWorldCount)
@@ -782,7 +811,8 @@ public class Level1GameState : MonoBehaviour
     public bool CanSettleAcceptedTrade(TradeTermsSnapshot agreement)
     {
         if (agreement == null || !ReferenceEquals(agreement.Source, activeTrade) ||
-            !ReferenceEquals(activeTrade?.AcceptedTerms, agreement) || activeTrade.SettlementClaimed)
+            !ReferenceEquals(activeTrade?.AcceptedTerms, agreement) || activeTrade.SettlementClaimed ||
+            marketManager.AvailableStock(profile.inventory, agreement.SpiceKey) < agreement.QuantityGrams)
             return false;
         if (OrderManager.Instance != null && OrderManager.Instance.CanCompleteMarketplaceFulfillment(agreement))
             return true;

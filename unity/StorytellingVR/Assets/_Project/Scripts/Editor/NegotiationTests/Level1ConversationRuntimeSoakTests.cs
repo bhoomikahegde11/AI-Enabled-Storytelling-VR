@@ -122,7 +122,7 @@ public class Level1ConversationRuntimeSoakTests
             "replacement candidate never reached review");
         Assert.AreEqual("What is your price?", fixture.Input.text, fixture.Diagnostics());
         Assert.AreEqual(processedBefore, (int)LocalDialogueTurnField.GetValue(fixture.Chat), fixture.Diagnostics());
-        fixture.Voice.ClearTranscript(); // B remains an optional clear action.
+        fixture.Voice.ClearTranscript(); // The optional Editor reset uses this same path.
         Assert.IsTrue(fixture.Chat.IsWaitingForPlayer, fixture.Diagnostics());
         Assert.IsEmpty(fixture.Input.text, fixture.Diagnostics());
         Assert.IsFalse(fixture.Chat.IsCurrentVoiceTurn(replacement), fixture.Diagnostics());
@@ -131,7 +131,6 @@ public class Level1ConversationRuntimeSoakTests
         Assert.IsTrue(fixture.Voice.BeginSimulatedCapture(out var delayed), fixture.Diagnostics());
         Assert.IsTrue(fixture.Voice.BeginSimulatedRecognition(delayed), fixture.Diagnostics());
         yield return WaitUntil(() => fixture.Speech.PendingCount == 1, "delayed recognition did not start");
-        fixture.Voice.ClearTranscript();
         Assert.IsTrue(fixture.Voice.BeginSimulatedCapture(out var fresh), fixture.Diagnostics());
         Assert.AreEqual(delayed.Interaction, fresh.Interaction, fixture.Diagnostics());
         Assert.AreNotEqual(delayed.Turn, fresh.Turn, fixture.Diagnostics());

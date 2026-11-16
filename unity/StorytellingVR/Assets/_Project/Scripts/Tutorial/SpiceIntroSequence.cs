@@ -13,7 +13,6 @@ public class SpiceIntroSequence : MonoBehaviour
     public class SpiceStep
     {
         public string spiceName;
-        public string costText;
 
         [TextArea(2, 4)]
         public string narration;
@@ -61,6 +60,7 @@ public class SpiceIntroSequence : MonoBehaviour
 
     [Header("Spice Guide Tutorial")]
     [SerializeField] private SpiceGuideTutorialPrompt spiceGuideTutorialPrompt;
+    private readonly MarketManager market = new MarketManager();
     private void Awake()
     {
         if (globalVolume != null)
@@ -105,13 +105,11 @@ public class SpiceIntroSequence : MonoBehaviour
 
         if (spiceGuideTutorialPrompt != null)
         {
-            yield return spiceGuideTutorialPrompt.RunTutorial();
-            spiceCostGuideController.UnlockGuide();
+            yield return spiceGuideTutorialPrompt.RunTutorial(subtitleText);
         }
-        
-
-
-
+        else
+            spiceCostGuideController?.UnlockGuide();
+        if (subtitleText != null) subtitleText.text = "";
         yield return new WaitForSeconds(1f);
 
         if (loadNextSceneAfterSequence)
@@ -137,8 +135,11 @@ public class SpiceIntroSequence : MonoBehaviour
         if (spiceNameText != null)
             spiceNameText.text = spice.spiceName;
 
+        string key = market.NormalizeSpiceKey(spice.spiceName);
+        bool exhibitOnly = key == "turmeric";
         if (spicePriceText != null)
-            spicePriceText.text = spice.costText;
+            spicePriceText.text = exhibitOnly ? "Historical exhibit only"
+                : $"Cost: {market.CalculateBaseValue(key, MarketManager.GramsPerVeesai)} Varahas / Veesai";
 
         if (dof != null)
         {
@@ -150,9 +151,9 @@ public class SpiceIntroSequence : MonoBehaviour
         yield return FadeCanvas(spiceInfoCanvas, 1f, 0.4f);
 
         yield return ShowSubtitle(
-            spice.narration,
-            GetSpiceLineId(spice.spiceName),
-            spice.narrationClip,
+            exhibitOnly ? "This is turmeric. It was used in the bazaar, but this stall trades pepper, cardamom and cinnamon." : spice.narration,
+            exhibitOnly ? null : GetSpiceLineId(spice.spiceName),
+            exhibitOnly ? null : spice.narrationClip,
             4f
         );
 

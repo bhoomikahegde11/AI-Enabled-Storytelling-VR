@@ -23,6 +23,7 @@ public class Level1NegotiationParserTests
     }
 
     [TestCase("Lakshmi Amma")]
+    [TestCase("Lakshmamma")]
     [TestCase("Abdul Rahman")]
     [TestCase("Francisco de Almeida")]
     [TestCase("Chinnamma Naik")]

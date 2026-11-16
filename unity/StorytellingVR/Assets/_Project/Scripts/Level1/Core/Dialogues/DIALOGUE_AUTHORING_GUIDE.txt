@@ -44,7 +44,7 @@ The current registered dialogue characters are:
 
 - Abdul Rahman: abdul_rahman
 - Francisco de Almeida: francisco_de_almeida
-- Lakshmi Amma: lakshmi_amma
+- Lakshmamma: lakshmi_amma
 - Chinnamma Naik: chinnamma_naik
 - Saraswati Chetti: saraswati_chetti
 - Father Penteado: father_penteado
@@ -255,7 +255,7 @@ Current practical guidance:
 
 Friendly NPCs:
 - Abdul Rahman
-- Lakshmi Amma
+- Lakshmamma
 - Saraswati Chetti
 
 Strict NPCs:
@@ -363,7 +363,7 @@ References:
 - cargo
 - voyages
 
-Lakshmi Amma:
+Lakshmamma:
 Local household or provision buyer.
 Warm elder personality.
 Witty, practical, caring.
@@ -516,7 +516,7 @@ Before considering dialogue changes done:
 - Test at least one Normal NPC
 
 Good practical test set:
-- Abdul Rahman or Lakshmi Amma or Saraswati Chetti
+- Abdul Rahman or Lakshmamma or Saraswati Chetti
 - Francisco de Almeida or Chinnamma Naik
 - Father Penteado
 

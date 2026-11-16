@@ -22,7 +22,7 @@ public class Level1LakshmiDialogueTests : Level1NegotiationTestBase
     private static LocalTradeState Trade(int patience = 8, string personality = "Friendly")
     {
         return new LocalTradeState {
-            buyerName = "Lakshmi Amma", buyerOrigin = "Local Household Buyer", buyerPersonality = personality,
+            buyerName = "Lakshmamma", buyerOrigin = "Local Household Buyer", buyerPersonality = personality,
             spiceKey = "pepper", spiceDisplayName = "Pepper", quantityGrams = 1000, quantityLabel = "1 kg",
             npcOffer = 100, previousNpcOffer = 100, marketValue = 96, maxBuyerPrice = 180,
             buyerPatience = patience, minIncrement = 2, negotiationInitialized = true,
@@ -36,6 +36,69 @@ public class Level1LakshmiDialogueTests : Level1NegotiationTestBase
             previousOffer = 100, updatedOffer = 100, resolvedPrice = 100,
             nextExpectedReplyState = ExpectedReplyState.ExpectAcceptOrCounter, replyText = "The offer remains 100."
         };
+    }
+
+    [TestCase("Lakshmamma")]
+    [TestCase("Lakshmi Amma")]
+    [TestCase("LakshmiAmma")]
+    [TestCase("Lakshmi_Amma")]
+    [TestCase("Lakshmi-Amma")]
+    [TestCase("lakshmi amma")]
+    [TestCase("LAKSHMI_AMMA")]
+    [TestCase("Lakshmi")]
+    public void CorrectedDisplayNamePreservesLegacyCharacterRouting(string name)
+    {
+        string id = DialogueCharacterRegistry.NormalizeCharacterId(name);
+        Assert.AreEqual("lakshmi_amma", id);
+        Assert.AreEqual("Lakshmamma", DialogueCharacterRegistry.GetDisplayName(name));
+        var registry = new DialogueCharacterRegistry();
+        var set = registry.FindCharacter(id);
+        Assert.IsNotNull(set);
+        Assert.AreEqual("lakshmi_amma", set.characterId);
+        Assert.AreEqual("Lakshmamma", set.displayName);
+        Assert.AreEqual("Lakshmamma", registry.GetRegisteredCharacterOrRandom(id).displayName);
+        CollectionAssert.AreEqual(LakshmiAmmaDialogue.Create().lines.SelectMany(line => line.templates).ToArray(),
+            set.lines.SelectMany(line => line.templates).ToArray());
+        Assert.IsFalse(set.lines.SelectMany(line => line.templates).Any(text => text.Contains("Lakshmi Amma")));
+        var trade = Trade();
+        trade.buyerName = name;
+        Assert.IsTrue(DialogueTableResponseProvider.IsLakshmi(trade));
+        Assert.IsTrue(DialogueTableResponseProvider.UsesAuthoredPresentation(trade));
+        Assert.AreEqual(name, trade.buyerName, "Display normalization must not rewrite saved/trade identity.");
+    }
+
+    [TestCase("Lakshmi Amma")]
+    [TestCase("Lakshmamma")]
+    public void SelfIntroductionUsesCorrectedNameWithoutMutatingTrade(string name)
+    {
+        var trade = Trade();
+        trade.buyerName = name;
+        var manager = CreateManager(100);
+        var input = manager.ClassifyInput("what is your name", trade);
+        var result = manager.ProcessLocalTurn(input, trade, new RuleBasedNPCBrain());
+        var provider = new DialogueTableResponseProvider();
+        for (int i = 0; i < 8; i++)
+        {
+            string reply = provider.GetReply(input, trade, result, manager.CurrentRound);
+            StringAssert.Contains("Lakshmamma", reply);
+            StringAssert.DoesNotContain("Lakshmi Amma", reply);
+        }
+        Assert.AreEqual(name, trade.buyerName);
+        Assert.AreEqual(100, trade.npcOffer);
+        Assert.AreEqual(8, trade.buyerPatience);
+        Assert.IsNull(trade.AcceptedTerms);
+    }
+
+    [TestCase("Abdul Rahman")]
+    [TestCase("Chinnamma Naik")]
+    [TestCase("Saraswati Chetti")]
+    [TestCase("Francisco de Almeida")]
+    [TestCase("Father Penteado")]
+    [TestCase("Customer")]
+    [TestCase(null)]
+    public void DisplayNameCorrectionLeavesOtherNamesUnchanged(string name)
+    {
+        Assert.AreEqual(name, DialogueCharacterRegistry.GetDisplayName(name));
     }
 
     [Test]
@@ -192,11 +255,11 @@ public class Level1LakshmiDialogueTests : Level1NegotiationTestBase
         Assert.AreNotEqual(reply, repeat);
     }
 
-    [TestCase("what is your name", "Lakshmi Amma")]
-    [TestCase("what's your name?", "Lakshmi Amma")]
-    [TestCase("who are you", "Lakshmi Amma")]
-    [TestCase("tell me your name", "Lakshmi Amma")]
-    [TestCase("Could you tell me your name, please?", "Lakshmi Amma")]
+    [TestCase("what is your name", "Lakshmamma")]
+    [TestCase("what's your name?", "Lakshmamma")]
+    [TestCase("who are you", "Lakshmamma")]
+    [TestCase("tell me your name", "Lakshmamma")]
+    [TestCase("Could you tell me your name, please?", "Lakshmamma")]
     [TestCase("where from", "local")]
     [TestCase("where are you from", "local")]
     [TestCase("are you from here", "local")]

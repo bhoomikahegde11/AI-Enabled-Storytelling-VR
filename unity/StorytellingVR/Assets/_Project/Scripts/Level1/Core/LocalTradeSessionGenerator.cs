@@ -14,6 +14,8 @@ public class LocalGeneratedTradeSession
     public int quantityGrams;
     public int startingOffer;
     public int maxAcceptablePrice;
+    public float openingOfferMultiplier;
+    public float buyerCeilingMultiplier;
     public int buyerPatience;
     public float buyerTrust;
     public float buyerFrustration;
@@ -31,13 +33,14 @@ public class LocalTradeSessionGenerator
 
     public LocalGeneratedTradeSession Generate(MarketManager marketManager, LocalProfileData profile, MarketEventData activeEvent, string forcedCharacterId = "")
     {
-        string spiceKey = PickAvailableSpice(profile);
-        marketManager.TryGetSpice(spiceKey, out SpiceData spiceData);
+        string spiceKey = PickAvailableSpice(marketManager, profile);
+        if (spiceKey == null || !marketManager.TryGetSpice(spiceKey, out SpiceData spiceData))
+            return null;
         int reputation = Level1GameState.ExistingInstance != null ? Level1GameState.Instance.CurrentReputation : 50;
 
-        int stock = GetInventory(profile, spiceKey);
+        int stock = marketManager.AvailableStock(profile.inventory, spiceKey);
         int quantity = PickQuantity(stock);
-        int marketValue = marketManager.CalculateMarketValue(spiceKey, quantity, activeEvent);
+        float marketValue = marketManager.CalculateMarketValueExact(spiceKey, quantity, activeEvent);
 
         DialogueCharacterProfile selectedCharacter = !string.IsNullOrWhiteSpace(forcedCharacterId)
             ? dialogueCharacterRegistry.GetRegisteredCharacterOrRandom(forcedCharacterId)
@@ -81,6 +84,8 @@ public class LocalTradeSessionGenerator
             quantityGrams = quantity,
             startingOffer = startingOffer,
             maxAcceptablePrice = maxAcceptablePrice,
+            openingOfferMultiplier = startMultiplier,
+            buyerCeilingMultiplier = maxMultiplier,
             buyerPatience = GetBuyerPatience(buyerPersonality),
             buyerTrust = Mathf.Clamp01(trust),
             buyerFrustration = Mathf.Clamp01(frustration),
@@ -291,29 +296,24 @@ public class LocalTradeSessionGenerator
         return -0.08f;
     }
 
-    private static string PickAvailableSpice(LocalProfileData profile)
+    private static string PickAvailableSpice(MarketManager marketManager, LocalProfileData profile)
     {
         List<string> available = new List<string>();
         foreach (string spiceKey in SpiceKeys)
         {
-            if (GetInventory(profile, spiceKey) > 0)
+            if (marketManager.AvailableStock(profile.inventory, spiceKey) >= MarketManager.MinimumSaleableGrams)
             {
                 available.Add(spiceKey);
             }
         }
 
-        return available.Count > 0 ? available[Random.Range(0, available.Count)] : "pepper";
-    }
-
-    private static int GetInventory(LocalProfileData profile, string spiceKey)
-    {
-        InventoryEntry entry = profile.inventory.Find(item => item.spiceKey == spiceKey);
-        return entry != null ? entry.grams : 0;
+        return available.Count > 0 ? available[Random.Range(0, available.Count)] : null;
     }
 
     private static int PickQuantity(int stock)
     {
-        int fallback = Mathf.Max(35, stock);
+        // Stay below the formatter's Seer boundary so the displayed Palams match the deduction.
+        int fallback = Mathf.Min(6, stock / MarketManager.MinimumSaleableGrams) * MarketManager.MinimumSaleableGrams;
         List<int> allowed = new List<int>();
         foreach (int quantity in QuantityOptions)
         {

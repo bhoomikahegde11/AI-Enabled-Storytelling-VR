@@ -1,183 +1,60 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class SpiceGuideTutorialPrompt : MonoBehaviour
 {
-    [Header("Tutorial Prompt UI")]
-    [SerializeField] private CanvasGroup promptCanvas;
-    [SerializeField] private TMP_Text promptText;
-
-    [Header("Spice Guide Controller")]
     [SerializeField] private SpiceCostGuideController guideController;
-
-    [Header("Input")]
-    [SerializeField] private InputActionReference holdGuideAction;
-
-    [Header("World Pause")]
     [SerializeField] private Animator[] animatorsToPause;
     [SerializeField] private MonoBehaviour[] scriptsToPause;
     [SerializeField] private AudioSource[] audioSourcesToLower;
-
-    [Header("Audio Fade")]
     [SerializeField] private float loweredVolume = 0.2f;
 
-    private bool isHolding;
-    private float[] originalVolumes;
+    private void Awake() => guideController?.LockGuide();
 
-    private void Awake()
+    public IEnumerator RunTutorial(TMP_Text instructions)
     {
-        SetCanvas(promptCanvas, 0f);
+        if (guideController == null) yield break;
 
-        if (guideController != null)
-            guideController.LockGuide();
-
-        originalVolumes = new float[audioSourcesToLower.Length];
-
-        for (int i = 0; i < audioSourcesToLower.Length; i++)
+        var speeds = new float[animatorsToPause.Length];
+        var enabled = new bool[scriptsToPause.Length];
+        var volumes = new float[audioSourcesToLower.Length];
+        for (int i = 0; i < speeds.Length; i++)
         {
-            if (audioSourcesToLower[i] != null)
-                originalVolumes[i] = audioSourcesToLower[i].volume;
+            if (animatorsToPause[i] == null) continue;
+            speeds[i] = animatorsToPause[i].speed;
+            animatorsToPause[i].speed = 0f;
         }
-    }
-
-    public IEnumerator RunTutorial()
-    {
-        PauseWorld();
-
-        if (promptText != null)
+        for (int i = 0; i < enabled.Length; i++)
         {
-            promptText.text =
-                "Cost Prices\n\n" +
-                "Press X during a trade to view the cost price list.";
+            if (scriptsToPause[i] == null) continue;
+            enabled[i] = scriptsToPause[i].enabled;
+            scriptsToPause[i].enabled = false;
+        }
+        for (int i = 0; i < volumes.Length; i++)
+        {
+            if (audioSourcesToLower[i] == null) continue;
+            volumes[i] = audioSourcesToLower[i].volume;
+            audioSourcesToLower[i].volume *= loweredVolume;
         }
 
-        yield return FadeCanvas(promptCanvas, 1f, 0.4f);
-
-        EnableInput();
-
-        //yield return new WaitUntil(() => isHolding);
-
-        //yield return FadeCanvas(promptCanvas, 0f, 0.25f);
-
-        //if (guideController != null)
-        //    guideController.ShowGuide();
-
-        //yield return new WaitForSeconds(1.5f);
-
-        //yield return new WaitUntil(() => !isHolding);
-
-        //if (guideController != null)
-        //    guideController.HideGuide();
-
-        DisableInput();
-
-        //if (guideController != null)
-            //guideController.UnlockGuide();
-
-        ResumeWorld();
-    }
-
-    private void EnableInput()
-    {
-        if (holdGuideAction == null)
-            return;
-
-        holdGuideAction.action.Enable();
-        holdGuideAction.action.performed += OnHoldStarted;
-        holdGuideAction.action.canceled += OnHoldEnded;
-    }
-
-    private void DisableInput()
-    {
-        if (holdGuideAction == null)
-            return;
-
-        holdGuideAction.action.performed -= OnHoldStarted;
-        holdGuideAction.action.canceled -= OnHoldEnded;
-        holdGuideAction.action.Disable();
-    }
-
-    private void OnHoldStarted(InputAction.CallbackContext context)
-    {
-        isHolding = true;
-    }
-
-    private void OnHoldEnded(InputAction.CallbackContext context)
-    {
-        isHolding = false;
-    }
-
-    private void PauseWorld()
-    {
-        foreach (Animator animator in animatorsToPause)
+        try
         {
-            if (animator != null)
-                animator.speed = 0f;
-        }
+            guideController.UnlockGuide();
+            if (instructions != null) instructions.text = "Press X to open the Spice Cost Guide.";
+            yield return new WaitUntil(() => guideController.IsOpen);
 
-        foreach (MonoBehaviour script in scriptsToPause)
+            if (instructions != null) instructions.text = "Take your time. Press X again when you are ready to close the guide and continue.";
+            yield return new WaitUntil(() => !guideController.IsOpen);
+        }
+        finally
         {
-            if (script != null)
-                script.enabled = false;
+            for (int i = 0; i < speeds.Length; i++)
+                if (animatorsToPause[i] != null) animatorsToPause[i].speed = speeds[i];
+            for (int i = 0; i < enabled.Length; i++)
+                if (scriptsToPause[i] != null) scriptsToPause[i].enabled = enabled[i];
+            for (int i = 0; i < volumes.Length; i++)
+                if (audioSourcesToLower[i] != null) audioSourcesToLower[i].volume = volumes[i];
         }
-
-        for (int i = 0; i < audioSourcesToLower.Length; i++)
-        {
-            if (audioSourcesToLower[i] != null)
-                audioSourcesToLower[i].volume = originalVolumes[i] * loweredVolume;
-        }
-    }
-
-    private void ResumeWorld()
-    {
-        foreach (Animator animator in animatorsToPause)
-        {
-            if (animator != null)
-                animator.speed = 1f;
-        }
-
-        foreach (MonoBehaviour script in scriptsToPause)
-        {
-            if (script != null)
-                script.enabled = true;
-        }
-
-        for (int i = 0; i < audioSourcesToLower.Length; i++)
-        {
-            if (audioSourcesToLower[i] != null)
-                audioSourcesToLower[i].volume = originalVolumes[i];
-        }
-    }
-
-    private IEnumerator FadeCanvas(CanvasGroup canvasGroup, float targetAlpha, float duration)
-    {
-        if (canvasGroup == null)
-            yield break;
-
-        canvasGroup.gameObject.SetActive(true);
-
-        float startAlpha = canvasGroup.alpha;
-        float timer = 0f;
-
-        while (timer < duration)
-        {
-            timer += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, timer / duration);
-            yield return null;
-        }
-
-        SetCanvas(canvasGroup, targetAlpha);
-    }
-
-    private void SetCanvas(CanvasGroup canvasGroup, float alpha)
-    {
-        if (canvasGroup == null)
-            return;
-
-        canvasGroup.alpha = alpha;
-        canvasGroup.interactable = alpha > 0.01f;
-        canvasGroup.blocksRaycasts = alpha > 0.01f;
     }
 }

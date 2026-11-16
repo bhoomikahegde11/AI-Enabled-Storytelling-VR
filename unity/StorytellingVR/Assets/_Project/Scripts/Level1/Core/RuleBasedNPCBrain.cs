@@ -9,6 +9,9 @@ public class RuleBasedNPCBrainResult
     public bool commitsQuantity;
     public string quantityLabel;
     public int marketValue;
+    public float preciseMarketValue;
+    public int requotedOpeningOffer;
+    public int requotedCeiling;
     public int previousOffer;
     public string replyText;
     public int updatedOffer;
@@ -35,6 +38,46 @@ public class RuleBasedNPCBrain
         MarketEventData activeEvent = null,
         int maximumRounds = int.MaxValue)
     {
+        if (trade == null || trade.AcceptedTerms != null || trade.buyerCeilingMultiplier <= 0f ||
+            !HasValidQuantity(input) || input.quantityGrams == trade.quantityGrams ||
+            input.quantityGrams > trade.availableStockGrams)
+            return EvaluateReply(playerText, input, trade, roundCount, patience, activeEvent, maximumRounds);
+
+        float reference = market.CalculateMarketValueExact(trade.spiceKey, input.quantityGrams, activeEvent);
+        int opening = Mathf.Max(1, Mathf.RoundToInt(reference * trade.openingOfferMultiplier));
+        int ceiling = Mathf.Max(opening, Mathf.RoundToInt(reference * trade.buyerCeilingMultiplier));
+        int oldOffer = trade.npcOffer;
+        int oldCeiling = trade.maxBuyerPrice;
+        int oldIncrement = trade.minIncrement;
+        float progress = Mathf.InverseLerp(trade.startingNpcOffer, oldCeiling, oldOffer);
+        try
+        {
+            // Evaluate the candidate against its own quote. ApplyDecision owns the actual commit.
+            trade.npcOffer = Mathf.RoundToInt(Mathf.Lerp(opening, ceiling, progress));
+            trade.maxBuyerPrice = ceiling;
+            trade.minIncrement = Mathf.Max(1, Mathf.RoundToInt(reference * 0.02f));
+            var result = EvaluateReply(playerText, input, trade, roundCount, patience, activeEvent, maximumRounds, repricedQuantity: true);
+            result.requotedOpeningOffer = opening;
+            result.requotedCeiling = ceiling;
+            return result;
+        }
+        finally
+        {
+            trade.npcOffer = oldOffer;
+            trade.maxBuyerPrice = oldCeiling;
+            trade.minIncrement = oldIncrement;
+        }
+    }
+
+    private static bool HasValidQuantity(NegotiationInput input) =>
+        input != null && !input.needsClarification && input.parseConfidence != ParseConfidence.Low &&
+        input.hasQuantity && input.quantityGrams > 0 &&
+        (input.intent == NegotiationIntent.QUANTITY_CHANGE || input.intent == NegotiationIntent.QUANTITY_PRICE ||
+         input.intent == NegotiationIntent.PRICE || input.intent == NegotiationIntent.COUNTER || input.intent == NegotiationIntent.ULTIMATUM);
+
+    private RuleBasedNPCBrainResult EvaluateReply(string playerText, NegotiationInput input, LocalTradeState trade,
+        int roundCount, int patience, MarketEventData activeEvent, int maximumRounds, bool repricedQuantity = false)
+    {
         if (trade != null && trade.AcceptedTerms != null)
         {
             TradeTermsSnapshot accepted = trade.AcceptedTerms;
@@ -58,16 +101,16 @@ public class RuleBasedNPCBrain
         int currentOffer = trade != null ? trade.npcOffer : 0;
         int marketValue = trade != null ? trade.marketValue : 0;
         int sellerPrice = input != null && input.hasSellerPrice ? input.sellerPrice : -1;
-        bool validQuantity = input != null && !input.needsClarification && input.parseConfidence != ParseConfidence.Low &&
-            input.hasQuantity && input.quantityGrams > 0 &&
-            (input.intent == NegotiationIntent.QUANTITY_CHANGE || input.intent == NegotiationIntent.QUANTITY_PRICE ||
-             input.intent == NegotiationIntent.PRICE || input.intent == NegotiationIntent.COUNTER || input.intent == NegotiationIntent.ULTIMATUM);
+        bool validQuantity = HasValidQuantity(input);
         int quantityGrams = validQuantity ? input.quantityGrams : (trade != null ? trade.quantityGrams : 0);
         if (validQuantity)
             quantity = market.FormatTraditionalQuantity(quantityGrams);
         string spiceDescriptor = GetSpiceDescriptor(trade != null ? trade.spiceKey : string.Empty, spice);
-        float marketPerGram = trade != null && trade.quantityGrams > 0 ? (float)trade.marketValue / trade.quantityGrams : 0f;
-        float targetMarketValue = quantityGrams > 0 ? marketPerGram * quantityGrams : marketValue;
+        float reference = trade != null && trade.preciseMarketValue > 0f ? trade.preciseMarketValue : marketValue;
+        float targetMarketValue = validQuantity && trade != null && quantityGrams != trade.quantityGrams
+            ? (trade.preciseMarketValue > 0f ? market.CalculateMarketValueExact(trade.spiceKey, quantityGrams, activeEvent)
+                : reference / Mathf.Max(1, trade.quantityGrams) * quantityGrams)
+            : reference;
 
         RuleBasedNPCBrainResult result = new RuleBasedNPCBrainResult
         {
@@ -77,6 +120,7 @@ public class RuleBasedNPCBrain
             resolvedQuantityGrams = quantityGrams,
             quantityLabel = quantity,
             marketValue = validQuantity && trade != null ? market.CalculateMarketValue(trade.spiceKey, quantityGrams, activeEvent) : marketValue,
+            preciseMarketValue = targetMarketValue,
             commitsQuantity = validQuantity,
             nextExpectedReplyState = ExpectedReplyState.ExpectAcceptOrCounter
         };
@@ -92,6 +136,19 @@ public class RuleBasedNPCBrain
         bool invalidTerms = (input.intent == NegotiationIntent.ACCEPT || input.intent == NegotiationIntent.PRICE ||
             input.intent == NegotiationIntent.QUANTITY_PRICE || (input.intent == NegotiationIntent.COUNTER && input.hasSellerPrice)) &&
             !CanFinalizeAcceptance(input, trade);
+        if (validQuantity && quantityGrams > trade.availableStockGrams)
+        {
+            result.requiresClarification = true;
+            result.commitsQuantity = false;
+            result.nextExpectedReplyState = input.expectedReplyState == ExpectedReplyState.None
+                ? ExpectedReplyState.ExpectOfferPrice : input.expectedReplyState;
+            result.resolvedQuantityGrams = trade.quantityGrams;
+            result.quantityLabel = trade.quantityLabel;
+            result.marketValue = trade.marketValue;
+            result.preciseMarketValue = reference;
+            result.replyText = $"The quantity has not changed. I still seek {trade.quantityLabel} of {spiceDescriptor}.";
+            return SyncState(result, trade);
+        }
         if (input.needsClarification || input.intent == NegotiationIntent.CLARIFICATION || input.intent == NegotiationIntent.CONFUSED || invalidTerms)
         {
             result.requiresClarification = true;
@@ -242,7 +299,9 @@ public class RuleBasedNPCBrain
 
             case NegotiationIntent.QUANTITY_CHANGE:
                 AdjustEmotion(trade, -0.01f, 0.03f);
-                result.replyText = quantityGrams < trade.quantityGrams
+                result.replyText = repricedQuantity
+                    ? $"I am offering {currentOffer} varahas for {quantity} of {spiceDescriptor}."
+                    : quantityGrams < trade.quantityGrams
                     ? $"For the smaller quantity of {quantity}, my offer remains {currentOffer} varahas."
                     : $"For {quantity} of {spiceDescriptor}, I can still begin at {currentOffer} varahas.";
                 return SyncState(result, trade);
@@ -313,10 +372,7 @@ public class RuleBasedNPCBrain
                 trade.priceIntroduced = true;
                 trade.lastSellerPrice = sellerPrice;
 
-                float sellerPerGram = quantityGrams > 0 ? sellerPrice / Mathf.Max(1f, quantityGrams) : 0f;
-                float marketPerGramForTarget = quantityGrams > 0 ? targetMarketValue / Mathf.Max(1f, quantityGrams) : 0f;
-
-                if (sellerPerGram > 0f && marketPerGramForTarget > 0f && sellerPerGram < marketPerGramForTarget * 0.35f)
+                if (sellerPrice > 0 && targetMarketValue > 0f && sellerPrice < targetMarketValue * 0.35f)
                 {
                     trade.lowPriceCount++;
                     AdjustEmotion(trade, 0.05f + (0.04f * Mathf.Min(trade.lowPriceCount - 1, 2)), -0.06f);
@@ -330,7 +386,7 @@ public class RuleBasedNPCBrain
                     return SyncState(result, trade);
                 }
 
-                if (sellerPerGram > 0f && marketPerGramForTarget > 0f && sellerPerGram > marketPerGramForTarget * 1.8f)
+                if (targetMarketValue > 0f && sellerPrice > Mathf.Max(1f, targetMarketValue * 1.8f))
                 {
                     trade.tooExpensiveCount++;
                     AdjustEmotion(trade, 0.2f, -0.2f);
@@ -527,7 +583,7 @@ public class RuleBasedNPCBrain
         {
             trade.buyerDesperation = GetDesperation(trade.buyerPersonality);
         }
-        trade.minIncrement = Mathf.Max(2, Mathf.RoundToInt(trade.marketValue * 0.02f));
+        trade.minIncrement = Mathf.Max(1, Mathf.RoundToInt(trade.marketValue * 0.02f));
 
         // Opening offers are already advertised. Historical prices must never reprice them here.
         trade.negotiationInitialized = true;

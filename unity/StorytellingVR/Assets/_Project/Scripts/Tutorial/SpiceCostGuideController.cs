@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.XR;
 
@@ -5,35 +6,44 @@ public class SpiceCostGuideController : MonoBehaviour
 {
     [Header("Guide UI")]
     [SerializeField] private CanvasGroup guideCanvas;
+    [SerializeField] private TMP_Text pepperPrice;
+    [SerializeField] private TMP_Text cardamomPrice;
+    [SerializeField] private TMP_Text cinnamonPrice;
 
     [Header("Guide State")]
     [SerializeField] private bool guideUnlocked = false;
 
     private bool guideOpen = false;
     private bool buttonPreviouslyPressed = false;
+    public bool IsOpen => guideOpen;
 
     private void Start()
     {
+        var market = new MarketManager();
+        SetPrice(pepperPrice, "pepper");
+        SetPrice(cardamomPrice, "cardamom");
+        SetPrice(cinnamonPrice, "cinnamon");
         SetGuideVisible(false);
+
+        void SetPrice(TMP_Text label, string spice)
+        {
+            if (label != null)
+                label.text = market.CalculateBaseValue(spice, MarketManager.GramsPerVeesai).ToString();
+        }
     }
 
     private void Update()
     {
-        if (PauseMenuController.GameplayInputBlocked) return;
-        if (!guideUnlocked)
-            return;
-
         InputDevice leftController = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
+        leftController.TryGetFeatureValue(CommonUsages.primaryButton, out bool xPressed);
+        HandleToggleInput(xPressed || Input.GetKey(KeyCode.X), PauseMenuController.GameplayInputBlocked);
+    }
 
-        if (leftController.TryGetFeatureValue(CommonUsages.primaryButton, out bool xPressed))
-        {
-            if (xPressed && !buttonPreviouslyPressed)
-            {
-                ToggleGuide();
-            }
-
-            buttonPreviouslyPressed = xPressed;
-        }
+    private void HandleToggleInput(bool pressed, bool inputBlocked)
+    {
+        if (guideUnlocked && !inputBlocked && pressed && !buttonPreviouslyPressed)
+            ToggleGuide();
+        buttonPreviouslyPressed = pressed;
     }
 
     private void ToggleGuide()

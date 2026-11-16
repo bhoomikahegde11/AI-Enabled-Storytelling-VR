@@ -28,7 +28,7 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     private void Awake()
     {
-        LoadConfig();
+        if (practiceVoice == null) LoadConfig();
     }
 
     #if UNITY_EDITOR
@@ -86,6 +86,7 @@ public class Level1VoiceInputManager : MonoBehaviour
     [Header("System References")]
     [Tooltip("Reference to the ChatManager script.")]
     public ChatManager chatManager;
+    [SerializeField] private VoiceRecognitionManager practiceVoice;
 
     [Tooltip("Reference to the input text box.")]
     public TMP_InputField inputField;
@@ -115,22 +116,38 @@ public class Level1VoiceInputManager : MonoBehaviour
     private VoiceInputState currentState = VoiceInputState.Idle;
     public VoiceInputState CurrentState => currentState;
 
-    private Level1HUDManager hudManager
+    private Level1HUDManager hudManager => practiceVoice != null ? practiceVoice.hudManager : chatManager?.hudManager;
+
+    private bool IsCurrentVoiceTurn(ConversationTurnLifecycle.VoiceToken token) =>
+        practiceVoice != null ? practiceVoice.Turns.IsCurrent(token) : chatManager != null && chatManager.IsCurrentVoiceTurn(token);
+
+    private bool TryAdvanceVoiceTurn(ConversationTurnLifecycle.VoiceToken token, ConversationTurnLifecycle.Phase phase) =>
+        practiceVoice != null
+            ? !PauseMenuController.GameplaySuspended && practiceVoice.Turns.TryAdvanceVoice(token, phase)
+            : chatManager != null && chatManager.TryAdvanceVoiceTurn(token, phase);
+
+    private void EndVoiceWithoutSubmission(ConversationTurnLifecycle.VoiceToken token)
     {
-        get { return (chatManager != null) ? chatManager.hudManager : null; }
+        if (practiceVoice != null) practiceVoice.Turns.EndVoiceWithoutSubmission(token);
+        else chatManager?.EndVoiceWithoutSubmission(token);
     }
 
     private string GetIdleText()
     {
+        if (practiceVoice != null && !string.IsNullOrEmpty(practiceVoice.OfferHint))
+        {
+            string control = IsXRDeviceActive() ? "Left Trigger" : "V";
+            return $"Hold {control}, say {practiceVoice.OfferHint}, then release.";
+        }
         return IsXRDeviceActive()
-            ? "Hold Trigger to speak\nRelease to transcribe"
+            ? "Hold Left Trigger to speak\nRelease to transcribe"
             : "Hold V to speak\nRelease to transcribe";
     }
 
     private string GetReviewText()
     {
         return IsXRDeviceActive()
-            ? "Press A to send\nLT to retry (B clears)"
+            ? "Press A to send\nHold Left Trigger to retry"
             : "Press Enter to send\nV to retry (R clears)";
     }
 
@@ -177,7 +194,7 @@ public class Level1VoiceInputManager : MonoBehaviour
             isListening = false;
             hudManager?.StopListeningAnimation();
         }
-        chatManager?.EndVoiceWithoutSubmission(activeVoiceToken);
+        EndVoiceWithoutSubmission(activeVoiceToken);
         if (chatManager != null && chatManager.IsWaitingForPlayer) hudManager?.EnablePlayerTyping();
         if (inputField != null)
         {
@@ -206,7 +223,7 @@ public class Level1VoiceInputManager : MonoBehaviour
     {
         // Recognition already in flight may finish, but its coroutine waits before publishing review.
         if (currentState != VoiceInputState.Recording && !isRequestingMicrophonePermission) return;
-        chatManager?.EndVoiceWithoutSubmission(activeVoiceToken);
+        EndVoiceWithoutSubmission(activeVoiceToken);
         StopAllCoroutines();
         isRequestingMicrophonePermission = false;
         InvalidateVoiceWork(); // End capture without trimming, transcribing or submitting it.
@@ -215,7 +232,7 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     public void CancelForSceneExit()
     {
-        chatManager?.EndVoiceWithoutSubmission(activeVoiceToken);
+        EndVoiceWithoutSubmission(activeVoiceToken);
         StopAllCoroutines();
         isRequestingMicrophonePermission = false;
         InvalidateVoiceWork();
@@ -224,7 +241,7 @@ public class Level1VoiceInputManager : MonoBehaviour
     private void Start()
     {
         // 1. Auto-discover references if not assigned in Inspector
-        if (chatManager == null)
+        if (practiceVoice == null && chatManager == null)
         {
             chatManager = FindFirstObjectByType<ChatManager>();
         }
@@ -259,7 +276,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         isRequestingMicrophonePermission = false;
         recordingClip = null;
         StopAllCoroutines();
-        chatManager?.EndVoiceWithoutSubmission(activeVoiceToken);
+        EndVoiceWithoutSubmission(activeVoiceToken);
         if (chatManager != null && chatManager.IsWaitingForPlayer) hudManager?.EnablePlayerTyping();
         currentState = VoiceInputState.Idle;
     }
@@ -275,13 +292,12 @@ public class Level1VoiceInputManager : MonoBehaviour
 
         bool keyboardVoiceDown = Input.GetKeyDown(KeyCode.V);
         bool keyboardVoiceUp = Input.GetKeyUp(KeyCode.V);
-        bool controllerVoiceDown = OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger);
-        bool controllerVoiceUp = OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger);
+        bool controllerVoiceDown = OVRInput.GetDown(OVRInput.RawButton.LIndexTrigger);
+        bool controllerVoiceUp = OVRInput.GetUp(OVRInput.RawButton.LIndexTrigger);
         bool keyboardResetDown = Input.GetKeyDown(KeyCode.R);
-        bool controllerResetDown = OVRInput.GetDown(OVRInput.Button.Two);
 
-        bool keyboardVoiceEnabled = Level1DebugForceAccept.IsKeyboardVoiceShortcutEnabled();
-        bool keyboardResetEnabled = Level1DebugForceAccept.IsKeyboardResetShortcutEnabled();
+        bool keyboardVoiceEnabled = practiceVoice != null || Level1DebugForceAccept.IsKeyboardVoiceShortcutEnabled();
+        bool keyboardResetEnabled = practiceVoice != null || Level1DebugForceAccept.IsKeyboardResetShortcutEnabled();
 
         if (keyboardVoiceDown && !keyboardVoiceEnabled && !hasLoggedKeyboardVoiceShortcutIgnored)
         {
@@ -303,7 +319,7 @@ public class Level1VoiceInputManager : MonoBehaviour
             hasLoggedKeyboardResetShortcutIgnored = false;
         }
 
-        // Hold V (keyboard, if enabled) or Right Trigger (controller) to record
+        // Hold V (keyboard, if enabled) or Left Trigger to record.
         if ((keyboardVoiceEnabled && keyboardVoiceDown) || controllerVoiceDown)
         {
             Level1DebugForceAccept.LogVoice("[STT-QUEST] Input held/down: true");
@@ -315,53 +331,45 @@ public class Level1VoiceInputManager : MonoBehaviour
             StopListening();
         }
 
-        // Enter / A confirm  |  R / B reset  (keyboard + controller)
+        // Voice review owns confirmation. ChatManager handles typed input while waiting.
         if (currentState == VoiceInputState.Review)
         {
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)
-                || OVRInput.GetDown(OVRInput.Button.One))
+                || OVRInput.GetDown(OVRInput.RawButton.A))
             {
                 Level1DebugForceAccept.LogVoice("[VOICE CONFIRM] Confirm triggered (Enter / A)");
-                if (chatManager != null && inputField != null && !string.IsNullOrWhiteSpace(inputField.text))
-                {
-                    Level1DebugForceAccept.LogVoice("[STT] Sent to ChatManager: " + (inputField != null ? inputField.text : string.Empty));
-                    chatManager.OnSend();
-                }
-                else
-                {
-                    chatManager?.EndVoiceWithoutSubmission(activeVoiceToken);
-                }
-                currentState = VoiceInputState.Idle;
-                SetVoiceStatusText(GetIdleText());
-            }
-
-            if ((keyboardResetEnabled && keyboardResetDown) || controllerResetDown)
-            {
-                Level1DebugForceAccept.LogVoice("[VOICE CONFIRM] Reset triggered (R / B)");
-                ClearTranscript();
+                SubmitReviewedTranscript();
             }
         }
-        else
-        {
-            // Standard R / B when not reviewing: Clear transcript
-            if ((keyboardResetEnabled && keyboardResetDown) || controllerResetDown)
-            {
-                ClearTranscript();
-            }
-        }
-
-        // (A / B controller inputs handled above alongside Enter / R)
+        if (keyboardResetEnabled && keyboardResetDown)
+            ClearTranscript();
 
         // Auto-reset status back to Idle when the input text box is cleared
         if (GetCurrentVoiceStatusText() == GetReviewText())
         {
             if (inputField != null && string.IsNullOrEmpty(inputField.text))
             {
-                chatManager?.EndVoiceWithoutSubmission(activeVoiceToken);
+                EndVoiceWithoutSubmission(activeVoiceToken);
                 currentState = VoiceInputState.Idle;
                 SetVoiceStatusText(GetIdleText());
             }
         }
+    }
+
+    private void SubmitReviewedTranscript()
+    {
+        if (PauseMenuController.GameplayInputBlocked || currentState != VoiceInputState.Review ||
+            !IsCurrentVoiceTurn(activeVoiceToken)) return;
+
+        if (inputField != null && !string.IsNullOrWhiteSpace(inputField.text))
+        {
+            if (practiceVoice != null) practiceVoice.SubmitPrice(inputField.text);
+            else chatManager.OnSend();
+        }
+        // A successful submission consumes its token. A rejected or blank input returns to waiting.
+        EndVoiceWithoutSubmission(activeVoiceToken);
+        currentState = VoiceInputState.Idle;
+        SetVoiceStatusText(GetIdleText());
     }
 
     public void StartListening()
@@ -382,21 +390,25 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     private bool TryStartVoiceTurn()
     {
-        if (PauseMenuController.GameplayInputBlocked || chatManager == null) return false;
-        if (currentState == VoiceInputState.Review)
+        if (PauseMenuController.GameplayInputBlocked || (practiceVoice == null && chatManager == null)) return false;
+        if (currentState == VoiceInputState.Review || currentState == VoiceInputState.Recognizing)
         {
-            // LT replaces only this interaction's current review; never clear a resolved or responding turn.
-            if (chatManager.TurnPhase != ConversationTurnLifecycle.Phase.Reviewing ||
-                !chatManager.IsCurrentVoiceTurn(activeVoiceToken)) return false;
-            ClearTranscript(); // Invalidates the reviewed token and clears its candidate before the next capture.
+            var expectedPhase = currentState == VoiceInputState.Review
+                ? ConversationTurnLifecycle.Phase.Reviewing
+                : ConversationTurnLifecycle.Phase.Recognizing;
+            var phase = practiceVoice != null ? practiceVoice.Turns.CurrentPhase : chatManager.TurnPhase;
+            if (phase != expectedPhase || !IsCurrentVoiceTurn(activeVoiceToken)) return false;
+            ClearTranscript();
         }
-        return chatManager.TryBeginVoiceTurn(out activeVoiceToken);
+        return practiceVoice != null
+            ? practiceVoice.Turns.TryBeginCapture(out activeVoiceToken)
+            : chatManager.TryBeginVoiceTurn(out activeVoiceToken);
     }
 
     private void BeginCapture(ConversationTurnLifecycle.VoiceToken token)
     {
         if (PauseMenuController.GameplayInputBlocked) return;
-        if (chatManager == null || !chatManager.IsCurrentVoiceTurn(token)) return;
+        if (!IsCurrentVoiceTurn(token)) return;
 
         Level1DebugForceAccept.LogVoice("[STT] Recording started");
         isListening = true;
@@ -404,17 +416,8 @@ public class Level1VoiceInputManager : MonoBehaviour
         startListeningTime = Time.time;
         LogMicrophoneDiagnostics();
 
-        // Trigger UI expansion and glow animation
-        if (chatManager != null && chatManager.hudManager != null)
-        {
-            chatManager.hudManager.StartListeningAnimation();
-        }
-
-        // Disable typing and clear focus to prevent push-to-talk key from typing into field
-        if (chatManager != null && chatManager.hudManager != null)
-        {
-            chatManager.hudManager.DisablePlayerTyping();
-        }
+        hudManager?.StartListeningAnimation();
+        hudManager?.DisablePlayerTyping();
 
         // Clear input box
         if (inputField != null)
@@ -459,16 +462,12 @@ public class Level1VoiceInputManager : MonoBehaviour
         Level1DebugForceAccept.LogVoice("[STT] Recording stopped");
         Level1DebugForceAccept.LogVoice("[STT-QUEST] Recording duration seconds: " + duration.ToString("0.000"));
 
-        // Trigger UI scale-down and return to idle animation
-        if (chatManager != null && chatManager.hudManager != null)
-        {
-            chatManager.hudManager.StopListeningAnimation();
-        }
+        hudManager?.StopListeningAnimation();
 
         // Stop Unity Microphone capture
         Microphone.End(deviceName);
 
-        if (chatManager == null || !chatManager.TryAdvanceVoiceTurn(activeVoiceToken, ConversationTurnLifecycle.Phase.Recognizing))
+        if (!TryAdvanceVoiceTurn(activeVoiceToken, ConversationTurnLifecycle.Phase.Recognizing))
             return;
         currentState = VoiceInputState.Recognizing;
 
@@ -576,7 +575,7 @@ public class Level1VoiceInputManager : MonoBehaviour
         }
         while (!task.IsCompleted)
         {
-            if (chatManager == null || !chatManager.IsCurrentVoiceTurn(token))
+            if (!IsCurrentVoiceTurn(token))
             {
                 Debug.Log($"[VOICE TURN] discarded stale result session={token.Interaction} turn={token.Turn}");
                 yield break;
@@ -584,7 +583,7 @@ public class Level1VoiceInputManager : MonoBehaviour
             yield return null;
         }
 
-        if (chatManager == null || !chatManager.IsCurrentVoiceTurn(token))
+        if (!IsCurrentVoiceTurn(token))
         {
             Debug.Log($"[VOICE TURN] discarded stale result session={token.Interaction} turn={token.Turn}");
             yield break;
@@ -614,7 +613,16 @@ public class Level1VoiceInputManager : MonoBehaviour
 
         if (IsValidTranscript(transcript))
         {
-            if (!chatManager.TryAdvanceVoiceTurn(token, ConversationTurnLifecycle.Phase.Reviewing)) yield break;
+            if (practiceVoice != null)
+            {
+                if (!NegotiationStateManager.TryExtractPracticePrice(transcript, out int price))
+                {
+                    RecoverFromVoiceFailure(token, "I didn't hear a price. Hold Left Trigger and try again.");
+                    yield break;
+                }
+                transcript = price + (price == 1 ? " Varaha" : " Varahas");
+            }
+            if (!TryAdvanceVoiceTurn(token, ConversationTurnLifecycle.Phase.Reviewing)) yield break;
             Level1DebugForceAccept.LogVoice("[VOICE CONFIRM] Awaiting player approval");
             Level1DebugForceAccept.LogVoice("[STT] Transcript ready for confirm: " + transcript);
 
@@ -623,7 +631,7 @@ public class Level1VoiceInputManager : MonoBehaviour
                 inputField.text = transcript;
             }
 
-            if (!chatManager.IsCurrentVoiceTurn(token)) yield break;
+            if (!IsCurrentVoiceTurn(token)) yield break;
 
             currentState = VoiceInputState.Review;
             SetVoiceStatusText(GetReviewText());
@@ -647,12 +655,12 @@ public class Level1VoiceInputManager : MonoBehaviour
 
     private void RecoverFromVoiceFailure(ConversationTurnLifecycle.VoiceToken token, string message)
     {
-        if (chatManager == null || !chatManager.IsCurrentVoiceTurn(token)) return;
+        if (!IsCurrentVoiceTurn(token)) return;
         if (inputField != null) inputField.text = string.Empty;
         currentState = VoiceInputState.Idle;
         SetVoiceStatusText(message);
-        chatManager.EndVoiceWithoutSubmission(token);
-        hudManager?.EnablePlayerTyping();
+        EndVoiceWithoutSubmission(token);
+        if (practiceVoice == null) hudManager?.EnablePlayerTyping();
     }
 
     #if UNITY_EDITOR
@@ -668,7 +676,7 @@ public class Level1VoiceInputManager : MonoBehaviour
     // PlayMode soak tests enter the real recognition/review path without opening a microphone.
     public bool BeginSimulatedRecognition(ConversationTurnLifecycle.VoiceToken token)
     {
-        if (chatManager == null || !chatManager.TryAdvanceVoiceTurn(token, ConversationTurnLifecycle.Phase.Recognizing))
+        if (!TryAdvanceVoiceTurn(token, ConversationTurnLifecycle.Phase.Recognizing))
             return false;
         activeVoiceToken = token;
         currentState = VoiceInputState.Recognizing;
@@ -692,7 +700,7 @@ public class Level1VoiceInputManager : MonoBehaviour
 
         isRequestingMicrophonePermission = false;
 
-        if (chatManager == null || !chatManager.IsCurrentVoiceTurn(token)) yield break;
+        if (!IsCurrentVoiceTurn(token)) yield break;
 
         bool hasPermission = Application.HasUserAuthorization(UserAuthorization.Microphone);
         Level1DebugForceAccept.LogVoice("[STT-QUEST] Microphone permission: " + hasPermission);
@@ -704,7 +712,14 @@ public class Level1VoiceInputManager : MonoBehaviour
             yield break;
         }
 
-        SetVoiceStatusText(GetIdleText());
+        // The permission dialog may consume the release event from the original press.
+        bool triggerHeld = OVRInput.Get(OVRInput.RawButton.LIndexTrigger);
+        bool keyboardVoiceEnabled = practiceVoice != null || Level1DebugForceAccept.IsKeyboardVoiceShortcutEnabled();
+        if (!triggerHeld && !(keyboardVoiceEnabled && Input.GetKey(KeyCode.V)))
+        {
+            RecoverFromVoiceFailure(token, GetIdleText());
+            yield break;
+        }
         BeginCapture(token);
     }
 
@@ -861,6 +876,7 @@ public class Level1VoiceInputManager : MonoBehaviour
             Debug.LogWarning("[STT] Speech provider not assigned. Assign VoskSpeechProvider to Level1VoiceInputManager.");
         }
 
+        if (practiceVoice != null) return null; // Practice must use its configured offline provider.
         return useLocalSpeech ? new LocalSpeechProvider() : new BackendSpeechProvider(serverUrl);
     }
 }

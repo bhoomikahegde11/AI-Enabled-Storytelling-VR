@@ -6,9 +6,12 @@ public class AudioManager : MonoBehaviour
 {
     public AudioSource audioSource;
     public UnityEngine.MonoBehaviour localNpcTtsProvider;
+    [Tooltip("Optional exact-dialogue voice banks; other characters retain localNpcTtsProvider.")]
+    public UnityEngine.MonoBehaviour prerecordedNpcProvider;
     private bool isDownloading;
 
     public bool IsPlayingOrLoading => isDownloading ||
+        (prerecordedNpcProvider is IPrerecordedNpcVoiceProvider recorded && recorded.IsBusy) ||
         (audioSource != null && audioSource.isPlaying) ||
         (localNpcTtsProvider is SherpaEditorTtsProvider sherpa &&
          sherpa.audioSource != null && sherpa.audioSource.isPlaying) ||
@@ -20,6 +23,7 @@ public class AudioManager : MonoBehaviour
         isDownloading = false;
         if (audioSource != null) audioSource.Stop();
         if (localNpcTtsProvider is INpcTtsCancellable cancellable) cancellable.StopSpeaking();
+        if (prerecordedNpcProvider != localNpcTtsProvider && prerecordedNpcProvider is INpcTtsCancellable recorded) recorded.StopSpeaking();
         ResetTalkingParameter();
     }
 
@@ -121,6 +125,12 @@ public class AudioManager : MonoBehaviour
 
     public bool TrySpeakText(string text, string characterId)
     {
+        if (prerecordedNpcProvider is IPrerecordedNpcVoiceProvider recorded && recorded.HandlesCharacter(characterId))
+        {
+            // A bound bank must never guess a dynamic line from its final prose.
+            (prerecordedNpcProvider as ICharacterNpcTtsProvider)?.Speak(text, characterId);
+            return false;
+        }
         if (string.IsNullOrWhiteSpace(text))
         {
             Debug.LogWarning("[TTS] Skipped: empty NPC reply");
@@ -149,6 +159,29 @@ public class AudioManager : MonoBehaviour
         }
 
         return TrySpeakText(text);
+    }
+
+    public MonoBehaviour GetVoiceProvider(string characterId)
+    {
+        return prerecordedNpcProvider is IPrerecordedNpcVoiceProvider recorded && recorded.HandlesCharacter(characterId)
+            ? prerecordedNpcProvider : localNpcTtsProvider;
+    }
+
+    public NpcVoicePlan PrepareVoice(NpcVoicePresentation presentation)
+    {
+        if (presentation == null || !(prerecordedNpcProvider is IPrerecordedNpcVoiceProvider recorded) ||
+            !recorded.HandlesCharacter(presentation.CharacterId)) return null;
+        if (recorded.TryPrepare(presentation, out NpcVoicePlan plan, out string error)) return plan;
+        Debug.LogWarning("[NPC VOICE] No exact presentation; subtitle retained. " + error);
+        return null;
+    }
+
+    public bool TrySpeakPresentation(NpcVoicePlan plan)
+    {
+        if (plan == null || !(prerecordedNpcProvider is IPrerecordedNpcVoiceProvider recorded) ||
+            !recorded.HandlesCharacter(plan.CharacterId)) return false;
+        try { recorded.Speak(plan); return true; }
+        catch (System.Exception ex) { StopPlayback(); Debug.LogWarning("[NPC VOICE] " + ex.Message); return false; }
     }
 
     private IEnumerator DownloadAndPlayAudioRoutine(string url)

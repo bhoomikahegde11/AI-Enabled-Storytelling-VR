@@ -8,7 +8,7 @@ public static class LakshmiAmmaDialogue
 {
     public static CharacterDialogueSet Create()
     {
-        return new CharacterDialogueSet("lakshmi_amma", "Lakshmi Amma", NpcPersonalityBucket.Friendly,
+        return new CharacterDialogueSet("lakshmi_amma", "Lakshmamma", NpcPersonalityBucket.Friendly,
             new List<DialogueLine>
             {
                 Line(DialogueScenario.CustomerGreeting,
@@ -134,10 +134,10 @@ public static class LakshmiAmmaDialogue
                     "I am buying for a household, merchant. {currentBuyerOffer} {currency} is the offer I am making.",
                     "I must make my money serve the whole house. My offer stands at {currentBuyerOffer} {currency}."),
                 Line(DialogueScenario.AskName,
-                    "I am Lakshmi Amma. And you, merchant?",
-                    "Lakshmi Amma. That is what you may call me.",
-                    "My name is Lakshmi Amma. It is good to meet you.",
-                    "You may call me Lakshmi Amma. Now we are properly acquainted."),
+                    "I am Lakshmamma. And you, merchant?",
+                    "Lakshmamma. That is what you may call me.",
+                    "My name is Lakshmamma. It is good to meet you.",
+                    "You may call me Lakshmamma. Now we are properly acquainted."),
                 Line(DialogueScenario.AskOrigin,
                     "I am from here, in Vijayanagara. This is my local market.",
                     "No long journey for me. I live here in Vijayanagara.",

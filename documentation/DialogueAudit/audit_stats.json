@@ -2,7 +2,7 @@
   "total_rows": 1047,
   "total_dialogue_lines": 263,
   "npc_template_counts": {
-    "Lakshmi Amma": 206,
+    "Lakshmamma": 206,
     "Chinnamma Naik": 167,
     "Saraswati Chetti": 164,
     "Abdul Rahman": 170,
@@ -63,7 +63,7 @@
   },
   "npc_scen_counts": {
     "CustomerGreeting": {
-      "Lakshmi Amma": 6,
+      "Lakshmamma": 6,
       "Chinnamma Naik": 5,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -71,7 +71,7 @@
       "Father Penteado": 4
     },
     "RepeatCustomerGreeting": {
-      "Lakshmi Amma": 6,
+      "Lakshmamma": 6,
       "Chinnamma Naik": 5,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -79,7 +79,7 @@
       "Father Penteado": 4
     },
     "AskWhatBuyerWants": {
-      "Lakshmi Amma": 6,
+      "Lakshmamma": 6,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -87,7 +87,7 @@
       "Father Penteado": 4
     },
     "AskSellerPrice": {
-      "Lakshmi Amma": 6,
+      "Lakshmamma": 6,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -95,7 +95,7 @@
       "Father Penteado": 4
     },
     "AskBuyerBudget": {
-      "Lakshmi Amma": 6,
+      "Lakshmamma": 6,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -103,7 +103,7 @@
       "Father Penteado": 4
     },
     "AskQuantity": {
-      "Lakshmi Amma": 6,
+      "Lakshmamma": 6,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -111,7 +111,7 @@
       "Father Penteado": 4
     },
     "QuantityChanged": {
-      "Lakshmi Amma": 4,
+      "Lakshmamma": 4,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -119,7 +119,7 @@
       "Father Penteado": 4
     },
     "SellerPriceTooHigh": {
-      "Lakshmi Amma": 9,
+      "Lakshmamma": 9,
       "Chinnamma Naik": 7,
       "Saraswati Chetti": 7,
       "Abdul Rahman": 7,
@@ -127,7 +127,7 @@
       "Father Penteado": 7
     },
     "SellerPriceSlightlyHigh": {
-      "Lakshmi Amma": 6,
+      "Lakshmamma": 6,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -135,7 +135,7 @@
       "Father Penteado": 4
     },
     "SellerPriceBelowExpected": {
-      "Lakshmi Amma": 6,
+      "Lakshmamma": 6,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -143,7 +143,7 @@
       "Father Penteado": 4
     },
     "BuyerCounterFirst": {
-      "Lakshmi Amma": 6,
+      "Lakshmamma": 6,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -151,7 +151,7 @@
       "Father Penteado": 4
     },
     "BuyerCounterMiddle": {
-      "Lakshmi Amma": 9,
+      "Lakshmamma": 9,
       "Chinnamma Naik": 7,
       "Saraswati Chetti": 7,
       "Abdul Rahman": 7,
@@ -159,7 +159,7 @@
       "Father Penteado": 7
     },
     "BuyerCounterFinal": {
-      "Lakshmi Amma": 6,
+      "Lakshmamma": 6,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -167,7 +167,7 @@
       "Father Penteado": 4
     },
     "BuyerHoldsFirm": {
-      "Lakshmi Amma": 21,
+      "Lakshmamma": 21,
       "Chinnamma Naik": 25,
       "Saraswati Chetti": 30,
       "Abdul Rahman": 30,
@@ -175,7 +175,7 @@
       "Father Penteado": 30
     },
     "SellerPriceAccepted": {
-      "Lakshmi Amma": 8,
+      "Lakshmamma": 8,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -183,7 +183,7 @@
       "Father Penteado": 4
     },
     "PlayerAcceptedDeal": {
-      "Lakshmi Amma": 8,
+      "Lakshmamma": 8,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -191,7 +191,7 @@
       "Father Penteado": 4
     },
     "PlayerRejectedBuyerOffer": {
-      "Lakshmi Amma": 6,
+      "Lakshmamma": 6,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -199,7 +199,7 @@
       "Father Penteado": 4
     },
     "OfferReason": {
-      "Lakshmi Amma": 4,
+      "Lakshmamma": 4,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -207,7 +207,7 @@
       "Father Penteado": 4
     },
     "AskName": {
-      "Lakshmi Amma": 4,
+      "Lakshmamma": 4,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -215,7 +215,7 @@
       "Father Penteado": 4
     },
     "AskOrigin": {
-      "Lakshmi Amma": 4,
+      "Lakshmamma": 4,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -223,7 +223,7 @@
       "Father Penteado": 4
     },
     "WeatherQuestion": {
-      "Lakshmi Amma": 4,
+      "Lakshmamma": 4,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 3,
       "Abdul Rahman": 3,
@@ -231,7 +231,7 @@
       "Father Penteado": 3
     },
     "HistoryKing": {
-      "Lakshmi Amma": 4,
+      "Lakshmamma": 4,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 3,
       "Abdul Rahman": 3,
@@ -239,7 +239,7 @@
       "Father Penteado": 3
     },
     "HistoryTemple": {
-      "Lakshmi Amma": 4,
+      "Lakshmamma": 4,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 3,
       "Abdul Rahman": 3,
@@ -247,7 +247,7 @@
       "Father Penteado": 3
     },
     "HistoryQuestion": {
-      "Lakshmi Amma": 4,
+      "Lakshmamma": 4,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -255,7 +255,7 @@
       "Father Penteado": 4
     },
     "SocialGreeting": {
-      "Lakshmi Amma": 9,
+      "Lakshmamma": 9,
       "Chinnamma Naik": 7,
       "Saraswati Chetti": 7,
       "Abdul Rahman": 13,
@@ -263,7 +263,7 @@
       "Father Penteado": 13
     },
     "OffTopic": {
-      "Lakshmi Amma": 6,
+      "Lakshmamma": 6,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -271,7 +271,7 @@
       "Father Penteado": 4
     },
     "HostileWarning": {
-      "Lakshmi Amma": 6,
+      "Lakshmamma": 6,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 3,
       "Abdul Rahman": 3,
@@ -279,7 +279,7 @@
       "Father Penteado": 3
     },
     "UnclearSpeech": {
-      "Lakshmi Amma": 4,
+      "Lakshmamma": 4,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -287,7 +287,7 @@
       "Father Penteado": 4
     },
     "Unknown": {
-      "Lakshmi Amma": 1,
+      "Lakshmamma": 1,
       "Chinnamma Naik": 1,
       "Saraswati Chetti": 1,
       "Abdul Rahman": 1,
@@ -295,7 +295,7 @@
       "Father Penteado": 1
     },
     "TransactionSuccess": {
-      "Lakshmi Amma": 6,
+      "Lakshmamma": 6,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 4,
       "Abdul Rahman": 4,
@@ -303,7 +303,7 @@
       "Father Penteado": 4
     },
     "TransactionFailure": {
-      "Lakshmi Amma": 9,
+      "Lakshmamma": 9,
       "Chinnamma Naik": 7,
       "Saraswati Chetti": 7,
       "Abdul Rahman": 7,
@@ -311,7 +311,7 @@
       "Father Penteado": 7
     },
     "TimePressure": {
-      "Lakshmi Amma": 4,
+      "Lakshmamma": 4,
       "Chinnamma Naik": 3,
       "Saraswati Chetti": 3,
       "Abdul Rahman": 3,
@@ -319,7 +319,7 @@
       "Father Penteado": 3
     },
     "IdleReminderFirst": {
-      "Lakshmi Amma": 4,
+      "Lakshmamma": 4,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 3,
       "Abdul Rahman": 3,
@@ -327,7 +327,7 @@
       "Father Penteado": 3
     },
     "IdleReminderSecond": {
-      "Lakshmi Amma": 4,
+      "Lakshmamma": 4,
       "Chinnamma Naik": 4,
       "Saraswati Chetti": 3,
       "Abdul Rahman": 3,
@@ -339,7 +339,7 @@
     "{ruleReply}": [
       [
         "L1_LAK_151",
-        "Lakshmi Amma",
+        "Lakshmamma",
         "Unknown",
         "Any",
         "Any"
@@ -382,8 +382,8 @@
     ]
   },
   "mood_restricted_counts": {
-    "Lakshmi Amma | BuyerHoldsFirm | Mood=Strict": 5,
-    "Lakshmi Amma | BuyerHoldsFirm | Mood=Impatient": 5,
+    "Lakshmamma | BuyerHoldsFirm | Mood=Strict": 5,
+    "Lakshmamma | BuyerHoldsFirm | Mood=Impatient": 5,
     "Chinnamma Naik | BuyerHoldsFirm | Mood=Friendly": 5,
     "Chinnamma Naik | BuyerHoldsFirm | Mood=Strict": 5,
     "Chinnamma Naik | BuyerHoldsFirm | Mood=Impatient": 5,
@@ -411,13 +411,13 @@
     "Father Penteado | SocialGreeting | Mood=Impatient": 3
   },
   "patience_restricted_counts": {
-    "Lakshmi Amma | BuyerHoldsFirm | Patience=Low": 5,
-    "Lakshmi Amma | SellerPriceTooHigh | Patience=Low": 3,
-    "Lakshmi Amma | SellerPriceAccepted | Patience=Low": 2,
-    "Lakshmi Amma | PlayerAcceptedDeal | Patience=Low": 2,
-    "Lakshmi Amma | SocialGreeting | Patience=Low": 3,
-    "Lakshmi Amma | TransactionFailure | Patience=Low": 3,
-    "Lakshmi Amma | BuyerCounterMiddle | Patience=Low": 3,
+    "Lakshmamma | BuyerHoldsFirm | Patience=Low": 5,
+    "Lakshmamma | SellerPriceTooHigh | Patience=Low": 3,
+    "Lakshmamma | SellerPriceAccepted | Patience=Low": 2,
+    "Lakshmamma | PlayerAcceptedDeal | Patience=Low": 2,
+    "Lakshmamma | SocialGreeting | Patience=Low": 3,
+    "Lakshmamma | TransactionFailure | Patience=Low": 3,
+    "Lakshmamma | BuyerCounterMiddle | Patience=Low": 3,
     "Chinnamma Naik | BuyerHoldsFirm | Patience=Low": 5,
     "Chinnamma Naik | SellerPriceTooHigh | Patience=Low": 3,
     "Chinnamma Naik | BuyerCounterMiddle | Patience=Low": 3,

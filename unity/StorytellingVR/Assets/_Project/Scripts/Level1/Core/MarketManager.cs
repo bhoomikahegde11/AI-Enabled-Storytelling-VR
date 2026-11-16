@@ -5,13 +5,15 @@ using UnityEngine;
 public class MarketManager
 {
     private const float EventChance = 0.35f;
+    public const int GramsPerVeesai = 1400;
+    public const int MinimumSaleableGrams = 35;
 
     private readonly Dictionary<string, SpiceData> spiceCatalog = new Dictionary<string, SpiceData>(StringComparer.OrdinalIgnoreCase)
     {
-        { "pepper", new SpiceData("pepper", "Pepper", 80, 1.2f, 15000) },
-        { "clove", new SpiceData("clove", "Clove", 70, 1.3f, 8000) },
-        { "cinnamon", new SpiceData("cinnamon", "Cinnamon", 80, 1.3f, 12000) },
-        { "cardamom", new SpiceData("cardamom", "Cardamom", 100, 1.5f, 4000) }
+        { "pepper", new SpiceData("pepper", "Pepper", 12, 1.2f, 15000) },
+        { "clove", new SpiceData("clove", "Clove", 98, 1.3f, 8000) },
+        { "cinnamon", new SpiceData("cinnamon", "Cinnamon", 20, 1.3f, 12000) },
+        { "cardamom", new SpiceData("cardamom", "Cardamom", 18, 1.5f, 4000) }
     };
 
     private readonly List<MarketEventData> events = new List<MarketEventData>
@@ -70,22 +72,27 @@ public class MarketManager
         return spiceCatalog.TryGetValue(NormalizeSpiceKey(spiceKey), out spiceData);
     }
 
-    public int CalculateMarketValue(string spiceKey, int quantityGrams, MarketEventData activeEvent)
+    public int CalculateMarketValue(string spiceKey, int quantityGrams, MarketEventData activeEvent) =>
+        (int)Math.Round(CalculateMarketTotal(spiceKey, quantityGrams, activeEvent));
+
+    public float CalculateMarketValueExact(string spiceKey, int quantityGrams, MarketEventData activeEvent) =>
+        (float)CalculateMarketTotal(spiceKey, quantityGrams, activeEvent);
+
+    private decimal CalculateMarketTotal(string spiceKey, int quantityGrams, MarketEventData activeEvent)
     {
         if (!TryGetSpice(spiceKey, out SpiceData spiceData))
         {
             return 0;
         }
 
-        float quantityKg = Mathf.Max(0f, quantityGrams) / 1000f;
-        float marketPricePerKg = spiceData.basePricePerKg * spiceData.marketMultiplier;
+        decimal marketTotal = BaseTotal(spiceData, quantityGrams) * (decimal)spiceData.marketMultiplier;
 
         if (activeEvent != null && string.Equals(NormalizeSpiceKey(activeEvent.affected_spice), spiceData.key, StringComparison.OrdinalIgnoreCase))
         {
-            marketPricePerKg *= activeEvent.price_multiplier;
+            marketTotal *= (decimal)activeEvent.price_multiplier;
         }
 
-        return Mathf.RoundToInt(marketPricePerKg * quantityKg);
+        return marketTotal;
     }
 
     public int CalculateBaseValue(string spiceKey, int quantityGrams)
@@ -95,19 +102,28 @@ public class MarketManager
             return 0;
         }
 
-        float quantityKg = Mathf.Max(0f, quantityGrams) / 1000f;
-        return Mathf.RoundToInt(spiceData.basePricePerKg * quantityKg);
+        return (int)Math.Round(BaseTotal(spiceData, quantityGrams));
     }
 
-    public void DeductInventory(List<InventoryEntry> inventory, string spiceKey, int grams)
-    {
-        InventoryEntry entry = inventory.Find(item => string.Equals(item.spiceKey, NormalizeSpiceKey(spiceKey), StringComparison.OrdinalIgnoreCase));
-        if (entry == null)
-        {
-            return;
-        }
+    private static decimal BaseTotal(SpiceData spice, int grams) =>
+        (decimal)spice.basePricePerVeesai * Math.Max(0, grams) / GramsPerVeesai;
 
-        entry.grams = Mathf.Max(0, entry.grams - Mathf.Max(0, grams));
+    private InventoryEntry FindInventory(List<InventoryEntry> inventory, string spiceKey)
+    {
+        string key = NormalizeSpiceKey(spiceKey);
+        return inventory?.Find(item => item != null && string.Equals(item.spiceKey, key, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public int AvailableStock(List<InventoryEntry> inventory, string spiceKey) =>
+        Mathf.Max(0, FindInventory(inventory, spiceKey)?.grams ?? 0);
+
+    public bool TryDeductInventory(List<InventoryEntry> inventory, string spiceKey, int grams)
+    {
+        InventoryEntry entry = FindInventory(inventory, spiceKey);
+        if (entry == null || grams <= 0 || entry.grams < grams)
+            return false;
+        entry.grams -= grams;
+        return true;
     }
 
     public MarketEventData RollRandomMarketEvent()

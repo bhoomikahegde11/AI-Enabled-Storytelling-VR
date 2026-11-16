@@ -1,0 +1,506 @@
+{
+  "lakshmi_amma": {
+    "authored": 206,
+    "unique_authored": 206,
+    "authored_classes": {
+      "CORE": 146,
+      "REACHABLE_OPTIONAL": 56,
+      "UNREACHABLE_OR_DEFERRED": 4
+    },
+    "all_classes": {
+      "CORE": 146,
+      "REACHABLE_OPTIONAL": 65,
+      "UNREACHABLE_OR_DEFERRED": 51,
+      "FALLBACK_ONLY": 83
+    },
+    "authored_fixed": 77,
+    "authored_dynamic": 129,
+    "routed": 202,
+    "routed_fixed": 73,
+    "routed_dynamic": 129,
+    "scenarios": {
+      "CustomerGreeting": 6,
+      "RepeatCustomerGreeting": 6,
+      "AskWhatBuyerWants": 6,
+      "AskSellerPrice": 6,
+      "AskBuyerBudget": 6,
+      "AskQuantity": 6,
+      "QuantityChanged": 4,
+      "SellerPriceTooHigh": 9,
+      "SellerPriceSlightlyHigh": 6,
+      "SellerPriceBelowExpected": 6,
+      "BuyerCounterFirst": 6,
+      "BuyerCounterMiddle": 9,
+      "BuyerCounterFinal": 6,
+      "BuyerHoldsFirm": 21,
+      "SellerPriceAccepted": 8,
+      "PlayerAcceptedDeal": 8,
+      "PlayerRejectedBuyerOffer": 6,
+      "OfferReason": 4,
+      "AskName": 4,
+      "AskOrigin": 4,
+      "WeatherQuestion": 4,
+      "HistoryKing": 4,
+      "HistoryTemple": 4,
+      "HistoryQuestion": 4,
+      "SocialGreeting": 9,
+      "OffTopic": 6,
+      "HostileWarning": 6,
+      "UnclearSpeech": 4,
+      "Unknown": 1,
+      "TransactionSuccess": 6,
+      "TransactionFailure": 9,
+      "TimePressure": 4,
+      "IdleReminderFirst": 4,
+      "IdleReminderSecond": 4
+    },
+    "categories": {
+      "AUTHORED": 206,
+      "BRAIN_FALLBACK": 80,
+      "GENERIC_BYPASSED": 43,
+      "PRESENTATION_FALLBACK": 11,
+      "PROVIDER_FALLBACK": 3,
+      "UI_ONLY_RECOVERY": 2
+    },
+    "placeholders": {
+      "quantityLabel": 59,
+      "spiceName": 60,
+      "currentBuyerOffer": 14,
+      "currency": 93,
+      "offeredPrice": 7,
+      "counterPrice": 63,
+      "finalPrice": 16,
+      "ruleReply": 5
+    },
+    "authored_duplicate_texts": [],
+    "per_voice_estimate": 327,
+    "defensive_estimate": 420,
+    "character_piece_estimate": 278,
+    "vocabulary_estimate": 50,
+    "studio": {
+      "inventory_rows": 206,
+      "inventory_duplicate_ids": [],
+      "manifest_duplicate_ids": [],
+      "missing_templates": [],
+      "changed_text": [],
+      "restriction_mismatches": [],
+      "missing_recording_ids": [],
+      "wrong_speaker_ids": [],
+      "assembly_reconstruction_mismatches": [],
+      "fixed_mapping_mismatches": [],
+      "dynamic_assembly_missing": [],
+      "manifest_rows": 355,
+      "manifest_modes": {
+        "FRAGMENT": 251,
+        "FULL_CLIP": 104
+      },
+      "manifest_priorities": {
+        "ESSENTIAL": 140,
+        "DEFERRED": 215
+      },
+      "manifest_statuses": {
+        "NOT_GENERATED": 352,
+        "VALIDATED": 3
+      },
+      "raw_source_hash_drift_ids": [],
+      "validated_manifest_rows": [
+        {
+          "id": "REC_LAK_E019275EA6EDC38F",
+          "dialogue": "L1_LAK_095",
+          "wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\validated\\lakshmi_amma\\REC_LAK_E019275EA6EDC38F__take01.wav",
+          "exists": true
+        },
+        {
+          "id": "REC_LAK_C86BF14A32763697",
+          "dialogue": "L1_LAK_152",
+          "wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\validated\\lakshmi_amma\\REC_LAK_C86BF14A32763697__take01.wav",
+          "exists": true
+        },
+        {
+          "id": "REC_LAK_039EFDC6BCD926D3",
+          "dialogue": "L1_LAK_168",
+          "wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\validated\\lakshmi_amma\\REC_LAK_039EFDC6BCD926D3__take01.wav",
+          "exists": true
+        }
+      ]
+    }
+  },
+  "chinnamma_naik": {
+    "authored": 167,
+    "unique_authored": 167,
+    "authored_classes": {
+      "CORE": 116,
+      "REACHABLE_OPTIONAL": 48,
+      "UNREACHABLE_OR_DEFERRED": 3
+    },
+    "all_classes": {
+      "CORE": 116,
+      "REACHABLE_OPTIONAL": 57,
+      "UNREACHABLE_OR_DEFERRED": 50,
+      "FALLBACK_ONLY": 83
+    },
+    "authored_fixed": 64,
+    "authored_dynamic": 103,
+    "routed": 164,
+    "routed_fixed": 61,
+    "routed_dynamic": 103,
+    "scenarios": {
+      "CustomerGreeting": 5,
+      "RepeatCustomerGreeting": 5,
+      "AskWhatBuyerWants": 4,
+      "AskSellerPrice": 4,
+      "AskBuyerBudget": 4,
+      "AskQuantity": 4,
+      "QuantityChanged": 4,
+      "SellerPriceTooHigh": 7,
+      "SellerPriceSlightlyHigh": 4,
+      "SellerPriceBelowExpected": 4,
+      "BuyerCounterFirst": 4,
+      "BuyerCounterMiddle": 7,
+      "BuyerCounterFinal": 4,
+      "BuyerHoldsFirm": 25,
+      "SellerPriceAccepted": 4,
+      "PlayerAcceptedDeal": 4,
+      "PlayerRejectedBuyerOffer": 4,
+      "OfferReason": 4,
+      "AskName": 4,
+      "AskOrigin": 4,
+      "WeatherQuestion": 4,
+      "HistoryKing": 4,
+      "HistoryTemple": 4,
+      "HistoryQuestion": 4,
+      "SocialGreeting": 7,
+      "OffTopic": 4,
+      "HostileWarning": 4,
+      "UnclearSpeech": 4,
+      "Unknown": 1,
+      "TransactionSuccess": 4,
+      "TransactionFailure": 7,
+      "TimePressure": 3,
+      "IdleReminderFirst": 4,
+      "IdleReminderSecond": 4
+    },
+    "categories": {
+      "AUTHORED": 167,
+      "BRAIN_FALLBACK": 80,
+      "GENERIC_BYPASSED": 43,
+      "PRESENTATION_FALLBACK": 11,
+      "PROVIDER_FALLBACK": 3,
+      "UI_ONLY_RECOVERY": 2
+    },
+    "placeholders": {
+      "quantityLabel": 39,
+      "spiceName": 40,
+      "currentBuyerOffer": 12,
+      "currency": 75,
+      "offeredPrice": 5,
+      "counterPrice": 55,
+      "finalPrice": 8,
+      "ruleReply": 5
+    },
+    "authored_duplicate_texts": [],
+    "per_voice_estimate": 288,
+    "defensive_estimate": 378,
+    "character_piece_estimate": 239,
+    "vocabulary_estimate": 50,
+    "studio": {
+      "inventory_rows": 167,
+      "inventory_duplicate_ids": [],
+      "manifest_duplicate_ids": [],
+      "missing_templates": [],
+      "changed_text": [],
+      "restriction_mismatches": [],
+      "missing_recording_ids": [],
+      "wrong_speaker_ids": [],
+      "assembly_reconstruction_mismatches": [],
+      "fixed_mapping_mismatches": [],
+      "dynamic_assembly_missing": [],
+      "manifest_rows": 307,
+      "manifest_modes": {
+        "FRAGMENT": 216,
+        "FULL_CLIP": 91
+      },
+      "manifest_priorities": {
+        "ESSENTIAL": 137,
+        "DEFERRED": 170
+      },
+      "manifest_statuses": {
+        "NOT_GENERATED": 304,
+        "VALIDATED": 3
+      },
+      "raw_source_hash_drift_ids": [],
+      "validated_manifest_rows": [
+        {
+          "id": "REC_CHI_F41195C6AC542289",
+          "dialogue": "L1_CHI_068",
+          "wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\validated\\chinnamma_naik\\REC_CHI_F41195C6AC542289__take01.wav",
+          "exists": true
+        },
+        {
+          "id": "REC_CHI_8900CCE1215C5FF3",
+          "dialogue": "L1_CHI_117",
+          "wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\validated\\chinnamma_naik\\REC_CHI_8900CCE1215C5FF3__take01.wav",
+          "exists": true
+        },
+        {
+          "id": "REC_CHI_9AE088EDB37CD53C",
+          "dialogue": "L1_CHI_128",
+          "wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\validated\\chinnamma_naik\\REC_CHI_9AE088EDB37CD53C__take01.wav",
+          "exists": true
+        }
+      ]
+    }
+  },
+  "saraswati_chetti": {
+    "authored": 164,
+    "unique_authored": 164,
+    "authored_classes": {
+      "CORE": 117,
+      "REACHABLE_OPTIONAL": 44,
+      "UNREACHABLE_OR_DEFERRED": 3
+    },
+    "all_classes": {
+      "CORE": 117,
+      "REACHABLE_OPTIONAL": 53,
+      "UNREACHABLE_OR_DEFERRED": 50,
+      "FALLBACK_ONLY": 83
+    },
+    "authored_fixed": 67,
+    "authored_dynamic": 97,
+    "routed": 161,
+    "routed_fixed": 64,
+    "routed_dynamic": 97,
+    "scenarios": {
+      "CustomerGreeting": 4,
+      "RepeatCustomerGreeting": 4,
+      "AskWhatBuyerWants": 4,
+      "AskBuyerBudget": 4,
+      "AskQuantity": 4,
+      "AskSellerPrice": 4,
+      "QuantityChanged": 4,
+      "SellerPriceTooHigh": 7,
+      "SellerPriceSlightlyHigh": 4,
+      "SellerPriceBelowExpected": 4,
+      "BuyerCounterFirst": 4,
+      "BuyerCounterMiddle": 7,
+      "BuyerCounterFinal": 4,
+      "BuyerHoldsFirm": 30,
+      "SellerPriceAccepted": 4,
+      "PlayerAcceptedDeal": 4,
+      "PlayerRejectedBuyerOffer": 4,
+      "OfferReason": 4,
+      "AskName": 4,
+      "AskOrigin": 4,
+      "WeatherQuestion": 3,
+      "HistoryKing": 3,
+      "HistoryTemple": 3,
+      "HistoryQuestion": 4,
+      "SocialGreeting": 7,
+      "OffTopic": 4,
+      "HostileWarning": 3,
+      "UnclearSpeech": 4,
+      "Unknown": 1,
+      "TransactionSuccess": 4,
+      "TransactionFailure": 7,
+      "TimePressure": 3,
+      "IdleReminderFirst": 3,
+      "IdleReminderSecond": 3
+    },
+    "categories": {
+      "AUTHORED": 164,
+      "BRAIN_FALLBACK": 80,
+      "GENERIC_BYPASSED": 43,
+      "PRESENTATION_FALLBACK": 11,
+      "PROVIDER_FALLBACK": 3,
+      "UI_ONLY_RECOVERY": 2
+    },
+    "placeholders": {
+      "quantityLabel": 28,
+      "spiceName": 27,
+      "currentBuyerOffer": 8,
+      "currency": 70,
+      "offeredPrice": 6,
+      "counterPrice": 51,
+      "finalPrice": 8,
+      "ruleReply": 5
+    },
+    "authored_duplicate_texts": [],
+    "per_voice_estimate": 284,
+    "defensive_estimate": 380,
+    "character_piece_estimate": 235,
+    "vocabulary_estimate": 50,
+    "studio": {
+      "inventory_rows": 164,
+      "inventory_duplicate_ids": [],
+      "manifest_duplicate_ids": [],
+      "missing_templates": [],
+      "changed_text": [],
+      "restriction_mismatches": [],
+      "missing_recording_ids": [],
+      "wrong_speaker_ids": [],
+      "assembly_reconstruction_mismatches": [],
+      "fixed_mapping_mismatches": [],
+      "dynamic_assembly_missing": [],
+      "manifest_rows": 290,
+      "manifest_modes": {
+        "FRAGMENT": 208,
+        "FULL_CLIP": 82
+      },
+      "manifest_priorities": {
+        "ESSENTIAL": 123,
+        "DEFERRED": 167
+      },
+      "manifest_statuses": {
+        "NOT_GENERATED": 287,
+        "VALIDATED": 3
+      },
+      "raw_source_hash_drift_ids": [],
+      "validated_manifest_rows": [
+        {
+          "id": "REC_SAR_2D8A56FAD34B984B",
+          "dialogue": "L1_SAR_066",
+          "wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\validated\\saraswati_chetti\\REC_SAR_2D8A56FAD34B984B__take01.wav",
+          "exists": true
+        },
+        {
+          "id": "REC_SAR_776C472F0C7CF8B9",
+          "dialogue": "L1_SAR_111",
+          "wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\validated\\saraswati_chetti\\REC_SAR_776C472F0C7CF8B9__take01.wav",
+          "exists": true
+        },
+        {
+          "id": "REC_SAR_5DE114704BFD8F0A",
+          "dialogue": "L1_SAR_122",
+          "wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\validated\\saraswati_chetti\\REC_SAR_5DE114704BFD8F0A__take01.wav",
+          "exists": true
+        }
+      ]
+    }
+  },
+  "abdul_rahman": {
+    "authored": 170,
+    "unique_authored": 170,
+    "authored_classes": {
+      "CORE": 117,
+      "REACHABLE_OPTIONAL": 50,
+      "UNREACHABLE_OR_DEFERRED": 3
+    },
+    "all_classes": {
+      "CORE": 117,
+      "REACHABLE_OPTIONAL": 59,
+      "UNREACHABLE_OR_DEFERRED": 50,
+      "FALLBACK_ONLY": 83
+    },
+    "authored_fixed": 71,
+    "authored_dynamic": 99,
+    "routed": 167,
+    "routed_fixed": 68,
+    "routed_dynamic": 99,
+    "scenarios": {
+      "CustomerGreeting": 4,
+      "RepeatCustomerGreeting": 4,
+      "AskWhatBuyerWants": 4,
+      "AskBuyerBudget": 4,
+      "AskQuantity": 4,
+      "AskSellerPrice": 4,
+      "QuantityChanged": 4,
+      "SellerPriceTooHigh": 7,
+      "SellerPriceSlightlyHigh": 4,
+      "SellerPriceBelowExpected": 4,
+      "BuyerCounterFirst": 4,
+      "BuyerCounterMiddle": 7,
+      "BuyerCounterFinal": 4,
+      "BuyerHoldsFirm": 30,
+      "SellerPriceAccepted": 4,
+      "PlayerAcceptedDeal": 4,
+      "PlayerRejectedBuyerOffer": 4,
+      "OfferReason": 4,
+      "AskName": 4,
+      "AskOrigin": 4,
+      "WeatherQuestion": 3,
+      "HistoryKing": 3,
+      "HistoryTemple": 3,
+      "HistoryQuestion": 4,
+      "SocialGreeting": 13,
+      "OffTopic": 4,
+      "HostileWarning": 3,
+      "UnclearSpeech": 4,
+      "Unknown": 1,
+      "TransactionSuccess": 4,
+      "TransactionFailure": 7,
+      "TimePressure": 3,
+      "IdleReminderFirst": 3,
+      "IdleReminderSecond": 3
+    },
+    "categories": {
+      "AUTHORED": 170,
+      "BRAIN_FALLBACK": 80,
+      "GENERIC_BYPASSED": 43,
+      "PRESENTATION_FALLBACK": 11,
+      "PROVIDER_FALLBACK": 3,
+      "UI_ONLY_RECOVERY": 2
+    },
+    "placeholders": {
+      "quantityLabel": 26,
+      "spiceName": 30,
+      "currentBuyerOffer": 8,
+      "currency": 70,
+      "offeredPrice": 5,
+      "counterPrice": 51,
+      "finalPrice": 8,
+      "ruleReply": 5
+    },
+    "authored_duplicate_texts": [],
+    "per_voice_estimate": 290,
+    "defensive_estimate": 385,
+    "character_piece_estimate": 241,
+    "vocabulary_estimate": 50,
+    "studio": {
+      "inventory_rows": 170,
+      "inventory_duplicate_ids": [],
+      "manifest_duplicate_ids": [],
+      "missing_templates": [],
+      "changed_text": [],
+      "restriction_mismatches": [],
+      "missing_recording_ids": [],
+      "wrong_speaker_ids": [],
+      "assembly_reconstruction_mismatches": [],
+      "fixed_mapping_mismatches": [],
+      "dynamic_assembly_missing": [],
+      "manifest_rows": 297,
+      "manifest_modes": {
+        "FRAGMENT": 211,
+        "FULL_CLIP": 86
+      },
+      "manifest_priorities": {
+        "ESSENTIAL": 122,
+        "DEFERRED": 175
+      },
+      "manifest_statuses": {
+        "NOT_GENERATED": 294,
+        "VALIDATED": 3
+      },
+      "raw_source_hash_drift_ids": [],
+      "validated_manifest_rows": [
+        {
+          "id": "REC_ABD_6E470C97CE49A4A5",
+          "dialogue": "L1_ABD_066",
+          "wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\validated\\abdul_rahman\\REC_ABD_6E470C97CE49A4A5__take01.wav",
+          "exists": true
+        },
+        {
+          "id": "REC_ABD_B40D8E8974FFBD0C",
+          "dialogue": "L1_ABD_111",
+          "wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\validated\\abdul_rahman\\REC_ABD_B40D8E8974FFBD0C__take01.wav",
+          "exists": true
+        },
+        {
+          "id": "REC_ABD_607120DF8AEA94AB",
+          "dialogue": "L1_ABD_122",
+          "wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\validated\\abdul_rahman\\REC_ABD_607120DF8AEA94AB__take01.wav",
+          "exists": true
+        }
+      ]
+    }
+  }
+}

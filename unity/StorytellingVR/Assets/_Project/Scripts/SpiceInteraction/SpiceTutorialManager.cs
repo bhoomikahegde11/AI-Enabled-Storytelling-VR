@@ -162,7 +162,7 @@ public class SpiceTutorialManager : MonoBehaviour
             return;
 
         scooperFilled = true;
-        SetPrompt("Bring the filled scooper to the customer's bag.");
+        SetPrompt("Bring the filled scooper to the customer's bag.\nOne correctly filled scoop fulfills the entire requested quantity.");
 
         StartDialogueSequence(ShowDialogueSequence(
             "Narrator",

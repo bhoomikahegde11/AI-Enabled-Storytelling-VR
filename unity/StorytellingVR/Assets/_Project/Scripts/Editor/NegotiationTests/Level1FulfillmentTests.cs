@@ -196,8 +196,10 @@ public class Level1FulfillmentTests
         finally { UnityEngine.Object.DestroyImmediate(host); }
     }
 
-    [Test]
-    public void PlayerTradeHudUsesBuyerNameAndHidesBuyerMaximum()
+    [TestCase("Lakshmi Amma")]
+    [TestCase("Lakshmamma")]
+    [TestCase("lakshmi_amma")]
+    public void PlayerTradeHudUsesBuyerNameAndHidesBuyerMaximum(string buyerName)
     {
         var host = new GameObject("Pass3 HUD fixture");
         host.SetActive(false);
@@ -213,9 +215,9 @@ public class Level1FulfillmentTests
             offerText.transform.SetParent(host.transform);
             typeof(Level1HUDManager).GetField("tradeNPCOfferText", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(hud, offerText.GetComponent<TextMeshProUGUI>());
-            hud.ShowCurrentTrade("Pepper", "1 Seer (~280g)", "Lakshmi Amma");
+            hud.ShowCurrentTrade("Pepper", "1 Seer (~280g)", buyerName);
             hud.UpdateCurrentTrade(new CurrentTrade { spice = "Pepper", npc_offer = 173, market_value = 100 });
-            StringAssert.Contains("Lakshmi Amma", hud.tradeBuyerText.text);
+            StringAssert.Contains("Lakshmamma", hud.tradeBuyerText.text);
             Assert.AreEqual("NPC Offer:\n173 Varahas", offerText.GetComponent<TextMeshProUGUI>().text);
             hud.ShowCurrentTrade("Pepper", "1 Seer (~280g)", "");
             StringAssert.Contains("Waiting for customer", hud.tradeBuyerText.text);

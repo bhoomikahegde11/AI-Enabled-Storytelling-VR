@@ -216,7 +216,6 @@ public sealed class PauseMenuController : MonoBehaviour
             CapturePauseState();
             SuspendSceneComponents();
             foreach (var voice in FindObjectsByType<Level1VoiceInputManager>(FindObjectsSortMode.None)) voice.OnGlobalPause();
-            foreach (var voice in FindObjectsByType<VoiceRecognitionManager>(FindObjectsSortMode.None)) voice.OnGlobalPause();
             foreach (var native in FindObjectsByType<AndroidNativeTtsProvider>(FindObjectsSortMode.None)) native.StopSpeaking();
             OVRInput.SetControllerVibration(0f, 0f, OVRInput.Controller.LTouch);
             OVRInput.SetControllerVibration(0f, 0f, OVRInput.Controller.RTouch);
@@ -310,7 +309,6 @@ public sealed class PauseMenuController : MonoBehaviour
         if (view != null) view.HideImmediately();
         if (rayLine != null) rayLine.enabled = false;
         foreach (var voice in FindObjectsByType<Level1VoiceInputManager>(FindObjectsSortMode.None)) voice.CancelForSceneExit();
-        foreach (var voice in FindObjectsByType<VoiceRecognitionManager>(FindObjectsSortMode.None)) voice.CancelForSceneExit();
         foreach (var chat in FindObjectsByType<ChatManager>(FindObjectsSortMode.None)) chat.ResetConversationUI();
     }
 

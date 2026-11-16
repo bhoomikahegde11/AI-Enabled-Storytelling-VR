@@ -118,6 +118,8 @@ public class TutorialManager : MonoBehaviour
 
     private bool currentTradePanelOpened = false;
     private bool currentTradePanelVisible = false;
+    private bool practiceSalePaid;
+    private int currentPracticeOffer;
     private AudioSource fallbackAudioSource;
 
 
@@ -128,7 +130,9 @@ public class TutorialManager : MonoBehaviour
     private const string TutorialBuyer = "Rahim";
     private const string TutorialSpice = "Cardamom";
     private const string TutorialQuantity = "1 Veesai";
-    private const int TutorialCostPrice = 18;
+    private const int MaximumFairPrice = 30;
+    private readonly MarketManager practiceMarket = new MarketManager();
+    private int TutorialCostPrice => practiceMarket.CalculateBaseValue(TutorialSpice, MarketManager.GramsPerVeesai);
 
 
     //==================================================
@@ -145,8 +149,7 @@ public class TutorialManager : MonoBehaviour
         UpdateMoneyUI();
         UpdateRespectUI();
 
-        if (hudManager != null)
-            hudManager.HideCurrentTrade();
+        RefreshPracticeTrade();
 
         StartCoroutine(PauseMenuController.RunGameplay(TutorialSequence()));
     }
@@ -158,19 +161,21 @@ public class TutorialManager : MonoBehaviour
         if ((OVRInput.GetDown(OVRInput.Button.Four) ||
              Input.GetKeyDown(KeyCode.Y)) &&
             hudManager != null)
-        {
-            currentTradePanelOpened = true;
-            currentTradePanelVisible = !currentTradePanelVisible;
+            TogglePracticeTradePanel();
+    }
 
-            hudManager.SetTutorialTrade(
-                TutorialBuyer,
-                TutorialSpice,
-                TutorialQuantity,
-                TutorialCostPrice,
-                0,
-                currentTradePanelVisible
-            );
-        }
+    private void TogglePracticeTradePanel()
+    {
+        currentTradePanelVisible = !currentTradePanelVisible;
+        currentTradePanelOpened |= currentTradePanelVisible;
+        RefreshPracticeTrade();
+    }
+
+    private void RefreshPracticeTrade()
+    {
+        hudManager?.SetTutorialTrade(TutorialBuyer, TutorialSpice, TutorialQuantity, TutorialCostPrice,
+            practiceMarket.CalculateMarketValue(TutorialSpice, MarketManager.GramsPerVeesai, null),
+            currentPracticeOffer, currentTradePanelVisible, practiceSalePaid);
     }
 
 
@@ -351,6 +356,9 @@ public class TutorialManager : MonoBehaviour
         // NARRATOR EXPLAINS BUTTON
         //--------------------------------------------------
 
+        currentTradePanelOpened = false;
+        currentTradePanelVisible = false;
+        RefreshPracticeTrade();
         PromptManager.Instance.ShowPrompt("Current Trade\n\nPress Y to view the customer's request and spice cost.",
             PromptManager.Instance.yButton
         );
@@ -376,20 +384,11 @@ public class TutorialManager : MonoBehaviour
 
     public void HandlePlayerOffer(int offer)
     {
-        if (tutorialFinished)
+        if (tutorialFinished || practiceSalePaid || offer <= 0 || (!waitingForHighPrice && !waitingForFairPrice))
             return;
 
-        if (hudManager != null)
-        {
-            hudManager.SetTutorialTrade(
-                TutorialBuyer,
-                TutorialSpice,
-                TutorialQuantity,
-                TutorialCostPrice,
-                offer,
-                currentTradePanelVisible
-            );
-        }
+        currentPracticeOffer = offer;
+        RefreshPracticeTrade();
 
         if (spokenPriceText != null)
             spokenPriceText.text =
@@ -495,13 +494,7 @@ public class TutorialManager : MonoBehaviour
     {
         waitingForFairPrice = false;
 
-        if (offer >= 22 && offer <= 30)
-        {
-            StartCoroutine(PauseMenuController.RunGameplay(
-                FairPriceSequence(offer)
-            ));
-        }
-        else if (offer > 30)
+        if (offer > MaximumFairPrice)
         {
             ChangeRespect(-20);
 
@@ -509,11 +502,8 @@ public class TutorialManager : MonoBehaviour
                 TooHighAgainSequence(offer)
             ));
         }
-        else if (offer < 18)
+        else if (offer < TutorialCostPrice)
         {
-            coins += offer;
-            UpdateMoneyUI();
-
             StartCoroutine(PauseMenuController.RunGameplay(
                 TooLowSequence(offer)
             ));
@@ -554,8 +544,7 @@ public class TutorialManager : MonoBehaviour
         // TRANSACTION VALUES CHANGE
         //--------------------------------------------------
 
-        AddMoney(offer);
-        ChangeRespect(+20);
+        CompletePracticeSale(offer);
 
         yield return new WaitForSeconds(0.75f);
 
@@ -564,16 +553,20 @@ public class TutorialManager : MonoBehaviour
         // STALL OWNER CONCLUDES TUTORIAL
         //--------------------------------------------------
 
-        yield return StartCoroutine(PauseMenuController.RunGameplay(
-            ShowDialogueSequence(
-                TutorialMerchantSpeaker,
-                merchantAudioSource,
-                merchantFairPriceEndingClip,
-                BhaskaraFairPriceEndingLineId,
-
-                "Well done. You earned a profit without sacrificing the customer's trust. Remember that balance. A good merchant builds wealth, but a great merchant builds a reputation as well."
-            )
-        ));
+        if (offer > TutorialCostPrice)
+        {
+            yield return StartCoroutine(PauseMenuController.RunGameplay(
+                ShowDialogueSequence(
+                    TutorialMerchantSpeaker,
+                    merchantAudioSource,
+                    merchantFairPriceEndingClip,
+                    BhaskaraFairPriceEndingLineId,
+                    "Well done. You earned a profit without sacrificing the customer's trust. Remember that balance. A good merchant builds wealth, but a great merchant builds a reputation as well."
+                )
+            ));
+        }
+        else
+            yield return ShowPracticeBreakEven();
 
         FinishTutorial();
     }
@@ -657,8 +650,7 @@ public class TutorialManager : MonoBehaviour
         // TRANSACTION VALUES CHANGE
         //--------------------------------------------------
 
-        AddMoney(offer);
-        ChangeRespect(+30);
+        CompletePracticeSale(offer);
 
         yield return new WaitForSeconds(0.75f);
 
@@ -723,11 +715,24 @@ public class TutorialManager : MonoBehaviour
     }
 
 
-    private void AddMoney(int amount)
+    private IEnumerator ShowPracticeBreakEven()
     {
+        const string message = "You broke even. The price covered the spice cost, so the margin was 0 varahas.";
+        if (dialogueText != null) dialogueText.text = message;
+        hudManager?.ShowSubtitle(TutorialMerchantSpeaker, message);
+        yield return new WaitForSeconds(4f);
+        hudManager?.HideSubtitle();
+    }
+
+    private void CompletePracticeSale(int amount)
+    {
+        if (practiceSalePaid || amount <= 0 || amount > MaximumFairPrice) return;
+        practiceSalePaid = true;
         int oldCoins = coins;
 
         coins += amount;
+        ChangeRespect(amount < TutorialCostPrice ? 5 : amount == TutorialCostPrice ? 10 : 20);
+        RefreshPracticeTrade();
 
         Debug.Log(
             $"[TUTORIAL MONEY] {oldCoins} -> {coins} | Earned: {amount}"
@@ -743,7 +748,7 @@ public class TutorialManager : MonoBehaviour
     private void UpdateMoneyUI()
     {
         if (hudManager != null)
-            hudManager.UpdateMoney(coins);
+            hudManager.UpdateMoney(coins, practice: true);
 
         if (coinsEarnedText != null)
             coinsEarnedText.text = coins.ToString();

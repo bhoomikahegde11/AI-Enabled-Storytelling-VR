@@ -104,7 +104,7 @@ public class DialogueCharacterRegistry
         {
             new DialogueCharacterProfile("abdul_rahman", "Abdul Rahman", "Arab Caravan Trader", "Friendly"),
             new DialogueCharacterProfile("francisco_de_almeida", "Francisco de Almeida", "Portuguese Trade Agent", "Strict"),
-            new DialogueCharacterProfile("lakshmi_amma", "Lakshmi Amma", "Local Household Buyer", "Friendly"),
+            new DialogueCharacterProfile("lakshmi_amma", "Lakshmamma", "Local Household Buyer", "Friendly"),
             new DialogueCharacterProfile("chinnamma_naik", "Chinnamma Naik", "Vijayanagara Wholesale Spice Buyer", "Strict"),
             new DialogueCharacterProfile("saraswati_chetti", "Saraswati Chetti", "Local Vijayanagara Retail Shop Owner", "Friendly"),
             new DialogueCharacterProfile("father_penteado", "Father Penteado", "Portuguese Cleric", "Normal")
@@ -130,7 +130,7 @@ public class DialogueCharacterRegistry
             return "francisco_de_almeida";
         }
 
-        if (normalized.Contains("lakshmi"))
+        if (normalized.Contains("lakshmi") || normalized.Contains("lakshmamma"))
         {
             return "lakshmi_amma";
         }
@@ -151,6 +151,12 @@ public class DialogueCharacterRegistry
         }
 
         return string.Empty;
+    }
+
+    // Normalize presentation without rewriting legacy trade/save names or changing lookup keys.
+    public static string GetDisplayName(string buyerName)
+    {
+        return NormalizeCharacterId(buyerName) == "lakshmi_amma" ? "Lakshmamma" : buyerName;
     }
 
     private static List<DialogueLine> CreateGenericLines()

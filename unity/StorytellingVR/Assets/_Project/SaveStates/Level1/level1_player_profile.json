@@ -30,12 +30,29 @@
     "current_scene": "Epilogue_ModernStudyRoom",
     "progression_index": 8,
     "intro_completed": true,
-    "remainingMarketDaySeconds": 2000.0,
+    "remainingMarketDaySeconds": 766.1231689453125,
     "hasSavedMarketDayTimer": true,
     "level1_entry": {
-        "varahas": 0,
-        "reputation": 0,
-        "inventory": [],
+        "varahas": 171,
+        "reputation": 50,
+        "inventory": [
+            {
+                "spiceKey": "pepper",
+                "grams": 15000
+            },
+            {
+                "spiceKey": "clove",
+                "grams": 8000
+            },
+            {
+                "spiceKey": "cinnamon",
+                "grams": 12000
+            },
+            {
+                "spiceKey": "cardamom",
+                "grams": 4000
+            }
+        ],
         "shiftStats": {
             "shifts_completed": 0,
             "total_varahas_earned": 0,
@@ -44,7 +61,7 @@
         "completedLevels": []
     },
     "level1_entry_format": 1,
-    "level1_entry_present": false,
+    "level1_entry_present": true,
     "save_name": "",
     "character_name": "",
     "selected_gender": "Male"

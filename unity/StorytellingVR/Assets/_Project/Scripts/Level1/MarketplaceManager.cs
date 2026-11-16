@@ -416,9 +416,13 @@ public class MarketplaceManager : MonoBehaviour
             yield break;
         }
 
-        PrepareIncomingCustomerLifecycle();
-
         StopNextCustomerCountdown();
+        if (!PrepareIncomingCustomerLifecycle())
+        {
+            chatManager?.ResetConversationUI("No saleable stock remains. The market day will end when the timer runs out.");
+            if (conversationUI != null) conversationUI.SetActive(true);
+            yield break;
+        }
 
         if (chatManager != null)
         {
@@ -482,6 +486,7 @@ public class MarketplaceManager : MonoBehaviour
             // Show temporary subtitle: Speaker "Customer", Text "Customer is browsing your goods..."
             string buyerName = Level1GameState.ExistingInstance?.ActiveTrade?.buyerName;
             if (string.IsNullOrWhiteSpace(buyerName)) buyerName = "Customer";
+            buyerName = DialogueCharacterRegistry.GetDisplayName(buyerName);
             chatManager.hudManager.ShowSubtitle(buyerName, $"{buyerName} is browsing your goods...");
         }
 
@@ -1322,18 +1327,21 @@ public class MarketplaceManager : MonoBehaviour
         return path;
     }
 
-    private void PrepareIncomingCustomerLifecycle()
+    private bool PrepareIncomingCustomerLifecycle()
     {
         if (chatManager == null || !chatManager.useLocalSessionGeneration)
         {
             preparedLocalSession = null;
-            return;
+            return true;
         }
 
         Level1GameState.Instance.PrepareForNewCustomer();
         preparedLocalSession = Level1GameState.Instance.GenerateLocalSession();
+        if (preparedLocalSession == null)
+            return false;
         preparedLocalSession.runtimeSessionId = nextRuntimeSessionId++;
         AssignCharacterVisualForSession(preparedLocalSession, "incoming-customer");
+        return true;
     }
 
     private static void ApplyCharacterVisualOffsets(Transform visualTransform, DialogueCharacterProfile profile)

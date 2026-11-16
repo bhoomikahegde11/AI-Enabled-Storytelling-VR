@@ -3024,19 +3024,14 @@ public class NegotiationStateManager
                intent == NegotiationIntent.CONTINUE;
     }
 
-    private static bool TryExtractPrice(string text, bool quantityAlreadyMatched, out int price)
+    internal static bool TryExtractPracticePrice(string transcript, out int price)
     {
         price = 0;
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        string sanitized = StripCurrencyTokens(text);
-        string[] words = sanitized.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+        string text = InputNormalizer.Normalize(transcript, awaitingPrice: true);
+        string[] words = text.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
         for (int i = 0; i < words.Length; i++)
         {
-            if (!int.TryParse(words[i], out int candidate))
+            if (!int.TryParse(words[i], out int candidate) || candidate <= 0)
             {
                 continue;
             }
@@ -3047,15 +3042,16 @@ public class NegotiationStateManager
                 continue;
             }
 
-            price = candidate;
+            string previous = i > 0 ? words[i - 1] : string.Empty;
+            if (words.Length == 1 || next == "varaha" || next == "varahas" ||
+                previous == "offer" || previous == "price")
+            {
+                price = candidate;
+                return true;
+            }
         }
 
-        if (price > 0)
-        {
-            return true;
-        }
-
-        return quantityAlreadyMatched && IsPureNumber(sanitized) && words.Length > 0 && int.TryParse(words[0], out price);
+        return false;
     }
 
     private static bool TryExtractQuantity(string text, LocalTradeState trade, out int quantityGrams)

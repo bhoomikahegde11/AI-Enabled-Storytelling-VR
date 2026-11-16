@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 
 public class LocalTradeOutcome
@@ -32,6 +33,14 @@ public class TransactionManager
         int varahaChange = 0;
         int reputationChange = 0;
         bool accepted = string.Equals(outcome, "ACCEPT", System.StringComparison.OrdinalIgnoreCase);
+
+        if (accepted && (!LocalTradeSessionGenerator.PhysicalTradeSpiceKeys.Contains(spiceKey, System.StringComparer.OrdinalIgnoreCase) ||
+            finalPrice <= 0 || !marketManager.TryDeductInventory(profile.inventory, spiceKey, finalQuantityGrams)))
+        {
+            result.currentMoney = playerState.CurrentVarahas;
+            result.currentReputation = playerState.CurrentReputation;
+            return result;
+        }
 
         if (accepted)
         {
@@ -73,11 +82,6 @@ public class TransactionManager
         profile.global_metrics.total_varahas = playerState.CurrentVarahas;
         profile.global_metrics.reputation = playerState.CurrentReputation;
 
-        if (accepted && finalQuantityGrams > 0)
-        {
-            marketManager.DeductInventory(profile.inventory, spiceKey, finalQuantityGrams);
-        }
-
         if (accepted)
         {
             profile.shift_stats.total_deals_made++;
@@ -89,6 +93,7 @@ public class TransactionManager
                 quantity = !string.IsNullOrWhiteSpace(acceptedQuantityLabel) ? acceptedQuantityLabel : marketManager.FormatTraditionalQuantity(finalQuantityGrams),
                 earned = Mathf.Max(0, finalPrice),
                 profit = Mathf.Max(0, finalPrice - baseValue),
+                signed_margin = finalPrice - baseValue,
                 respect_change = reputationChange,
                 buyer_name = buyerName,
                 buyer_origin = buyerOrigin

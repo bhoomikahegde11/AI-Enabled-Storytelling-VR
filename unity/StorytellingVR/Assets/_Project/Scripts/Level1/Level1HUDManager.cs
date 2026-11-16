@@ -94,6 +94,7 @@ public class Level1HUDManager : MonoBehaviour
     private Coroutine tradeCompleteCoroutine;
     private Coroutine subtitleAnimCoroutine;
     private bool ledgerOpen = false;
+    private bool showingPracticeTrade;
 
     // Cached original divider width for animation
     private float originalDividerWidth;
@@ -183,9 +184,10 @@ public class Level1HUDManager : MonoBehaviour
 
     private void Update()
     {
-        if (PauseMenuController.GameplayInputBlocked) return;
+        if (PauseMenuController.GameplayInputBlocked || showingPracticeTrade) return;
         // Toggle ledger with TAB key (ignored if player is typing in inputField)
-        if (Input.GetKeyDown(KeyCode.Tab))
+        bool keyboardTrade = Input.GetKeyDown(KeyCode.Tab) || Input.GetKeyDown(KeyCode.Y);
+        if (keyboardTrade)
         {
             if (playerInput != null && playerInput.isFocused)
                 return;
@@ -193,7 +195,7 @@ public class Level1HUDManager : MonoBehaviour
             ToggleTradeLedger();
         }
 
-        if (Level1DebugForceAccept.IsVrTradePanelShortcutPressed())
+        else if (Level1DebugForceAccept.IsVrTradePanelShortcutPressed())
         {
             ToggleTradeLedger();
         }
@@ -453,6 +455,8 @@ public class Level1HUDManager : MonoBehaviour
             {
                 UpdateCurrentTrade(currentTrade);
             }
+            else
+                SetLedgerWaitingState();
         }
     }
 
@@ -461,6 +465,8 @@ public class Level1HUDManager : MonoBehaviour
         if (tradeBuyerText != null) tradeBuyerText.text = "Waiting for customer...";
         if (tradeQuantityText != null) tradeQuantityText.text = "";
         if (tradeSpiceText != null) tradeSpiceText.text = "";
+        if (tradeNPCOfferText != null) tradeNPCOfferText.text = "";
+        if (tradeMarketValueText != null) tradeMarketValueText.text = "";
     }
 
     // ─────────────────────────────────────────────
@@ -469,6 +475,7 @@ public class Level1HUDManager : MonoBehaviour
 
     public void ShowSubtitle(string speaker, string text)
     {
+        speaker = DialogueCharacterRegistry.GetDisplayName(speaker);
         if (subtitlePanel == null) return;
 
         // Stop any in-progress subtitle animation (show or hide)
@@ -702,6 +709,7 @@ public class Level1HUDManager : MonoBehaviour
 
     public void ShowNPCIntro(string name, string origin)
     {
+        name = DialogueCharacterRegistry.GetDisplayName(name);
         if (npcIntroPanel == null) return;
         npcIntroPanel.SetActive(true);
 
@@ -728,7 +736,9 @@ public class Level1HUDManager : MonoBehaviour
     //  ECONOMY HUD
     // ─────────────────────────────────────────────
 
-    public void UpdateMoney(int varaha)
+    public void UpdateMoney(int varaha) => UpdateMoney(varaha, false);
+
+    public void UpdateMoney(int varaha, bool practice)
     {
         bool isInitial = (lastMoneyAmount == -1);
         
@@ -737,7 +747,7 @@ public class Level1HUDManager : MonoBehaviour
 
         if (varahaText != null)
         {
-            varahaText.text = $"{varaha} Varahas";
+            varahaText.text = practice ? $"Practice balance: {varaha} Varahas" : $"{varaha} Varahas";
         }
 
         if (varahaAmountText != null)
@@ -1204,7 +1214,8 @@ public class Level1HUDManager : MonoBehaviour
         {
             if (isSuccess)
             {
-                ledgerDetailsText.text = $"Spice: {spice}\nQuantity: {quantity}\nBuyer: {buyer}";
+                string margin = transaction.signed_margin.HasValue ? $"\nMargin: {FormatSignedMargin(transaction.signed_margin.Value)} Varahas" : "";
+                ledgerDetailsText.text = $"Spice: {spice}\nQuantity: {quantity}\nBuyer: {buyer}{margin}";
             }
             else
             {
@@ -1217,7 +1228,7 @@ public class Level1HUDManager : MonoBehaviour
             if (isSuccess)
             {
                 string repSign = reputationDelta >= 0 ? "+" : "";
-                ledgerRewardText.text = $"+{earned} Varahas\n{repSign}{reputationDelta} Honour";
+                ledgerRewardText.text = $"Proceeds: +{earned} Varahas\n{repSign}{reputationDelta} Honour";
             }
             else
             {
@@ -1306,6 +1317,7 @@ public class Level1HUDManager : MonoBehaviour
 
     public void ShowCurrentTrade(string spice, string quantity, string buyerName)
     {
+        buyerName = DialogueCharacterRegistry.GetDisplayName(buyerName);
         if (currentTradePanel == null) return;
 
         if (string.IsNullOrEmpty(buyerName))
@@ -1314,42 +1326,38 @@ public class Level1HUDManager : MonoBehaviour
         }
         else
         {
-            if (tradeBuyerText != null) tradeBuyerText.text = $"Customer:\n{buyerName}";
-            if (tradeQuantityText != null) tradeQuantityText.text = $"Seeking:\n{quantity}";
+            if (tradeBuyerText != null) tradeBuyerText.text = buyerName;
+            if (tradeQuantityText != null) tradeQuantityText.text = quantity;
             if (tradeSpiceText != null) tradeSpiceText.text = spice;
         }
     }
 
     // Used by the scripted transaction tutorial, where the player proposes every price.
     // This deliberately avoids the gameplay-only "NPC Offer" wording.
-    public void SetTutorialTrade(string buyerName, string spice, string quantity, int costPrice, int playerOffer, bool showPanel)
+    public void SetTutorialTrade(string buyerName, string spice, string quantity, int costPrice,
+        int marketReference, int playerOffer, bool showPanel, bool paid)
     {
+        showingPracticeTrade = true;
         if (currentTradePanel == null) return;
 
         ledgerOpen = showPanel;
         currentTradePanel.SetActive(showPanel);
 
-        if (tradeBuyerText != null) tradeBuyerText.text = $"Customer:\n{buyerName}";
-        if (tradeQuantityText != null) tradeQuantityText.text = $"Seeking:\n{quantity}";
-        if (tradeSpiceText != null) tradeSpiceText.text = spice;
-        if (tradeNPCOfferText != null)
+        UpdateCurrentTrade(new CurrentTrade
         {
-            tradeNPCOfferText.text = playerOffer > 0
-                ? $"Your Offer:\n{playerOffer} Varahas"
-                : "Your Offer:\n--";
-        }
-        if (tradeMarketValueText != null)
-        {
-            tradeMarketValueText.text =
-                $"Cost Price:\n{costPrice} Varahas\nFair Range:\n22-30 Varahas";
-        }
+            buyer_name = buyerName, spice = spice, quantity = quantity, npc_offer = playerOffer,
+            base_cost = costPrice, market_value = marketReference, practice = true, agreement_locked = paid
+        });
     }
 
     public void UpdateCurrentTrade(CurrentTrade trade)
     {
         if (trade == null) return;
 
-        int profitIfAccepted = trade.npc_offer - trade.market_value;
+        if (tradeBuyerText != null && !string.IsNullOrWhiteSpace(trade.buyer_name))
+            tradeBuyerText.text = DialogueCharacterRegistry.GetDisplayName(trade.buyer_name);
+        if (tradeQuantityText != null)
+            tradeQuantityText.text = trade.quantity;
 
         if (tradeSpiceText != null)
         {
@@ -1358,15 +1366,21 @@ public class Level1HUDManager : MonoBehaviour
 
         if (tradeNPCOfferText != null)
         {
-            tradeNPCOfferText.text = $"NPC Offer:\n{trade.npc_offer} Varahas";
+            string label = trade.agreement_locked ? "Agreed Price" : trade.practice ? "Your Offer" : "NPC Offer";
+            string price = trade.npc_offer > 0 ? $"{trade.npc_offer} Varahas" : "--";
+            tradeNPCOfferText.text = $"{label}:\n{price}";
         }
 
         if (tradeMarketValueText != null)
         {
-            string profitSign = profitIfAccepted >= 0 ? "+" : "";
-            tradeMarketValueText.text = $"Market Value:\n{trade.market_value} Varahas\nProfit @ Offer:\n{profitSign}{profitIfAccepted} Varahas";
+            string cost = trade.base_cost?.ToString() ?? "--";
+            string margin = trade.base_cost.HasValue && trade.npc_offer > 0
+                ? FormatSignedMargin(trade.npc_offer - trade.base_cost.Value) : "--";
+            tradeMarketValueText.text = $"Base cost: {cost} Varahas\nMarket reference: {trade.market_value} Varahas\nMargin: {margin} Varahas";
         }
     }
+
+    private static string FormatSignedMargin(int amount) => amount.ToString("+0;-0;0");
 
     public void HideCurrentTrade()
     {

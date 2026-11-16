@@ -11,7 +11,7 @@ PROVIDER = REPO_ROOT / "unity/StorytellingVR/Assets/_Project/Scripts/Level1/Core
 SCENARIOS = REPO_ROOT / "unity/StorytellingVR/Assets/_Project/Scripts/Level1/Core/Dialogues/DialogueScenario.cs"
 
 CHARACTER_FILES = [
-    ("Lakshmi Amma", "lakshmi_amma", "LakshmiAmmaDialogue.cs", "LAK"),
+    ("Lakshmamma", "lakshmi_amma", "LakshmiAmmaDialogue.cs", "LAK"),
     ("Chinnamma Naik", "chinnamma_naik", "ChinappaNaikDialogue.cs", "CHI"),
     ("Saraswati Chetti", "saraswati_chetti", "SiddharthChettiDialogue.cs", "SAR"),
     ("Abdul Rahman", "abdul_rahman", "AbdulRahmanDialogue.cs", "ABD"),

@@ -1,0 +1,78 @@
+{
+  "id": "VS1_FAT_NUM_FORTY",
+  "text": "forty",
+  "source_wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\batches\\portuguese_ready_20261027\\verification_studio_v1\\components\\father_penteado\\VS1_FAT_NUM_FORTY__take01.wav",
+  "source_sha256": "371b78b92833ff066a1d34797c9cf180cbd51741f6ec61ab324955dc2c0632ff",
+  "source_metadata": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\batches\\portuguese_ready_20261027\\verification_studio_v1\\components\\father_penteado\\VS1_FAT_NUM_FORTY__take01.json",
+  "engine": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+  "model_revision": "fd4b254389122332181a7c3db7f27e918eec64e3",
+  "voice": {
+    "speaker": "Father Penteado",
+    "character_id": "father_penteado",
+    "engine": "QWEN_BASE",
+    "voice": "PENTEADO_APPROVED_SYNTHETIC",
+    "reference_wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\samples\\07_Qwen_Portuguese_Merchants\\FatherPenteado_Thanks_Qwen.wav",
+    "reference_sha256": "e0137991e31269bb3148cc0bc7e8875fc2b42d6635b5001a2daa48f1883eae44",
+    "reference_transcript": "Muito obrigado. The goods are here as agreed; you have my thanks.",
+    "identity_status": "APPROVED_SYNTHETIC_REFERENCE_BASE_PILOT_PENDING",
+    "model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+  },
+  "generation_settings": {
+    "dtype": "bfloat16",
+    "attention": "sdpa",
+    "batch_size": 1,
+    "max_new_tokens": 512,
+    "non_streaming_mode": true,
+    "reference_wav": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\samples\\07_Qwen_Portuguese_Merchants\\FatherPenteado_Thanks_Qwen.wav",
+    "reference_sha256": "e0137991e31269bb3148cc0bc7e8875fc2b42d6635b5001a2daa48f1883eae44",
+    "reference_transcript": "Muito obrigado. The goods are here as agreed; you have my thanks.",
+    "x_vector_only_mode": false,
+    "prompt_reused_per_character": true,
+    "generation_defaults": {
+      "do_sample": true,
+      "repetition_penalty": 1.05,
+      "temperature": 0.9,
+      "top_p": 1.0,
+      "top_k": 50,
+      "subtalker_dosample": true,
+      "subtalker_temperature": 0.9,
+      "subtalker_top_p": 1.0,
+      "subtalker_top_k": 50,
+      "max_new_tokens": 8192
+    }
+  },
+  "seed": 2037188764,
+  "postprocessing": {
+    "policy": "Existing Near-Contiguous + QuietEdgesV1 copy reused byte-for-byte",
+    "source_processed_path": "G:\\Users\\chitr\\Desktop\\Capstone\\NPC-Voice-Generator\\production\\batches\\portuguese_ready_20261027\\verification_studio_v3\\assembly_copies\\near\\father_penteado\\VS1_FAT_NUM_FORTY__v3.wav",
+    "source_processed_sha256": "cd2b4ef8fecd8ec04a7771a125e20422be948f059ad6bbbc9d9f0294d09c3f9b",
+    "gain_already_present": 4.0,
+    "source_edge_warning": false
+  },
+  "package_wav": "Audio/Fragments/VS1_FAT_NUM_FORTY.wav",
+  "package_wav_sha256": "cd2b4ef8fecd8ec04a7771a125e20422be948f059ad6bbbc9d9f0294d09c3f9b",
+  "quality": {
+    "technical_valid": true,
+    "errors": [],
+    "warnings": [],
+    "metrics": {
+      "duration_seconds": 0.7,
+      "sample_rate": 24000,
+      "channels": 1,
+      "encoding": "PCM_24",
+      "frames": 16804,
+      "peak": 0.3962233066558838,
+      "silence_threshold_dbfs": -45,
+      "analysis_frame_ms": 20,
+      "leading_low_energy_seconds": 0.06,
+      "trailing_low_energy_seconds": 0.1,
+      "total_low_energy_seconds": 0.16,
+      "internal_low_energy_gaps_at_least_350ms": [],
+      "intended_words_per_minute": 85.7
+    },
+    "content_verification": "UNVERIFIED_NO_INSTALLED_OFFLINE_ASR",
+    "ending_verification": "HEURISTIC_ONLY_LISTEN_TO_FINAL_WORD",
+    "speaker_identity_verification": "REFERENCE_OR_SPEAKER_CONFIG_CHECKED_PERCEPTUAL_IDENTITY_UNVERIFIED"
+  },
+  "review_status": "PENDING_LISTENING"
+}

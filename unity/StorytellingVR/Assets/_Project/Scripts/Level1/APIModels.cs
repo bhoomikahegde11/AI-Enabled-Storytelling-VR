@@ -1,10 +1,14 @@
 [System.Serializable]
 public class CurrentTrade
 {
+    public string buyer_name;
     public string spice;
     public string quantity;
     public int npc_offer;
     public int market_value;
+    public int? base_cost;
+    public bool agreement_locked;
+    public bool practice;
 }
 
 [System.Serializable]
@@ -53,6 +57,7 @@ public class TransactionSummary
     public string quantity;
     public int earned;
     public int profit;
+    public int? signed_margin;
     public int respect_change;
     public string buyer_name;
     public string buyer_origin;

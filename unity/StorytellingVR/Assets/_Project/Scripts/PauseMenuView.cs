@@ -35,8 +35,16 @@ public sealed class PauseMenuView : MonoBehaviour
         mainButtons = new[] { resumeButton, restartButton, returnButton };
         confirmationButtons = new[] { confirmButton, cancelButton };
         resumeButton.onClick.AddListener(() => resume());
-        restartButton.onClick.AddListener(() => Confirm("Restart this chapter?",
-            "Your unfinished interactions in this scene will be discarded. Completed progress will be kept.", "Restart", "Cancel", restart));
+        restartButton.onClick.AddListener(() =>
+        {
+            if (currentScene == GameManager.DefaultGameplaySceneName)
+                Confirm("Restart the market day?",
+                    "Money, respect, inventory, and trade progress will return to their state at the beginning of this market day.",
+                    "Restart", "Cancel", restart);
+            else
+                Confirm("Restart this chapter?",
+                    "Your unfinished interactions in this scene will be discarded. Completed progress will be kept.", "Restart", "Cancel", restart);
+        });
         returnButton.onClick.AddListener(() =>
         {
             if (HasUnfinishedMarketCustomer())

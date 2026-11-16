@@ -4,7 +4,7 @@ The six active character tables under `unity/StorytellingVR/Assets/_Project/Scri
 
 | Runtime character | Active source file | `DialogueLine` entries | Authored templates |
 |---|---|---:|---:|
-| Lakshmi Amma (`lakshmi_amma`) | `LakshmiAmmaDialogue.cs` | 43 | 206 |
+| Lakshmamma (`lakshmi_amma`) | `LakshmiAmmaDialogue.cs` | 43 | 206 |
 | Chinnamma Naik (`chinnamma_naik`) | `ChinappaNaikDialogue.cs` | 42 | 167 |
 | Saraswati Chetti (`saraswati_chetti`) | `SiddharthChettiDialogue.cs` | 43 | 164 |
 | Abdul Rahman (`abdul_rahman`) | `AbdulRahmanDialogue.cs` | 45 | 170 |

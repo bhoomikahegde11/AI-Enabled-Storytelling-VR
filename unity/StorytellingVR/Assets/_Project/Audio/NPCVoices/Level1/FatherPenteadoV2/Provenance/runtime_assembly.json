@@ -1,0 +1,155 @@
+{
+  "version": 2,
+  "character_id": "father_penteado",
+  "sample_rate": 24000,
+  "channels": 1,
+  "encoding": "PCM_24",
+  "preset": "Near-Contiguous + QuietEdgesV1",
+  "numbers": {
+    "zero": "REC_FAT_6D3A4E030AF82510",
+    "one": "VS1_FAT_NUM_ONE",
+    "two": "VS1_FAT_NUM_TWO",
+    "three": "VS1_FAT_NUM_THREE",
+    "four": "VS1_FAT_NUM_FOUR",
+    "five": "VS1_FAT_NUM_FIVE",
+    "six": "VS1_FAT_NUM_SIX",
+    "seven": "VS1_FAT_NUM_SEVEN",
+    "eight": "VS1_FAT_NUM_EIGHT",
+    "nine": "VS1_FAT_NUM_NINE",
+    "ten": "VS1_FAT_NUM_TEN",
+    "eleven": "VS1_FAT_NUM_ELEVEN",
+    "twelve": "VS1_FAT_NUM_TWELVE",
+    "thirteen": "VS1_FAT_NUM_THIRTEEN",
+    "fourteen": "VS1_FAT_NUM_FOURTEEN",
+    "fifteen": "VS1_FAT_NUM_FIFTEEN",
+    "sixteen": "VS1_FAT_NUM_SIXTEEN",
+    "seventeen": "VS1_FAT_NUM_SEVENTEEN",
+    "eighteen": "VS1_FAT_NUM_EIGHTEEN",
+    "nineteen": "VS1_FAT_NUM_NINETEEN",
+    "twenty": "VS1_FAT_NUM_TWENTY",
+    "thirty": "VS1_FAT_NUM_THIRTY",
+    "forty": "VS1_FAT_NUM_FORTY",
+    "fifty": "VS1_FAT_NUM_FIFTY",
+    "sixty": "VS1_FAT_NUM_SIXTY",
+    "seventy": "VS1_FAT_NUM_SEVENTY",
+    "eighty": "VS1_FAT_NUM_EIGHTY",
+    "ninety": "VS1_FAT_NUM_NINETY",
+    "hundred": "VS1_FAT_NUM_HUNDRED",
+    "and": "VS1_FAT_NUM_AND",
+    "point": "REC_FAT_4850FDE2F99734FF",
+    "thousand": "REC_FAT_90E0F3DE790B6977",
+    "million": "REC_FAT_2A63C22A31848EAF",
+    "billion": "FAT_FINAL_80C697E9924A5260"
+  },
+  "spices": {
+    "pepper": "VS1_FAT_PRODUCT_PEPPER",
+    "cinnamon": "VS1_FAT_PRODUCT_CINNAMON",
+    "cardamom": "VS1_FAT_PRODUCT_CARDAMOM"
+  },
+  "quantity_units": {
+    "Palam": "FAT_FINAL_BE0C215FF97DF52F",
+    "Palams": "FAT_FINAL_256CD2312669B56D",
+    "Seer": "VS1_FAT_UNIT_SEER",
+    "Seers": "VS1_FAT_UNIT_SEERS",
+    "Veesai": "VS1_FAT_UNIT_VEESAI",
+    "Manangu": "FAT_FINAL_F57BF634D1452DC2",
+    "Manangus": "FAT_FINAL_E312B71312EEE0FE",
+    "Bahar": "FAT_FINAL_8EBAC4285D3522FD",
+    "Bahars": "FAT_FINAL_44667AF4AD2062CD"
+  },
+  "quantity_fallback": "FAT_FINAL_7D369EFD1C4B4084",
+  "slot_aliases": {
+    "quantity": "brainQuantityLabel",
+    "spice": "spiceName",
+    "spiceDescriptor": "spiceDescriptor",
+    "currentOffer": "previousOffer",
+    "sellerPrice": "sellerPrice",
+    "counterOffer": "updatedOffer",
+    "nextOffer": "updatedOffer",
+    "result.updatedOffer": "updatedOffer",
+    "result.acceptedTerms.Price": "finalPrice",
+    "result.acceptedTerms.QuantityLabel": "acceptedQuantityLabel",
+    "result.acceptedTerms.SpiceName": "acceptedSpiceName",
+    "input.referencedPrices[0]": "firstReferencedPrice",
+    "input.referencedPrices[input.referencedPrices.Count - 1]": "lastReferencedPrice"
+  },
+  "join_ms": {
+    "number_number": 1,
+    "word": 4,
+    "clause": 25,
+    "sentence": 55,
+    "source_edge_guard": 15
+  },
+  "integer_range": [
+    0,
+    2147483647
+  ],
+  "quantities": "Use authoritative quantityLabel traditional portion verbatim; strip only trailing (~metric gloss) for speech. Do NOT convert/re-round grams or invent units.",
+  "accepted_terms": "For agreement/fulfillment use immutable AcceptedTerms price/item/quantity; never mutable npcOffer. No audio code may commit a trade.",
+  "missing_audio_fallback": {
+    "action": "WITHHOLD_ENTIRE_UTTERANCE_AND_KEEP_EXACT_SUBTITLE",
+    "never": [
+      "unrelated clip",
+      "partial price",
+      "generic acceptance",
+      "quantity substitution"
+    ],
+    "optional_tts": "Only an explicitly enabled existing provider, preserving exact semantic text."
+  },
+  "rule_reply": "Only compose an exact known brain fallback source template. Unknown arbitrary prose is unsupported; do not replace it.",
+  "integration_status": "ASSETS_READY_ADAPTER_REQUIRED: INpcTtsProvider currently accepts Speak(string); no Level1 prerecorded template/fragment adapter was modified or installed.",
+  "agreement_sources": [
+    "L1_FAT_058",
+    "L1_FAT_059",
+    "L1_FAT_060",
+    "L1_FAT_061",
+    "L1_FAT_062",
+    "L1_FAT_063",
+    "L1_FAT_064",
+    "L1_FAT_065",
+    "FALLBACK_520f27500d260b",
+    "FALLBACK_033d9cc2dfab17",
+    "FALLBACK_004247a6b5770f"
+  ],
+  "descriptor_vocabulary": {
+    "pepper": "FAT_V2_4CB189665FF62A96",
+    "cinnamon": "FAT_V2_75922BBADBDC6C5B",
+    "cardamom": "FAT_V2_AE5283D156ABC12E"
+  },
+  "identity": {
+    "character_id": "father_penteado",
+    "display_name": "Father Penteado",
+    "nationality": "Portuguese",
+    "homeland": "Portugal",
+    "occupation": "priest and scholar",
+    "evidence": "FatherPenteadoDialogue summary + AskOrigin entries; buyerOrigin is a role, not a country."
+  },
+  "safe_number_fallbacks": {
+    "offeredPrice": "currentBuyerOffer",
+    "counterPrice": "currentBuyerOffer",
+    "currentBuyerOffer": "counterPrice",
+    "finalPrice": "counterPrice",
+    "minimumPrice": "counterPrice"
+  },
+  "conditional_counter_sources": [
+    "FALLBACK_a6deb456bb946e",
+    "FALLBACK_cbe75edd25564e",
+    "FALLBACK_1b4b866b634206",
+    "FALLBACK_33dd5b5d98ecc8",
+    "FALLBACK_615164660836d1",
+    "FALLBACK_33a2ecd05a1125"
+  ],
+  "currency_policy": "CURRENCY_CLIP selects its singular recording iff the explicitly associated actual price is 1. Plural takes remain unchanged.",
+  "source_context_contract": {
+    "previousOffer": "RuleBasedNPCBrainResult.previousOffer, captured before mutation",
+    "updatedOffer": "RuleBasedNPCBrainResult.updatedOffer",
+    "brainQuantityLabel": "RuleBasedNPCBrainResult.quantityLabel, including a valid proposed change",
+    "sellerPrice": "NegotiationInput.sellerPrice",
+    "quantityLabel": "committed active quantity or immutable accepted label for agreement/success",
+    "spiceDescriptor": "GetSpiceDescriptor(trade.spiceKey), never an alias for plain spiceName",
+    "acceptedTerms": "immutable accepted contract; overrides mutable fields for agreement/success",
+    "settlementClaimed": "LocalTradeState.SettlementClaimed; required before receipt speech",
+    "isAccepted/walkedAway": "semantic decision/outcome flags supplied by caller; audio never infers them from prose"
+  },
+  "conditional_counter_note": "These exact brain helper sources can say raise despite no movement. On updatedOffer<=previousOffer the documented voice-side variant is the unrestricted HOLD L1_FAT_053 with counterPrice=updatedOffer. This changes presentation only; Unity must still be corrected separately."
+}

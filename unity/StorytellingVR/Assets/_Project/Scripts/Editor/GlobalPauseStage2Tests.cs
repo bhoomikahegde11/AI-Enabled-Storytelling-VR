@@ -6,6 +6,7 @@ using System.Reflection;
 using NUnit.Framework;
 using TMPro;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -208,6 +209,12 @@ public class GlobalPauseStage2Tests
         Assert.AreEqual(1, returns);
         var state = State();
         view.Open("Level1_MainLoopUpdated", true);
+        view.restartButton.onClick.Invoke();
+        Assert.AreEqual("Restart the market day?", view.confirmationTitle.text);
+        StringAssert.Contains("Money, respect, inventory, and trade progress", view.confirmationBody.text);
+        StringAssert.Contains("beginning of this market day", view.confirmationBody.text);
+        view.cancelButton.onClick.Invoke();
+        Assert.AreEqual(1, restarts);
         view.returnButton.onClick.Invoke();
         Assert.AreEqual("Return to the Main Menu?", view.confirmationTitle.text);
         Assert.AreEqual("Cancel", view.cancelButton.GetComponentInChildren<TMP_Text>(true).text);
@@ -407,23 +414,96 @@ public class GlobalPauseStage2Tests
         Assert.AreEqual(string.Empty, voice.inputField.text);
     }
 
-    [Test]
-    public void AbortedTutorialRequestCannotApplyAfterResumeOrReplaceReviewedOffer()
+    [TestCase("25 varahas", 25)]
+    [TestCase("Twenty-five varahas", 25)]
+    [TestCase("One Veesai for 25 varahas", 25)]
+    [TestCase("2 Seers for 25 varahas", 25)]
+    [TestCase("25 varahas for 2 Seers", 25)]
+    [TestCase("Twenty-five", 25)]
+    [TestCase("2 Seers", 0)]
+    [TestCase("two point five seers", 0)]
+    [TestCase("I offer twenty-five", 25)]
+    [TestCase("   ", 0)]
+    public void TutorialPriceUsesMarketNumberAndQuantityParsing(string transcript, int expected)
     {
-        var voice = Host("tutorial voice fixture").AddComponent<VoiceRecognitionManager>();
-        voice.gameObject.SetActive(true); // Exercise generation rejection, not the inactive-component guard.
-        Field(typeof(VoiceRecognitionManager), "waitingForInput").SetValue(voice, true);
-        Field(typeof(VoiceRecognitionManager), "hasPendingOffer").SetValue(voice, true);
-        Field(typeof(VoiceRecognitionManager), "pendingOffer").SetValue(voice, 50);
-        int oldGeneration = (int)Field(typeof(VoiceRecognitionManager), "requestGeneration").GetValue(voice);
+        var parse = typeof(NegotiationStateManager).GetMethod("TryExtractPracticePrice", BindingFlags.Static | BindingFlags.NonPublic);
+        object[] args = { transcript, 0 };
+        Assert.AreEqual(expected > 0, parse.Invoke(null, args));
+        Assert.AreEqual(expected, args[1]);
+    }
+
+    [Test]
+    public void RahimSceneUsesSharedRecorderAndLocalVosk()
+    {
+        var scene = EditorSceneManager.OpenPreviewScene(
+            "Assets/_Project/Scenes/CompleteFlowWithFinalScenes/NewTransactionTutorial.unity");
+        try
+        {
+            var practice = System.Array.Find(scene.GetRootGameObjects(),
+                root => root.GetComponentInChildren<VoiceRecognitionManager>(true) != null)
+                ?.GetComponentInChildren<VoiceRecognitionManager>(true);
+            Assert.IsNotNull(practice);
+            Assert.IsTrue(practice.enabled && practice.gameObject.activeInHierarchy);
+            var voice = (Level1VoiceInputManager)new SerializedObject(practice).FindProperty("voiceInput").objectReferenceValue;
+            Assert.IsNotNull(voice);
+            Assert.IsTrue(voice.enabled && voice.gameObject.activeInHierarchy);
+            Assert.AreSame(practice, new SerializedObject(voice).FindProperty("practiceVoice").objectReferenceValue);
+            Assert.AreSame(practice.hudManager.playerInput, voice.inputField);
+            Assert.IsNotNull(voice.inputField);
+            Assert.IsInstanceOf<VoskSpeechProvider>(voice.speechProviderOverride);
+            Assert.IsTrue(voice.speechProviderOverride.enabled && voice.speechProviderOverride.gameObject.activeInHierarchy);
+            Assert.AreSame(practice, practice.tutorialManager.voiceRecognitionManager);
+        }
+        finally { EditorSceneManager.ClosePreviewScene(scene); }
+    }
+
+    [Test]
+    public void TutorialLTRetryRejectsLateRecognitionAndBlankConfirmation()
+    {
+        var host = Host("shared practice voice fixture");
+        var voice = host.AddComponent<Level1VoiceInputManager>();
+        var practice = host.AddComponent<VoiceRecognitionManager>();
+        practice.tutorialManager = host.AddComponent<TutorialManager>();
+        voice.inputField = host.AddComponent<TMP_InputField>();
+        voice.speechProviderOverride = host.AddComponent<Level1SoakSpeechProvider>();
+        Field(typeof(Level1VoiceInputManager), "practiceVoice").SetValue(voice, practice);
+        Field(typeof(VoiceRecognitionManager), "voiceInput").SetValue(practice, voice);
+        practice.ListenForPrice("25 varahas");
+        var turns = (ConversationTurnLifecycle)typeof(VoiceRecognitionManager)
+            .GetProperty("Turns", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(practice);
+
+        var provider = (Level1SoakSpeechProvider)voice.speechProviderOverride;
+        Assert.IsTrue(voice.BeginSimulatedCapture(out var old));
+        Assert.IsTrue(turns.TryAdvanceVoice(old, ConversationTurnLifecycle.Phase.Recognizing));
+        Field(typeof(Level1VoiceInputManager), "currentState").SetValue(voice, Level1VoiceInputManager.VoiceInputState.Recognizing);
+        var abandoned = (IEnumerator)Invoke(voice, "TranscribeAudioRoutine", null, old);
+        Assert.IsTrue(abandoned.MoveNext());
+
+        Assert.IsTrue(voice.BeginSimulatedCapture(out var current));
+        Assert.AreEqual(old.Interaction, current.Interaction);
+        Assert.AreNotEqual(old.Turn, current.Turn);
+        provider.CompleteNext("70 varahas");
+        Assert.IsFalse(abandoned.MoveNext());
+        Assert.IsEmpty(voice.inputField.text);
+        Assert.IsTrue(turns.TryAdvanceVoice(current, ConversationTurnLifecycle.Phase.Recognizing));
+        var replacement = (IEnumerator)Invoke(voice, "TranscribeAudioRoutine", null, current);
+        Assert.IsTrue(replacement.MoveNext());
+        provider.CompleteNext("One Veesai for 25 varahas");
+        Assert.IsFalse(replacement.MoveNext());
+        Assert.AreEqual("25 Varahas", voice.inputField.text);
+
+        // A paused review retains the current candidate, and a blank can never submit it.
         Invoke(pause, "CapturePauseState");
         voice.OnGlobalPause();
+        Invoke(voice, "SubmitReviewedTranscript");
+        Assert.AreEqual(ConversationTurnLifecycle.Phase.Reviewing, turns.CurrentPhase);
+        Assert.AreEqual("25 Varahas", voice.inputField.text);
         pause.ResumeGameplay();
         Invoke(pause, "CloseImmediately");
-        Invoke(voice, "ReceiveTranscription", oldGeneration, "999");
-        Assert.IsTrue((bool)Field(typeof(VoiceRecognitionManager), "hasPendingOffer").GetValue(voice));
-        Assert.AreEqual(50, Field(typeof(VoiceRecognitionManager), "pendingOffer").GetValue(voice));
-        Assert.AreEqual(oldGeneration + 1, Field(typeof(VoiceRecognitionManager), "requestGeneration").GetValue(voice));
+        voice.inputField.text = "";
+        Invoke(voice, "SubmitReviewedTranscript");
+        Assert.IsTrue(turns.IsWaitingForPlayer);
+        Assert.IsFalse(turns.IsCurrent(current));
     }
 
     [Test]

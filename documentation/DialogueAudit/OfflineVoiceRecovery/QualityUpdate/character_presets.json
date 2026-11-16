@@ -1,0 +1,112 @@
+{
+  "Lakshmi Amma": {
+    "speaker": "Swapna",
+    "description": "a warm, shrewd Indian woman, speaking directly to a merchant in an engaged conversation",
+    "approved": false,
+    "delivery_presets": {
+      "Natural Conversational": {
+        "description": "a warm, shrewd Indian woman, speaking directly to a merchant in an engaged conversation",
+        "mood": "friendly",
+        "pace": "moderate",
+        "expression": "moderate"
+      },
+      "Lively Negotiation": {
+        "description": "a warm, shrewd Indian woman, speaking directly to a merchant in an engaged conversation; the exchange is lively and persuasive",
+        "mood": "persuasive",
+        "pace": "brisk",
+        "expression": "high"
+      },
+      "Brisk Conversational": {
+        "description": "a warm, shrewd Indian woman, speaking directly to a merchant in an engaged conversation; the rhythm is brisk and conversational",
+        "mood": "neutral",
+        "pace": "brisk",
+        "expression": "moderate"
+      }
+    }
+  },
+  "Chinnamma Naik": {
+    "speaker": "Priya",
+    "description": "a confident Indian woman, direct and dry-witted, bargaining face to face",
+    "approved": false,
+    "delivery_presets": {
+      "Natural Conversational": {
+        "description": "a confident Indian woman, direct and dry-witted, bargaining face to face",
+        "mood": "friendly",
+        "pace": "moderate",
+        "expression": "moderate"
+      },
+      "Lively Negotiation": {
+        "description": "a confident Indian woman, direct and dry-witted, bargaining face to face; the exchange is lively and persuasive",
+        "mood": "persuasive",
+        "pace": "brisk",
+        "expression": "high"
+      },
+      "Brisk Conversational": {
+        "description": "a confident Indian woman, direct and dry-witted, bargaining face to face; the rhythm is brisk and conversational",
+        "mood": "neutral",
+        "pace": "brisk",
+        "expression": "moderate"
+      }
+    }
+  },
+  "Saraswati Chetti": {
+    "speaker": "Sneha",
+    "description": "a practical Indian merchant woman, precise and engaged in a conversation",
+    "approved": false,
+    "delivery_presets": {
+      "Natural Conversational": {
+        "description": "a practical Indian merchant woman, precise and engaged in a conversation",
+        "mood": "friendly",
+        "pace": "moderate",
+        "expression": "moderate"
+      },
+      "Lively Negotiation": {
+        "description": "a practical Indian merchant woman, precise and engaged in a conversation; the exchange is lively and persuasive",
+        "mood": "persuasive",
+        "pace": "brisk",
+        "expression": "high"
+      },
+      "Brisk Conversational": {
+        "description": "a practical Indian merchant woman, precise and engaged in a conversation; the rhythm is brisk and conversational",
+        "mood": "neutral",
+        "pace": "brisk",
+        "expression": "moderate"
+      }
+    }
+  },
+  "Abdul Rahman": {
+    "speaker": "Kabir",
+    "description": "a sociable Indian merchant man, warm and confident, talking with another seller",
+    "approved": false,
+    "delivery_presets": {
+      "Natural Conversational": {
+        "description": "a sociable Indian merchant man, warm and confident, talking with another seller",
+        "mood": "friendly",
+        "pace": "moderate",
+        "expression": "moderate"
+      },
+      "Lively Negotiation": {
+        "description": "a sociable Indian merchant man, warm and confident, talking with another seller; the exchange is lively and persuasive",
+        "mood": "persuasive",
+        "pace": "brisk",
+        "expression": "high"
+      },
+      "Brisk Conversational": {
+        "description": "a sociable Indian merchant man, warm and confident, talking with another seller; the rhythm is brisk and conversational",
+        "mood": "neutral",
+        "pace": "brisk",
+        "expression": "moderate"
+      }
+    }
+  },
+  "Francisco": {
+    "speaker": "Thoma",
+    "description": "an expressive adult male merchant, alert and persuasive in a lively conversation",
+    "approved": false
+  },
+  "Father Penteado": {
+    "speaker": "Raghav",
+    "description": "a mature adult man, calm and thoughtful, speaking fluently in a conversation",
+    "approved": false
+  }
+}

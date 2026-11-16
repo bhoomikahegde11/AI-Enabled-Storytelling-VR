@@ -1,0 +1,739 @@
+diff --git a/unity/StorytellingVR/Assets/_Project/Scripts/Level1/NpcVoicePresentation.cs b/unity/StorytellingVR/Assets/_Project/Scripts/Level1/NpcVoicePresentation.cs
+--- a/unity/StorytellingVR/Assets/_Project/Scripts/Level1/NpcVoicePresentation.cs
++++ b/unity/StorytellingVR/Assets/_Project/Scripts/Level1/NpcVoicePresentation.cs
+@@ -41,12 +41,20 @@
+     public bool requiresAgreement, requiresSettlement, conditionalCounter;
+     public NpcVoiceOperation[] operations;
+ }
++[Serializable] public sealed class NpcVoiceProcessing
++{
++    public const string IndianOfflineVersion = "indian-hysteresis-zero-number-v1";
++    public string assemblyVersion;
++    public float defaultGapMs, numberGapMs, quantityGapMs, numberPaddingMs, numberCrossfadeMs;
++}
+ [Serializable] public sealed class NpcVoiceBankData
+ {
+     public string characterId;
+     public int sampleRate;
+     public NpcVoiceTemplate[] templates;
+     public NpcVoicePair[] numbers, spices, descriptors, units, aliases;
++    public NpcVoicePair[] numberPhrases, quantityPhrases;
++    public NpcVoiceProcessing processing;
+     public string[] edgeGuardClipIds;
+     public string quantityFallback;
+     public string holdTemplateId;
+@@ -61,6 +69,8 @@
+     public int SampleRate { get; internal set; }
+     public readonly List<string> ClipIds = new List<string>();
+     public readonly List<float> GapSeconds = new List<float>();
++    public bool PreserveOriginalSubtitle { get; internal set; }
++    internal bool PreviousNumeric;
+     internal string PreviousPiece = "";
+ 
+     public float[] AssembleSamples(IList<float[]> pieces)
+@@ -98,7 +108,8 @@
+ {
+     private readonly NpcVoiceBankData bank;
+     private readonly Dictionary<string, NpcVoiceTemplate> templates = new Dictionary<string, NpcVoiceTemplate>();
+-    private readonly Dictionary<string, string> numbers, spices, descriptors, units, aliases;
++    private readonly Dictionary<string, string> numbers, spices, descriptors, units, aliases, numberPhrases, quantityPhrases;
++    private readonly bool useOfflineEdges;
+     private readonly Dictionary<string, string> descriptorText = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+     private readonly HashSet<string> edgeGuards;
+     private static readonly Regex Fields = new Regex(@"\{([^{}]+)\}");
+@@ -112,6 +123,13 @@
+         foreach (var template in bank.templates) templates.Add(template.id, template);
+         numbers = Index(bank.numbers); spices = Index(bank.spices); descriptors = Index(bank.descriptors);
+         units = Index(bank.units); aliases = Index(bank.aliases);
++        useOfflineEdges = bank.processing?.assemblyVersion == NpcVoiceProcessing.IndianOfflineVersion;
++        numberPhrases = Index(bank.numberPhrases); quantityPhrases = Index(bank.quantityPhrases);
++        if (useOfflineEdges && (bank.processing.numberGapMs != 0 ||
++            bank.processing.quantityGapMs != 0 || bank.processing.numberPaddingMs != 0 ||
++            bank.processing.numberCrossfadeMs != 0 || float.IsNaN(bank.processing.defaultGapMs) ||
++            bank.processing.defaultGapMs < 0 || bank.processing.defaultGapMs > 100))
++            throw new ArgumentException("Unsupported offline voice processing settings");
+         foreach (var entry in bank.descriptors) descriptorText.Add(entry.key, entry.text);
+         edgeGuards = new HashSet<string>(bank.edgeGuardClipIds ?? new string[0]);
+     }
+@@ -151,7 +169,8 @@
+             if (selected == null) selected = FindExactFallback(request.OriginalText, values);
+             if (selected == null) throw new ArgumentException("No exact selected dialogue mapping");
+             var result = new NpcVoicePlan { CharacterId = bank.characterId, DialogueId = selected.id,
+-                InteractionId = request.InteractionId, TurnId = request.TurnId, SampleRate = bank.sampleRate };
++                InteractionId = request.InteractionId, TurnId = request.TurnId, SampleRate = bank.sampleRate,
++                PreserveOriginalSubtitle = useOfflineEdges };
+             var text = new StringBuilder();
+             Append(selected, request, values, result, text, 0);
+             result.Text = text.ToString().Trim();
+@@ -213,6 +232,8 @@
+         }
+         if (t.conditionalCounter && Number("updatedOffer", values) <= Number("previousOffer", values))
+         {
++            if (useOfflineEdges)
++                throw new ArgumentException("Counter speech would disagree with the unchanged subtitle");
+             values["counterPrice"] = Number("updatedOffer", values).ToString(CultureInfo.InvariantCulture);
+             Append(templates[bank.holdTemplateId], request, values, plan, text, depth + 1); return;
+         }
+@@ -244,14 +265,27 @@
+             if (name == "quantityLabel" || name == "brainQuantityLabel" || name == "acceptedQuantityLabel")
+             {
+                 string label = Required(values, name);
+-                if (label == "this lot") { AddClip(plan, bank.quantityFallback, false, label); text.Append(label); continue; }
++                if (label == "this lot") { AddClip(plan, bank.quantityFallback, false, label, numeric: true); text.Append(label); continue; }
+                 var match = Regex.Match(label, @"^\s*(\d+)\s+(Palams?|Seers?|Veesai|Manangus?|Bahars?)(?:\s*\(~\s*\d+(?:\.\d+)?\s*(?:g|kg)\))?\s*$", RegexOptions.IgnoreCase);
+                 int count;
+                 if (!match.Success || !int.TryParse(match.Groups[1].Value, out count) || count <= 0) throw new ArgumentException("Unsupported traditional quantity " + label);
+                 string unit = match.Groups[2].Value;
+                 foreach (var singular in new[] { "Palam", "Seer", "Manangu", "Bahar" })
+                     if ((unit.Equals(singular, StringComparison.OrdinalIgnoreCase) && count != 1) || (unit.Equals(singular + "s", StringComparison.OrdinalIgnoreCase) && count == 1)) throw new ArgumentException("Noncanonical quantity unit");
+-                AppendNumber(count, plan, text); text.Append(' '); AddClip(plan, units[unit], false, unit); text.Append(unit); continue;
++                string quantityPhrase = string.Join(" ", NumberWords(count)) + " " + unit;
++                if (useOfflineEdges && quantityPhrases.TryGetValue(quantityPhrase, out string quantityClip))
++                {
++                    AddClip(plan, quantityClip, false, quantityPhrase, numeric: true);
++                    text.Append(quantityPhrase);
++                }
++                else
++                {
++                    AppendNumber(count, plan, text);
++                    text.Append(' ');
++                    AddClip(plan, units[unit], false, unit, numeric: true);
++                    text.Append(unit);
++                }
++                continue;
+             }
+             if (name == "spiceName" || name == "acceptedSpiceName" || op.name == "spiceDescriptor")
+             {
+@@ -266,9 +300,21 @@
+     private void AppendNumber(int n, NpcVoicePlan plan, StringBuilder text)
+     {
+         var words = NumberWords(n);
+-        for (int i = 0; i < words.Count; i++) { if (i > 0) text.Append(' '); AddClip(plan, numbers[words[i]], i > 0, words[i]); text.Append(words[i]); }
+-    }
+-    private void AddClip(NpcVoicePlan plan, string id, bool numberJoin, string piece)
++        if (useOfflineEdges && numberPhrases.TryGetValue(n.ToString(CultureInfo.InvariantCulture), out string phraseClip))
++        {
++            string phrase = string.Join(" ", words);
++            AddClip(plan, phraseClip, false, phrase, numeric: true);
++            text.Append(phrase);
++            return;
++        }
++        for (int i = 0; i < words.Count; i++)
++        {
++            if (i > 0) text.Append(' ');
++            AddClip(plan, numbers[words[i]], i > 0, words[i], numeric: true);
++            text.Append(words[i]);
++        }
++    }
++    private void AddClip(NpcVoicePlan plan, string id, bool numberJoin, string piece, bool numeric = false)
+     {
+         if (string.IsNullOrEmpty(id)) throw new ArgumentException("Missing clip ID");
+         if (plan.ClipIds.Count > 0)
+@@ -277,9 +323,17 @@
+             if (Regex.IsMatch(plan.PreviousPiece, @"[.!?]\s*$") || Regex.IsMatch(piece ?? "", @"^\s*[.!?]")) gap = 0.055f;
+             else if (Regex.IsMatch(plan.PreviousPiece, @"[,;:]\s*$") || Regex.IsMatch(piece ?? "", @"^\s*[,;:]")) gap = 0.025f;
+             if (edgeGuards.Contains(id) || edgeGuards.Contains(plan.ClipIds[plan.ClipIds.Count - 1])) gap = Math.Max(gap, 0.015f);
++            if (useOfflineEdges)
++            {
++                gap = bank.processing.defaultGapMs / 1000f;
++                if (Regex.IsMatch(plan.PreviousPiece, @"[.!?]\s*$") || Regex.IsMatch(piece ?? "", @"^\s*[.!?]")) gap = Math.Max(gap, 0.055f);
++                else if (Regex.IsMatch(plan.PreviousPiece, @"[,;:]\s*$") || Regex.IsMatch(piece ?? "", @"^\s*[,;:]")) gap = Math.Max(gap, 0.025f);
++                if (plan.PreviousNumeric || numeric) gap = 0f;
++            }
+             plan.GapSeconds.Add(gap);
+         }
+         plan.ClipIds.Add(id);
+         plan.PreviousPiece = piece ?? "";
+-    }
+-}
++        plan.PreviousNumeric = numeric;
++    }
++}
+diff --git a/unity/StorytellingVR/Assets/_Project/Scripts/Level1/ChatManager.cs b/unity/StorytellingVR/Assets/_Project/Scripts/Level1/ChatManager.cs
+--- a/unity/StorytellingVR/Assets/_Project/Scripts/Level1/ChatManager.cs
++++ b/unity/StorytellingVR/Assets/_Project/Scripts/Level1/ChatManager.cs
+@@ -1142,7 +1142,7 @@
+     private void PresentNpcSubtitleAndTts(string speaker, string replyText, string characterId, NpcVoicePresentation presentation = null)
+     {
+         NpcVoicePlan voicePlan = audioManager != null ? audioManager.PrepareVoice(presentation?.ForTurn(InteractionId, TurnId)) : null;
+-        if (voicePlan != null)
++        if (voicePlan != null && !voicePlan.PreserveOriginalSubtitle)
+         {
+             replyText = voicePlan.Text; // One exact plan supplies both subtitles and the recorded utterance.
+             if (npcText != null) npcText.text = replyText;
+diff --git a/unity/StorytellingVR/Assets/_Project/Scripts/Editor/IndianNpcVoicePackage.cs b/unity/StorytellingVR/Assets/_Project/Scripts/Editor/IndianNpcVoicePackage.cs
+new file mode 100644
+--- /dev/null
++++ b/unity/StorytellingVR/Assets/_Project/Scripts/Editor/IndianNpcVoicePackage.cs
+@@ -0,0 +1,245 @@
++using System;
++using System.Collections.Generic;
++using System.IO;
++using System.Linq;
++using System.Security.Cryptography;
++using System.Text;
++using System.Text.RegularExpressions;
++using UnityEngine;
++
++// Read-only preflight. The Editor importer performs asset writes only after this returns.
++public sealed class IndianNpcVoicePackage
++{
++    [Serializable] public sealed class Clip
++    {
++        public string clipId, relativeWavPath, sha256, text;
++    }
++    [Serializable] private sealed class ClipIndex { public Clip[] clips; }
++    [Serializable] private sealed class Coverage
++    {
++        public string character_id, speaker;
++        public bool ready_for_import_review;
++        public int required, wav_count, failures, pending, mapping_count, required_mapping_count;
++        public string[] missing_vocabulary;
++    }
++    [Serializable] private sealed class Validation
++    {
++        public string character, speaker;
++        public bool production_complete;
++        public int tested_signals, mapping_count;
++        public string[] missing_assets, declared_missing_vocabulary;
++    }
++    [Serializable] private sealed class Manifest
++    {
++        public int version;
++        public string character_id;
++        public Voice voice;
++        public Recording[] recordings;
++        public Template[] templates;
++        public string[] missing_template_ids;
++    }
++    [Serializable] private sealed class Voice { public string character_id, speaker; }
++    [Serializable] private sealed class Recording
++    {
++        public string id, speaker, spoken_text, wav_path, wav_sha256, status;
++        public int sample_rate, channels;
++    }
++    [Serializable] private sealed class Template
++    {
++        public string id, category, scenario, source_expression_template, spoken_template;
++        public bool requiresAgreement, requiresSettlement, conditionalCounter;
++        public Operation[] operations;
++    }
++    [Serializable] private sealed class Operation
++    {
++        public string kind, id, singular_id, price_slot, name, source_piece, text;
++    }
++
++    private static readonly Dictionary<string, string> Speakers = new Dictionary<string, string>(StringComparer.Ordinal) {
++        { "lakshmi_amma", "Swapna" }, { "chinnamma_naik", "Priya" },
++        { "abdul_rahman", "Kabir" }, { "saraswati_chetti", "Mary" }
++    };
++    private static readonly Regex SafeId = new Regex(@"\A[A-Za-z0-9_-]+\z");
++    private static readonly Regex Sha256 = new Regex(@"\A[0-9a-fA-F]{64}\z");
++    public string DirectoryPath { get; private set; }
++    public string BankJson { get; private set; }
++    public NpcVoiceBankData Bank { get; private set; }
++    public Clip[] Clips { get; private set; }
++    public string SourcePath(Clip clip) => Path.Combine(DirectoryPath, clip.relativeWavPath);
++
++    public static IndianNpcVoicePackage Read(string directory)
++    {
++        var root = Path.GetFullPath(directory);
++        var bankJson = File.ReadAllText(Path.Combine(root, "UnityVoiceBank.json"));
++        var bank = JsonUtility.FromJson<NpcVoiceBankData>(bankJson);
++        Check(bank != null && Speakers.TryGetValue(bank.characterId ?? "", out _), "Unexpected Indian character ID");
++        string speaker = Speakers[bank.characterId];
++        var coverage = ReadJson<Coverage>(root, "coverage_report.json");
++        var validation = ReadJson<Validation>(root, "production_validation.json");
++        Check(coverage.character_id == bank.characterId && validation.character == bank.characterId &&
++            coverage.speaker == speaker && validation.speaker == speaker, "Report identity does not match bank");
++        Check(coverage.ready_for_import_review && coverage.pending == 0 && coverage.failures == 0 &&
++            Empty(coverage.missing_vocabulary) && validation.production_complete &&
++            Empty(validation.missing_assets) && Empty(validation.declared_missing_vocabulary), "Package is incomplete or failed validation");
++        var manifest = ReadJson<Manifest>(root, "mapping_manifest.json");
++        Check(manifest.version == 1 && manifest.character_id == bank.characterId && manifest.voice != null &&
++            manifest.voice.character_id == bank.characterId && manifest.voice.speaker == speaker &&
++            Empty(manifest.missing_template_ids), "Manifest identity or coverage differs from the bank");
++        var catalog = File.ReadAllText(Path.Combine(root, "UnityVoiceClips.json")).Trim();
++        Check(catalog.StartsWith("[", StringComparison.Ordinal) && catalog.EndsWith("]", StringComparison.Ordinal), "Expected a clip index array");
++        var clips = JsonUtility.FromJson<ClipIndex>("{\"clips\":" + catalog + "}").clips;
++        Check(clips != null && clips.Length > 0 && coverage.required == clips.Length && coverage.wav_count == clips.Length &&
++            validation.tested_signals == clips.Length && manifest.recordings != null && manifest.recordings.Length == clips.Length,
++            "Clip counts do not agree with completed reports");
++        Check(bank.templates != null && bank.templates.Length > 0 && manifest.templates != null &&
++            manifest.templates.Length == bank.templates.Length && coverage.mapping_count == bank.templates.Length &&
++            coverage.required_mapping_count == bank.templates.Length && validation.mapping_count == bank.templates.Length,
++            "Template counts do not agree with completed reports");
++        Check(bank.sampleRate == 44100 && bank.processing?.assemblyVersion == NpcVoiceProcessing.IndianOfflineVersion,
++            "Expected a native 44.1 kHz Indian bank with offline edge processing");
++
++        var indexed = new Dictionary<string, Clip>(StringComparer.OrdinalIgnoreCase);
++        var records = manifest.recordings.ToDictionary(x => x.id, StringComparer.Ordinal);
++        foreach (var clip in clips)
++        {
++            Check(clip != null && SafeId.IsMatch(clip.clipId ?? "") && Sha256.IsMatch(clip.sha256 ?? "") &&
++                clip.relativeWavPath == "audio/" + clip.clipId + ".wav" && !string.IsNullOrWhiteSpace(clip.text), "Malformed clip index row");
++            Check(!indexed.ContainsKey(clip.clipId), "Duplicate clip ID " + clip.clipId);
++            indexed.Add(clip.clipId, clip);
++            Check(records.TryGetValue(clip.clipId, out var record) && record.speaker == speaker &&
++                record.spoken_text == clip.text && record.wav_path == clip.relativeWavPath && record.wav_sha256 == clip.sha256 &&
++                record.status == "VALIDATED" && record.sample_rate == bank.sampleRate && record.channels == 1,
++                "Clip differs from validated manifest: " + clip.clipId);
++        }
++
++        ValidateMappings(bank, manifest.templates, indexed);
++        foreach (var clip in clips)
++        {
++            string path = Path.Combine(root, clip.relativeWavPath);
++            Check(File.Exists(path), "Missing processed WAV: " + clip.relativeWavPath);
++            Check(string.Equals(Hash(path), clip.sha256, StringComparison.OrdinalIgnoreCase), "WAV checksum mismatch: " + clip.relativeWavPath);
++            VerifyWav(path, bank.sampleRate);
++        }
++        return new IndianNpcVoicePackage { DirectoryPath = root, BankJson = bankJson, Bank = bank, Clips = clips };
++    }
++
++    private static void ValidateMappings(NpcVoiceBankData bank, Template[] manifest, Dictionary<string, Clip> indexed)
++    {
++        new NpcVoicePlanner(bank); // Also checks the runtime processing contract and duplicate keys.
++        void HasClip(string id)
++        {
++            Check(!string.IsNullOrEmpty(id) && indexed.TryGetValue(id, out var clip) && clip.clipId == id, "Unknown clip reference: " + id);
++        }
++        void Vocabulary(NpcVoicePair[] pairs, IEnumerable<string> required)
++        {
++            Check(pairs != null, "Missing vocabulary group");
++            foreach (var entry in pairs) HasClip(entry.id);
++            Check(required.All(key => pairs.Any(pair => pair.key == key)), "Required vocabulary is incomplete");
++        }
++
++        var scales = new[] { 100, 101, 1000, 1000000, 1000000000 };
++        Vocabulary(bank.numbers, Enumerable.Range(0, 100).Concat(scales).SelectMany(NpcVoicePlanner.NumberWords).Distinct());
++        Vocabulary(bank.numberPhrases, new[] { "1", "234", "999" });
++        foreach (var phrase in bank.numberPhrases)
++        {
++            Check(int.TryParse(phrase.key, System.Globalization.NumberStyles.None,
++                System.Globalization.CultureInfo.InvariantCulture, out var n), "Invalid number phrase key: " + phrase.key);
++            Check(SpokenKey(indexed[phrase.id].text) == SpokenKey(string.Join(" ", NpcVoicePlanner.NumberWords(n))),
++                "Number phrase text does not match the key: " + phrase.key);
++        }
++        Vocabulary(bank.units, "Palam Palams Seer Seers Veesai Manangu Manangus Bahar Bahars".Split(' '));
++        Vocabulary(bank.quantityPhrases, new[] { "one Seer", "two Seers", "one Veesai", "two Veesai" });
++        foreach (var phrase in bank.quantityPhrases)
++            Check(SpokenKey(phrase.key) == SpokenKey(indexed[phrase.id].text), "Quantity phrase text does not match the key: " + phrase.key);
++        Vocabulary(bank.spices, new[] { "pepper", "cinnamon", "cardamom" });
++        Vocabulary(bank.descriptors, new[] { "pepper", "cinnamon", "cardamom" });
++        foreach (var pair in bank.numbers.Concat(bank.units).Concat(bank.spices))
++            Check(SpokenKey(pair.key) == SpokenKey(indexed[pair.id].text), "Vocabulary text differs from key: " + pair.key);
++        foreach (var descriptor in bank.descriptors)
++            Check(descriptor.text == indexed[descriptor.id].text, "Spice descriptor differs from clip text: " + descriptor.key);
++        HasClip(bank.quantityFallback);
++        Check(SpokenKey(indexed[bank.quantityFallback].text) == "this lot", "Wrong quantity fallback");
++        var byId = manifest.ToDictionary(x => x.id, StringComparer.Ordinal);
++        var authored = new HashSet<(string, string)>();
++        foreach (var line in bank.templates)
++        {
++            Check(!string.IsNullOrWhiteSpace(line.id) && !string.IsNullOrWhiteSpace(line.scenario) &&
++                !string.IsNullOrWhiteSpace(line.sourceTemplate) && (line.category == "AUTHORED" || line.category == "FALLBACK"),
++                "Invalid dialogue row");
++            Check(byId.TryGetValue(line.id, out var m) && m.category == line.category && m.scenario == line.scenario &&
++                m.source_expression_template == line.sourceTemplate && m.spoken_template == line.spokenTemplate &&
++                m.requiresAgreement == line.requiresAgreement && m.requiresSettlement == line.requiresSettlement &&
++                m.conditionalCounter == line.conditionalCounter && line.operations != null && line.operations.Length > 0 &&
++                m.operations != null && line.operations.Length == m.operations.Length, "Dialogue differs from manifest: " + line.id);
++            if (line.category == "AUTHORED")
++                Check(authored.Add((line.scenario, line.sourceTemplate)), "Duplicate authored selection key: " + line.id);
++            for (int i = 0; i < line.operations.Length; i++)
++            {
++                var op = line.operations[i];
++                var expected = m.operations[i];
++                Check(op != null && expected != null && op.kind == expected.kind && Same(op.id, expected.id) &&
++                    Same(op.singularId, expected.singular_id) && Same(op.priceSlot, expected.price_slot) &&
++                    Same(op.name, expected.name) && Same(op.sourcePiece, expected.source_piece) && Same(op.text, expected.text),
++                    "Segment differs from manifest: " + line.id);
++                switch (op.kind)
++                {
++                    case "VALUE": Check(!string.IsNullOrEmpty(op.name), "Empty value slot: " + line.id); break;
++                    case "PUNCTUATION": Check(!string.IsNullOrEmpty(op.text), "Empty punctuation: " + line.id); break;
++                    case "CLIP": HasClip(op.id); break;
++                    case "CURRENCY_CLIP":
++                        HasClip(op.id); HasClip(op.singularId);
++                        Check(!string.IsNullOrEmpty(op.priceSlot), "Unbound currency: " + line.id);
++                        break;
++                    default: throw new InvalidDataException("Unknown Indian segment kind " + op.kind);
++                }
++            }
++        }
++        Check(bank.templates.Any(t => t.id == bank.holdTemplateId && t.scenario == "BuyerHoldsFirm"), "Missing HOLD mapping");
++    }
++
++    public static string Hash(string path)
++    {
++        using (var stream = File.OpenRead(path))
++        using (var sha = SHA256.Create())
++            return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
++    }
++
++    public static void VerifyWav(string path, int rate)
++    {
++        using (var stream = File.OpenRead(path))
++        using (var reader = new BinaryReader(stream, Encoding.ASCII))
++        {
++            string Tag() => Encoding.ASCII.GetString(reader.ReadBytes(4));
++            Check(Tag() == "RIFF" && reader.ReadUInt32() + 8L == stream.Length && Tag() == "WAVE", "Invalid WAV header: " + path);
++            bool format = false, data = false;
++            while (stream.Position + 8 <= stream.Length)
++            {
++                string tag = Tag();
++                uint size = reader.ReadUInt32();
++                long end = stream.Position + size + (size & 1);
++                Check(end <= stream.Length, "Truncated WAV chunk: " + path);
++                if (tag == "fmt ")
++                {
++                    Check(!format && size >= 16 && reader.ReadUInt16() == 1 && reader.ReadUInt16() == 1 &&
++                        reader.ReadUInt32() == rate && reader.ReadUInt32() == rate * 3 &&
++                        reader.ReadUInt16() == 3 && reader.ReadUInt16() == 24, "Expected native mono PCM-24: " + path);
++                    format = true;
++                }
++                if (tag == "data")
++                {
++                    Check(!data && size > 0 && size % 3 == 0, "Invalid or empty WAV samples: " + path);
++                    data = true;
++                }
++                stream.Position = end;
++            }
++            Check(format && data && stream.Position == stream.Length, "Incomplete WAV: " + path);
++        }
++    }
++
++    private static T ReadJson<T>(string root, string file) where T : class =>
++        JsonUtility.FromJson<T>(File.ReadAllText(Path.Combine(root, file))) ?? throw new InvalidDataException("Invalid JSON: " + file);
++    private static bool Empty(string[] values) => values != null && values.Length == 0;
++    private static bool Same(string a, string b) => (a ?? "") == (b ?? "");
++    private static string SpokenKey(string value) => Regex.Replace(value.ToLowerInvariant().Replace('-', ' '), @"\s+", " ").Trim();
++    private static void Check(bool condition, string message) { if (!condition) throw new InvalidDataException(message); }
++}
+diff --git a/unity/StorytellingVR/Assets/_Project/Scripts/Editor/IndianNpcVoicePackageImporter.cs b/unity/StorytellingVR/Assets/_Project/Scripts/Editor/IndianNpcVoicePackageImporter.cs
+new file mode 100644
+--- /dev/null
++++ b/unity/StorytellingVR/Assets/_Project/Scripts/Editor/IndianNpcVoicePackageImporter.cs
+@@ -0,0 +1,188 @@
++using System;
++using System.IO;
++using System.Linq;
++using UnityEditor;
++using UnityEditor.SceneManagement;
++using UnityEngine;
++using UnityEngine.SceneManagement;
++
++public static class IndianNpcVoicePackageImporter
++{
++    private const string ScenePath = "Assets/_Project/Scenes/CompleteFlowWithFinalScenes/Level1_MainLoopUpdated.unity";
++    private const string Root = "Assets/_Project/Audio/NPCVoices/Level1/IndianProduction";
++
++    [MenuItem("Tools/Anubhava/Import Completed Indian NPC Voice Package")]
++    private static void ImportFromMenu()
++    {
++        string directory = EditorUtility.OpenFolderPanel("Select one completed Indian NPC voice package", "", "");
++        if (string.IsNullOrEmpty(directory))
++            return;
++        try
++        {
++            string result = Import(directory);
++            EditorUtility.DisplayDialog("NPC voice import", result + "\nSave Level1_MainLoopUpdated to keep its registration.", "OK");
++        }
++        catch (Exception e)
++        {
++            Debug.LogException(e);
++            EditorUtility.DisplayDialog("NPC voice import stopped", e.Message, "OK");
++        }
++    }
++
++    public static string Import(string directory)
++    {
++        var scene = SceneManager.GetActiveScene();
++        if (EditorApplication.isPlayingOrWillChangePlaymode || scene.path != ScenePath)
++            throw new InvalidOperationException("Open Level1_MainLoopUpdated as the active scene in Edit Mode first.");
++        var provider = scene.GetRootGameObjects()
++            .SelectMany(root => root.GetComponentsInChildren<AudioManager>(true))
++            .Select(manager => manager.prerecordedNpcProvider)
++            .OfType<PreRecordedNpcTtsProvider>().Distinct().SingleOrDefault();
++        if (provider == null || provider.audioSource == null || !provider.enabled || provider.gameObject.scene != scene)
++            throw new InvalidOperationException("Could not find the configured Level 1 prerecorded provider and its BuyerNPC AudioSource.");
++
++        EditorUtility.DisplayProgressBar("NPC voice import", "Checking final reports, clip hashes and mappings", 0);
++        try
++        {
++            var package = IndianNpcVoicePackage.Read(directory);
++            return ImportValidated(package, provider);
++        }
++        finally { EditorUtility.ClearProgressBar(); }
++    }
++
++    private static string ImportValidated(IndianNpcVoicePackage package, PreRecordedNpcTtsProvider provider)
++    {
++        string character = package.Bank.characterId;
++        string folder = Root + "/" + character;
++        string bankPath = folder + "/VoiceBank.json";
++        string dbPath = folder + "/VoiceDatabase.asset";
++        string audioFolder = folder + "/Audio";
++        var banks = provider.characterBanks ?? Array.Empty<PreRecordedNpcTtsProvider.CharacterVoiceBank>();
++        var existing = banks.Where(x => x != null && x.characterId == character).SingleOrDefault();
++        if (existing != null && (AssetDatabase.GetAssetPath(existing.mapping) != bankPath ||
++                                 AssetDatabase.GetAssetPath(existing.clips) != dbPath))
++            throw new InvalidOperationException("This character already uses a different voice bank. Resolve that registration in the Inspector first.");
++        if (File.Exists(bankPath) && File.ReadAllText(bankPath) != package.BankJson)
++            throw new IOException("A different imported mapping already exists at " + bankPath);
++        var database = AssetDatabase.LoadAssetAtPath<DialogueVoiceDatabase>(dbPath);
++        if (File.Exists(dbPath) && database == null)
++            throw new IOException("Another asset already exists at " + dbPath);
++        foreach (var clip in package.Clips)
++        {
++            string path = audioFolder + "/" + clip.clipId + ".wav";
++            if (File.Exists(path) && IndianNpcVoicePackage.Hash(path) != clip.sha256.ToLowerInvariant())
++                throw new IOException("A different recording already exists at " + path);
++        }
++
++        EnsureFolder(audioFolder);
++        AssetDatabase.StartAssetEditing();
++        try
++        {
++            for (int i = 0; i < package.Clips.Length; i++)
++            {
++                var clip = package.Clips[i];
++                string path = audioFolder + "/" + clip.clipId + ".wav";
++                EditorUtility.DisplayProgressBar("NPC voice import", "Copying " + character, (float)i / package.Clips.Length);
++                if (!File.Exists(path))
++                {
++                    File.Copy(package.SourcePath(clip), path);
++                    if (IndianNpcVoicePackage.Hash(path) != clip.sha256.ToLowerInvariant())
++                    {
++                        File.Delete(path);
++                        throw new IOException("Package WAV changed while copying: " + clip.relativeWavPath);
++                    }
++                }
++                if (AssetImporter.GetAtPath(path) == null)
++                    AssetDatabase.ImportAsset(path);
++            }
++            if (!File.Exists(bankPath))
++            {
++                File.WriteAllText(bankPath, package.BankJson);
++                AssetDatabase.ImportAsset(bankPath);
++            }
++        }
++        finally { AssetDatabase.StopAssetEditing(); }
++
++        var imported = new AudioClip[package.Clips.Length];
++        for (int i = 0; i < imported.Length; i++)
++        {
++            var clip = package.Clips[i];
++            string path = audioFolder + "/" + clip.clipId + ".wav";
++            var importer = AssetImporter.GetAtPath(path) as AudioImporter;
++            if (importer == null)
++                throw new IOException("Unity did not create an audio importer for " + path);
++            EditorUtility.DisplayProgressBar("NPC voice import", "Configuring " + character, (float)i / imported.Length);
++            ConfigureAudio(importer);
++            imported[i] = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
++            if (imported[i] == null || imported[i].channels != 1 || imported[i].frequency != package.Bank.sampleRate)
++                throw new IOException("Imported clip format mismatch at " + path);
++        }
++        var mapping = AssetDatabase.LoadAssetAtPath<TextAsset>(bankPath);
++        if (mapping == null)
++            throw new IOException("Unity did not import the voice mapping");
++        if (database == null)
++        {
++            database = ScriptableObject.CreateInstance<DialogueVoiceDatabase>();
++            AssetDatabase.CreateAsset(database, dbPath);
++        }
++        var db = new SerializedObject(database);
++        var entries = db.FindProperty("entries");
++        entries.arraySize = imported.Length;
++        for (int i = 0; i < imported.Length; i++)
++        {
++            var entry = entries.GetArrayElementAtIndex(i);
++            entry.FindPropertyRelative("lineId").stringValue = package.Clips[i].clipId;
++            entry.FindPropertyRelative("audioClip").objectReferenceValue = imported[i];
++            entry.FindPropertyRelative("description").stringValue = package.Clips[i].text;
++        }
++        db.ApplyModifiedPropertiesWithoutUndo();
++        EditorUtility.SetDirty(database);
++        AssetDatabase.SaveAssetIfDirty(database);
++
++        if (existing == null)
++        {
++            Undo.RecordObject(provider, "Register NPC voice bank");
++            provider.characterBanks = banks.Concat(new[] { new PreRecordedNpcTtsProvider.CharacterVoiceBank
++            {
++                characterId = character, mapping = mapping, clips = database,
++                overrideAudibility = true, voiceVolume = 1f, minimumVoiceDistance = 4f
++            }}).ToArray();
++            EditorUtility.SetDirty(provider);
++            EditorSceneManager.MarkSceneDirty(provider.gameObject.scene);
++        }
++        return $"Imported {package.Clips.Length} clips for {character}.";
++    }
++
++    private static void ConfigureAudio(AudioImporter importer)
++    {
++        bool Matches(AudioImporterSampleSettings settings) => settings.loadType == AudioClipLoadType.DecompressOnLoad &&
++            settings.sampleRateSetting == AudioSampleRateSetting.PreserveSampleRate &&
++            settings.compressionFormat == AudioCompressionFormat.PCM && !settings.preloadAudioData;
++        if (Matches(importer.defaultSampleSettings) && importer.ContainsSampleSettingsOverride("Android") &&
++            Matches(importer.GetOverrideSampleSettings("Android")) && !importer.forceToMono &&
++            !importer.ambisonic && importer.loadInBackground)
++            return;
++        var settings = importer.defaultSampleSettings;
++        settings.loadType = AudioClipLoadType.DecompressOnLoad;
++        settings.sampleRateSetting = AudioSampleRateSetting.PreserveSampleRate;
++        settings.compressionFormat = AudioCompressionFormat.PCM;
++        settings.preloadAudioData = false;
++        importer.defaultSampleSettings = settings;
++        if (!importer.SetOverrideSampleSettings("Android", settings))
++            throw new IOException("Unity rejected Android audio import settings for " + importer.assetPath);
++        importer.forceToMono = false; // WAVs are already mono. Force-to-mono can normalize imported audio.
++        importer.loadInBackground = true;
++        importer.ambisonic = false;
++        importer.SaveAndReimport();
++    }
++
++    private static void EnsureFolder(string path)
++    {
++        if (AssetDatabase.IsValidFolder(path))
++            return;
++        int slash = path.LastIndexOf('/');
++        string parent = path.Substring(0, slash);
++        EnsureFolder(parent);
++        AssetDatabase.CreateFolder(parent, path.Substring(slash + 1));
++    }
++}
+diff --git a/unity/StorytellingVR/Assets/_Project/Scripts/Editor/NegotiationTests/IndianNpcVoiceIntegrationTests.cs b/unity/StorytellingVR/Assets/_Project/Scripts/Editor/NegotiationTests/IndianNpcVoiceIntegrationTests.cs
+new file mode 100644
+--- /dev/null
++++ b/unity/StorytellingVR/Assets/_Project/Scripts/Editor/NegotiationTests/IndianNpcVoiceIntegrationTests.cs
+@@ -0,0 +1,128 @@
++using System.Collections.Generic;
++using System.Linq;
++using System.Reflection;
++using NUnit.Framework;
++using UnityEditor;
++using UnityEngine;
++
++public class IndianNpcVoiceIntegrationTests
++{
++    private static NpcVoicePair Pair(string key, string id) => new NpcVoicePair { key = key, id = id };
++    private static NpcVoiceBankData Bank(string character, bool offline = true) => new NpcVoiceBankData
++    {
++        characterId = character, sampleRate = 44100,
++        processing = offline ? new NpcVoiceProcessing { assemblyVersion = NpcVoiceProcessing.IndianOfflineVersion, defaultGapMs = 60f } : null,
++        numbers = new[] { Pair("one", "one"), Pair("two", "two"), Pair("thousand", "thousand"),
++            Pair("hundred", "hundred"), Pair("and", "and"), Pair("thirty", "thirty"), Pair("four", "four") },
++        numberPhrases = new[] { Pair("234", "price234") },
++        quantityPhrases = new[] { Pair("two Seers", "twoSeers") },
++        units = new[] { Pair("Seers", "seers") },
++        spices = new[] { Pair("pepper", "pepper") },
++        descriptors = new NpcVoicePair[0],
++        templates = new[] {
++            new NpcVoiceTemplate { id = "same", scenario = "BuyerCounterFirst", category = "AUTHORED",
++                sourceTemplate = "At {price} varahas for {quantityLabel} of {spiceName}.",
++                operations = new[] {
++                    new NpcVoiceOperation { kind = "CLIP", id = "start", sourcePiece = "At " },
++                    new NpcVoiceOperation { kind = "VALUE", name = "price" },
++                    new NpcVoiceOperation { kind = "CURRENCY_CLIP", id = "plural", singularId = "singular", priceSlot = "price", sourcePiece = " varahas for " },
++                    new NpcVoiceOperation { kind = "VALUE", name = "quantityLabel" },
++                    new NpcVoiceOperation { kind = "CLIP", id = "of", sourcePiece = " of " },
++                    new NpcVoiceOperation { kind = "VALUE", name = "spiceName" },
++                    new NpcVoiceOperation { kind = "PUNCTUATION", text = "." }
++                }
++            },
++            new NpcVoiceTemplate { id = "fixed", scenario = "AskName", category = "AUTHORED", sourceTemplate = "Welcome.",
++                operations = new[] { new NpcVoiceOperation { kind = "CLIP", id = "shared", sourcePiece = "Welcome." } } }
++        }
++    };
++
++    private static NpcVoicePresentation Request(NpcVoiceBankData bank, string price = "234", string quantity = "2 Seers (~560g)") =>
++        new NpcVoicePresentation(bank.characterId, bank.templates[0].scenario, bank.templates[0].sourceTemplate,
++            "Original subtitle", new Dictionary<string, string> { ["price"] = price, ["quantityLabel"] = quantity, ["spiceName"] = "pepper" });
++
++    [Test] public void WholeNumberAndQuantityPhrasesTakePriorityAndKeepZeroBoundaryGaps()
++    {
++        var bank = Bank("lakshmi_amma");
++        Assert.IsTrue(new NpcVoicePlanner(bank).TryPlan(Request(bank), out var plan, out var error), error);
++        CollectionAssert.AreEqual(new[] { "start", "price234", "plural", "twoSeers", "of", "pepper" }, plan.ClipIds);
++        CollectionAssert.AreEqual(new[] { 0f, 0f, 0f, 0f, .060f }, plan.GapSeconds);
++        Assert.IsTrue(plan.PreserveOriginalSubtitle);
++        Assert.AreEqual("At two hundred and thirty four varahas for two Seers of pepper.", plan.Text);
++        var pieces = plan.ClipIds.Select((clip, index) => new[] { .25f, index / 10f }).ToList();
++        var pcm = plan.AssembleSamples(pieces);
++        CollectionAssert.AreEqual(pieces.Take(5).SelectMany(p => p), pcm.Take(10));
++        CollectionAssert.AreEqual(pieces[5], pcm.Skip(pcm.Length - 2));
++    }
++
++    [Test] public void AbsentPhrasesUseExactGrammarAndHistoricalUnit()
++    {
++        var bank = Bank("saraswati_chetti");
++        bank.quantityPhrases = new NpcVoicePair[0];
++        var planner = new NpcVoicePlanner(bank);
++        Assert.IsTrue(planner.TryPlan(Request(bank, "1001"), out var big, out var error), error);
++        CollectionAssert.AreEqual(new[] { "start", "one", "thousand", "and", "one", "plural", "two", "seers", "of", "pepper" }, big.ClipIds);
++        Assert.AreEqual("At one thousand and one varahas for two Seers of pepper.", big.Text);
++        Assert.IsTrue(planner.TryPlan(Request(bank, "1"), out var small, out error), error);
++        Assert.AreEqual("singular", small.ClipIds[2]);
++        Assert.IsFalse(planner.TryPlan(Request(bank, "3000"), out _, out _), "No 'three' recording: fail closed.");
++        Assert.IsFalse(planner.TryPlan(Request(bank, "234", "1.5 Seers"), out _, out _));
++    }
++
++    [TestCase("father_penteado")]
++    [TestCase("francisco_de_almeida")]
++    public void LegacyBanksKeepNumberCompositionAndLegacySpacing(string character)
++    {
++        var bank = Bank(character, offline: false);
++        Assert.IsTrue(new NpcVoicePlanner(bank).TryPlan(Request(bank), out var plan, out var error), error);
++        CollectionAssert.AreEqual(new[] { "two", "hundred", "and", "thirty", "four" }, plan.ClipIds.Skip(1).Take(5));
++        Assert.AreEqual(.004f, plan.GapSeconds[0]);
++        Assert.AreEqual(.001f, plan.GapSeconds[1]);
++        Assert.IsFalse(plan.PreserveOriginalSubtitle);
++    }
++
++    [Test] public void SameClipIdIsResolvedInTheActiveBankAndMissingClipFailsClosed()
++    {
++        var host = new GameObject("Indian voice fixture");
++        var lak = ScriptableObject.CreateInstance<DialogueVoiceDatabase>();
++        var sar = ScriptableObject.CreateInstance<DialogueVoiceDatabase>();
++        var clip = AudioClip.Create("Lakshmi fixed", 16, 1, 44100, false);
++        var lakJson = new TextAsset(JsonUtility.ToJson(Bank("lakshmi_amma")));
++        var sarJson = new TextAsset(JsonUtility.ToJson(Bank("saraswati_chetti")));
++        // Recreate the database after serialization to exercise its actual lookup initialization.
++        var property = new SerializedObject(lak);
++        var entries = property.FindProperty("entries");
++        entries.arraySize = 1;
++        var entry = entries.GetArrayElementAtIndex(0);
++        entry.FindPropertyRelative("lineId").stringValue = "shared";
++        entry.FindPropertyRelative("audioClip").objectReferenceValue = clip;
++        property.ApplyModifiedPropertiesWithoutUndo();
++        typeof(DialogueVoiceDatabase).GetMethod("InitializeDictionary", BindingFlags.Instance | BindingFlags.NonPublic)
++            .Invoke(lak, null);
++        try
++        {
++            var provider = host.AddComponent<PreRecordedNpcTtsProvider>();
++            provider.characterBanks = new[] {
++                new PreRecordedNpcTtsProvider.CharacterVoiceBank { characterId = "lakshmi_amma", mapping = lakJson, clips = lak },
++                new PreRecordedNpcTtsProvider.CharacterVoiceBank { characterId = "saraswati_chetti", mapping = sarJson, clips = sar }
++            };
++            NpcVoicePresentation Fixed(string id) => new NpcVoicePresentation(id, "AskName", "Welcome.", "Welcome.", new Dictionary<string, string>());
++            Assert.IsTrue(provider.TryPrepare(Fixed("lakshmi_amma"), out var plan, out var error), error);
++            CollectionAssert.AreEqual(new[] { "shared" }, plan.ClipIds);
++            Assert.AreEqual("lakshmi_amma", plan.CharacterId);
++            Assert.IsFalse(provider.TryPrepare(Fixed("saraswati_chetti"), out var missing, out _));
++            Assert.IsNull(missing, "The other actor's clip must not be used.");
++            int callbacks = 0;
++            provider.PlaybackFailed += _ => callbacks++;
++            provider.StopSpeaking();
++            typeof(PreRecordedNpcTtsProvider).GetMethod("Fail", BindingFlags.Instance | BindingFlags.NonPublic)
++                .Invoke(provider, new object[] { "old cancelled load", 0 });
++            Assert.AreEqual(0, callbacks);
++            Assert.IsFalse(provider.IsBusy);
++        }
++        finally
++        {
++            foreach (var obj in new Object[] { host, lak, sar, clip, lakJson, sarJson }) Object.DestroyImmediate(obj);
++        }
++    }
++}

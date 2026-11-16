@@ -183,6 +183,7 @@ public class ChatManager : MonoBehaviour
     void Update()
     {
         if (PauseMenuController.GameplayInputBlocked) return;
+        if (!IsWaitingForPlayer) return;
         // Detect Enter / Return key press for confirmation
         if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
         {
@@ -195,7 +196,7 @@ public class ChatManager : MonoBehaviour
 
         if (useOfflineTypedInputFallback && inputField != null && !string.IsNullOrEmpty(inputField.text))
         {
-            if (OVRInput.GetDown(OVRInput.Button.One))
+            if (OVRInput.GetDown(OVRInput.RawButton.A))
             {
                 Debug.Log("[INPUT] Controller confirm triggered");
                 OnSend();
@@ -241,6 +242,11 @@ public class ChatManager : MonoBehaviour
             LocalGeneratedTradeSession localSession = hasPreparedLocalSession
                 ? preparedLocalSession
                 : Level1GameState.Instance.GenerateLocalSession();
+            if (localSession == null)
+            {
+                ResetConversationUI("No saleable stock remains. The market day will end when the timer runs out.");
+                return;
+            }
             negotiationStateManager.ResetState(localSession.startingOffer, localSession.buyerPatience);
             if (marketplaceManager != null)
             {
@@ -301,7 +307,8 @@ public class ChatManager : MonoBehaviour
                 null,
                 null,
                 Level1GameState.Instance.BuildCurrentTradeForHud(),
-                0)));
+                0,
+                dialogueTableResponseProvider.LastPresentation)));
             return;
         }
 
@@ -562,6 +569,7 @@ public void OnVoiceInput(string spokenText)
         int dialogueTurnId = ++localDialogueTurnId;
 
         string tableReplyText = fallbackReplyText;
+        NpcVoicePresentation voicePresentation = null;
         try
         {
             string resolvedReply = dialogueTableResponseProvider.GetReply(
@@ -569,6 +577,7 @@ public void OnVoiceInput(string spokenText)
                 trade,
                 brainResult,
                 negotiationStateManager.CurrentRound);
+            voicePresentation = dialogueTableResponseProvider.LastPresentation;
 
             if (!string.IsNullOrWhiteSpace(resolvedReply))
             {
@@ -626,7 +635,7 @@ public void OnVoiceInput(string spokenText)
         PresentNpcSubtitleAndTts(
             !string.IsNullOrEmpty(trade.buyerName) ? trade.buyerName : "Customer",
             brainResult.replyText,
-            DialogueCharacterRegistry.NormalizeCharacterId(trade.buyerName));
+            DialogueCharacterRegistry.NormalizeCharacterId(trade.buyerName), voicePresentation);
 
         if (useLocalLLMGeneration && !brainResult.isFinished && !DialogueTableResponseProvider.UsesAuthoredPresentation(trade))
         {
@@ -1002,7 +1011,7 @@ public void OnVoiceInput(string spokenText)
         }
     }
 
-    private IEnumerator FirstReplyIntroRoutine(string text, string audioUrl, int reputation, int totalVarahas, bool done, TransactionSummary transaction, Animator npcAnim, CurrentTrade currentTrade, int reputationDelta)
+    private IEnumerator FirstReplyIntroRoutine(string text, string audioUrl, int reputation, int totalVarahas, bool done, TransactionSummary transaction, Animator npcAnim, CurrentTrade currentTrade, int reputationDelta, NpcVoicePresentation voicePresentation = null)
     {
         // Stop browsing/thinking state and look at player when the response arrives
         if (feedbackManager != null)
@@ -1059,7 +1068,7 @@ public void OnVoiceInput(string spokenText)
 
         if (useLocalSessionGeneration || useLocalNpcBrain)
         {
-            PresentNpcSubtitleAndTts(bName, text, DialogueCharacterRegistry.NormalizeCharacterId(bName));
+            PresentNpcSubtitleAndTts(bName, text, DialogueCharacterRegistry.NormalizeCharacterId(bName), voicePresentation);
         }
         else
         {
@@ -1096,7 +1105,7 @@ public void OnVoiceInput(string spokenText)
         ResumeConversationUI(afterReminder);
     }
 
-    private bool TrySpeakNpcReply(string replyText, string characterId = "")
+    private bool TrySpeakNpcReply(string replyText, string characterId = "", NpcVoicePlan voicePlan = null)
     {
         if (!enableNpcTTS)
         {
@@ -1133,13 +1142,20 @@ public void OnVoiceInput(string spokenText)
         Level1DebugForceAccept.LogVerbose("[TTS] Speaking NPC reply: " + cleanedReplyText);
         Level1DebugForceAccept.LogVerbose("[TTS] Character: " + ttsCharacterId);
 
-        return audioManager.TrySpeakText(cleanedReplyText, ttsCharacterId);
+        return voicePlan != null ? audioManager.TrySpeakPresentation(voicePlan) : audioManager.TrySpeakText(cleanedReplyText, ttsCharacterId);
     }
 
-    private void PresentNpcSubtitleAndTts(string speaker, string replyText, string characterId)
+    private void PresentNpcSubtitleAndTts(string speaker, string replyText, string characterId, NpcVoicePresentation presentation = null)
     {
-        if (enableNpcTTS && audioManager != null && audioManager.localNpcTtsProvider != null &&
-            !(audioManager.localNpcTtsProvider is INpcTtsPlaybackAware))
+        NpcVoicePlan voicePlan = audioManager != null ? audioManager.PrepareVoice(presentation?.ForTurn(InteractionId, TurnId)) : null;
+        if (voicePlan != null && !voicePlan.PreserveOriginalSubtitle)
+        {
+            replyText = voicePlan.Text; // One exact plan supplies both subtitles and the recorded utterance.
+            if (npcText != null) npcText.text = replyText;
+        }
+        MonoBehaviour voiceProvider = audioManager != null ? audioManager.GetVoiceProvider(characterId) : null;
+        if (enableNpcTTS && audioManager != null && voiceProvider != null &&
+            !(voiceProvider is INpcTtsPlaybackAware))
         {
             // Android native TTS has no completion event. Keep the reply window closed briefly.
             npcPresentationUntil = PauseMenuController.GameplayUnscaledTime + Mathf.Clamp((replyText ?? string.Empty).Length / 15f, 1f, 6f);
@@ -1149,15 +1165,15 @@ public void OnVoiceInput(string spokenText)
         if (!enableNpcTTS || audioManager == null)
         {
             TriggerSubtitleDisplay(speaker, replyText);
-            TrySpeakNpcReply(replyText, characterId);
+            TrySpeakNpcReply(replyText, characterId, voicePlan);
             return;
         }
 
-        INpcTtsPlaybackAware playbackAwareProvider = audioManager.localNpcTtsProvider as INpcTtsPlaybackAware;
+        INpcTtsPlaybackAware playbackAwareProvider = voiceProvider as INpcTtsPlaybackAware;
         if (playbackAwareProvider == null)
         {
             TriggerSubtitleDisplay(speaker, replyText);
-            TrySpeakNpcReply(replyText, characterId);
+            TrySpeakNpcReply(replyText, characterId, voicePlan);
             return;
         }
 
@@ -1168,7 +1184,7 @@ public void OnVoiceInput(string spokenText)
         subscribedTtsPlaybackProvider.PlaybackStarted += OnNpcTtsPlaybackStarted;
         subscribedTtsPlaybackProvider.PlaybackFailed += OnNpcTtsPlaybackFailed;
 
-        bool ttsAccepted = TrySpeakNpcReply(replyText, characterId);
+        bool ttsAccepted = TrySpeakNpcReply(replyText, characterId, voicePlan);
         if (!ttsAccepted)
         {
             CleanupPendingTtsSubtitleWait();
@@ -1557,7 +1573,10 @@ public void OnVoiceInput(string spokenText)
             npcText.text = timeoutLine;
         }
 
-        PlayNegotiationIdleReminder(timeoutLine);
+        // ActiveTrade was cleared by settlement. Present the exact terminal selection
+        // with the departing customer, without reselecting through the empty session.
+        PresentNpcSubtitleAndTts(trade.buyerName, timeoutLine,
+            DialogueCharacterRegistry.NormalizeCharacterId(trade.buyerName), dialogueTableResponseProvider.LastPresentation);
 
         if (respectUIManager != null)
         {
@@ -1686,7 +1705,7 @@ public void OnVoiceInput(string spokenText)
         {
             if (npcText != null) npcText.text = completionLine;
             PresentNpcSubtitleAndTts(agreement.Source.buyerName, completionLine,
-                DialogueCharacterRegistry.NormalizeCharacterId(agreement.Source.buyerName));
+                DialogueCharacterRegistry.NormalizeCharacterId(agreement.Source.buyerName), dialogueTableResponseProvider.LastPresentation);
         }
 
         if (marketplaceManager != null)
@@ -1764,7 +1783,7 @@ public void OnVoiceInput(string spokenText)
             npcText.text = reminderLine;
         }
 
-        PresentNpcSubtitleAndTts(buyerName, reminderLine, characterId);
+        PresentNpcSubtitleAndTts(buyerName, reminderLine, characterId, dialogueTableResponseProvider.LastPresentation);
         if (!sessionOutcomeResolved)
             WaitForNpcResponseThenEnable(true);
     }

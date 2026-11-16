@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
@@ -37,6 +38,7 @@ public class DialogueTableResponseProvider
     private readonly DialogueCharacterRegistry registry = new DialogueCharacterRegistry();
     private LocalTradeState recentCharacterTrade;
     private readonly Queue<string> recentCharacterTemplates = new Queue<string>();
+    public NpcVoicePresentation LastPresentation { get; private set; }
 
     public static bool IsLakshmi(LocalTradeState trade)
     {
@@ -58,6 +60,7 @@ public class DialogueTableResponseProvider
     // These hooks render existing events; they do not start or advance negotiation/idle stages.
     public string GetIdleReminder(LocalTradeState trade, string fallback, int stage, bool terminal)
     {
+        LastPresentation = null;
         if (!UsesAuthoredPresentation(trade)) return fallback;
         return GetPresentation(trade, terminal ? DialogueScenario.TransactionFailure :
             stage == 2 ? DialogueScenario.IdleReminderSecond : DialogueScenario.IdleReminderFirst, fallback);
@@ -65,12 +68,14 @@ public class DialogueTableResponseProvider
 
     public string GetTransactionSuccess(LocalTradeState trade)
     {
+        LastPresentation = null;
         if (!UsesAuthoredPresentation(trade) || trade.AcceptedTerms == null || !trade.SettlementClaimed) return string.Empty;
         return GetPresentation(trade, DialogueScenario.TransactionSuccess, "Thank you, merchant.");
     }
 
     private string GetPresentation(LocalTradeState trade, DialogueScenario scenario, string fallback)
     {
+        LastPresentation = null;
         try
         {
             PrepareCharacterHistory(trade);
@@ -78,7 +83,8 @@ public class DialogueTableResponseProvider
             context.scenario = scenario;
             string level;
             string template = FindTemplate(context, registry.FindCharacter(context.characterId), out level);
-            return string.IsNullOrWhiteSpace(template) ? fallback : ReplacePlaceholders(template, context);
+            string rendered = string.IsNullOrWhiteSpace(template) ? fallback : ReplacePlaceholders(template, context);
+            return CapturePresentation(template, rendered, context, trade, null, null);
         }
         catch (Exception ex)
         {
@@ -90,6 +96,7 @@ public class DialogueTableResponseProvider
 
     public string GetGreeting(LocalTradeState trade, int reputation, bool isRepeatCustomer)
     {
+        LastPresentation = null;
         if (trade == null)
         {
             return string.Empty;
@@ -100,14 +107,14 @@ public class DialogueTableResponseProvider
             DialogueContext context = new DialogueContext
             {
                 characterId = DialogueCharacterRegistry.NormalizeCharacterId(trade.buyerName),
-                characterName = !string.IsNullOrWhiteSpace(trade.buyerName) ? trade.buyerName : "Customer",
+                characterName = DialogueCharacterRegistry.GetDisplayName(!string.IsNullOrWhiteSpace(trade.buyerName) ? trade.buyerName : "Customer"),
                 scenario = isRepeatCustomer ? DialogueScenario.RepeatCustomerGreeting : DialogueScenario.CustomerGreeting,
                 reputationBucket = ToReputationBucket(reputation),
                 patienceBucket = ToPatienceBucket(trade.buyerPatience),
                 desperationBucket = ToDesperationBucket(trade.buyerDesperation),
                 roundBucket = RoundBucket.First,
                 personalityBucket = ToPersonalityBucket(trade.buyerPersonality),
-                buyerName = !string.IsNullOrWhiteSpace(trade.buyerName) ? trade.buyerName : "Customer",
+                buyerName = DialogueCharacterRegistry.GetDisplayName(!string.IsNullOrWhiteSpace(trade.buyerName) ? trade.buyerName : "Customer"),
                 spiceName = !string.IsNullOrWhiteSpace(trade.spiceDisplayName) ? trade.spiceDisplayName.ToLowerInvariant() : "spice",
                 quantityLabel = !string.IsNullOrWhiteSpace(trade.quantityLabel) ? trade.quantityLabel : "this lot",
                 offeredPrice = trade.lastSellerPrice,
@@ -132,7 +139,7 @@ public class DialogueTableResponseProvider
                 return string.Empty;
             }
 
-            return ReplacePlaceholders(template, context);
+            return CapturePresentation(template, ReplacePlaceholders(template, context), context, trade, null, null);
         }
         catch
         {
@@ -142,6 +149,7 @@ public class DialogueTableResponseProvider
 
     public string GetReply(NegotiationInput input, LocalTradeState trade, RuleBasedNPCBrainResult brainResult, int roundCount)
     {
+        LastPresentation = null;
         string fallbackReply = brainResult != null ? brainResult.replyText : string.Empty;
         if (brainResult == null || (brainResult.requiresClarification && !UsesAuthoredPresentation(trade)))
         {
@@ -154,6 +162,7 @@ public class DialogueTableResponseProvider
             PrepareCharacterHistory(trade);
             if (UsesAuthoredPresentation(trade))
                 context.scenario = MapAuthoredScenario(input, brainResult, context.scenario, context.characterId);
+            CapturePresentation(null, fallbackReply, context, trade, input, brainResult);
             CharacterDialogueSet characterSet = registry.FindCharacter(context.characterId);
             string matchLevel;
             string template = FindTemplate(context, characterSet, out matchLevel);
@@ -180,7 +189,7 @@ public class DialogueTableResponseProvider
             }
 
             Level1DebugForceAccept.LogVerbose("[DIALOGUE-TABLE] Final reply: " + finalReply);
-            return finalReply;
+            return CapturePresentation(template, finalReply, context, trade, input, brainResult);
         }
         catch (Exception ex)
         {
@@ -190,6 +199,54 @@ public class DialogueTableResponseProvider
             }
             return fallbackReply;
         }
+    }
+
+    private string CapturePresentation(string template, string text, DialogueContext context, LocalTradeState trade,
+        NegotiationInput input, RuleBasedNPCBrainResult result)
+    {
+        Func<int, string> number = n => n.ToString(CultureInfo.InvariantCulture);
+        string quantity = !string.IsNullOrWhiteSpace(result?.quantityLabel) ? result.quantityLabel : context.quantityLabel;
+        int previous = result != null && result.previousOffer > 0 ? result.previousOffer : context.currentBuyerOffer;
+        int updated = result != null ? result.updatedOffer : context.currentBuyerOffer;
+        var accepted = result?.acceptedTerms ?? trade?.AcceptedTerms;
+        string spiceKey = accepted != null ? accepted.SpiceKey : trade?.spiceKey;
+        string descriptor = spiceKey == "pepper" ? "black pepper" : spiceKey == "cinnamon" ? "cinnamon bark" :
+            spiceKey == "cardamom" ? "green cardamom" : context.spiceName;
+        var values = new Dictionary<string, string>
+        {
+            { "buyerName", trade != null ? trade.buyerName : context.buyerName }, { "buyerOrigin", trade?.buyerOrigin ?? "" },
+            { "spiceName", context.spiceName }, { "spice", context.spiceName }, { "spiceDescriptor", descriptor },
+            { "quantityLabel", context.quantityLabel }, { "brainQuantityLabel", quantity }, { "quantity", quantity },
+            { "currentBuyerOffer", number(context.currentBuyerOffer) }, { "counterPrice", number(context.counterPrice) },
+            { "finalPrice", number(context.finalPrice) }, { "offeredPrice", number(context.offeredPrice) },
+            { "minimumPrice", number(context.minimumPrice) }, { "sellerPrice", number(input != null ? input.sellerPrice : context.offeredPrice) },
+            { "previousOffer", number(previous) }, { "currentOffer", number(previous) }, { "updatedOffer", number(updated) },
+            { "result.updatedOffer", number(updated) }, { "counterOffer", number(updated) }, { "nextOffer", number(updated) },
+            { "currency", context.currency }, { "round", number(context.round) }, { "patience", number(context.patience) },
+            { "reputation", number(context.reputation) },
+            { "isAccepted", accepted != null || (result != null && result.isAccepted) ? "true" : "false" },
+            { "hasAcceptedTerms", accepted != null ? "true" : "false" },
+            { "walkedAway", (result != null && result.walkedAway) || (context.scenario == DialogueScenario.TransactionFailure && accepted == null) ? "true" : "false" },
+            { "settlementClaimed", trade != null && trade.SettlementClaimed ? "true" : "false" }
+        };
+        if (accepted != null)
+        {
+            values["acceptedPrice"] = number(accepted.Price);
+            values["acceptedQuantityLabel"] = accepted.QuantityLabel;
+            values["acceptedSpiceName"] = accepted.SpiceName.ToLowerInvariant();
+            values["result.acceptedTerms.Price"] = number(accepted.Price);
+            values["result.acceptedTerms.QuantityLabel"] = accepted.QuantityLabel;
+            values["result.acceptedTerms.SpiceName"] = accepted.SpiceName;
+        }
+        if (input != null && input.referencedPrices.Count > 0)
+        {
+            values["firstReferencedPrice"] = number(input.referencedPrices[0]);
+            values["lastReferencedPrice"] = number(input.referencedPrices[input.referencedPrices.Count - 1]);
+            values["input.referencedPrices[0]"] = values["firstReferencedPrice"];
+            values["input.referencedPrices[input.referencedPrices.Count - 1]"] = values["lastReferencedPrice"];
+        }
+        LastPresentation = new NpcVoicePresentation(context.characterId, context.scenario.ToString(), template, text, values, context.ruleReply);
+        return text; // Preserve all existing string APIs and authored selection behavior.
     }
 
     private string FindTemplate(DialogueContext context, CharacterDialogueSet characterSet, out string matchLevel)
@@ -495,14 +552,14 @@ public class DialogueTableResponseProvider
         return new DialogueContext
         {
             characterId = DialogueCharacterRegistry.NormalizeCharacterId(trade != null ? trade.buyerName : string.Empty),
-            characterName = !string.IsNullOrWhiteSpace(trade != null ? trade.buyerName : string.Empty) ? trade.buyerName : "Customer",
+            characterName = DialogueCharacterRegistry.GetDisplayName(!string.IsNullOrWhiteSpace(trade != null ? trade.buyerName : string.Empty) ? trade.buyerName : "Customer"),
             scenario = MapScenario(input, trade, brainResult, roundCount, offeredPrice),
             reputationBucket = ToReputationBucket(reputation),
             patienceBucket = ToPatienceBucket(patience),
             desperationBucket = ToDesperationBucket(desperation),
             roundBucket = ToRoundBucket(roundCount),
             personalityBucket = ToPersonalityBucket(trade != null ? trade.buyerPersonality : string.Empty),
-            buyerName = !string.IsNullOrWhiteSpace(trade != null ? trade.buyerName : string.Empty) ? trade.buyerName : "Customer",
+            buyerName = DialogueCharacterRegistry.GetDisplayName(!string.IsNullOrWhiteSpace(trade != null ? trade.buyerName : string.Empty) ? trade.buyerName : "Customer"),
             spiceName = accepted != null ? Safe(accepted.SpiceName, "spice").ToLowerInvariant() :
                 !string.IsNullOrWhiteSpace(trade != null ? trade.spiceDisplayName : string.Empty) ? trade.spiceDisplayName.ToLowerInvariant() : "spice",
             quantityLabel = accepted != null ? accepted.QuantityLabel :
