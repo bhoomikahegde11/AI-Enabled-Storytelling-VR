@@ -33,6 +33,8 @@ public class MeeraInspectableItem : MonoBehaviour
     public InspectableItemType ItemType => itemType;
     public string ItemDisplayName => itemDisplayName;
     public bool HasBeenInspected => hasBeenInspected;
+    public bool CanInspect => isActiveAndEnabled && !hasBeenInspected &&
+        (endingOverride != null || (inspectionController != null && inspectionController.CanInspect(this)));
 
     private void Awake()
     {
@@ -91,8 +93,7 @@ public class MeeraInspectableItem : MonoBehaviour
 
     public void PlaySelectionFeedback()
     {
-        if (glowObject != null)
-            glowObject.SetActive(true);
+        SetInspectionHighlight(true);
 
         if (audioSource != null && inspectionSound != null)
             audioSource.PlayOneShot(inspectionSound);
@@ -100,8 +101,13 @@ public class MeeraInspectableItem : MonoBehaviour
 
     public void StopSelectionFeedback()
     {
+        SetInspectionHighlight(false);
+    }
+
+    internal void SetInspectionHighlight(bool visible)
+    {
         if (glowObject != null)
-            glowObject.SetActive(false);
+            glowObject.SetActive(visible);
     }
 
     public void ResetInspection()

@@ -1,19 +1,13 @@
 using UnityEngine;
 using System.Collections;
-using System.Collections.Generic;
 public class ScooperFill : MonoBehaviour
 {
     public SpiceVisualSet[] spiceVisuals;
     public float wrongSpiceClearDelay = 0.7f;
-    public float zoneExitGracePeriod = 0.2f;
 
-    private bool insideSack = false;
-    private bool filled = false;
+    private bool filled;
     public SpiceType currentSpice = SpiceType.None;
 
-    private SpiceZone currentZone;
-    private readonly HashSet<SpiceZone> overlappingZones = new HashSet<SpiceZone>();
-    private Coroutine clearZoneCoroutine;
     private Coroutine wrongSpiceClearCoroutine;
     public static ScooperFill Instance;
     void Awake()
@@ -23,31 +17,6 @@ public class ScooperFill : MonoBehaviour
     void Start()
     {
         ShowSpiceVisual(SpiceType.None);
-    }
-
-    void Update()
-    {
-        if (PauseMenuController.GameplayInputBlocked) return;
-        // Not inside any sack
-        if (!insideSack)
-            return;
-
-        // Already holding spice
-        if (filled)
-            return;
-
-        // Somehow no current zone
-        if (currentZone == null)
-            return;
-
-        // Player isn't holding the trigger
-        if (!OVRInput.Get(OVRInput.RawButton.RIndexTrigger))
-            return;
-
-        currentSpice = currentZone.spiceType;
-
-        FillScooper();
-
     }
 
     void FillScooper()
@@ -84,55 +53,24 @@ public class ScooperFill : MonoBehaviour
             StopCoroutine(wrongSpiceClearCoroutine);
             wrongSpiceClearCoroutine = null;
         }
-        filled = false;
-        insideSack = false;
-        currentZone = null;
-        currentSpice = SpiceType.None;
-        overlappingZones.Clear();
-
-        if (clearZoneCoroutine != null)
-        {
-            StopCoroutine(clearZoneCoroutine);
-            clearZoneCoroutine = null;
-        }
-
-        ShowSpiceVisual(SpiceType.None);
-
-        Debug.Log("Reset");
+        EmptyScooper();
     }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        if (PauseMenuController.GameplayInputBlocked) return;
-        RefreshZoneState(FindSpiceZone(other));
-    }
+    private void OnTriggerEnter(Collider other) => TryFillFromOpening(other, IsScoopTriggerHeld());
+    private void OnTriggerStay(Collider other) => TryFillFromOpening(other, IsScoopTriggerHeld());
 
-    private void OnTriggerStay(Collider other)
-    {
-        if (PauseMenuController.GameplayInputBlocked) return;
-        RefreshZoneState(FindSpiceZone(other));
-    }
+    private static bool IsScoopTriggerHeld() => OVRInput.Get(OVRInput.RawButton.RIndexTrigger);
 
-    private void OnTriggerExit(Collider other)
+    private void TryFillFromOpening(Collider other, bool triggerHeld)
     {
-        SpiceZone zone = FindSpiceZone(other);
-
-        if (zone == null)
+        if (filled || !triggerHeld || PauseMenuController.GameplayInputBlocked)
             return;
 
-        overlappingZones.Remove(zone);
-
-        if (overlappingZones.Count > 0)
-        {
-            currentZone = GetAnyOverlappingZone();
-            insideSack = currentZone != null;
+        if (!other.TryGetComponent(out SpiceZone zone) || other != zone.fillOpening)
             return;
-        }
 
-        if (clearZoneCoroutine != null)
-            StopCoroutine(clearZoneCoroutine);
-
-        clearZoneCoroutine = StartCoroutine(ClearZoneAfterGracePeriod(zone));
+        currentSpice = zone.spiceType;
+        FillScooper();
     }
 
     IEnumerator StopHaptics()
@@ -171,66 +109,6 @@ public class ScooperFill : MonoBehaviour
         {
             EmptyScooper();
         }
-    }
-
-    
-
-    SpiceZone FindSpiceZone(Collider other)
-    {
-        SpiceZone zone = other.GetComponent<SpiceZone>();
-        if (zone != null)
-            return zone;
-
-        zone = other.GetComponentInParent<SpiceZone>();
-        if (zone != null)
-            return zone;
-
-        return other.GetComponentInChildren<SpiceZone>();
-    }
-
-    private void RefreshZoneState(SpiceZone zone)
-    {
-        if (zone == null)
-            return;
-
-        overlappingZones.Add(zone);
-        currentZone = zone;
-        insideSack = true;
-
-        if (clearZoneCoroutine != null)
-        {
-            StopCoroutine(clearZoneCoroutine);
-            clearZoneCoroutine = null;
-        }
-    }
-
-    private IEnumerator ClearZoneAfterGracePeriod(SpiceZone exitedZone)
-    {
-        yield return new WaitForSeconds(zoneExitGracePeriod);
-
-        if (overlappingZones.Count > 0)
-        {
-            currentZone = GetAnyOverlappingZone();
-            insideSack = currentZone != null;
-        }
-        else if (currentZone == exitedZone || currentZone == null)
-        {
-            currentZone = null;
-            insideSack = false;
-        }
-
-        clearZoneCoroutine = null;
-    }
-
-    private SpiceZone GetAnyOverlappingZone()
-    {
-        foreach (SpiceZone zone in overlappingZones)
-        {
-            if (zone != null)
-                return zone;
-        }
-
-        return null;
     }
 
     void ShowSpiceVisual(SpiceType spice)

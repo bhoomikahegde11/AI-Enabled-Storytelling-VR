@@ -22,30 +22,17 @@ public class BagReceiver : MonoBehaviour
         }
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider other) => TryReceive(other);
+    private void OnTriggerStay(Collider other) => TryReceive(other);
+
+    private void TryReceive(Collider other)
     {
-        if (PauseMenuController.GameplayInputBlocked) return;
-        if (completed)
+        if (completed || PauseMenuController.GameplayInputBlocked)
             return;
 
-        Debug.Log(
-            "BAG RECEIVED: " +
-            other.name
-        );
-
-        ScooperFill scooper = ScooperFill.Instance;
-
-        // A hand/controller/other collider cannot deliver whatever happens to be in the global scooper.
-        if (scooper == null ||
-            (other.GetComponentInParent<ScooperFill>() != scooper && other.GetComponentInChildren<ScooperFill>() != scooper))
-        {
-            Debug.Log("Scooper doesn't exist!");
+        // The collider on the scoop itself is the bowl sensor. The controller and fill visuals cannot deliver.
+        if (!other.TryGetComponent(out ScooperFill scooper) || scooper != ScooperFill.Instance || !scooper.IsFilled())
             return;
-        }
-
-        Debug.Log("Scooper Instance Found");
-        Debug.Log("Scooper Filled: " + scooper.IsFilled());
-        Debug.Log("Current Spice: " + scooper.currentSpice);
 
         OrderManager orderManager = OrderManager.Instance;
         if (orderManager == null) return;
@@ -56,16 +43,8 @@ public class BagReceiver : MonoBehaviour
                 Level1GameState.ExistingInstance?.ActiveTrade, marketplaceAgreement);
 
         if (!tutorialModeActive && !pendingMarketplaceFulfillment)
-        {
-            Debug.LogWarning("[BagReceiver] Ignoring bag delivery because there is no active tutorial order or accepted marketplace fulfillment.");
             return;
-        }
 
-        if (!scooper.IsFilled())
-        {
-            Debug.Log("Scooper Empty");
-            return;
-        }
         SpiceType expectedSpice = tutorialModeActive ? orderManager.requestedSpice : orderManager.MarketplaceOrder.Spice;
         if (scooper.currentSpice != expectedSpice)
         {
@@ -74,60 +53,33 @@ public class BagReceiver : MonoBehaviour
             if (SpiceTutorialManager.Instance != null)
                 SpiceTutorialManager.Instance.NotifyWrongSpiceBroughtToBag();
 
-            OVRInput.SetControllerVibration(
-        0.3f,
-        0.3f,
-        OVRInput.Controller.RTouch
-    );
-
+            OVRInput.SetControllerVibration(0.3f, 0.3f, OVRInput.Controller.RTouch);
             scooper.EmptyScooper();
-
             StartCoroutine(StopHaptics());
-
             return;
         }
 
         SpiceType deliveredSpice = scooper.currentSpice;
-        if (!tutorialModeActive)
-        {
-            if (!orderManager.TryDeliverMarketplaceScoop(marketplaceAgreement, deliveredSpice, scooper.IsFilled()))
-                return;
-            scooper.EmptyScooper(); // Consume the scoop before completion callbacks can deliver it twice.
-        }
+        if (!tutorialModeActive &&
+            !orderManager.TryDeliverMarketplaceScoop(marketplaceAgreement, deliveredSpice, scooper.IsFilled()))
+            return;
 
         completed = true;
-
-        Debug.Log("Correct Spice");
-        OVRInput.SetControllerVibration(
-        1f,
-        1f,
-        OVRInput.Controller.RTouch
-    );
-
+        scooper.EmptyScooper(); // Consume before completion callbacks.
+        OVRInput.SetControllerVibration(1f, 1f, OVRInput.Controller.RTouch);
         if (customer != null) customer.FillBag(deliveredSpice);
-        scooper.EmptyScooper();
 
-        if (tutorialModeActive && SpiceTutorialManager.Instance != null)
-            SpiceTutorialManager.Instance.NotifyCorrectBagFilled();
-
-        if (!tutorialModeActive && chatManager != null)
+        if (tutorialModeActive)
         {
-            if (chatManager.HasPendingFulfillment)
-            {
-                chatManager.CompleteAcceptedFulfillment(marketplaceAgreement);
-            }
-            else
-            {
-                Debug.LogWarning("[BagReceiver] ChatManager assigned, but there is no pending accepted fulfillment to complete.");
-            }
+            if (SpiceTutorialManager.Instance != null)
+                SpiceTutorialManager.Instance.NotifyCorrectBagFilled();
         }
-
-
+        else
+            chatManager.CompleteAcceptedFulfillment(marketplaceAgreement);
 
         StartCoroutine(StopHaptics());
-
-        
     }
+
     IEnumerator StopHaptics()
     {
         yield return new WaitForSeconds(0.15f);

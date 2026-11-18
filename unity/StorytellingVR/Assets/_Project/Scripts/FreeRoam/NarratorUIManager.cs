@@ -488,7 +488,7 @@ public class NarratorUIManager : MonoBehaviour
         }
     }
 
-    private void StopCurrentRoutine()
+    internal void StopCurrentRoutine()
     {
         HideContinueTutorialPrompt();
         StopCurrentVoice();

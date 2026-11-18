@@ -183,10 +183,12 @@ public class Level1EconomyPolishTests
         {
             var roots = scene.GetRootGameObjects();
             SpiceCostGuideController guide = null;
+            SpiceIntroSequence intro = null;
             Level1HUDManager hud = null;
             foreach (var root in roots)
             {
                 guide = guide ?? root.GetComponentInChildren<SpiceCostGuideController>(true);
+                intro = intro ?? root.GetComponentInChildren<SpiceIntroSequence>(true);
                 foreach (var candidate in root.GetComponentsInChildren<Level1HUDManager>(true))
                     if (candidate.currentTradePanel != null) hud = candidate;
             }
@@ -197,6 +199,13 @@ public class Level1EconomyPolishTests
             Assert.IsNotNull(view);
             foreach (string price in new[] { "pepperPrice", "cardamomPrice", "cinnamonPrice" })
                 Assert.IsInstanceOf<TMP_Text>(serialized.FindProperty(price).objectReferenceValue);
+            if (sceneName == "NewSpiceScene")
+            {
+                Assert.IsNotNull(intro);
+                var subtitle = (TMP_Text)new SerializedObject(intro).FindProperty("subtitleText").objectReferenceValue;
+                Assert.IsNotNull(subtitle);
+                Assert.IsEmpty(subtitle.text, "The initial fade runs before the first narration line is set.");
+            }
             var toggle = typeof(SpiceCostGuideController).GetMethod("HandleToggleInput", BindingFlags.NonPublic | BindingFlags.Instance);
             guide.UnlockGuide();
             toggle.Invoke(guide, new object[] { true, true });

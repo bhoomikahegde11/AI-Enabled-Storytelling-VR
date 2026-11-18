@@ -205,7 +205,7 @@ public class Level1ConversationRuntimeSoakTests
         yield return WaitUntil(() => !fixture.Marketplace.IsTransitioning, "customer departure stuck", MaxTransitionGameSeconds);
     }
 
-    private static void RequireEmptyEditorScene()
+    internal static void RequireEmptyEditorScene()
     {
         var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
         var roots = scene.IsValid() && scene.isLoaded ? scene.GetRootGameObjects() : Array.Empty<GameObject>();

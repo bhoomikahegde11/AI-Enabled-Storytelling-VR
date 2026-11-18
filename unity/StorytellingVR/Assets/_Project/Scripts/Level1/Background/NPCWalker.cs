@@ -1,5 +1,7 @@
 using UnityEngine;
+using UnityEngine.AI;
 using System.Collections;
+using System.Collections.Generic;
 
 public class NPCWalker : MonoBehaviour
 {
@@ -9,8 +11,14 @@ public class NPCWalker : MonoBehaviour
     private Quaternion stallRotation;
     private bool goingToStall = false;
     private bool waiting = false;
+    private bool scriptedMovement;
+    private bool walking;
     private FreeRoamMarketSpawner freeRoamSpawner;
-    private Collider avoidanceNPC;
+    private const float PersonalSpace = 0.68f;
+    private const float LookAhead = 1.2f;
+    private static readonly List<NPCWalker> ActiveWalkers = new List<NPCWalker>();
+    private Transform[] sceneCharacters;
+    private Transform avoidanceNPC;
     private Vector3 passingDirection;
     [SerializeField] private float moveSpeed = 0.85f;
     [SerializeField] private float turnSpeed = 5f;
@@ -22,8 +30,13 @@ public class NPCWalker : MonoBehaviour
 
     public Transform VisualAnchor => visualAnchor != null ? visualAnchor : transform;
 
+    private void OnEnable() => ActiveWalkers.Add(this);
+    private void OnDisable() => ActiveWalkers.Remove(this);
+
     void Start()
     {
+        if (scriptedMovement)
+            return;
         if (animator == null)
         {
             animator = visualAnchor != null
@@ -48,8 +61,26 @@ public class NPCWalker : MonoBehaviour
         if (animator != null)
         {
             animator.applyRootMotion = false;
-            animator.SetFloat("Speed", waiting ? 0f : 1f);
+            walking = !waiting;
+            animator.SetFloat("Speed", walking ? 1f : 0f);
         }
+    }
+
+    public void ConfigureScriptedMovement(Vector3 destination, float speed, float rotationSpeed, Transform[] characters)
+    {
+        scriptedMovement = true;
+        target = destination;
+        moveSpeed = speed;
+        turnSpeed = rotationSpeed;
+        sceneCharacters = characters;
+    }
+
+    public bool StepScriptedMovement()
+    {
+        if (!TryGetMovementDirection(out Vector3 direction))
+            return false;
+        Advance(direction);
+        return true;
     }
 
     public void Initialize(
@@ -57,7 +88,8 @@ public class NPCWalker : MonoBehaviour
     bool stopAtStall,
     Vector3 leaveDestination,
     Quaternion stallRot,
-    StallPoint stall)
+    StallPoint stall,
+    Transform[] characters = null)
     {
         target = destination;
         goingToStall = stopAtStall;
@@ -65,15 +97,26 @@ public class NPCWalker : MonoBehaviour
 
         stallRotation = stallRot;
         myStall = stall;
+        sceneCharacters = characters;
         avoidanceNPC = null;
         passingDirection = Vector3.zero;
-        waitTime =
-    Random.Range(6f, 14f);
+        waitTime = Random.Range(6f, 14f);
+
+        if (characters != null && characters.Length > 0 && !TryGetComponent<NavMeshObstacle>(out _))
+        {
+            // Let the guide and buyer see these transform-driven walkers without carving their paths.
+            var obstacle = gameObject.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Capsule;
+            obstacle.center = Vector3.up * 0.8f;
+            obstacle.height = 1.6f;
+            obstacle.radius = PersonalSpace * 0.5f;
+            obstacle.carving = false;
+        }
     }
 
     void Update()
     {
-        if (waiting)
+        if (scriptedMovement || waiting)
             return;
 
         if (!TryGetMovementDirection(out Vector3 direction))
@@ -103,9 +146,18 @@ public class NPCWalker : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-        direction.Normalize();
+        Advance(direction);
+    }
+
+    private void Advance(Vector3 direction)
+    {
+        Vector3 step = GetSafeStep(direction, Time.deltaTime);
+        SetWalking(step.sqrMagnitude > 0f);
+        if (step.sqrMagnitude == 0f)
+            return;
+
         Quaternion targetRotation =
-            Quaternion.LookRotation(direction);
+            Quaternion.LookRotation(step);
 
         transform.rotation = Quaternion.Slerp(
             transform.rotation,
@@ -113,16 +165,20 @@ public class NPCWalker : MonoBehaviour
             turnSpeed * Time.deltaTime
         );
 
-        transform.position +=
-            transform.forward *
-            moveSpeed *
-            Time.deltaTime;
+        transform.position += step;
+    }
+
+    private void SetWalking(bool moving)
+    {
+        if (animator != null && walking != moving)
+            animator.SetFloat("Speed", moving ? 1f : 0f);
+        walking = moving;
     }
 
     private bool TryGetMovementDirection(out Vector3 direction)
     {
-        direction = target - transform.position;
-        direction.y = 0f;
+        Vector3 position = transform.position;
+        direction = Planar(target - position);
 
         // Arrival belongs to the assigned target, never to avoidance steering.
         if (direction.magnitude < 0.05f)
@@ -132,81 +188,116 @@ public class NPCWalker : MonoBehaviour
             return false;
         }
 
-        Vector3 rawTargetDirection = direction;
-        Vector3 toOther = Vector3.zero;
-        if (avoidanceNPC != null)
+        float distance = direction.magnitude;
+        Vector3 towardTarget = direction / distance;
+        if (avoidanceNPC != null &&
+            (!avoidanceNPC.gameObject.activeInHierarchy ||
+             Planar(avoidanceNPC.position - position).sqrMagnitude >= LookAhead * LookAhead ||
+             Vector3.Dot(Planar(avoidanceNPC.position - position), towardTarget) < -0.15f))
         {
-            toOther = avoidanceNPC.transform.position - transform.position;
-            toOther.y = 0f;
-            if (!avoidanceNPC.enabled || !avoidanceNPC.gameObject.activeInHierarchy ||
-                toOther.magnitude >= 1.2f)
-            {
-                avoidanceNPC = null;
-                passingDirection = Vector3.zero;
-            }
+            avoidanceNPC = null;
+            passingDirection = Vector3.zero;
         }
 
         if (avoidanceNPC == null)
         {
-            passingDirection = Vector3.zero;
-            float closestDistance = 0.8f;
-            foreach (Collider c in Physics.OverlapSphere(transform.position, 1.2f))
-            {
-                if (c.transform.IsChildOf(transform) || !c.CompareTag("NPC"))
-                    continue;
-
-                Vector3 offset = c.transform.position - transform.position;
-                offset.y = 0f;
-                float distance = offset.magnitude;
-                if (distance < closestDistance &&
-                    Vector3.Dot(transform.forward, offset.normalized) > 0.3f)
-                {
-                    avoidanceNPC = c;
-                    toOther = offset;
-                    closestDistance = distance;
-                }
-            }
-
+            avoidanceNPC = FindBlocker(towardTarget * Mathf.Min(distance, LookAhead), LookAhead * LookAhead);
             if (avoidanceNPC != null)
             {
-                // Freeze world-space left for this encounter. Opposing walkers
-                // see opposite separation vectors, so pass on opposite sides.
-                passingDirection = Vector3.Cross(toOther.normalized, Vector3.up);
+                Vector3 toOther = Planar(avoidanceNPC.position - position);
+                // Opposing walkers see opposite separation vectors and pick opposite world sides.
+                Vector3 approach = toOther.sqrMagnitude > 0.0001f ? toOther.normalized : towardTarget;
+                passingDirection = Vector3.Cross(approach, Vector3.up);
             }
         }
 
-        if (avoidanceNPC != null && toOther.magnitude < 0.8f)
-        {
-            direction += passingDirection * 2f;
-            direction -= toOther.normalized;
-            if (direction.sqrMagnitude < 0.000001f)
-                direction = rawTargetDirection;
-        }
+        if (avoidanceNPC != null)
+            direction = towardTarget + passingDirection * 1.25f;
 
         return true;
     }
 
+    private Vector3 GetSafeStep(Vector3 direction, float deltaTime)
+    {
+        float distance = Mathf.Min(moveSpeed * deltaTime, Planar(target - transform.position).magnitude);
+        Vector3 step = direction.normalized * distance;
+        if (FindBlocker(step) == null)
+            return step;
+        if (avoidanceNPC == null)
+            return Vector3.zero;
+
+        // If forward motion is blocked, step sideways before trying to make progress again.
+        step = passingDirection * distance;
+        if (FindBlocker(step) == null)
+            return step;
+        if (FindBlocker(-step) == null)
+        {
+            passingDirection = -passingDirection;
+            return -step;
+        }
+        return Vector3.zero;
+    }
+
+    private Transform FindBlocker(Vector3 step, float nearest = float.PositiveInfinity)
+    {
+        if (step.sqrMagnitude < 0.000001f)
+            return null;
+        Vector3 position = transform.position;
+        Transform blocker = null;
+        foreach (NPCWalker walker in ActiveWalkers)
+        {
+            if (walker != this && walker.gameObject.scene == gameObject.scene)
+                ConsiderBlocker(walker.transform, position, step, ref blocker, ref nearest);
+        }
+        if (sceneCharacters != null)
+        {
+            foreach (Transform character in sceneCharacters)
+            {
+                if (character != null && character.gameObject.activeInHierarchy)
+                    ConsiderBlocker(character, position, step, ref blocker, ref nearest);
+            }
+        }
+        return blocker;
+    }
+
+    private static void ConsiderBlocker(Transform character, Vector3 position, Vector3 step,
+        ref Transform blocker, ref float nearest)
+    {
+        Vector3 separation = character.position - position;
+        if (Mathf.Abs(separation.y) >= 1.2f)
+            return;
+        separation.y = 0f;
+        float currentDistance = separation.sqrMagnitude;
+        float projection = Vector3.Dot(separation, step);
+        if (currentDistance >= nearest || projection <= 0f)
+            return; // Always allow walking away, including recovery from initial overlap.
+        float fraction = Mathf.Min(1f, projection / step.sqrMagnitude);
+        if ((separation - step * fraction).sqrMagnitude < PersonalSpace * PersonalSpace)
+        {
+            blocker = character;
+            nearest = currentDistance;
+        }
+    }
+
+    private static Vector3 Planar(Vector3 vector)
+    {
+        vector.y = 0f;
+        return vector;
+    }
+
     IEnumerator WaitAtStall()
     {
-        transform.position = target;
+        transform.position = new Vector3(transform.position.x, target.y, transform.position.z);
         transform.rotation = stallRotation;
         waiting = true;
 
-        if (animator != null)
-        {
-            animator.SetFloat("Speed", 0f);
-        }
+        SetWalking(false);
 
         yield return new WaitForSeconds(waitTime);
 
         if (myStall != null)
         {
             myStall.occupied = false;
-        }
-
-        if (animator != null)
-        {
-            animator.SetFloat("Speed", 1f);
         }
 
         target = exitTarget;

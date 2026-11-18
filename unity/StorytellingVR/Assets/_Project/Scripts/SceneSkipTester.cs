@@ -4,6 +4,7 @@ using UnityEngine.XR;
 
 public class SceneSkipTester : MonoBehaviour
 {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     private bool bWasPressed;
 
     void Update()
@@ -39,4 +40,5 @@ public class SceneSkipTester : MonoBehaviour
             Debug.LogError("No GameManager found");
         }
     }
+#endif
 }

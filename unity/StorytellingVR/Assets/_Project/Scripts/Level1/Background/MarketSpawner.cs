@@ -21,6 +21,7 @@ public class MarketSpawner : MonoBehaviour
     [SerializeField] private GameObject fallbackVisualPrefab;
     [SerializeField] private RuntimeAnimatorController backgroundWalkingController;
     [SerializeField] private bool startSpawningImmediately;
+    [SerializeField] private Transform[] pedestrianBlockers;
 
     public Transform leftSpawn;
     public Transform rightSpawn;
@@ -206,7 +207,8 @@ public class MarketSpawner : MonoBehaviour
         visitsStall,
         exitTarget.position,
         stallRotation,
-        chosenStall
+        chosenStall,
+        pedestrianBlockers
     );
 
         Debug.Log($"[BG NPC] Destination assigned: {firstDestination}.", npc);

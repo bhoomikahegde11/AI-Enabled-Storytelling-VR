@@ -127,7 +127,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
 
     private void ResolveMerchantComponents()
     {
-        if (merchantAgent == null && merchant != null)
+        if (merchant != null && (merchantAgent == null || merchantAgent.transform != merchant))
             merchantAgent = merchant.GetComponent<NavMeshAgent>();
 
         if (merchantAnimator == null && merchant != null)
@@ -347,49 +347,23 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
         }
         else
         {
-            float timer = 0f;
-
-            while (
-                Vector3.Distance(
-                    merchant.position,
-                    stopPosition
-                ) > stoppingDistance
-                && timer < maxWalkTime)
+            var spawner = FindFirstObjectByType<FreeRoamMarketSpawner>();
+            var walker = merchant.gameObject.AddComponent<NPCWalker>();
+            walker.ConfigureScriptedMovement(stopPosition, walkSpeed, turnSpeed, spawner?.PedestrianBlockers);
+            try
             {
-                timer += Time.deltaTime;
-
-                merchant.position = Vector3.MoveTowards(
-                    merchant.position,
-                    stopPosition,
-                    walkSpeed * Time.deltaTime
-                );
-
-                Vector3 direction =
-                    stopPosition - merchant.position;
-
-                direction.y = 0f;
-
-                if (direction.sqrMagnitude > 0.001f)
+                float timer = 0f;
+                while (timer < maxWalkTime && walker.StepScriptedMovement())
                 {
-                    Quaternion targetRotation =
-                        Quaternion.LookRotation(direction);
-
-                    merchant.rotation = Quaternion.Slerp(
-                        merchant.rotation,
-                        targetRotation,
-                        turnSpeed * Time.deltaTime
-                    );
+                    timer += Time.deltaTime;
+                    yield return null;
                 }
-
-                yield return null;
+            }
+            finally
+            {
+                if (walker != null) Destroy(walker);
             }
         }
-
-        merchant.position = new Vector3(
-            stopPosition.x,
-            merchant.position.y,
-            stopPosition.z
-        );
 
         FaceStall();
         

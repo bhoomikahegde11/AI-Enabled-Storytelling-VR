@@ -133,6 +133,7 @@ public class HandBagAnimation : MonoBehaviour
     IEnumerator MoveBagForward()
     {
         Vector3 startPos = handBag.transform.position;
+        Vector3 deliveryPosition = GetDeliveryPosition();
 
         float t = 0;
 
@@ -143,7 +144,7 @@ public class HandBagAnimation : MonoBehaviour
             handBag.transform.position =
                 Vector3.Lerp(
                     startPos,
-                    bagFillPosition.position,
+                    deliveryPosition,
                     t
                 );
 
@@ -264,9 +265,21 @@ public class HandBagAnimation : MonoBehaviour
         }
 
         SetActorVisualsVisible(false);
-        handBag.transform.position = bagFillPosition.position;
         handBag.transform.rotation = bagFillPosition.rotation;
+        handBag.transform.position = GetDeliveryPosition();
         handBag.SetActive(true);
+    }
+
+    private Vector3 GetDeliveryPosition()
+    {
+        // The marker is where the player dips the scoop. The imported bag pivot is offset from its opening.
+        if (bagReceiver != null && bagReceiver.TryGetComponent(out BoxCollider opening))
+        {
+            Vector3 openingOffset = opening.transform.TransformPoint(opening.center) - handBag.transform.position;
+            return bagFillPosition.position - openingOffset;
+        }
+
+        return bagFillPosition.position;
     }
 
     public void ConfigureMarketplaceCustomerHandoff(

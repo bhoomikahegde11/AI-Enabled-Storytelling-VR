@@ -5328,6 +5328,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpiceZone
   spiceType: 1
+  fillOpening: {fileID: 739337439}
 --- !u!54 &739337438
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -5374,8 +5375,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.013305629, y: 0.0037696592, z: 0.013920818}
-  m_Center: {x: -0.019752834, y: 0.013575451, z: 0.0054933107}
+  m_Size: {x: 0.0105, y: 0.0073, z: 0.0105}
+  m_Center: {x: -0.01975283, y: 0.01687545, z: 0.005493311}
 --- !u!1 &754606994
 GameObject:
   m_ObjectHideFlags: 0
@@ -5938,8 +5939,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.015487535, y: 0.003769661, z: 0.014248737}
-  m_Center: {x: -0.020445932, y: 0.013211549, z: 0.022223298}
+  m_Size: {x: 0.0105, y: 0.0073, z: 0.0105}
+  m_Center: {x: -0.02044593, y: 0.01651155, z: 0.0222233}
 --- !u!114 &814711991
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5953,6 +5954,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpiceZone
   spiceType: 4
+  fillOpening: {fileID: 814711990}
 --- !u!1001 &842064939
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9619,7 +9621,6 @@ MonoBehaviour:
   - spiceType: 3
     visual: {fileID: 2063880235}
   wrongSpiceClearDelay: 0.7
-  zoneExitGracePeriod: 0.2
   currentSpice: 1
 --- !u!54 &1236844439
 Rigidbody:
@@ -9648,8 +9649,8 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!65 &1236844440
-BoxCollider:
+--- !u!135 &1236844440
+SphereCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -9667,8 +9668,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Radius: 0.15
+  m_Center: {x: -0.964, y: 0.764, z: -0.775}
 --- !u!1001 &1238133447
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -10536,8 +10537,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9db3d4d0482d4824aa3a47f3a942ef1c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStallSpiceGuide
-  playerStallRoot: {fileID: 1198942227}
-  alignCollidersOnStart: 1
+  playerStallRoot: {fileID: 1412453619}
+  alignCollidersOnStart: 0
   colliderPadding: {x: 0.03, y: 0.04, z: 0.03}
   colliderScale: {x: 0.85, y: 1.1, z: 0.85}
   minimumColliderSize: 0.09
@@ -11954,7 +11955,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2806290354107157340, guid: d03ff2c940a64bc498c6f6ea53a9811a, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 5.22
+      value: 5.150718
       objectReference: {fileID: 0}
     - target: {fileID: 2900721524365905941, guid: d03ff2c940a64bc498c6f6ea53a9811a, type: 3}
       propertyPath: m_LocalScale.x
@@ -12186,7 +12187,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8843859316539943644, guid: d03ff2c940a64bc498c6f6ea53a9811a, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.08
+      value: 2.442703
+      objectReference: {fileID: 0}
+    - target: {fileID: 7069170241096456474, guid: d03ff2c940a64bc498c6f6ea53a9811a, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 5.010353
+      objectReference: {fileID: 0}
+    - target: {fileID: 7069170241096456474, guid: d03ff2c940a64bc498c6f6ea53a9811a, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -3.514744
+      objectReference: {fileID: 0}
+    - target: {fileID: 2806290354107157340, guid: d03ff2c940a64bc498c6f6ea53a9811a, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 2.440816
+      objectReference: {fileID: 0}
+    - target: {fileID: 8843859316539943644, guid: d03ff2c940a64bc498c6f6ea53a9811a, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 5.284187
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
@@ -13063,6 +13080,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpiceZone
   spiceType: 2
+  fillOpening: {fileID: 1741652853}
 --- !u!65 &1741652853
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -13082,8 +13100,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.013929324, y: 0.0039472794, z: 0.014468879}
-  m_Center: {x: -0.020363891, y: 0.013576055, z: 0.04066851}
+  m_Size: {x: 0.011, y: 0.0073, z: 0.011}
+  m_Center: {x: -0.02036389, y: 0.01687606, z: 0.04066851}
 --- !u!54 &1741652854
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -13469,7 +13487,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.01, y: 0.01, z: 0.006836658}
+  m_Size: {x: 0.019, y: 0.016, z: 0.019}
   m_Center: {x: -0.019792847, y: 0.007565056, z: 0.04015971}
 --- !u!114 &1870454936
 MonoBehaviour:
@@ -13971,7 +13989,7 @@ Transform:
   m_GameObject: {fileID: 1901758060}
   serializedVersion: 2
   m_LocalRotation: {x: -0.00000003774895, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 5.3300004, y: -0.8560001, z: -2.2479975}
+  m_LocalPosition: {x: 5.116787, y: -0.8560001, z: -1.517378}
   m_LocalScale: {x: 114.729996, y: 114.73, z: 114.729996}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -14081,8 +14099,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.013661472, y: 0.0037696592, z: 0.013501253}
-  m_Center: {x: -0.021083651, y: 0.013575451, z: 0.0061673573}
+  m_Size: {x: 0.0105, y: 0.0073, z: 0.0105}
+  m_Center: {x: -0.02108365, y: 0.01687545, z: 0.006167357}
 --- !u!114 &1901758066
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14096,6 +14114,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpiceZone
   spiceType: 3
+  fillOpening: {fileID: 1901758065}
 --- !u!1 &1918064616
 GameObject:
   m_ObjectHideFlags: 0
@@ -14385,7 +14404,7 @@ Transform:
   m_GameObject: {fileID: 1945395394}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 30.973, y: -0.065, z: 5.955}
+  m_LocalPosition: {x: 30.98, y: 0.085, z: 4.38}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -15391,7 +15410,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 0.015672123, y: 0.0037696608, z: 0.015672121}
   m_Center: {x: -0.0200905, y: 0.013211549, z: 0.022974895}

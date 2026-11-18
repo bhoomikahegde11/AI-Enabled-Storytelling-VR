@@ -291,8 +291,7 @@ public class NPCDialogueVRLaserPointer : MonoBehaviour
                     MeeraInspectableItem
                 >();
 
-            if (inspectableItem != null &&
-                inspectableItem.isActiveAndEnabled)
+            if (inspectableItem != null && inspectableItem.CanInspect)
             {
                 result.targetType =
                     RayTargetType.InspectableItem;

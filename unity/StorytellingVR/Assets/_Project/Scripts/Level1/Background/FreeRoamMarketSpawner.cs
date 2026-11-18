@@ -47,6 +47,8 @@ public class FreeRoamMarketSpawner : MonoBehaviour
 
     [SerializeField] private GameObject fallbackVisualPrefab;
     [SerializeField] private RuntimeAnimatorController backgroundWalkingController;
+    [SerializeField] private Transform[] pedestrianBlockers;
+    public Transform[] PedestrianBlockers => pedestrianBlockers;
 
     private int activeNPCs = 0;
     private int lastVisualIndex = -1;
@@ -278,7 +280,8 @@ public class FreeRoamMarketSpawner : MonoBehaviour
             goingToStall,
             exitPoint.position,
             stallRotation,
-            selectedStall
+            selectedStall,
+            pedestrianBlockers
         );
     }
 
