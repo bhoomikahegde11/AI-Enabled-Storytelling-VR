@@ -22,8 +22,28 @@ public class GlobalMetricsData
 public class ShiftStatsData
 {
     public int shifts_completed;
+    // Legacy field stores gross buyer payments.
     public int total_varahas_earned;
     public int total_deals_made;
+    public int total_cost_of_goods_sold;
+    public int total_costed_deals;
+}
+
+[Serializable]
+public class MarketDayResult
+{
+    public bool finalized;
+    public bool hasOpeningBalance;
+    public bool hasCompleteCosts;
+    public bool interruptedTrade;
+    public int openingWallet;
+    public int salesRevenue;
+    public int costOfGoodsSold;
+    public int closingWallet;
+    public int completedTrades;
+    public int closingRespect;
+
+    public int? NetTradingProfit => hasCompleteCosts ? salesRevenue - costOfGoodsSold : (int?)null;
 }
 
 [Serializable]
@@ -48,6 +68,10 @@ public class LocalProfileData
     public float remainingMarketDaySeconds;
     public bool hasSavedMarketDayTimer;
     public Level1EntrySnapshotData level1_entry;
+    public MarketDayResult market_day;
+    public bool epilogue_finance_tracked;
+    public bool epilogue_paycheck_applied;
+    public bool epilogue_book_purchased;
     // JsonUtility's inline class serialization cannot preserve null by itself.
     public int level1_entry_format;
     public bool level1_entry_present;
@@ -93,14 +117,14 @@ public class LocalSaveManager
     {
         MarketManager resolvedMarketManager = marketManager ?? new MarketManager();
 
+        if (TryReadCommittedProfile(savePath, out LocalProfileData data))
+        {
+            EnsureDefaults(data, resolvedMarketManager);
+            return data;
+        }
+
         if (File.Exists(savePath))
         {
-            if (TryReadProfile(savePath, out LocalProfileData data))
-            {
-                EnsureDefaults(data, resolvedMarketManager);
-                return data;
-            }
-
             // A damaged slot must not be replaced by an apparently empty profile.
             Debug.LogError("[LocalSaveManager] Profile is invalid; refusing to overwrite " + savePath);
             return CreateDefaultProfile(resolvedMarketManager);
@@ -127,6 +151,44 @@ public class LocalSaveManager
         return WriteProfile(profile, false);
     }
 
+    public bool TryApplyEpiloguePaycheck(int defaultPaycheck, int bookPrice, out int balance, out int paid)
+    {
+        balance = paid = 0;
+        if (savePath != GetActiveSavePath() || !TryLoadExistingProfile(out LocalProfileData profile)) return false;
+        balance = profile.global_metrics.total_varahas;
+        if (profile.epilogue_paycheck_applied) return true;
+
+        // Legacy epilogue checkpoints did not record either side effect.
+        bool legacyCheckpoint = !profile.epilogue_finance_tracked &&
+            (profile.current_scene == GameManager.BookPurchaseSceneName ||
+             profile.current_scene == "Epilogue_ModernStudyRoom");
+        int payment = legacyCheckpoint ? 0 : Mathf.Max(defaultPaycheck, bookPrice - balance);
+        profile.epilogue_finance_tracked = true;
+        profile.epilogue_paycheck_applied = true;
+        profile.epilogue_book_purchased = legacyCheckpoint;
+        profile.global_metrics.total_varahas += payment;
+        if (!SaveProfile(profile)) return false;
+        balance = profile.global_metrics.total_varahas;
+        paid = payment;
+        return true;
+    }
+
+    public bool TryPurchaseEpilogueBook(int bookPrice, out int balance, out int spent)
+    {
+        balance = spent = 0;
+        if (savePath != GetActiveSavePath() || !TryLoadExistingProfile(out LocalProfileData profile)) return false;
+        balance = profile.global_metrics.total_varahas;
+        if (profile.epilogue_book_purchased) return true;
+        if (!profile.epilogue_paycheck_applied || bookPrice < 0 || balance < bookPrice) return false;
+
+        profile.global_metrics.total_varahas -= bookPrice;
+        profile.epilogue_book_purchased = true;
+        if (!SaveProfile(profile)) return false;
+        balance = profile.global_metrics.total_varahas;
+        spent = bookPrice;
+        return true;
+    }
+
     public bool CreateFreshProfile(string saveName = "", string characterName = "", string gender = "Male")
     {
         string journeyName = (saveName ?? string.Empty).Trim();
@@ -148,8 +210,8 @@ public class LocalSaveManager
         try
         {
             if (!allowExplicitOverwrite &&
-                ((File.Exists(savePath) && !TryReadProfile(savePath, out _)) ||
-                 (!File.Exists(savePath) && (File.Exists(backupPath) || File.Exists(tempPath)))))
+                (File.Exists(savePath) || File.Exists(backupPath) || File.Exists(tempPath)) &&
+                !TryReadCommittedProfile(savePath, out _))
             {
                 Debug.LogError("[LocalSaveManager] Refusing to overwrite an invalid profile: " + savePath);
                 return false;
@@ -298,10 +360,16 @@ public class LocalSaveManager
 
     public static bool TryLoadSlot(int slot, out LocalProfileData profile)
     {
-        return TryReadProfile(GetSlotSavePath(slot), out profile);
+        return TryReadCommittedProfile(GetSlotSavePath(slot), out profile);
     }
 
-    public bool TryLoadExistingProfile(out LocalProfileData profile) => TryReadProfile(savePath, out profile);
+    public bool TryLoadExistingProfile(out LocalProfileData profile) => TryReadCommittedProfile(savePath, out profile);
+
+    private static bool TryReadCommittedProfile(string path, out LocalProfileData profile)
+    {
+        // During Android's rename window the backup is the last committed profile.
+        return TryReadProfile(File.Exists(path) ? path : path + ".bak", out profile);
+    }
 
     public static bool DeleteSlot(int slot)
     {
@@ -430,6 +498,7 @@ public class LocalSaveManager
             },
             inventory = marketManager.CreateDefaultInventoryEntries(),
             shift_stats = new ShiftStatsData(),
+            epilogue_finance_tracked = true,
             current_scene = DefaultCurrentSceneName,
             progression_index = DefaultProgressionIndex,
             intro_completed = false,

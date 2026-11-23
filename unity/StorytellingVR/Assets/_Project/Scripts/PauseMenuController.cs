@@ -300,6 +300,11 @@ public sealed class PauseMenuController : MonoBehaviour
         if (isPaused && owner != null) owner.ReturnToMainMenu();
     }
 
+    internal void ShowTransitionFailure(string message)
+    {
+        if (isPaused && view != null) view.confirmationBody.text = message;
+    }
+
     internal void PrepareForTransition()
     {
         exiting = true;

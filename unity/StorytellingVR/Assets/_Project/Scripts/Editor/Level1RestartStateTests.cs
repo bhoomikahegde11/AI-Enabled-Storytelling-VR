@@ -235,8 +235,121 @@ public class Level1RestartStateTests
             Assert.IsFalse((bool)claim.Invoke(marketplace, null));
             Assert.AreEqual(250, state.CurrentMoney);
             Assert.AreEqual(61, state.CurrentReputation);
+            Assert.AreEqual(0, state.FinalizedMarketDay.NetTradingProfit);
+            Assert.AreEqual(1, new LocalSaveManager().LoadProfile().shift_stats.shifts_completed);
         }
         finally { UnityEngine.Object.DestroyImmediate(marketplaceHost); }
+    }
+
+    [TestCase(17, -1)]
+    [TestCase(18, 0)]
+    [TestCase(25, 7)]
+    public void ReceiptPreservesSignedResultsAcrossReloadAndClearsOnRestart(int price, int margin)
+    {
+        SetRunningClock(60f);
+        var saves = new LocalSaveManager();
+        state.SyncTradeFromBackend("Lakshmi Amma", "Hampi", "Cardamom", "1 Veesai", 1400, price, null);
+        TradeTermsSnapshot terms = TradeTermsSnapshot.Capture(state.ActiveTrade);
+        Assert.IsTrue(state.ActiveTrade.BindAcceptedTerms(terms));
+        Assert.IsTrue(state.ResolveAcceptedTrade(terms, 0.7f, 0.2f, 0).isSuccess);
+        Assert.AreEqual(margin, state.GetMarketDayTotals().NetTradingProfit);
+
+        state.EndMarketDay();
+        state.ReloadProfileFromDisk();
+        state.StartMarketDay();
+        MarketDayResult result = state.FinalizedMarketDay;
+        Assert.AreEqual(250, result.openingWallet);
+        Assert.AreEqual(price, result.salesRevenue);
+        Assert.AreEqual(18, result.costOfGoodsSold);
+        Assert.AreEqual(margin, result.NetTradingProfit);
+        Assert.AreEqual(250 + price, result.closingWallet);
+        Assert.AreEqual(1, result.completedTrades);
+        Assert.AreEqual(1, saves.LoadProfile().shift_stats.shifts_completed);
+        Assert.IsFalse(state.ResolveAcceptedTrade(terms, 0.7f, 0.2f, 0).isSuccess);
+
+        Assert.IsTrue(saves.TryApplyEpiloguePaycheck(15, 18, out _, out _));
+        Assert.IsTrue(saves.TryPurchaseEpilogueBook(18, out int wallet, out _));
+        Assert.AreEqual(250 + price + 15 - 18, wallet);
+        Assert.AreEqual(margin, saves.LoadProfile().market_day.NetTradingProfit);
+        Assert.AreEqual(250 + price, saves.LoadProfile().market_day.closingWallet);
+
+        Assert.IsTrue(state.RestoreLevel1EntrySnapshot());
+        Assert.IsNull(state.FinalizedMarketDay);
+        Assert.AreEqual(0, state.GetMarketDayTotals().NetTradingProfit);
+        LocalProfileData restored = saves.LoadProfile();
+        Assert.IsFalse(restored.epilogue_paycheck_applied);
+        Assert.IsFalse(restored.epilogue_book_purchased);
+        Assert.AreEqual(0, restored.shift_stats.total_costed_deals);
+    }
+
+    [Test]
+    public void ExpiredOrderCannotSettleAndFailedReceiptSaveCanBeRetried()
+    {
+        SetRunningClock(0f);
+        var saves = new LocalSaveManager();
+        state.SyncTradeFromBackend("Lakshmi Amma", "Hampi", "Pepper", "1 Veesai", 1400, 20, null);
+        TradeTermsSnapshot terms = TradeTermsSnapshot.Capture(state.ActiveTrade);
+        Assert.IsTrue(state.ActiveTrade.BindAcceptedTerms(terms));
+        Assert.IsFalse(state.ResolveAcceptedTrade(terms, 0.7f, 0.2f, 0).isSuccess);
+
+        string obstruction = saves.SavePath + ".tmp";
+        Directory.CreateDirectory(obstruction);
+        LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("Failed to save profile"));
+        state.EndMarketDay();
+        Assert.IsTrue(state.HasUnsavedChanges);
+        Assert.IsTrue(state.FinalizedMarketDay.interruptedTrade);
+        Assert.AreEqual(0, state.FinalizedMarketDay.completedTrades);
+        Assert.AreEqual(250, state.FinalizedMarketDay.closingWallet);
+        Assert.IsFalse(saves.LoadProfile().market_day?.finalized ?? false);
+
+        Directory.Delete(obstruction);
+        Assert.IsTrue(state.SaveProfileToDisk());
+        state.ReloadProfileFromDisk();
+        Assert.IsTrue(state.FinalizedMarketDay.interruptedTrade);
+        Assert.IsFalse(state.ResolveAcceptedTrade(terms, 0.7f, 0.2f, 0).isSuccess);
+        Assert.AreEqual(1, saves.LoadProfile().shift_stats.shifts_completed);
+    }
+
+    [Test]
+    public void DayTotalsAccumulateProfitsAndLossesOnceAfterResume()
+    {
+        foreach (int price in new[] { 25, 17 })
+        {
+            state.SyncTradeFromBackend("Lakshmi Amma", "Hampi", "Cardamom", "1 Veesai", 1400, price, null);
+            TradeTermsSnapshot terms = TradeTermsSnapshot.Capture(state.ActiveTrade);
+            Assert.IsTrue(state.ActiveTrade.BindAcceptedTerms(terms));
+            Assert.IsTrue(state.ResolveAcceptedTrade(terms, 0.7f, 0.2f, 0).isSuccess);
+            Assert.IsFalse(state.ResolveAcceptedTrade(terms, 0.7f, 0.2f, 0).isSuccess);
+            state.ReloadProfileFromDisk();
+        }
+
+        MarketDayResult totals = state.GetMarketDayTotals();
+        Assert.AreEqual(42, totals.salesRevenue);
+        Assert.AreEqual(36, totals.costOfGoodsSold);
+        Assert.AreEqual(6, totals.NetTradingProfit);
+        Assert.AreEqual(292, totals.closingWallet);
+        Assert.AreEqual(2, totals.completedTrades);
+    }
+
+    [Test]
+    public void LegacyDayWithoutCostsKeepsRevenueAndMarksProfitUnavailable()
+    {
+        var saves = new LocalSaveManager();
+        LocalProfileData legacy = saves.LoadProfile();
+        legacy.current_scene = GameManager.DefaultGameplaySceneName;
+        legacy.shift_stats.total_deals_made++;
+        legacy.shift_stats.total_varahas_earned += 200;
+        legacy.global_metrics.total_varahas += 200;
+        legacy.hasSavedMarketDayTimer = true;
+        legacy.remainingMarketDaySeconds = 0f;
+        Assert.IsTrue(saves.SaveProfile(legacy));
+
+        state.ReloadProfileFromDisk();
+        state.StartMarketDay();
+        Assert.AreEqual(200, state.FinalizedMarketDay.salesRevenue);
+        Assert.AreEqual(450, state.FinalizedMarketDay.closingWallet);
+        Assert.AreEqual(1, state.FinalizedMarketDay.completedTrades);
+        Assert.IsNull(state.FinalizedMarketDay.NetTradingProfit);
     }
 
     private static FieldInfo TimerField(string name) => typeof(Level1GameState)

@@ -79,6 +79,7 @@ public class MarketplaceManager : MonoBehaviour
     private Coroutine marketDayStartupCoroutine;
     private Level1GameState marketDayState;
     private bool marketDayCompletionStarted;
+    private int receiptShownFrame;
     private bool isOriginalPlaceholderVisible = true;
     private bool keepsHipsActive = true;
     private float playerIdleStartedAt;
@@ -198,6 +199,7 @@ public class MarketplaceManager : MonoBehaviour
         marketDayState = Level1GameState.Instance;
         marketDayState.MarketDayEndedEvent += HandleMarketDayEnded;
         marketDayState.StartMarketDay();
+        chatManager?.hudManager?.UpdateMarketEarnings();
         if (marketDayState.MarketDayEnded)
         {
             HandleMarketDayEnded(); // Continue from an already-expired checkpoint.
@@ -228,7 +230,33 @@ public class MarketplaceManager : MonoBehaviour
     private void HandleMarketDayEnded()
     {
         if (!TryClaimMarketDayCompletion()) return;
-        GameManager.Instance.LoadSceneByName("Epilogue_BookPurchase", abandonCurrentWork: true);
+        StopNegotiationTimer();
+        StopNextCustomerCountdown();
+        StopAllCoroutines();
+        preparedLocalSession = null;
+        isTransitioning = false;
+        if (IsNavMeshAgentReady(navMeshAgent)) navMeshAgent.isStopped = true;
+        SetWalkingAnimation(false);
+        chatManager?.ResetConversationUI("The market has closed.");
+        receiptShownFrame = Time.frameCount;
+        ShowMarketReceipt();
+    }
+
+    private void Update()
+    {
+        if (!marketDayCompletionStarted || Time.frameCount <= receiptShownFrame ||
+            PauseMenuController.GameplayInputBlocked ||
+            (!OVRInput.GetDown(OVRInput.RawButton.A) && !Input.GetKeyDown(KeyCode.Return))) return;
+
+        var manager = GameManager.Instance;
+        manager.ContinueFromMarketReceipt();
+        if (!manager.IsLoading) ShowMarketReceipt();
+    }
+
+    private void ShowMarketReceipt()
+    {
+        chatManager?.hudManager?.ShowMarketDayReceipt(
+            marketDayState.FinalizedMarketDay, marketDayState.HasUnsavedChanges);
     }
 
     /// <summary>
@@ -515,7 +543,7 @@ public class MarketplaceManager : MonoBehaviour
     /// </summary>
     public void OnNegotiationFinished(bool wasAccepted)
     {
-        if (isTransitioning) return;
+        if (isTransitioning || marketDayState?.MarketDayEnded == true) return;
         isTransitioning = true;
         StopNegotiationTimer();
 

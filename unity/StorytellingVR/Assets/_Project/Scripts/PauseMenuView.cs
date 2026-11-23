@@ -56,7 +56,12 @@ public sealed class PauseMenuView : MonoBehaviour
                     "Your unfinished interactions will be discarded. Completed progress will be saved.",
                     "Return to Main Menu", "Cancel", returnToMenu);
         });
-        confirmButton.onClick.AddListener(() => { var action = pendingAction; pendingAction = null; action?.Invoke(); });
+        confirmButton.onClick.AddListener(() =>
+        {
+            var action = pendingAction;
+            pendingAction = null;
+            action?.Invoke();
+        });
         cancelButton.onClick.AddListener(ShowMain);
         HideImmediately();
     }

@@ -45,9 +45,7 @@ public class OrderManager : MonoBehaviour
     public bool BeginMarketplaceFulfillment(TradeTermsSnapshot agreement)
     {
         SpiceType mappedSpice = MapSpiceName(agreement?.SpiceKey);
-        if (mappedSpice == SpiceType.None || agreement.Price <= 0 || agreement.QuantityGrams <= 0 ||
-            !ReferenceEquals(agreement.Source.AcceptedTerms, agreement) || agreement.Source.SettlementClaimed ||
-            !ReferenceEquals(agreement.Source, Level1GameState.ExistingInstance?.ActiveTrade))
+        if (mappedSpice == SpiceType.None || Level1GameState.ExistingInstance?.CanFulfillAcceptedTrade(agreement) != true)
         {
             Debug.LogWarning("[OrderManager] Cannot fulfill invalid or unsupported accepted terms.");
             return false;
@@ -56,9 +54,6 @@ public class OrderManager : MonoBehaviour
         tutorialMode = false;
         CancelMarketplaceFulfillment();
 
-        requestedSpice = mappedSpice;
-        marketplaceOrder = new MarketplaceFulfillmentOrder(agreement);
-
         handBagAnimation = PrepareMarketplaceCustomerHandoff();
 
         if (handBagAnimation == null)
@@ -66,17 +61,18 @@ public class OrderManager : MonoBehaviour
             handBagAnimation = FindFirstObjectByType<HandBagAnimation>();
         }
 
-        if (handBagAnimation != null)
+        if (handBagAnimation == null || handBagAnimation.handBag == null ||
+            handBagAnimation.bagReceiver == null || handBagAnimation.bagFillPosition == null)
         {
-            handBagAnimation.StartOrder();
-            handBagAnimation.BindMarketplaceAgreement(agreement);
-            handBagAnimation.bagReceiver?.BindMarketplaceOrder(agreement);
-        }
-        else
-        {
-            Debug.LogWarning("[OrderManager] Marketplace fulfillment started, but HandBagAnimation was not found.");
+            Debug.LogWarning("[OrderManager] Marketplace fulfillment requires a handoff and bag receiver.");
+            return false;
         }
 
+        requestedSpice = mappedSpice;
+        marketplaceOrder = new MarketplaceFulfillmentOrder(agreement);
+        handBagAnimation.StartOrder();
+        handBagAnimation.BindMarketplaceAgreement(agreement);
+        handBagAnimation.bagReceiver.BindMarketplaceOrder(agreement);
         return true;
     }
 
@@ -97,8 +93,9 @@ public class OrderManager : MonoBehaviour
 
     public bool TryDeliverMarketplaceScoop(TradeTermsSnapshot agreement, SpiceType spice, bool scoopFilled)
     {
-        return marketplaceOrder != null && marketplaceOrder.TryDeliver(
-            Level1GameState.ExistingInstance?.ActiveTrade, agreement, spice, scoopFilled);
+        var state = Level1GameState.ExistingInstance;
+        return state != null && !state.MarketClosedForTrading && marketplaceOrder != null &&
+            marketplaceOrder.TryDeliver(state.ActiveTrade, agreement, spice, scoopFilled);
     }
 
     public bool CanCompleteMarketplaceFulfillment(TradeTermsSnapshot agreement)

@@ -9,6 +9,7 @@ public class GameManager : MonoBehaviour
     public const string DefaultMainMenuSceneName = "MainMenu_Optimized";
     public const string DefaultIntroSceneName = "ModernStudyRoom";
     public const string DefaultGameplaySceneName = "Level1_MainLoopUpdated";
+    public const string BookPurchaseSceneName = "Epilogue_BookPurchase";
 
     private static readonly string[] DefaultSceneOrder =
     {
@@ -318,9 +319,14 @@ public class GameManager : MonoBehaviour
         string sceneName = SceneManager.GetActiveScene().name;
         if (!IsGameplayScene(sceneName)) return;
         if (!Application.CanStreamedLevelBeLoaded(sceneName)) return;
-        if (sceneName == DefaultGameplaySceneName && !Level1GameState.Instance.RestoreLevel1EntrySnapshot())
+        bool marketRestart = sceneName == DefaultGameplaySceneName;
+        if (marketRestart && !Level1GameState.Instance.RestoreLevel1EntrySnapshot())
+        {
+            GetComponent<PauseMenuController>()?.ShowTransitionFailure("Could not restore the market-day save. Retry or cancel.");
             return; // Do not reload into a partially reset or unsaved attempt.
-        LoadSceneByName(sceneName, abandonCurrentWork: true);
+        }
+        LoadSceneByNameInternal(sceneName, abandonCurrentWork: true, allowMarketExit: false,
+            marketRestartSaved: marketRestart);
     }
 
     public void ReturnToMainMenu()
@@ -329,6 +335,20 @@ public class GameManager : MonoBehaviour
     }
 
     public void LoadSceneByName(string sceneName, bool abandonCurrentWork = false)
+    {
+        LoadSceneByNameInternal(sceneName, abandonCurrentWork, allowMarketExit: false);
+    }
+
+    public void ContinueFromMarketReceipt()
+    {
+        if (currentSceneName != DefaultGameplaySceneName ||
+            Level1GameState.ExistingInstance?.FinalizedMarketDay == null ||
+            PauseMenuController.GameplayInputBlocked) return;
+        LoadSceneByNameInternal(BookPurchaseSceneName, abandonCurrentWork: true, allowMarketExit: true);
+    }
+
+    private void LoadSceneByNameInternal(string sceneName, bool abandonCurrentWork, bool allowMarketExit,
+        bool marketRestartSaved = false)
     {
         if (isLoading)
         {
@@ -342,27 +362,19 @@ public class GameManager : MonoBehaviour
         }
 
         string targetSceneName = sceneName.Trim();
+        if (!allowMarketExit && currentSceneName == DefaultGameplaySceneName &&
+            targetSceneName != DefaultGameplaySceneName && targetSceneName != mainMenuSceneName)
+        {
+            Debug.LogWarning("[SCENE FLOW] Continue from the market receipt to leave Level 1.");
+            return;
+        }
         if (!Application.CanStreamedLevelBeLoaded(targetSceneName))
         {
             Debug.LogError("[SCENE FLOW] Scene is not available in the build scene list: " + targetSceneName);
             return; // Do not abandon local work or write progression for an unavailable destination.
         }
-        int targetIndex = GetProgressionIndex(targetSceneName);
-        if (targetIndex >= 0)
-        {
-            currentIndex = targetIndex;
-        }
-        else if (string.Equals(targetSceneName, mainMenuSceneName, System.StringComparison.Ordinal))
-        {
-            currentIndex = -1;
-        }
-        else
-        {
-            currentIndex = -1;
-            Debug.LogWarning($"[SCENE FLOW] Loading non-progression scene '{targetSceneName}'. Progression index reset to -1.");
-        }
-
-        StartCoroutine(LoadRoutine(targetSceneName, abandonCurrentWork || targetSceneName == mainMenuSceneName));
+        StartCoroutine(LoadRoutine(targetSceneName, abandonCurrentWork || targetSceneName == mainMenuSceneName,
+            marketRestartSaved));
     }
 
     // Level 1 uses Y for its ledger; it must not also advance the scene/progression.
@@ -382,15 +394,22 @@ public class GameManager : MonoBehaviour
         LoadNextScene();
     }
 
-    private IEnumerator LoadRoutine(string targetSceneName, bool abandonCurrentWork)
+    private IEnumerator LoadRoutine(string targetSceneName, bool abandonCurrentWork, bool marketRestartSaved)
     {
         isLoading = true;
         PauseMenuController pause = GetComponent<PauseMenuController>();
+        bool transitionPrepared = false;
         try
         {
-            pause?.PrepareForTransition();
+            if (!marketRestartSaved && !PreserveCommittedProgress(abandonCurrentWork))
+            {
+                Debug.LogWarning("[SCENE FLOW] Save failed. The current scene remains open.");
+                pause?.ShowTransitionFailure("Save failed. Retry or cancel.");
+                yield break;
+            }
 
-            PreserveCommittedProgress(abandonCurrentWork);
+            transitionPrepared = true;
+            pause?.PrepareForTransition();
 
             // A new Level 1 visit gets its own entry baseline. Continue and Restart retain
             // the baseline already stored in the selected save slot.
@@ -446,16 +465,17 @@ public class GameManager : MonoBehaviour
         finally
         {
             isLoading = false;
-            pause?.FinishTransition();
+            if (transitionPrepared) pause?.FinishTransition();
         }
     }
 
-    private void PreserveCommittedProgress(bool abandonCurrentWork)
+    private bool PreserveCommittedProgress(bool abandonCurrentWork)
     {
         var state = Level1GameState.ExistingInstance;
-        if (state == null) return;
-        state.SaveProfileToDisk();
+        if (state == null) return true;
+        if (!state.SaveProfileToDisk()) return false;
         if (abandonCurrentWork) state.ReloadProfileFromDisk();
+        return true;
     }
 
     private void InitializeRuntimeState()
@@ -568,6 +588,7 @@ public class GameManager : MonoBehaviour
         if (skipSuppressed) return "debug skipping is suppressed";
         if (PauseMenuController.GameplayInputBlocked) return "pause/input-release gate is active";
         if (currentSceneName != DefaultGameplaySceneName) return "scene is not Level1_MainLoopUpdated";
+        if (Level1GameState.ExistingInstance?.MarketClosedForTrading == true) return "the market receipt is due";
 
         if (!keyboardInput) return null;
 
@@ -643,7 +664,7 @@ public class GameManager : MonoBehaviour
             return;
         }
         Debug.Log("[DEBUG SKIP] Accepted; requesting Epilogue_BookPurchase through GameManager without awarding results.");
-        LoadSceneByName("Epilogue_BookPurchase", abandonCurrentWork: true);
+        LoadSceneByNameInternal(BookPurchaseSceneName, abandonCurrentWork: true, allowMarketExit: true);
         Debug.Log($"[DEBUG SKIP] Transition {(isLoading ? "started" : "did not start; inspect SCENE FLOW errors")}.");
         #endif
     }

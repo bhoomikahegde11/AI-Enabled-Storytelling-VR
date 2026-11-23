@@ -505,6 +505,19 @@ public class ModernStudyRoomEndingController : MonoBehaviour
             endingBodyFont
         );
 
+        var saves = new LocalSaveManager();
+        MarketDayResult marketDay = saves.TryLoadExistingProfile(out LocalProfileData profile) &&
+            profile.market_day?.finalized == true ? profile.market_day : null;
+        if (marketDay != null)
+        {
+            string result = Level1HUDManager.FormatTradingResult(marketDay.NetTradingProfit);
+            string trades = marketDay.hasOpeningBalance ? $"{marketDay.completedTrades} trades" : "Trade count unavailable";
+            AddLine(rt, $"Market day  |  {trades}  |  {result}", h * endingFinalLineSizeRatio,
+                h * (endingFinalLineYRatio - 0.085f), 1f, FontStyles.Normal, 0f, endingBodyFont);
+            AddLine(rt, $"Market closing wallet: {marketDay.closingWallet} Varahas", h * endingFinalLineSizeRatio,
+                h * (endingFinalLineYRatio - 0.13f), 1f, FontStyles.Normal, 0f, endingBodyFont);
+        }
+
         CanvasGroup group =
             root.GetComponent<CanvasGroup>();
 

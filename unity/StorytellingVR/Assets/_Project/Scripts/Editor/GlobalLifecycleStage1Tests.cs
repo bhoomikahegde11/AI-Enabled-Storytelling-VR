@@ -391,8 +391,7 @@ public class GlobalLifecycleStage1Tests
             "Input.GetKeyDown(KeyCode.F7)",
             "OVRInput.GetDown(OVRInput.Button.Two, OVRInput.Controller.RTouch)",
             "InputDevices.GetDeviceAtXRNode(XRNode.RightHand)",
-            "rightHand.TryGetFeatureValue(CommonUsages.secondaryButton, out xrB)",
-            "LoadSceneByName(\"Epilogue_BookPurchase\", abandonCurrentWork: true)"
+            "rightHand.TryGetFeatureValue(CommonUsages.secondaryButton, out xrB)"
         })
         {
             StringAssert.Contains(operation, guardedSource);
@@ -400,6 +399,11 @@ public class GlobalLifecycleStage1Tests
                 guardedSource.Split(new[] { operation }, StringSplitOptions.None).Length,
                 "Debug input and transition calls must not exist outside development compile guards.");
         }
+        int skipStart = source.IndexOf("private void TryDebugSkipMainLoop(", StringComparison.Ordinal);
+        int skipEnd = source.IndexOf("#endif", skipStart, StringComparison.Ordinal);
+        string debugSkip = source.Substring(skipStart, skipEnd - skipStart);
+        StringAssert.Contains("#if UNITY_EDITOR || DEVELOPMENT_BUILD", debugSkip);
+        StringAssert.Contains("LoadSceneByNameInternal(BookPurchaseSceneName, abandonCurrentWork: true, allowMarketExit: true)", debugSkip);
         StringAssert.DoesNotContain("Input.GetKeyDown(KeyCode.N)", source);
     }
 

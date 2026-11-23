@@ -247,6 +247,33 @@ public class Level1TransactionIntegrityTests
     }
 
     [Test]
+    public void UnsupportedAcceptedOrderRecoversWithoutPaymentOrPenalty()
+    {
+        state.SyncTradeFromBackend("Lakshmi Amma", "Hampi", "Clove", "1 Veesai", 1400, 100, null);
+        LocalTradeState trade = state.ActiveTrade;
+        TradeTermsSnapshot agreement = TradeTermsSnapshot.Capture(trade);
+        Assert.IsTrue(trade.BindAcceptedTerms(agreement));
+        Assert.IsNull(OrderManager.Instance);
+        ownedOrder = host.AddComponent<OrderManager>();
+        OrderManager.Instance = ownedOrder;
+        ChatManager chat = PendingChat(agreement);
+        typeof(ChatManager).GetField("pendingFulfillment", BindingFlags.Instance | BindingFlags.NonPublic)
+            .SetValue(chat, null);
+        int money = state.CurrentMoney;
+        int respect = state.CurrentReputation;
+
+        typeof(ChatManager).GetMethod("BeginAcceptedFulfillment", BindingFlags.Instance | BindingFlags.NonPublic)
+            .Invoke(chat, new object[] { trade, agreement.Price, agreement.QuantityGrams, 0.7f, 0.1f, 0 });
+
+        Assert.IsFalse(chat.HasPendingFulfillment);
+        Assert.IsFalse(ownedOrder.IsMarketplaceFulfillmentActive);
+        Assert.IsNull(state.ActiveTrade);
+        Assert.AreEqual(money, state.CurrentMoney);
+        Assert.AreEqual(respect, state.CurrentReputation);
+        Assert.AreEqual(0, Profile.shift_stats.total_deals_made);
+    }
+
+    [Test]
     public void FailedSaveDoesNotReopenSettlementOrDuplicateRewards()
     {
         TradeTermsSnapshot agreement = AcceptCurrent();

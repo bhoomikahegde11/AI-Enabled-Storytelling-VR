@@ -95,6 +95,7 @@ public class Level1HUDManager : MonoBehaviour
     private Coroutine subtitleAnimCoroutine;
     private bool ledgerOpen = false;
     private bool showingPracticeTrade;
+    private bool showingMarketReceipt;
 
     // Cached original divider width for animation
     private float originalDividerWidth;
@@ -118,7 +119,7 @@ public class Level1HUDManager : MonoBehaviour
         // Set initial UI panel states
         if (subtitlePanel != null) subtitlePanel.SetActive(false);
         if (npcIntroPanel != null) npcIntroPanel.SetActive(false);
-        if (tradeCompletePanel != null) tradeCompletePanel.SetActive(false);
+        if (tradeCompletePanel != null && !showingMarketReceipt) tradeCompletePanel.SetActive(false);
         if (currentTradePanel != null) currentTradePanel.SetActive(false);
 
         // Cache the original divider width before any animation zeroes it out
@@ -184,7 +185,7 @@ public class Level1HUDManager : MonoBehaviour
 
     private void Update()
     {
-        if (PauseMenuController.GameplayInputBlocked || showingPracticeTrade) return;
+        if (PauseMenuController.GameplayInputBlocked || showingPracticeTrade || showingMarketReceipt) return;
         // Toggle ledger with TAB key (ignored if player is typing in inputField)
         bool keyboardTrade = Input.GetKeyDown(KeyCode.Tab) || Input.GetKeyDown(KeyCode.Y);
         if (keyboardTrade)
@@ -741,7 +742,8 @@ public class Level1HUDManager : MonoBehaviour
     public void UpdateMoney(int varaha, bool practice)
     {
         bool isInitial = (lastMoneyAmount == -1);
-        
+
+        if (!practice) UpdateMarketEarnings();
         if (varaha == lastMoneyAmount) return;
         lastMoneyAmount = varaha;
 
@@ -755,10 +757,7 @@ public class Level1HUDManager : MonoBehaviour
             varahaAmountText.text = varaha.ToString();
         }
 
-        if (varahaLabelText != null)
-        {
-            varahaLabelText.text = "VARAHAS";
-        }
+        if (practice && varahaLabelText != null) varahaLabelText.text = "VARAHAS";
 
         if (!isInitial)
         {
@@ -775,6 +774,24 @@ public class Level1HUDManager : MonoBehaviour
             RestoreMoneyPanelBaseScale();
             moneyAnimCoroutine = StartCoroutine(AnimateMoneyChange());
         }
+    }
+
+    public static string FormatMarketEarnings(int? amount) =>
+        amount.HasValue ? $"Varahas earned: {FormatSignedMargin(amount.Value)}" : "Varahas earned: N/A";
+
+    public static string FormatTradingResult(int? amount)
+    {
+        if (!amount.HasValue) return "Trading profit unavailable";
+        string label = amount.Value < 0 ? "Trading loss" : "Trading profit";
+        return $"{label}: {FormatSignedMargin(amount.Value)} Varahas";
+    }
+
+    public void UpdateMarketEarnings()
+    {
+        var state = Level1GameState.ExistingInstance;
+        if (state == null || (!state.MarketDayStarted && !state.MarketDayEnded)) return;
+        string earnings = FormatMarketEarnings(state.GetMarketDayTotals().NetTradingProfit);
+        if (varahaLabelText != null) varahaLabelText.text = $"WALLET (VARAHAS)\n{earnings}";
     }
 
     private IEnumerator AnimateMoneyChange()
@@ -1157,7 +1174,7 @@ public class Level1HUDManager : MonoBehaviour
 
     public void ShowTradeComplete(TransactionSummary transaction, bool isSuccess, int reputationDelta)
     {
-        if (tradeCompletePanel == null) return;
+        if (tradeCompletePanel == null || showingMarketReceipt) return;
         tradeCompletePanel.SetActive(true);
         string buyer = !string.IsNullOrWhiteSpace(transaction?.buyer_name) ? transaction.buyer_name : "Customer";
 
@@ -1193,6 +1210,40 @@ public class Level1HUDManager : MonoBehaviour
         tradeCompleteCoroutine = StartCoroutine(ShowLedgerRoutine(transaction, isSuccess, reputationDelta));
     }
 
+    public void ShowMarketDayReceipt(MarketDayResult result, bool savePending)
+    {
+        if (result == null || tradeCompletePanel == null) return;
+        if (tradeCompleteCoroutine != null) StopCoroutine(tradeCompleteCoroutine);
+        tradeCompleteCoroutine = null;
+        showingMarketReceipt = true;
+        if (currentTradePanel != null) currentTradePanel.SetActive(false);
+        tradeCompletePanel.SetActive(true);
+        if (ledgerCanvasGroup != null) ledgerCanvasGroup.alpha = 1f;
+        if (ledgerTransform != null) ledgerTransform.localScale = ledgerOriginalScale;
+        if (ledgerRewardText != null) ledgerRewardText.transform.localScale = ledgerRewardOriginalScale;
+        UpdateMarketEarnings();
+
+        string opening = result.hasOpeningBalance ? result.openingWallet.ToString() : "Unavailable";
+        string revenue = result.hasOpeningBalance ? result.salesRevenue.ToString() : "Unavailable";
+        string costs = result.hasCompleteCosts ? result.costOfGoodsSold.ToString() : "Unavailable";
+        string trades = result.hasOpeningBalance ? result.completedTrades.ToString() : "Unavailable";
+        if (ledgerTitleText != null) ledgerTitleText.text = "HAMPI MARKET LEDGER";
+        if (ledgerResultText != null) ledgerResultText.text = "MARKET DAY RECEIPT";
+        if (ledgerDetailsText != null)
+            ledgerDetailsText.text = $"Opening wallet: {opening}\nSales revenue: {revenue}\nCost of goods sold: {costs}\nClosing wallet: {result.closingWallet}";
+        if (ledgerRewardText != null)
+            ledgerRewardText.text = $"{FormatTradingResult(result.NetTradingProfit)}\nTrades: {trades}    Honour: {result.closingRespect}/100";
+        if (ledgerFooterText != null)
+        {
+            string notice = savePending ? "Save failed. Press A / Enter to retry."
+                : result.interruptedTrade ? "Unfinished trade ended. Press A / Enter to continue."
+                : !result.hasCompleteCosts ? "Earlier costs unavailable. Press A / Enter to continue."
+                : result.completedTrades == 0 ? "No completed trades. Press A / Enter to continue."
+                : "Press A / Enter to continue.";
+            ledgerFooterText.text = notice;
+        }
+    }
+
     private IEnumerator ShowLedgerRoutine(TransactionSummary transaction, bool isSuccess, int reputationDelta)
     {
         string spice = transaction != null ? transaction.item : "Unknown Spice";
@@ -1219,7 +1270,7 @@ public class Level1HUDManager : MonoBehaviour
             }
             else
             {
-                ledgerDetailsText.text = $"Buyer: {buyer}\n\nNo goods exchanged";
+                ledgerDetailsText.text = $"Buyer: {buyer}\n\n{transaction?.failure_reason ?? "No goods exchanged"}";
             }
         }
 
@@ -1239,7 +1290,9 @@ public class Level1HUDManager : MonoBehaviour
 
         if (ledgerFooterText != null)
         {
-            ledgerFooterText.text = isSuccess ? "Your name spreads through the market" : "The customer leaves your stall";
+            ledgerFooterText.text = Level1GameState.ExistingInstance?.HasUnsavedChanges == true
+                ? "Save pending. Keep this session open."
+                : isSuccess ? "Your name spreads through the market" : "The customer leaves your stall";
         }
 
         // Set initial scale and alpha

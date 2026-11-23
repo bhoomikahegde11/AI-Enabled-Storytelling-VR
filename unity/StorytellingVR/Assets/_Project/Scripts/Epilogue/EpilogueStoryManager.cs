@@ -93,65 +93,60 @@ public class EpilogueStoryManager : MonoBehaviour
     private IEnumerator BhaskaraSequence()
     {
         sequenceRunning = true;
+        currentStage = EpilogueStage.BhaskaraPaycheck;
 
-        yield return new WaitForSeconds(1f);
+        // Let the book's Start and the scene checkpoint finish before restoring its stage.
+        yield return null;
 
-        if (NarratorUIManager.Instance != null)
+        Level1GameState.Instance.EnsureInitialized();
+        var saves = new LocalSaveManager();
+        bool paycheckAlreadyApplied = saves.TryLoadExistingProfile(out LocalProfileData checkpoint) &&
+            checkpoint.epilogue_paycheck_applied;
+        if (!paycheckAlreadyApplied && NarratorUIManager.Instance != null)
         {
-            // Exactly matches the single recorded BHASKARA_EPILOGUE_01.wav.
-            yield return NarratorUIManager.Instance.PlayNarration(
-                "BHASKARA_EPILOGUE_01", "Bhaskara",
-                "You did well today. Here is your share of the earnings.", 5f);
+            yield return new WaitForSeconds(1f);
+            if (checkpoint?.market_day?.NetTradingProfit > 0)
+            {
+                yield return NarratorUIManager.Instance.PlayNarration(
+                    "BHASKARA_EPILOGUE_01", "Bhaskara",
+                    "You did well today. Here is your share of the earnings.", 5f);
+            }
+            else
+            {
+                yield return NarratorUIManager.Instance.PlayNarration(
+                    "Bhaskara", "The market has closed. Here is your pay for the day.", 5f);
+            }
         }
-        else
+        else if (!paycheckAlreadyApplied) yield return new WaitForSeconds(6f);
+
+        int balance;
+        int paycheck;
+        while (!saves.TryApplyEpiloguePaycheck(defaultPaycheck, bookPrice, out balance, out paycheck))
+            yield return WaitForFinanceRetry("Could not save your pay");
+        Level1GameState.ExistingInstance?.ReloadProfileFromDisk();
+        walletHUD?.SetBalance(balance);
+        if (paycheck > 0)
         {
-            yield return new WaitForSeconds(5f);
-        }
-
-        // ── Paycheck ──────────────────────────────────────────────────────────
-
-        LocalSaveManager saveManager = new LocalSaveManager();
-        LocalProfileData profile = saveManager.LoadProfile();
-
-        int balanceBefore =
-            profile.global_metrics.total_varahas;
-
-        int paycheck = defaultPaycheck;
-
-        if (balanceBefore + paycheck < bookPrice)
-            paycheck = bookPrice - balanceBefore;
-
-        profile.global_metrics.total_varahas += paycheck;
-
-        saveManager.SaveProfile(profile);
-
-        if (Level1GameState.Instance != null)
-            Level1GameState.Instance.ReloadProfileFromDisk();
-
-        if (walletHUD != null)
-        {
-            walletHUD.SetBalance(
-                profile.global_metrics.total_varahas
-            );
-
-            walletHUD.ShowGain(paycheck);
+            walletHUD?.ShowGain(paycheck);
+            objectiveUI?.SetObjective($"Bhaskara's pay: +{paycheck} Varahas\nWallet: {balance} Varahas");
         }
 
-        yield return new WaitForSeconds(1f);
-
-        // Narrator line
-        if (NarratorUIManager.Instance != null)
+        if (saves.TryLoadExistingProfile(out checkpoint) && checkpoint.epilogue_book_purchased)
         {
-            yield return NarratorUIManager.Instance.PlayNarration(
-                "NARRATOR_EPILOGUE_01",
-                "Narrator",
-                "With enough Varahas now in hand, perhaps it is finally time to return to Meera.",
-                6f
-            );
+            EnableBookPickup(balance);
+            yield break;
         }
-        else
+
+        if (!paycheckAlreadyApplied)
         {
-            yield return new WaitForSeconds(5f);
+            yield return new WaitForSeconds(1f);
+            if (NarratorUIManager.Instance != null)
+            {
+                yield return NarratorUIManager.Instance.PlayNarration(
+                    "NARRATOR_EPILOGUE_01", "Narrator",
+                    "With enough Varahas now in hand, perhaps it is finally time to return to Meera.", 6f);
+            }
+            else yield return new WaitForSeconds(5f);
         }
 
         // ── Advance to ReturnToMeera ─────────────────────────────────────────
@@ -159,7 +154,7 @@ public class EpilogueStoryManager : MonoBehaviour
         currentStage = EpilogueStage.ReturnToMeera;
 
         objectiveUI?.SetObjective(
-            "Purchase the book from Meera"
+            $"Purchase the book from Meera ({bookPrice} Varahas)\nWallet: {balance} Varahas"
         );
 
         // Point directional indicator at Meera.
@@ -275,33 +270,14 @@ public class EpilogueStoryManager : MonoBehaviour
 
         // ── Deduct book price ─────────────────────────────────────────────────
 
-        LocalSaveManager saveManager =
-            new LocalSaveManager();
-
-        LocalProfileData profile =
-            saveManager.LoadProfile();
-
-        profile.global_metrics.total_varahas -=
-            bookPrice;
-
-        if (profile.global_metrics.total_varahas < 0)
-        {
-            profile.global_metrics.total_varahas = 0;
-        }
-
-        saveManager.SaveProfile(profile);
-
-        if (Level1GameState.Instance != null)
-            Level1GameState.Instance.ReloadProfileFromDisk();
-
-        if (walletHUD != null)
-        {
-            walletHUD.ShowSpend(bookPrice);
-
-            walletHUD.SetBalance(
-                profile.global_metrics.total_varahas
-            );
-        }
+        var saves = new LocalSaveManager();
+        int balance;
+        int spent;
+        while (!saves.TryPurchaseEpilogueBook(bookPrice, out balance, out spent))
+            yield return WaitForFinanceRetry("Could not save the book purchase");
+        Level1GameState.ExistingInstance?.ReloadProfileFromDisk();
+        walletHUD?.SetBalance(balance);
+        if (spent > 0) walletHUD?.ShowSpend(spent);
 
         // Final Meera line
         if (NarratorUIManager.Instance != null)
@@ -318,11 +294,23 @@ public class EpilogueStoryManager : MonoBehaviour
             yield return new WaitForSeconds(4f);
         }
 
-        // ── Advance to OpenBook ───────────────────────────────────────────────
+        EnableBookPickup(balance);
+    }
 
+    private IEnumerator WaitForFinanceRetry(string message)
+    {
+        objectiveUI?.SetObjective($"{message}. Press A / Enter to retry.");
+        yield return null;
+        while (PauseMenuController.GameplayInputBlocked ||
+            (!OVRInput.GetDown(OVRInput.RawButton.A) && !Input.GetKeyDown(KeyCode.Return)))
+            yield return null;
+    }
+
+    private void EnableBookPickup(int balance)
+    {
         currentStage = EpilogueStage.OpenBook;
 
-        objectiveUI?.SetObjective("Take the book");
+        objectiveUI?.SetObjective($"Take the book\nWallet: {balance} Varahas");
 
         if (endingBookInteraction != null)
         {

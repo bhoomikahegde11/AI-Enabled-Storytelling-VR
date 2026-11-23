@@ -53,6 +53,7 @@ public class StartResponse
 [System.Serializable]
 public class TransactionSummary
 {
+    public string failure_reason;
     public string item;
     public string quantity;
     public int earned;

@@ -87,13 +87,16 @@ public class TransactionManager
             profile.shift_stats.total_deals_made++;
             profile.shift_stats.total_varahas_earned += varahaChange;
             int baseValue = marketManager.CalculateBaseValue(spiceKey, finalQuantityGrams);
+            profile.shift_stats.total_cost_of_goods_sold += baseValue;
+            profile.shift_stats.total_costed_deals++;
+            int margin = finalPrice - baseValue;
             result.transaction = new TransactionSummary
             {
                 item = Capitalize(spiceKey),
                 quantity = !string.IsNullOrWhiteSpace(acceptedQuantityLabel) ? acceptedQuantityLabel : marketManager.FormatTraditionalQuantity(finalQuantityGrams),
                 earned = Mathf.Max(0, finalPrice),
-                profit = Mathf.Max(0, finalPrice - baseValue),
-                signed_margin = finalPrice - baseValue,
+                profit = Mathf.Max(0, margin),
+                signed_margin = margin,
                 respect_change = reputationChange,
                 buyer_name = buyerName,
                 buyer_origin = buyerOrigin

@@ -195,6 +195,7 @@ public class GlobalPauseStage2Tests
         Assert.AreEqual(0, restarts);
         view.cancelButton.onClick.Invoke();
         Assert.IsTrue(view.mainView.activeSelf);
+        view.confirmButton.onClick.Invoke();
         Assert.AreEqual(0, restarts);
         view.restartButton.onClick.Invoke();
         view.confirmButton.onClick.Invoke();
@@ -205,6 +206,7 @@ public class GlobalPauseStage2Tests
         Assert.AreEqual("Return to the Main Menu?", view.confirmationTitle.text);
         Assert.AreEqual("Cancel", view.cancelButton.GetComponentInChildren<TMP_Text>(true).text);
         Assert.AreEqual(0, returns);
+        view.confirmButton.onClick.Invoke();
         view.confirmButton.onClick.Invoke();
         Assert.AreEqual(1, returns);
         var state = State();
@@ -581,6 +583,7 @@ public class GlobalPauseStage2Tests
         var state = State();
         Field(typeof(Level1GameState), "<MarketDayStarted>k__BackingField").SetValue(state, true);
         Field(typeof(Level1GameState), "marketDayRemainingSeconds").SetValue(state, 500f);
+        Field(typeof(Level1GameState), "marketDayStartedAt").SetValue(state, Time.time - 400f);
         var clock = PauseMenuController.RunGameplay((IEnumerator)Invoke(state, "MarketDayTimerRoutine"));
         Invoke(pause, "CapturePauseState");
         Field(typeof(Level1GameState), "marketDayStartedAt").SetValue(state,
@@ -598,7 +601,7 @@ public class GlobalPauseStage2Tests
     }
 
     [Test]
-    public void DebugSkipEligibilityDoesNotDependOnOrExpireTheMarketClock()
+    public void DebugSkipLeavesTheMarketClockRunningAndCannotBypassAClosedMarketReceipt()
     {
         var state = State();
         Field(typeof(Level1GameState), "<MarketDayStarted>k__BackingField").SetValue(state, true);
@@ -609,8 +612,6 @@ public class GlobalPauseStage2Tests
         Assert.AreEqual(500f, state.MarketDayRemainingSeconds);
         Assert.IsFalse(state.MarketDayEnded);
         state.EndMarketDay();
-        Assert.IsTrue((bool)Invoke(manager, "CanDebugSkipMainLoop", false));
-        Field(typeof(GameManager), "enableDebugSceneSkip").SetValue(manager, false);
         Assert.IsFalse((bool)Invoke(manager, "CanDebugSkipMainLoop", false));
     }
 

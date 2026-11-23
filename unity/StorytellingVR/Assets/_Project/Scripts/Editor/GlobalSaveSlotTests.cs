@@ -222,6 +222,92 @@ public class GlobalSaveSlotTests
     }
 
     [Test]
+    public void EpiloguePayAndBookChargeAreOnceOnlyAfterSaveFailureAndResume()
+    {
+        Assert.IsTrue(LocalSaveManager.TryCreateJourneyInSlot(1, "Market", "Asha", "Female", false));
+        var saves = new LocalSaveManager();
+        LocalProfileData profile = saves.LoadProfile();
+        profile.current_scene = GameManager.BookPurchaseSceneName;
+        profile.global_metrics.total_varahas = 1;
+        Assert.IsTrue(saves.SaveProfile(profile));
+        string obstruction = saves.SavePath + ".tmp";
+
+        Directory.CreateDirectory(obstruction);
+        LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("Failed to save profile"));
+        Assert.IsFalse(saves.TryApplyEpiloguePaycheck(15, 18, out _, out _));
+        Assert.AreEqual(1, saves.LoadProfile().global_metrics.total_varahas);
+        Assert.IsFalse(saves.LoadProfile().epilogue_paycheck_applied);
+        Directory.Delete(obstruction);
+
+        Assert.IsTrue(saves.TryApplyEpiloguePaycheck(15, 18, out int wallet, out int paid));
+        Assert.AreEqual(18, wallet);
+        Assert.AreEqual(17, paid);
+        var resumed = new LocalSaveManager();
+        Assert.IsTrue(resumed.TryApplyEpiloguePaycheck(15, 18, out wallet, out paid));
+        Assert.AreEqual(18, wallet);
+        Assert.AreEqual(0, paid);
+
+        Directory.CreateDirectory(obstruction);
+        LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("Failed to save profile"));
+        Assert.IsFalse(resumed.TryPurchaseEpilogueBook(18, out _, out _));
+        Assert.IsFalse(saves.LoadProfile().epilogue_book_purchased);
+        Directory.Delete(obstruction);
+
+        Assert.IsTrue(resumed.TryPurchaseEpilogueBook(18, out wallet, out int spent));
+        Assert.AreEqual(0, wallet);
+        Assert.AreEqual(18, spent);
+        Assert.IsTrue(new LocalSaveManager().TryPurchaseEpilogueBook(18, out wallet, out spent));
+        Assert.AreEqual(0, wallet);
+        Assert.AreEqual(0, spent);
+        Assert.IsTrue(new LocalSaveManager().TryApplyEpiloguePaycheck(15, 18, out wallet, out paid));
+        Assert.AreEqual(0, wallet);
+        Assert.AreEqual(0, paid);
+    }
+
+    [Test]
+    public void LegacyBookCheckpointPreservesBalanceWhenPaymentHistoryIsUnknown()
+    {
+        Assert.IsTrue(LocalSaveManager.TryCreateJourneyInSlot(1, "Legacy", "Asha", "Female", false));
+        var saves = new LocalSaveManager();
+        LocalProfileData profile = saves.LoadProfile();
+        profile.current_scene = GameManager.BookPurchaseSceneName;
+        profile.epilogue_finance_tracked = false;
+        profile.global_metrics.total_varahas = 135;
+        Assert.IsTrue(saves.SaveProfile(profile));
+
+        Assert.IsTrue(saves.TryApplyEpiloguePaycheck(15, 18, out int wallet, out int paid));
+        Assert.AreEqual(135, wallet);
+        Assert.AreEqual(0, paid);
+        Assert.IsTrue(saves.TryPurchaseEpilogueBook(18, out wallet, out int spent));
+        Assert.AreEqual(135, wallet);
+        Assert.AreEqual(0, spent);
+    }
+
+    [Test]
+    public void InterruptedRenameUsesTheCommittedBackupInsteadOfTheTemporaryProfile()
+    {
+        Assert.IsTrue(LocalSaveManager.TryCreateJourneyInSlot(1, "Market", "Asha", "Female", false));
+        var saves = new LocalSaveManager();
+        LocalProfileData profile = saves.LoadProfile();
+        profile.global_metrics.total_varahas = 135;
+        profile.epilogue_paycheck_applied = true;
+        Assert.IsTrue(saves.SaveProfile(profile));
+        File.Copy(saves.SavePath, saves.SavePath + ".bak", true);
+        profile.global_metrics.total_varahas = 117;
+        profile.epilogue_book_purchased = true;
+        File.WriteAllText(saves.SavePath + ".tmp", JsonUtility.ToJson(profile));
+        File.Delete(saves.SavePath);
+
+        Assert.IsTrue(LocalSaveManager.TryLoadSlot(1, out LocalProfileData restored));
+        Assert.IsFalse(restored.epilogue_book_purchased);
+        Assert.AreEqual(135, restored.global_metrics.total_varahas);
+        Assert.IsTrue(saves.TryPurchaseEpilogueBook(18, out int wallet, out int spent));
+        Assert.AreEqual(117, wallet);
+        Assert.AreEqual(18, spent);
+        Assert.IsTrue(saves.LoadProfile().epilogue_book_purchased);
+    }
+
+    [Test]
     public void ContinueProfileAndLevel1RestartSnapshotStayInTheirOriginalSlot()
     {
         Assert.IsTrue(LocalSaveManager.TryCreateJourneyInSlot(1, "Market", "Asha", "Female", false));

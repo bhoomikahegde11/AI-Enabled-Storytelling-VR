@@ -683,7 +683,7 @@ public void OnVoiceInput(string spokenText)
 
             if (coinsEarnedText != null)
             {
-                coinsEarnedText.text = "Coins Earned: " + localMoney;
+                UpdateCoinsEarnedText();
             }
 
             if (hudManager != null)
@@ -933,7 +933,7 @@ public void OnVoiceInput(string spokenText)
 
         if (coinsEarnedText != null)
         {
-            coinsEarnedText.text = "Coins Earned: " + localMoney;
+            UpdateCoinsEarnedText();
         }
 
         // Update Level 1 HUD Economy metrics
@@ -1424,8 +1424,9 @@ public void OnVoiceInput(string spokenText)
 
     private void BeginAcceptedFulfillment(LocalTradeState trade, int agreedPrice, int quantityGrams, float trust, float frustration, int outOfWorldCount)
     {
+        var state = Level1GameState.ExistingInstance;
         if (trade == null || trade.SettlementClaimed || pendingFulfillment != null ||
-            !ReferenceEquals(trade, Level1GameState.ExistingInstance?.ActiveTrade))
+            state == null || state.MarketClosedForTrading || !ReferenceEquals(trade, state.ActiveTrade))
         {
             Debug.LogWarning("[FULFILLMENT] Cannot enter pending fulfillment because there is no active trade.");
             return;
@@ -1433,7 +1434,11 @@ public void OnVoiceInput(string spokenText)
 
         TradeTermsSnapshot agreement = trade.AcceptedTerms ?? new TradeTermsSnapshot(trade, agreedPrice,
             quantityGrams > 0 ? quantityGrams : trade.quantityGrams, trade.quantityLabel, trade.marketValue);
-        if (!trade.BindAcceptedTerms(agreement)) return;
+        if (!trade.BindAcceptedTerms(agreement) || !state.CanFulfillAcceptedTrade(agreement))
+        {
+            FailAcceptedFulfillment(trade);
+            return;
+        }
 
         if (!sessionOutcomeResolved) ResolveConversationWork();
         isProcessing = false;
@@ -1480,26 +1485,47 @@ public void OnVoiceInput(string spokenText)
             orderManager = FindFirstObjectByType<OrderManager>();
         }
 
-        if (orderManager != null)
-        {
-            if (!orderManager.BeginMarketplaceFulfillment(agreement))
-                Debug.LogError("[FULFILLMENT] Accepted order could not start. Check spice/handoff configuration.");
-        }
-        else
-        {
-            Debug.LogWarning("[FULFILLMENT] Pending accepted trade created, but OrderManager was not found.");
-        }
-
         if (Level1DebugForceAccept.ShouldBypassScoopFulfillment())
         {
             Debug.Log("[TEMP DEBUG] bypassScoopFulfillmentForTesting is enabled. Completing accepted fulfillment without scooping.");
             CompleteAcceptedFulfillment();
+            return;
         }
+        #if UNITY_EDITOR
+        // The synthetic Editor soak completes agreements without a scene handoff.
+        if (orderManager == null && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name !=
+            GameManager.DefaultGameplaySceneName) return;
+        #endif
+        if (orderManager == null || !orderManager.BeginMarketplaceFulfillment(agreement))
+            FailAcceptedFulfillment(trade);
+    }
+
+    private void FailAcceptedFulfillment(LocalTradeState trade)
+    {
+        const string message = "Delivery unavailable. No goods exchanged.";
+        ResolveConversationWork();
+        ResetConversationUI(message);
+        Level1GameState.ExistingInstance?.CancelTrade(trade);
+        hudManager?.ShowTradeComplete(new TransactionSummary
+        {
+            buyer_name = trade.buyerName,
+            failure_reason = message
+        }, false, 0);
+        marketplaceManager?.OnNegotiationFinished(false);
+        Debug.LogWarning("[FULFILLMENT] The accepted order could not be delivered or settled.");
+    }
+
+    private void UpdateCoinsEarnedText()
+    {
+        if (coinsEarnedText != null)
+            coinsEarnedText.text = Level1HUDManager.FormatMarketEarnings(
+                Level1GameState.ExistingInstance?.GetMarketDayTotals().NetTradingProfit);
     }
 
     public bool TryHandleNegotiationTimeout(string finalLine = "")
     {
-        if (sessionOutcomeResolved || !IsWaitingForPlayer)
+        if (sessionOutcomeResolved || !IsWaitingForPlayer ||
+            Level1GameState.ExistingInstance?.MarketClosedForTrading == true)
         {
             return false;
         }
@@ -1585,7 +1611,7 @@ public void OnVoiceInput(string spokenText)
 
         if (coinsEarnedText != null)
         {
-            coinsEarnedText.text = "Coins Earned: " + localOutcome.currentMoney;
+            UpdateCoinsEarnedText();
         }
 
         if (hudManager != null)
@@ -1645,17 +1671,26 @@ public void OnVoiceInput(string spokenText)
             return;
         }
 
-        if (!Level1GameState.Instance.CanSettleAcceptedTrade(agreement))
+        var state = Level1GameState.Instance;
+        if (state.MarketClosedForTrading) return;
+        if (!state.CanSettleAcceptedTrade(agreement))
         {
-            Debug.LogWarning("[FULFILLMENT] Ignoring completion before the accepted order is fully delivered.");
+            if (OrderManager.Instance != null && OrderManager.Instance.CanCompleteMarketplaceFulfillment(agreement))
+                FailAcceptedFulfillment(agreement.Source);
+            else Debug.LogWarning("[FULFILLMENT] Ignoring completion before the accepted order is fully delivered.");
             return;
         }
 
         PendingFulfillmentData completing = pendingFulfillment;
         pendingFulfillment = null; // Consume before settlement/save/UI callbacks can re-enter.
-        LocalTradeOutcome localOutcome = Level1GameState.Instance.ResolveAcceptedTrade(
+        LocalTradeOutcome localOutcome = state.ResolveAcceptedTrade(
             agreement, completing.buyerTrust, completing.buyerFrustration, completing.outOfWorldCount
         );
+        if (!localOutcome.isSuccess)
+        {
+            FailAcceptedFulfillment(agreement.Source);
+            return;
+        }
 
         int localReputation = localOutcome.currentReputation;
         int localMoney = localOutcome.currentMoney;
@@ -1677,7 +1712,7 @@ public void OnVoiceInput(string spokenText)
 
         if (coinsEarnedText != null)
         {
-            coinsEarnedText.text = "Coins Earned: " + localMoney;
+            UpdateCoinsEarnedText();
         }
 
         if (hudManager != null)
