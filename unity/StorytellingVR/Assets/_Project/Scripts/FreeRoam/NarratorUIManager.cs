@@ -132,12 +132,13 @@ public class NarratorUIManager : MonoBehaviour
         string lineId,
         string speaker,
         string subtitle,
-        float duration = -1f)
+        float duration = -1f,
+        bool advanceWhenVoiceEnds = false)
     {
         StopCurrentRoutine();
 
         currentRoutine = StartCoroutine(PauseMenuController.RunGameplay(
-            NarrationRoutine(speaker, subtitle, lineId)
+            NarrationRoutine(speaker, subtitle, lineId, advanceWhenVoiceEnds)
         ));
 
         yield return currentRoutine;
@@ -183,7 +184,8 @@ public class NarratorUIManager : MonoBehaviour
     private IEnumerator NarrationRoutine(
     string speaker,
     string fullText,
-    string lineId)
+    string lineId,
+    bool advanceWhenVoiceEnds = false)
     {
         if (string.IsNullOrWhiteSpace(fullText))
             yield break;
@@ -240,7 +242,8 @@ public class NarratorUIManager : MonoBehaviour
                 pressedState =>
                 {
                     previousPressed = pressedState;
-                }
+                },
+                advanceWhenVoiceEnds
             );
 
             // Small separation between lines.
@@ -254,7 +257,8 @@ public class NarratorUIManager : MonoBehaviour
     string line,
     AudioClip clip,
     bool startingPressedState,
-    System.Action<bool> updatePressedState)
+    System.Action<bool> updatePressedState,
+    bool advanceWhenVoiceEnds = false)
     {
         if (subtitleText == null)
             yield break;
@@ -351,7 +355,7 @@ public class NarratorUIManager : MonoBehaviour
         subtitleText.maxVisibleCharacters =
             totalCharacters;
 
-        if (!waitForManualContinue && !autoAdvance)
+        if (advanceWhenVoiceEnds || (!waitForManualContinue && !autoAdvance))
         {
             while (dialogueVoiceSource != null && dialogueVoiceSource.isPlaying)
                 yield return null;

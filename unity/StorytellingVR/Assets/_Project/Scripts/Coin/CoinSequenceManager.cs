@@ -50,6 +50,12 @@ public class CoinSequenceManager : MonoBehaviour
         if (!sequenceStarted || switching)
             return;
 
+        if (sceneManager != null && sceneManager.IsNarrating)
+        {
+            waitingForRelease = true;
+            return;
+        }
+
         // Prevent same trigger press that started inspect from also immediately continuing.
         if (waitingForRelease)
         {
@@ -74,14 +80,13 @@ public class CoinSequenceManager : MonoBehaviour
 
         if (instructionPrompt != null)
         {
-            instructionPrompt.ShowTrigger(
-                "Press right trigger to continue"
-            );
+            instructionPrompt.ShowWristRotate("Hold right grip and rotate your wrist to inspect");
         }
     }
 
     void Next()
     {
+        if (sceneManager != null && sceneManager.IsNarrating) return;
         if (index >= coins.Length - 1)
         {
             FinishSequence();
@@ -174,10 +179,25 @@ public class CoinSequenceManager : MonoBehaviour
 
         if (instructionPrompt != null)
         {
-            instructionPrompt.ShowTrigger(
-                "Press right trigger to continue"
-            );
+            ShowInspectionPrompt();
         }
+    }
+
+    public void ShowInspectionPrompt()
+    {
+        if (instructionPrompt == null) return;
+        string message = "Hold right grip and rotate your wrist to inspect";
+        if (sceneManager == null || !sceneManager.IsNarrating)
+            message += "\nPress right trigger to continue";
+        instructionPrompt.ShowWristRotate(message);
+    }
+
+    private void OnDisable()
+    {
+        StopAllCoroutines();
+        sequenceStarted = false;
+        switching = false;
+        waitingForRelease = true;
     }
 
     void FinishSequence()

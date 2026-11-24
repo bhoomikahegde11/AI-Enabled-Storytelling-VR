@@ -77,7 +77,8 @@ public class CoinInteraction : MonoBehaviour
 
     public void TakeCoin()
     {
-        if (PauseMenuController.GameplayInputBlocked) return;
+        if (taken || PauseMenuController.GameplayInputBlocked ||
+            (sceneManager != null && !sceneManager.InspectionReady)) return;
         if (instructionPrompt != null)
         {
             instructionPrompt.Hide();
@@ -209,9 +210,8 @@ public class CoinInteraction : MonoBehaviour
 
 
         isInspecting = true;
-        instructionPrompt.ShowWristRotate(
-            "Hold right grip and rotate your wrist to inspect"
-        );
+        if (instructionPrompt != null)
+            instructionPrompt.ShowWristRotate("Hold right grip and rotate your wrist to inspect");
 
         if (sceneManager != null)
         {

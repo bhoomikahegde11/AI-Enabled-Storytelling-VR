@@ -48,6 +48,7 @@ public class ScooperFill : MonoBehaviour
 
     public void ResetScooper()
     {
+        OVRInput.SetControllerVibration(0, 0, OVRInput.Controller.RTouch);
         if (wrongSpiceClearCoroutine != null)
         {
             StopCoroutine(wrongSpiceClearCoroutine);
@@ -124,4 +125,6 @@ public class ScooperFill : MonoBehaviour
     {
         if (Instance == this) Instance = null;
     }
+
+    private void OnDisable() => ResetScooper();
 }

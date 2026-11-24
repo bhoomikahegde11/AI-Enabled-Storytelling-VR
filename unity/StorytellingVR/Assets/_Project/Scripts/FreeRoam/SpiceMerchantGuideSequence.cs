@@ -167,6 +167,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
     private IEnumerator RunSequence()
     {
         sequenceStarted = true;
+        ProtectConversationSpace();
 
         if (FreeRoamStoryManager.Instance != null)
             FreeRoamStoryManager.Instance.NotifyMerchantConversationStarted();
@@ -236,6 +237,7 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
             FreeRoamStoryManager.Instance.NotifyMerchantStartedWalking();
 
         // Merchant walks to stall
+        NPCWalker.ReleaseConversation(this);
         yield return MoveMerchantToStall();
 
         // Activate stall entry trigger
@@ -266,15 +268,25 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
     private IEnumerator StallArrivalDialogueSequence(
         System.Action onDialogueFinished)
     {
+        ProtectConversationSpace();
+        try
+        {
         yield return Say(
             "BHASKARA_STALL_ARRIVAL_01",
             merchantName,
             stallArrivalLine,
             stallArrivalLineDuration
         );
+        }
+        finally { NPCWalker.ReleaseConversation(this); }
 
         onDialogueFinished?.Invoke();
     }
+
+    private void ProtectConversationSpace() => NPCWalker.ProtectConversation(this,
+        Camera.main != null ? Camera.main.transform : null, merchant);
+
+    private void OnDisable() => NPCWalker.ReleaseConversation(this);
 
     private IEnumerator Say(
     string lineId,
@@ -294,7 +306,8 @@ public class SpiceMerchantGuideSequence : MonoBehaviour
                 lineId,
                 speaker,
                 text,
-                duration
+                duration,
+                advanceWhenVoiceEnds: lineId == "BHASKARA_STALL_ARRIVAL_01"
             );
         }
         else

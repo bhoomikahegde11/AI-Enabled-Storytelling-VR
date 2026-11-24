@@ -213,8 +213,11 @@ public class MarketplaceManager : MonoBehaviour
         EnsureCharacterProfilesInitialized();
     }
 
+    private void OnDisable() => NPCWalker.ReleaseConversation(this);
+
     private void OnDestroy()
     {
+        NPCWalker.ReleaseConversation(this);
         if (marketDayState != null) marketDayState.MarketDayEndedEvent -= HandleMarketDayEnded;
         ClearInstantiatedCharacterModel();
     }
@@ -230,6 +233,7 @@ public class MarketplaceManager : MonoBehaviour
     private void HandleMarketDayEnded()
     {
         if (!TryClaimMarketDayCompletion()) return;
+        NPCWalker.ReleaseConversation(this);
         StopNegotiationTimer();
         StopNextCustomerCountdown();
         StopAllCoroutines();
@@ -264,6 +268,7 @@ public class MarketplaceManager : MonoBehaviour
     /// </summary>
     private void ResetNPCToSpawnPoint()
     {
+        NPCWalker.ReleaseConversation(this);
         if (navMeshAgent != null)
         {
             navMeshAgent.enabled = false; // Disable temporarily to allow coordinate teleportation
@@ -524,6 +529,7 @@ public class MarketplaceManager : MonoBehaviour
         }
 
         ValidateNpcVisualState("conversation-start");
+        NPCWalker.ProtectConversation(this, Camera.main != null ? Camera.main.transform : null, buyerNPC.transform);
 
         // 5. Start backend request in parallel
         if (chatManager != null)
@@ -629,6 +635,7 @@ public class MarketplaceManager : MonoBehaviour
         }
 
         // 3. Move NPC to BuyerExitPoint and wait until reached
+        NPCWalker.ReleaseConversation(this);
         yield return StartCoroutine(PauseMenuController.RunGameplay(WalkToDestinationRoutine(exitPoint.position)));
 
         // 4. Now reset/clear conversation UI text and show approaching/waiting state

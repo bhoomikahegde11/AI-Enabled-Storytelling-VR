@@ -14,6 +14,7 @@ public class StallEntryTrigger : MonoBehaviour
 
     private bool arrivalDialogueStarted = false;
     private bool arrivalDialogueFinished = false;
+    private float arrivalDialogueStartedAt;
 
     private bool sceneLoadingTriggered = false;
 
@@ -60,6 +61,7 @@ public class StallEntryTrigger : MonoBehaviour
         if (!arrivalDialogueStarted)
         {
             arrivalDialogueStarted = true;
+            arrivalDialogueStartedAt = Time.realtimeSinceStartup;
 
             if (merchantSequence != null)
             {
@@ -91,7 +93,7 @@ public class StallEntryTrigger : MonoBehaviour
         arrivalDialogueFinished = true;
 
         Debug.Log(
-            "[STALL ENTRY] Merchant arrival dialogue finished"
+            $"[STALL ENTRY] Merchant arrival presentation finished after {Time.realtimeSinceStartup - arrivalDialogueStartedAt:0.00}s; scene loading has not started yet."
         );
 
         if (ObjectiveUIManager.Instance != null)

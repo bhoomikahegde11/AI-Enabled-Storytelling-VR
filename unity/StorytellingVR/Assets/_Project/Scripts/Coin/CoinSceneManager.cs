@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class CoinSceneManager : MonoBehaviour
 {
+    public bool IsNarrating { get; private set; }
+    public bool InspectionReady { get; private set; }
     private const string RahimPaymentLineId = "RAHIM_COIN_PAYMENT_01";
     private const string NarratorInspectCoinLineId = "NARRATOR_COIN_INSPECT_01";
     private const string NarratorVarahaLineId = "NARRATOR_COIN_VARAHA_01";
@@ -65,6 +67,7 @@ public class CoinSceneManager : MonoBehaviour
 
     IEnumerator StartCoinScene()
     {
+        InspectionReady = false;
         yield return new WaitForSeconds(2);
 
 
@@ -102,12 +105,14 @@ public class CoinSceneManager : MonoBehaviour
                 "Press the Trigger to inspect the coin"
             );
         }
+        InspectionReady = true;
     }
 
 
 
     public void NarrateVaraha()
     {
+        IsNarrating = true;
         StartCoroutine(PauseMenuController.RunGameplay(
             VarahaRoutine()
         ));
@@ -127,9 +132,7 @@ public class CoinSceneManager : MonoBehaviour
 
         if (instructionPrompt != null)
         {
-            instructionPrompt.ShowTrigger(
-                "Press right trigger to continue"
-            );
+            if (coinSequence != null) coinSequence.ShowInspectionPrompt();
         }
     }
 
@@ -137,14 +140,21 @@ public class CoinSceneManager : MonoBehaviour
 
     public void NarrateKasu()
     {
+        IsNarrating = true;
         StartCoroutine(PauseMenuController.RunGameplay(
-            ShowDialogue(
+            KasuRoutine()
+        ));
+    }
+
+    private IEnumerator KasuRoutine()
+    {
+        yield return ShowDialogue(
                 "Narrator",
                 "The Kasu, by contrast, is a smaller bronze coin commonly used for everyday transactions in the marketplace.",
                 NarratorKasuLineId,
                 kasuClip
-            )
-        ));
+            );
+        if (coinSequence != null) coinSequence.ShowInspectionPrompt();
     }
 
 
@@ -197,6 +207,9 @@ public class CoinSceneManager : MonoBehaviour
         AudioClip clip
     )
     {
+        IsNarrating = true;
+        try
+        {
         subtitlePanel.SetActive(true);
 
 
@@ -229,6 +242,23 @@ public class CoinSceneManager : MonoBehaviour
 
 
         subtitlePanel.SetActive(false);
+        }
+        finally { IsNarrating = false; }
+    }
+
+    private void OnDisable()
+    {
+        StopAllCoroutines();
+        IsNarrating = false;
+        InspectionReady = false;
+        if (voiceSource != null) voiceSource.Stop();
+        if (subtitlePanel != null) subtitlePanel.SetActive(false);
+        if (instructionPrompt != null) instructionPrompt.Hide();
+    }
+
+    private void OnDestroy()
+    {
+        if (coinSequence != null) coinSequence.OnCoinSequenceFinished -= EndCoinTutorial;
     }
 
     private AudioClip ResolveVoiceClip(string lineId, AudioClip fallbackClip)

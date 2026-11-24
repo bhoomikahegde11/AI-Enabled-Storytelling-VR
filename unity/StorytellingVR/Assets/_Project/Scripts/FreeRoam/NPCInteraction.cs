@@ -153,6 +153,7 @@ public class NPCInteraction : MonoBehaviour
         }
 
         inConversation = true;
+        ProtectConversationSpace();
 
         HideInteractionPrompt();
 
@@ -185,6 +186,7 @@ public class NPCInteraction : MonoBehaviour
         }
 
         inConversation = true;
+        ProtectConversationSpace();
 
         HideInteractionPrompt();
 
@@ -382,6 +384,7 @@ public class NPCInteraction : MonoBehaviour
         }
 
         inConversation = true;
+        ProtectConversationSpace();
 
         HideInteractionPrompt();
 
@@ -474,6 +477,7 @@ public class NPCInteraction : MonoBehaviour
     {
         StopTalking();
         inConversation = false;
+        NPCWalker.ReleaseConversation(this);
         conversationCompleted = true;
         closingDialoguePlaying = false;
 
@@ -494,6 +498,16 @@ public class NPCInteraction : MonoBehaviour
             $"[NPC] Conversation fully completed for {storyNPCType}."
         );
     }
+
+    private void ProtectConversationSpace()
+    {
+        Transform speaker = subtitlePositionController != null ? subtitlePositionController.transform :
+            (npcAnimator != null ? npcAnimator.transform : transform);
+        NPCWalker.ProtectConversation(this, Camera.main != null ? Camera.main.transform : null, speaker);
+    }
+
+    private void OnEnable() { if (inConversation) ProtectConversationSpace(); }
+    private void OnDisable() => NPCWalker.ReleaseConversation(this);
 
     private void ShowInteractionPrompt()
     {
