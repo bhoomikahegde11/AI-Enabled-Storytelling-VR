@@ -669,7 +669,6 @@ MonoBehaviour:
   - lineId: GATE_INTRO_NARRATOR_07
     text: Let me be your guide.
   screenFader: {fileID: 0}
-  nextSceneName: FreeRoam
 --- !u!82 &84961257
 AudioSource:
   m_ObjectHideFlags: 0
@@ -3680,8 +3679,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'Current Objective :'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
-  m_sharedMaterial: {fileID: 3746222270625453336, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: d8bab806c555092448924b788a84844f, type: 2}
+  m_sharedMaterial: {fileID: 3970555609361681697, guid: d8bab806c555092448924b788a84844f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -3817,8 +3816,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Look around
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
-  m_sharedMaterial: {fileID: 3746222270625453336, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: d8bab806c555092448924b788a84844f, type: 2}
+  m_sharedMaterial: {fileID: 3970555609361681697, guid: d8bab806c555092448924b788a84844f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -11841,8 +11840,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Use the Left Joystick to look at your surroundings.
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
-  m_sharedMaterial: {fileID: 3746222270625453336, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: d8bab806c555092448924b788a84844f, type: 2}
+  m_sharedMaterial: {fileID: 3970555609361681697, guid: d8bab806c555092448924b788a84844f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -16228,8 +16227,8 @@ MonoBehaviour:
   m_text: You seem to be lost, traveler. Let me be your guide. Welcome to Hampi,
     the roaring heart of the Vijayanagara Empire.
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
-  m_sharedMaterial: {fileID: 3746222270625453336, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: d8bab806c555092448924b788a84844f, type: 2}
+  m_sharedMaterial: {fileID: 3970555609361681697, guid: d8bab806c555092448924b788a84844f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -17753,8 +17752,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Narrator
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
-  m_sharedMaterial: {fileID: 3746222270625453336, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: d8bab806c555092448924b788a84844f, type: 2}
+  m_sharedMaterial: {fileID: 3970555609361681697, guid: d8bab806c555092448924b788a84844f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -19031,8 +19030,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
-  m_sharedMaterial: {fileID: 3746222270625453336, guid: 19adc0539f087f040b4e7e98b3ea9399, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: d8bab806c555092448924b788a84844f, type: 2}
+  m_sharedMaterial: {fileID: 3970555609361681697, guid: d8bab806c555092448924b788a84844f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

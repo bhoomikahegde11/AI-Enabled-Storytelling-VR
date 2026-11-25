@@ -25,7 +25,9 @@
     "shift_stats": {
         "shifts_completed": 0,
         "total_varahas_earned": 0,
-        "total_deals_made": 0
+        "total_deals_made": 0,
+        "total_cost_of_goods_sold": 0,
+        "total_costed_deals": 0
     },
     "current_scene": "Epilogue_ModernStudyRoom",
     "progression_index": 8,
@@ -56,10 +58,27 @@
         "shiftStats": {
             "shifts_completed": 0,
             "total_varahas_earned": 0,
-            "total_deals_made": 0
+            "total_deals_made": 0,
+            "total_cost_of_goods_sold": 0,
+            "total_costed_deals": 0
         },
         "completedLevels": []
     },
+    "market_day": {
+        "finalized": false,
+        "hasOpeningBalance": false,
+        "hasCompleteCosts": false,
+        "interruptedTrade": false,
+        "openingWallet": 0,
+        "salesRevenue": 0,
+        "costOfGoodsSold": 0,
+        "closingWallet": 0,
+        "completedTrades": 0,
+        "closingRespect": 0
+    },
+    "epilogue_finance_tracked": true,
+    "epilogue_paycheck_applied": true,
+    "epilogue_book_purchased": true,
     "level1_entry_format": 1,
     "level1_entry_present": true,
     "save_name": "",

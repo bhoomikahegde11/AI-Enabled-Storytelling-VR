@@ -33,6 +33,9 @@ public class EpilogueStoryManager : MonoBehaviour
     [Header("Objective UI")]
     [SerializeField] private ObjectiveUIManager objectiveUI;
 
+    [Header("Coin UI")]
+    [SerializeField] private EpilogueEarningsPopup earningsPopup;
+
     [Header("Meera Directional Indicator")]
     [Tooltip("Assign the NPCDirectionalIndicator from the scene (same one used in FreeRoam).")]
     [SerializeField] private NPCDirectionalIndicator meeraDirectionalIndicator;
@@ -54,6 +57,7 @@ public class EpilogueStoryManager : MonoBehaviour
     [Header("System References")]
     [SerializeField] private ScreenFader fader;
     [SerializeField] private TeleportManager teleportManager;
+
 
     private bool sequenceRunning = false;
 
@@ -104,7 +108,7 @@ public class EpilogueStoryManager : MonoBehaviour
             checkpoint.epilogue_paycheck_applied;
         if (!paycheckAlreadyApplied && NarratorUIManager.Instance != null)
         {
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSeconds(2f);
             if (checkpoint?.market_day?.NetTradingProfit > 0)
             {
                 yield return NarratorUIManager.Instance.PlayNarration(
@@ -119,17 +123,31 @@ public class EpilogueStoryManager : MonoBehaviour
         }
         else if (!paycheckAlreadyApplied) yield return new WaitForSeconds(6f);
 
+
         int balance;
         int paycheck;
-        while (!saves.TryApplyEpiloguePaycheck(defaultPaycheck, bookPrice, out balance, out paycheck))
+
+        while (!saves.TryApplyEpiloguePaycheck(
+            defaultPaycheck, bookPrice, out balance, out paycheck))
+        {
             yield return WaitForFinanceRetry("Could not save your pay");
+        }
+
         Level1GameState.ExistingInstance?.ReloadProfileFromDisk();
         walletHUD?.SetBalance(balance);
+
         if (paycheck > 0)
         {
             walletHUD?.ShowGain(paycheck);
-            objectiveUI?.SetObjective($"Bhaskara's pay: +{paycheck} Varahas\nWallet: {balance} Varahas");
+
+            // NEW: Show the animated coin reward popup.
+            earningsPopup?.ShowEarnings(paycheck);
+
+            objectiveUI?.SetObjective(
+                $"Bhaskara's pay: +{paycheck} Varahas\nWallet: {balance} Varahas"
+            );
         }
+
 
         if (saves.TryLoadExistingProfile(out checkpoint) && checkpoint.epilogue_book_purchased)
         {
